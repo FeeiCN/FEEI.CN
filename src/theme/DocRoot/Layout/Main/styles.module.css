@@ -1,0 +1,37 @@
+.docMainContainer {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+
+.docItemWrapper {
+  width: 100%;
+}
+
+@media (min-width: 997px) {
+  .docMainContainer {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .docMainContainerEnhanced {
+    max-width: calc(100% - var(--doc-sidebar-hidden-width));
+  }
+
+  .docItemWrapper {
+    width: 100%;
+    max-width: var(--ifm-container-width);
+    margin: 0 auto;
+    padding: 1rem 1.5rem 2rem;
+  }
+
+  .docItemWrapperEnhanced {
+    max-width: calc(
+      var(--ifm-container-width) + var(--doc-sidebar-width)
+    ) !important;
+  }
+}

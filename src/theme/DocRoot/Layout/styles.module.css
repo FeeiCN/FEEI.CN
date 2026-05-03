@@ -1,0 +1,23 @@
+.docRoot {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+
+.docsWrapper {
+  display: flex;
+  flex: 1 0 auto;
+  min-width: 0;
+}
+
+@media (min-width: 997px) {
+  .docsWrapper {
+    height: calc(100vh - var(--ifm-navbar-height));
+    overflow: hidden;
+  }
+
+  .docRoot {
+    height: 100%;
+    overflow: hidden;
+  }
+}

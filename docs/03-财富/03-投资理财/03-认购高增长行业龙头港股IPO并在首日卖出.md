@@ -2,7 +2,7 @@
 icon: chart-column
 ---
 
-# 策略三：认购高增长行业龙头港股IPO并在首日卖出
+# 跟随国际机构认购港股IPO并在首日卖出
 
 ![](//feei.cn/wp-content/plugins/a3-lazy-load/assets/images/lazy_placeholder.gif)![](https://feei.cn/wp-content/uploads/IMG_6945.png)
 ![](//feei.cn/wp-content/plugins/a3-lazy-load/assets/images/lazy_placeholder.gif)![](https://feei.cn/wp-content/uploads/IMG_6946.png)

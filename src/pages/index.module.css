@@ -1,23 +1,93 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
-
-.heroBanner {
-  padding: 4rem 0;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 2rem;
-  }
-}
-
-.buttons {
+.hero {
+  min-height: 52vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 5rem 2rem 3.5rem;
+  text-align: center;
+}
+
+.heroContent {
+  max-width: 580px;
+}
+
+.heroLabel {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  margin-bottom: 1.6rem;
+}
+
+.heroTitle {
+  font-size: clamp(2.2rem, 5.5vw, 3.4rem);
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+  margin-bottom: 1.25rem;
+}
+
+.heroTagline {
+  font-size: 1rem;
+  color: #6b7280;
+  line-height: 1.85;
+  margin-bottom: 2.5rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+.heroCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #ff5b1f;
+  text-decoration: none;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid rgba(255, 91, 31, 0.35);
+  transition: color 180ms ease, border-color 180ms ease, gap 180ms ease;
+}
+
+.heroCta:hover {
+  color: #e04a12;
+  border-color: #e04a12;
+  gap: 0.65rem;
+  text-decoration: none;
+}
+
+.heroCtaArrow {
+  width: 0.92rem;
+  height: 0.92rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 996px) {
+  .hero {
+    padding: 4rem 2rem 2.5rem;
+    min-height: 44vh;
+  }
+}
+
+[data-theme='dark'] .heroTitle {
+  color: #f9fafb;
+}
+
+[data-theme='dark'] .heroLabel {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+[data-theme='dark'] .heroTagline {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+[data-theme='dark'] .heroCta {
+  color: #ff8a5c;
+  border-color: rgba(255, 138, 92, 0.38);
+}
+
+[data-theme='dark'] .heroCta:hover {
+  color: #ff6e3a;
+  border-color: rgba(255, 110, 58, 0.7);
 }

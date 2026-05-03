@@ -28,3 +28,107 @@
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+.sidebarIcon {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--ifm-color-emphasis-600);
+  flex: 0 0 0.95rem;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: -0.125em;
+  transition: color var(--ifm-transition-fast) ease;
+}
+
+.menu__link--active .sidebarIcon {
+  color: inherit;
+}
+
+.theme-doc-sidebar-menu {
+  --ifm-menu-color: var(--ifm-color-emphasis-700);
+  --ifm-menu-link-padding-vertical: 0.5rem;
+  --ifm-menu-link-padding-horizontal: 0.75rem;
+}
+
+.theme-doc-sidebar-menu .menu__link {
+  border-radius: 0.45rem;
+  font-size: 0.98rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  transition:
+    background-color var(--ifm-transition-fast) ease,
+    color var(--ifm-transition-fast) ease;
+}
+
+.theme-doc-sidebar-menu .menu__link:hover {
+  background: rgba(15, 23, 42, 0.045);
+  color: var(--ifm-color-emphasis-900);
+}
+
+.theme-doc-sidebar-menu .menu__link--active {
+  background: rgba(46, 133, 85, 0.12);
+  color: var(--ifm-color-primary-darkest);
+  font-weight: 600;
+}
+
+.theme-doc-sidebar-menu .menu__list-item-collapsible--active {
+  border-radius: 0.45rem;
+}
+
+.docTitleWithIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  line-height: 1.05;
+}
+
+.docTitleIcon {
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 2.35rem;
+  color: var(--ifm-color-emphasis-500);
+  stroke-width: 1.6;
+  vertical-align: middle;
+}
+
+.markdown > header:first-child h1 {
+  margin-top: 0.15rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.03em;
+}
+
+.markdown > header:first-child + * {
+  margin-top: 0;
+}
+
+.navbarItemLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.navbarItemIcon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: 0 0 0.95rem;
+  color: currentColor;
+  stroke-width: 1.75;
+}
+
+.navbarItemLabelDropdown .navbarItemIcon {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex-basis: 0.9rem;
+}
+
+[data-theme='dark'] .theme-doc-sidebar-menu .menu__link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ifm-color-emphasis-100);
+}
+
+[data-theme='dark'] .theme-doc-sidebar-menu .menu__link--active {
+  background: rgba(37, 194, 160, 0.16);
+  color: var(--ifm-color-primary-lightest);
+}

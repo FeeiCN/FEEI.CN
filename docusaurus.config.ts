@@ -4,6 +4,62 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+type SidebarItemWithProps = {
+  type: string;
+  id?: string;
+  items?: SidebarItemWithProps[];
+  customProps?: Record<string, unknown>;
+  link?: {
+    type?: string;
+    id?: string;
+  };
+};
+
+type LoadedDocWithFrontMatter = {
+  id: string;
+  frontMatter?: Record<string, unknown>;
+};
+
+function getDocIcon(doc?: LoadedDocWithFrontMatter): string | undefined {
+  const icon = doc?.frontMatter?.icon;
+  return typeof icon === 'string' && icon.trim() ? icon.trim() : undefined;
+}
+
+function attachSidebarIcons<
+  T extends SidebarItemWithProps,
+  D extends LoadedDocWithFrontMatter,
+>(items: T[], docs: D[]): T[] {
+  const docsById = new Map(docs.map((doc) => [doc.id, doc]));
+
+  function visit(item: SidebarItemWithProps): SidebarItemWithProps {
+    const nextItem = {...item};
+
+    if (item.type === 'doc' && item.id) {
+      const icon = getDocIcon(docsById.get(item.id));
+      if (icon) {
+        nextItem.customProps = {...item.customProps, icon};
+      }
+    }
+
+    if (item.type === 'category') {
+      if (item.link?.type === 'doc' && item.link.id) {
+        const icon = getDocIcon(docsById.get(item.link.id));
+        if (icon) {
+          nextItem.customProps = {...item.customProps, icon};
+        }
+      }
+
+      if (item.items) {
+        nextItem.items = item.items.map(visit);
+      }
+    }
+
+    return nextItem;
+  }
+
+  return items.map((item) => visit(item) as T);
+}
+
 const config: Config = {
   title: '创造人生确定性',
   tagline: 'Dinosaurs are cool',
@@ -41,6 +97,10 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
+          async sidebarItemsGenerator(args) {
+            const items = await args.defaultSidebarItemsGenerator(args);
+            return attachSidebarIcons(items, args.docs);
+          },
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
@@ -86,30 +146,35 @@ const config: Config = {
           sidebarId: 'healthHappinessSidebar',
           position: 'left',
           label: '健康幸福',
+          icon: 'heart',
         },
         {
           type: 'docSidebar',
           sidebarId: 'careerSuccessSidebar',
           position: 'left',
           label: '事业有成',
+          icon: 'rocket',
         },
         {
           type: 'docSidebar',
           sidebarId: 'financeFreedomSidebar',
           position: 'left',
           label: '财务自由',
+          icon: 'chart-line',
         },
         {
           type: 'docSidebar',
           sidebarId: 'exploreWorldSidebar',
           position: 'left',
           label: '探索世界',
+          icon: 'compass',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
+        {to: '/blog', label: 'Blog', position: 'left', icon: 'book-open'},
         {
           href: 'https://github.com/facebook/docusaurus',
           label: 'GitHub',
           position: 'right',
+          icon: 'code-branch',
         },
       ],
     },

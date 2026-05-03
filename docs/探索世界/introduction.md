@@ -1,5 +1,6 @@
 ---
 sidebar_position: 1
+icon: compass
 ---
 
 # 探索世界

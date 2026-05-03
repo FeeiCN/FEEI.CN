@@ -23,7 +23,7 @@ const FeatureList: FeatureItem[] = [
     title: '能力',
     icon: 'rocket',
     description: '网络空间安全、人工智能、软性能力',
-    to: '/docs/能力/网络空间安全/前言',
+    to: '/docs/能力/网络空间安全/',
   },
   {
     title: '财富',

@@ -23,12 +23,42 @@
     'WenQuanYi Micro Hei',
     sans-serif;
   --ifm-heading-font-family: var(--ifm-font-family-base);
+  --ifm-font-size-base: 93.75%;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+
+  --ifm-breadcrumb-item-background-active: transparent;
+  --ifm-breadcrumb-padding-horizontal: 0;
+  --ifm-breadcrumb-padding-vertical: 0;
+  --ifm-breadcrumb-border-radius: 0;
+
+  --ifm-line-height-base: 1.85;
+  --ifm-paragraph-margin-bottom: 1.6rem;
+  --ifm-h2-font-size: 1.6rem;
+  --ifm-h3-font-size: 1.3rem;
+  --ifm-heading-margin-bottom: 0.8rem;
 }
 
 .markdown h1:first-child {
-    --ifm-h1-font-size: 2.25rem;
+  --ifm-h1-font-size: 2.25rem;
+}
+
+.markdown h2 {
+  margin-top: 2.4rem;
+}
+
+.markdown h3 {
+  margin-top: 1.8rem;
+}
+
+.markdown ul,
+.markdown ol {
+  margin-bottom: 1.6rem;
+}
+
+.markdown li {
+  margin-bottom: 0.3rem;
+  line-height: 1.85;
 }
 
 .navbar__logo {
@@ -60,14 +90,37 @@
   transform: translateY(-50%);
 }
 
-.navbar__link {
-  color: #8f96a3;
-  font-weight: 400;
+.navbar__items:not(.navbar__items--right) {
+  align-self: stretch;
+  align-items: stretch;
+  margin-top: calc(-1 * var(--ifm-navbar-padding-vertical));
+  margin-bottom: calc(-1 * var(--ifm-navbar-padding-vertical));
 }
 
-.navbar__link:hover,
+.navbar__item {
+  display: flex;
+  align-items: center;
+}
+
+.navbar__link {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  color: #8f96a3;
+  font-size: 0.875rem;
+  font-weight: 400;
+  box-shadow: inset 0 -2px 0 transparent;
+  transition: color var(--ifm-transition-fast) ease, box-shadow var(--ifm-transition-fast) ease;
+}
+
+.navbar__link:hover {
+  color: #374151;
+}
+
 .navbar__link--active {
-  color: #4b5563;
+  color: #ff5b1f;
+  font-weight: 500;
+  box-shadow: inset 0 -2px 0 #ff5b1f;
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
@@ -94,9 +147,13 @@
   color: rgba(255, 255, 255, 0.68);
 }
 
-[data-theme='dark'] .navbar__link:hover,
-[data-theme='dark'] .navbar__link--active {
+[data-theme='dark'] .navbar__link:hover {
   color: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme='dark'] .navbar__link--active {
+  color: #ff8a5c;
+  box-shadow: inset 0 -2px 0 #ff8a5c;
 }
 
 .sidebarIcon {

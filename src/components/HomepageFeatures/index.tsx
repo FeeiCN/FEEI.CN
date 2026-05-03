@@ -1,58 +1,53 @@
 import type {ReactNode} from 'react';
 import clsx from 'clsx';
+import Link from '@docusaurus/Link';
 import Heading from '@theme/Heading';
+import SidebarIcon from '@site/src/components/SidebarIcon';
 import styles from './styles.module.css';
 
 type FeatureItem = {
   title: string;
-  Svg: React.ComponentType<React.ComponentProps<'svg'>>;
-  description: ReactNode;
+  icon: string;
+  description: string;
+  to: string;
 };
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
-    description: (
-      <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
-      </>
-    ),
+    title: '健康',
+    icon: 'heart',
+    description: '习惯、疾病、饮食、保险、塑形、自我、关系、死亡',
+    to: '/docs/健康/习惯',
   },
   {
-    title: 'Focus on What Matters',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
-    description: (
-      <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
-      </>
-    ),
+    title: '能力',
+    icon: 'rocket',
+    description: '网络空间安全、人工智能、软性能力',
+    to: '/docs/能力/网络空间安全/前言',
   },
   {
-    title: 'Powered by React',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
-    description: (
-      <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
-      </>
-    ),
+    title: '财富',
+    icon: 'chart-line',
+    description: '工作储蓄、控制支出、投资理财',
+    to: '/docs/财富/让自己有更多的时间和选择权',
+  },
+  {
+    title: '体验',
+    icon: 'compass',
+    description: '探索世界，感受生活的多样性',
+    to: '/docs/体验/introduction',
   },
 ];
 
-function Feature({title, Svg, description}: FeatureItem) {
+function Feature({title, icon, description, to}: FeatureItem) {
   return (
-    <div className={clsx('col col--4')}>
-      <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
+    <Link to={to} className={clsx('col col--3', styles.featureCard)}>
+      <div className={styles.featureIcon}>
+        <SidebarIcon icon={icon} className={styles.featureIconSvg} />
       </div>
-      <div className="text--center padding-horiz--md">
-        <Heading as="h3">{title}</Heading>
-        <p>{description}</p>
-      </div>
-    </div>
+      <Heading as="h3" className={styles.featureTitle}>{title}</Heading>
+      <p className={styles.featureDesc}>{description}</p>
+    </Link>
   );
 }
 

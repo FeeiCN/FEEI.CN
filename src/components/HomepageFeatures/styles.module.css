@@ -1,11 +1,64 @@
 .features {
-  display: flex;
-  align-items: center;
-  padding: 2rem 0;
+  padding: 3rem 0;
   width: 100%;
 }
 
-.featureSvg {
-  height: 200px;
-  width: 200px;
+.featureCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1.5rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  color: inherit;
+}
+
+.featureCard:hover {
+  background: rgba(15, 23, 42, 0.04);
+  transform: translateY(-2px);
+  text-decoration: none;
+  color: inherit;
+}
+
+.featureIcon {
+  width: 3.5rem;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 91, 31, 0.08);
+  border-radius: 0.75rem;
+  margin-bottom: 1.2rem;
+}
+
+.featureIconSvg {
+  width: 1.6rem !important;
+  height: 1.6rem !important;
+  flex: 0 0 1.6rem !important;
+  color: #ff5b1f !important;
+  stroke-width: 1.6;
+}
+
+.featureTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #111827;
+}
+
+.featureDesc {
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0;
+}
+
+[data-theme='dark'] .featureCard:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .featureTitle {
+  color: var(--ifm-color-emphasis-100);
 }

@@ -61,8 +61,8 @@ function attachSidebarIcons<
 }
 
 const config: Config = {
-  title: '创造人生确定性',
-  tagline: 'Dinosaurs are cool',
+  title: '创造确定性人生',
+  tagline: '把所有的时间、精力和金钱都投入到长期目标中',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -78,8 +78,8 @@ const config: Config = {
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'facebook', // Usually your GitHub org/user name.
-  projectName: 'docusaurus', // Usually your repo name.
+  organizationName: 'feeicn', // Usually your GitHub org/user name.
+  projectName: 'certainty-in-life', // Usually your repo name.
 
   onBrokenLinks: 'throw',
 
@@ -135,10 +135,9 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: '创造人生确定性',
       logo: {
         alt: 'My Site Logo',
-        src: 'https://feei.cn/wp-content/uploads/2019/12/typology_logo@2x-1.png',
+        src: 'img/logo.png',
       },
       items: [
         {
@@ -171,7 +170,7 @@ const config: Config = {
         },
         {to: '/blog', label: 'Blog', position: 'left', icon: 'book-open'},
         {
-          href: 'https://github.com/facebook/docusaurus',
+          href: 'https://github.com/FeeiCN/certainty-in-life',
           label: 'GitHub',
           position: 'right',
           icon: 'code-branch',

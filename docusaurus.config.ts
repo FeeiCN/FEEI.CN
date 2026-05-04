@@ -9,6 +9,7 @@ type SidebarItemWithProps = {
   id?: string;
   items?: SidebarItemWithProps[];
   customProps?: Record<string, unknown>;
+  collapsed?: boolean;
   link?: {
     type?: string;
     id?: string;
@@ -42,6 +43,8 @@ function attachSidebarIcons<
     }
 
     if (item.type === 'category') {
+      nextItem.collapsed = false;
+
       if (item.link?.type === 'doc' && item.link.id) {
         const icon = getDocIcon(docsById.get(item.link.id));
         if (icon) {

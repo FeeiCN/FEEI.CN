@@ -101,6 +101,23 @@
   margin-bottom: calc(-1 * var(--ifm-navbar-padding-vertical));
 }
 
+@media (max-width: 996px) {
+  .navbar__items a.navbar__item {
+    display: none;
+  }
+
+  .navbar__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #374151;
+  }
+}
+
+[data-theme='dark'] .navbar__toggle {
+  color: rgba(255, 255, 255, 0.75);
+}
+
 .navbar__item {
   display: flex;
   align-items: center;

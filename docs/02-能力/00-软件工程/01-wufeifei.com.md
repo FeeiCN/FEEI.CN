@@ -5,3 +5,8 @@
 ## 部署
 
 - Github -> Action -> Server
+
+## 变更记录
+
+- 20260503 对比多个 Docs/Wiki/Mark2Site 工具后，最终选择了 Docusaurus，丑是丑了点，但功能性上是满足的。GitBook 很精致美观但闭源，学习复刻了下。
+- 20260504 调整下移动端菜单栏适配效果。

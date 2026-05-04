@@ -170,13 +170,13 @@ const config: Config = {
           label: '体验',
           icon: 'compass',
         },
-        {to: '/blog', label: 'Blog', position: 'left', icon: 'book-open'},
-        {
-          href: 'https://github.com/FeeiCN/certainty-in-life',
-          label: 'GitHub',
-          position: 'right',
-          icon: 'code-branch',
-        },
+        // {to: '/blog', label: 'Blog', position: 'left', icon: 'book-open'},
+        // {
+        //   href: 'https://github.com/FeeiCN/certainty-in-life',
+        //   label: 'GitHub',
+        //   position: 'right',
+        //   icon: 'code-branch',
+        // },
       ],
     },
     footer: {

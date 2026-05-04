@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s https://feei.cn/security-industry/)",
+      "Bash(curl -s https://feei.cn/wp-content/cache/wpo-minify/1777554981/assets/wpo-minify-header-4559cabe.min.css)",
+      "Bash(cat)",
+      "Bash(bash /tmp/extract_styles.sh)",
+      "WebFetch(domain:feei.cn)",
+      "Bash(curl -s \"https://feei.cn/cybersecurity/\")",
+      "Bash(mkdir -p /Users/feei/Projects/my-website/static/img/cybersecurity)",
+      "Bash(mkdir -p \"/Users/feei/Projects/my-website/docs/02-能力/01-网络空间安全\")",
+      "Bash(curl -s -o \"/Users/feei/Projects/my-website/static/img/cybersecurity/7539F0CF-A706-4ED5-955E-73E4EDC5A48A-23201-000009288E6F8048-scaled.jpg\" \"https://feei.cn/wp-content/uploads/7539F0CF-A706-4ED5-955E-73E4EDC5A48A-23201-000009288E6F8048-scaled.jpg\")",
+      "Bash(curl -s \"https://feei.cn/historical-cybersecurity-incidents/\" -o /tmp/cybersec_page.html)",
+      "Bash(curl -L -o /Users/feei/Projects/my-website/static/img/cybersecurity/image-23-scaled.png \"https://feei.cn/wp-content/uploads/image-23-scaled.png\")",
+      "Bash(curl -sL \"https://feei.cn/cybersecurity-defense-challenges-and-breakthroughs/\" -o /tmp/cybersec_page.html)",
+      "Bash(python3 *)",
+      "Bash(curl -s -L \"https://feei.cn/cybersecurity-organization-and-governance-assurance/\" -o /tmp/cyb_page.html)",
+      "Bash(curl -s -L https://feei.cn/cybersecurity-organization-and-governance-assurance/ -H 'User-Agent: Mozilla/5.0 \\(Macintosh; Intel Mac OS X 10_15_7\\) AppleWebKit/537.36 \\(KHTML, like Gecko\\) Chrome/120.0.0.0 Safari/537.36' -H 'Accept: text/html,application/xhtml+xml,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8' -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8' -o /tmp/cyb_page_ua.html)",
+      "Bash(curl -s -L https://feei.cn/wp-content/uploads/image-25-scaled.png -o /Users/feei/Projects/my-website/static/img/cybersecurity/image-25-scaled.png)",
+      "Bash(curl -s \"https://feei.cn/cybersecurity-architecture-design/\" -o /tmp/cybersec_page.html)",
+      "Bash(curl -s -o /tmp/logo.png \"https://feei.cn/wp-content/uploads/2019/12/typology_logo@2x-1.png\")",
+      "Bash(identify /tmp/logo.png)",
+      "Bash(sips -g all /tmp/logo.png)",
+      "Bash(xargs cat *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
+    ]
+  }
+}

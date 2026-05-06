@@ -67,8 +67,6 @@ function attachSidebarIcons<
 const config: Config = {
   title: '创造确定性人生',
   tagline: '把所有的时间、精力和金钱都投入到长期目标中',
-  favicon: 'img/favicon.ico',
-
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
@@ -94,6 +92,39 @@ const config: Config = {
     defaultLocale: 'zh-Hans',
     locales: ['zh-Hans'],
   },
+
+  headTags: [
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'icon',
+        href: '/img/icons/feei-icon-32.png',
+        sizes: '32x32',
+      },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'icon',
+        href: '/img/icons/feei-icon-192.png',
+        sizes: '192x192',
+      },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'apple-touch-icon',
+        href: '/img/icons/feei-icon-180.png',
+      },
+    },
+    {
+      tagName: 'meta',
+      attributes: {
+        name: 'msapplication-TileImage',
+        content: '/img/icons/feei-icon-270.png',
+      },
+    },
+  ],
 
   presets: [
     [

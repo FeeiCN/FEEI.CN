@@ -207,7 +207,7 @@ const config: Config = {
           label: '体验',
           icon: 'compass',
         },
-        // {to: '/blog', label: 'Blog', position: 'left', icon: 'book-open'},
+        {to: '/blog/', label: '吾日三省吾身', position: 'left', icon: 'clipboard-check'},
         // {
         //   href: 'https://github.com/FeeiCN/certainty-in-life',
         //   label: 'GitHub',

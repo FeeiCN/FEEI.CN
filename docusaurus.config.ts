@@ -33,7 +33,7 @@ function attachSidebarIcons<
 >(items: T[], docs: D[]): T[] {
   const docsById = new Map(docs.map((doc) => [doc.id, doc]));
 
-  function visit(item: SidebarItemWithProps): SidebarItemWithProps {
+  function visit(item: SidebarItemWithProps, depth: number): SidebarItemWithProps {
     const nextItem = {...item};
 
     if (item.type === 'doc' && item.id) {
@@ -44,7 +44,7 @@ function attachSidebarIcons<
     }
 
     if (item.type === 'category') {
-      nextItem.collapsed = false;
+      nextItem.collapsed = depth > 0;
 
       if (item.link?.type === 'doc' && item.link.id) {
         const icon = getDocIcon(docsById.get(item.link.id));
@@ -54,14 +54,14 @@ function attachSidebarIcons<
       }
 
       if (item.items) {
-        nextItem.items = item.items.map(visit);
+        nextItem.items = item.items.map((child) => visit(child, depth + 1));
       }
     }
 
     return nextItem;
   }
 
-  return items.map((item) => visit(item) as T);
+  return items.map((item) => visit(item, 0) as T);
 }
 
 const config: Config = {
@@ -70,6 +70,16 @@ const config: Config = {
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
+  },
+
+  markdown: {
+    // .md files use CommonMark (no JSX parsing), .mdx files use MDX
+    format: 'detect',
+    preprocessor: ({fileContent}) => {
+      // Escape * inside URLs — security write-ups use *** to mask IPs/domains,
+      // but Markdown parses *** as bold+italic and breaks link resolution.
+      return fileContent.replace(/https?:\/\/\S+/g, (url) => url.replace(/\*/g, '\\*'));
+    },
   },
 
   // Set the production url of your site here
@@ -98,7 +108,7 @@ const config: Config = {
       tagName: 'link',
       attributes: {
         rel: 'icon',
-        href: '/img/icons/feei-icon-32.png',
+        href: '/img/icons/feei-icon-32.webp',
         sizes: '32x32',
       },
     },
@@ -106,7 +116,7 @@ const config: Config = {
       tagName: 'link',
       attributes: {
         rel: 'icon',
-        href: '/img/icons/feei-icon-192.png',
+        href: '/img/icons/feei-icon-192.webp',
         sizes: '192x192',
       },
     },
@@ -114,14 +124,14 @@ const config: Config = {
       tagName: 'link',
       attributes: {
         rel: 'apple-touch-icon',
-        href: '/img/icons/feei-icon-180.png',
+        href: '/img/icons/feei-icon-180.webp',
       },
     },
     {
       tagName: 'meta',
       attributes: {
         name: 'msapplication-TileImage',
-        content: '/img/icons/feei-icon-270.png',
+        content: '/img/icons/feei-icon-270.webp',
       },
     },
   ],
@@ -131,6 +141,7 @@ const config: Config = {
       'classic',
       {
         docs: {
+          routeBasePath: '/',
           sidebarPath: './sidebars.ts',
           async sidebarItemsGenerator(args) {
             const items = await args.defaultSidebarItemsGenerator(args);
@@ -141,21 +152,7 @@ const config: Config = {
           editUrl:
             'https://github.com/FeeiCN/certainty-in-life/tree/main/',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/FeeiCN/certainty-in-life/tree/main/',
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -167,7 +164,7 @@ const config: Config = {
 
   themeConfig: {
     // Replace with your project's social card
-    image: 'img/docusaurus-social-card.jpg',
+    image: 'img/docusaurus-social-card.webp',
     colorMode: {
       defaultMode: 'light',
       disableSwitch: false,
@@ -176,7 +173,7 @@ const config: Config = {
     navbar: {
       logo: {
         alt: 'My Site Logo',
-        src: 'img/logo.png',
+        src: 'img/logo.webp',
       },
       items: [
         {
@@ -207,7 +204,20 @@ const config: Config = {
           label: '体验',
           icon: 'compass',
         },
-        {to: '/blog/', label: '吾日三省吾身', position: 'left', icon: 'clipboard-check'},
+        {
+          type: 'docSidebar',
+          sidebarId: 'dailyReflectionSidebar',
+          position: 'left',
+          label: '总结',
+          icon: 'clipboard-check',
+        },
+        {
+          type: 'docSidebar',
+          sidebarId: 'aboutSidebar',
+          position: 'left',
+          label: '关于',
+          icon: 'user',
+        },
         // {
         //   href: 'https://github.com/FeeiCN/certainty-in-life',
         //   label: 'GitHub',

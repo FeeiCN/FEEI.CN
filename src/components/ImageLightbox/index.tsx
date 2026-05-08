@@ -191,7 +191,12 @@ export default function ImageLightbox() {
       }
 
       if (image.complete) {
-        classifyLoadedImage();
+        const idle = (window as Window & {requestIdleCallback?: (cb: () => void) => void}).requestIdleCallback;
+        if (idle) {
+          idle(classifyLoadedImage);
+        } else {
+          setTimeout(classifyLoadedImage, 0);
+        }
       } else {
         image.addEventListener('load', classifyLoadedImage, {once: true});
       }

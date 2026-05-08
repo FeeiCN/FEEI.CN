@@ -1,38 +1,106 @@
 import React from 'react';
 import clsx from 'clsx';
-import * as LucideIcons from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
+import {
+  Activity,
+  Apple,
+  Ban,
+  BanknoteArrowUp,
+  Bed,
+  BicepsFlexed,
+  BookOpen,
+  BookOpenText,
+  Brain,
+  Briefcase,
+  Calculator,
+  ChartCandlestick,
+  ChartColumn,
+  ChartLine,
+  ChartNetwork,
+  ChartPie,
+  ClipboardCheck,
+  Clock3,
+  Coins,
+  Compass,
+  Factory,
+  Film,
+  Footprints,
+  Gem,
+  GitBranch,
+  GraduationCap,
+  Heart,
+  ListTree,
+  MessageSquare,
+  PiggyBank,
+  Receipt,
+  Rocket,
+  Route,
+  Shield,
+  ShieldCheck,
+  Spade,
+  Stethoscope,
+  Target,
+  TentTree,
+  Trophy,
+  User,
+  Users,
+  Wallet,
+} from 'lucide-react';
 
 type Props = {
   icon?: string;
   className?: string;
 };
 
-// Legacy aliases: frontmatter names that don't match Lucide's PascalCase directly
-const aliases: Record<string, string> = {
-  'apple-whole': 'Apple',
-  'clock': 'Clock3',
-  'code-branch': 'GitBranch',
-  'hourglass-end': 'Hourglass',
-  'industry': 'Factory',
-  'language': 'Languages',
-  'user-graduate': 'GraduationCap',
+const ICONS: Record<string, LucideIcon> = {
+  'activity': Activity,
+  'apple-whole': Apple,
+  'ban': Ban,
+  'banknote-arrow-up': BanknoteArrowUp,
+  'bed': Bed,
+  'biceps-flexed': BicepsFlexed,
+  'book-open': BookOpen,
+  'book-open-text': BookOpenText,
+  'brain': Brain,
+  'briefcase': Briefcase,
+  'calculator': Calculator,
+  'chart-candlestick': ChartCandlestick,
+  'chart-column': ChartColumn,
+  'chart-line': ChartLine,
+  'chart-network': ChartNetwork,
+  'chart-pie': ChartPie,
+  'clipboard-check': ClipboardCheck,
+  'clock': Clock3,
+  'code-branch': GitBranch,
+  'coins': Coins,
+  'compass': Compass,
+  'film': Film,
+  'gem': Gem,
+  'heart': Heart,
+  'industry': Factory,
+  'list-tree': ListTree,
+  'messages-square': MessageSquare,
+  'piggy-bank': PiggyBank,
+  'receipt': Receipt,
+  'rocket': Rocket,
+  'route': Route,
+  'shield': Shield,
+  'shield-check': ShieldCheck,
+  'spade': Spade,
+  'sport-shoe': Footprints,
+  'stethoscope': Stethoscope,
+  'target': Target,
+  'tent-tree': TentTree,
+  'trophy': Trophy,
+  'user': User,
+  'user-graduate': GraduationCap,
+  'users': Users,
+  'wallet': Wallet,
 };
-
-function toPascalCase(str: string): string {
-  return str
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join('');
-}
 
 export default function SidebarIcon({icon, className}: Props) {
   if (!icon) return null;
-
-  const lucideName = aliases[icon] ?? toPascalCase(icon);
-  const Icon = (LucideIcons as Record<string, unknown>)[lucideName] as LucideIcon | undefined;
-
+  const Icon = ICONS[icon];
   if (!Icon) return null;
-
   return <Icon aria-hidden="true" className={clsx('sidebarIcon', className)} />;
 }

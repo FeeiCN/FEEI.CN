@@ -30,6 +30,15 @@ def fetch_json(url: str) -> dict:
     return json.loads(fetch_bytes(url).decode("utf-8"))
 
 
+def yaml_title(title: str) -> str:
+    """Quote a title for YAML frontmatter if it contains special characters."""
+    if ":" in title or '"' in title or "'" in title or "#" in title:
+        if "'" not in title:
+            return f"'{title}'"
+        return '"' + title.replace('"', '\\"') + '"'
+    return title
+
+
 def clean_text(value: str) -> str:
     value = html.unescape(value)
     value = value.replace("\xa0", " ")
@@ -145,15 +154,29 @@ def group_adjacent_images(markdown: str, image_dir: Path) -> str:
     return "\n\n".join(grouped)
 
 
+def escape_mdx_angle_brackets(markdown: str) -> str:
+    """Escape < outside fenced code blocks that would break MDX parsing."""
+    result = []
+    last_end = 0
+    for m in re.finditer(r"```[\s\S]*?```", markdown):
+        before = markdown[last_end:m.start()]
+        result.append(re.sub(r"<(?![a-zA-Z_$\/]|!--)", "&lt;", before))
+        result.append(m.group())
+        last_end = m.end()
+    result.append(re.sub(r"<(?![a-zA-Z_$\/]|!--)", "&lt;", markdown[last_end:]))
+    return "".join(result)
+
+
 def normalize_markdown(markdown: str, image_dir: Path) -> str:
     markdown = group_adjacent_images(markdown, image_dir)
+    markdown = escape_mdx_angle_brackets(markdown)
     markdown = markdown.replace(
         "**2025 年，我累计阅读 80 本书，阅读 255 天，总时长超过 368 小时（较去年增长 133%），平均每天约 60 分钟，并留下 2223 条**阅读笔记** 。** 今年阅读主要围绕经济理财与个人提升方面。",
         "**2025 年，我累计阅读 80 本书，阅读 255 天，总时长超过 368 小时（较去年增长 133%），平均每天约 60 分钟，并留下 2223 条阅读笔记。** 今年阅读主要围绕经济理财与个人提升方面。",
     )
     markdown = re.sub(r"(?<!\\)(?<!\*)\*\*万", r"\\*\\*万", markdown)
-    if "{/* truncate */}" not in markdown:
-        markdown = re.sub(r"\n\n(## )", "\n\n{/* truncate */}\n\n\\1", markdown, count=1)
+    if "<!-- truncate -->" not in markdown:
+        markdown = re.sub(r"\n\n(## )", "\n\n<!-- truncate -->\n\n\\1", markdown, count=1)
     return markdown
 
 
@@ -235,7 +258,21 @@ class Converter:
         if not target.exists():
             target.write_bytes(fetch_bytes(url))
             time.sleep(0.05)
-        local = f"./{filename}"
+        # Convert to WebP on the fly; update filename so the md ref uses .webp
+        if target.suffix.lower() != ".webp":
+            webp_target = target.with_suffix(".webp")
+            if not webp_target.exists():
+                try:
+                    from PIL import Image
+                    with Image.open(target) as im:
+                        mode = "RGBA" if im.mode in ("P", "RGBA") else "RGB"
+                        im.convert(mode).save(webp_target, "WEBP", quality=82, method=6)
+                except Exception:
+                    webp_target = target  # fallback: keep original
+            if webp_target != target and webp_target.exists():
+                target.unlink()
+            target = webp_target
+        local = f"./{target.name}"
         self.downloads[url] = local
         return local
 
@@ -248,9 +285,12 @@ class Converter:
         return f"![{alt}]({local})"
 
     def convert_table(self, tag: Tag) -> str:
+        def escape_cell(text: str) -> str:
+            return text.replace("<", "&lt;").replace(">", "&gt;")
+
         rows: list[list[str]] = []
         for tr in tag.find_all("tr"):
-            cells = [clean_text(cell.get_text(" ", strip=True)) for cell in tr.find_all(["th", "td"])]
+            cells = [escape_cell(clean_text(cell.get_text(" ", strip=True))) for cell in tr.find_all(["th", "td"])]
             if cells:
                 rows.append(cells)
         if not rows:
@@ -306,7 +346,7 @@ class Converter:
 
         if node.name == "p":
             images = [self.image_markdown(img) for img in node.find_all("img")]
-            images = [img for img in images if img]
+            images = list(dict.fromkeys(img for img in images if img))
             text = clean_text(inline_text(node))
             parts = []
             if text:
@@ -316,9 +356,11 @@ class Converter:
 
         if node.name == "figure":
             parts: list[str] = []
+            seen: set[str] = set()
             for img in node.find_all("img"):
                 md = self.image_markdown(img)
-                if md:
+                if md and md not in seen:
+                    seen.add(md)
                     parts.append(md)
             caption = node.find("figcaption")
             if caption:
@@ -336,6 +378,19 @@ class Converter:
 
         if node.name in {"ul", "ol"}:
             return self.convert_list(node, node.name == "ol")
+
+        if node.name == "pre":
+            code_tag = node.find("code")
+            lang = ""
+            if code_tag:
+                for cls in (code_tag.get("class") or []):
+                    if cls.startswith("language-"):
+                        lang = cls[9:]
+                        break
+                text = code_tag.get_text()
+            else:
+                text = node.get_text()
+            return f"```{lang}\n{text.rstrip()}\n```"
 
         if node.name == "blockquote":
             text = self.convert_children(node)
@@ -393,7 +448,7 @@ def main() -> None:
     body = re.sub(r"\n{3,}", "\n\n", body).strip()
     body = normalize_markdown(body, out_dir)
 
-    frontmatter = f"""---\nslug: {slug}\ntitle: {title}\ndate: {date}\ntags: [年度总结]\n---\n"""
+    frontmatter = f"""---\nslug: {slug}\ntitle: {yaml_title(title)}\ndate: {date}\ntags: [年度总结]\n---\n"""
     source_note = f"\n\n> 原文：[{title}]({source_url})\n\n"
     out_file.write_text(frontmatter + source_note + body + "\n", encoding="utf-8")
     print(f"Wrote {out_file}")

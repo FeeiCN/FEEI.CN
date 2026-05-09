@@ -32,7 +32,9 @@
       "Bash(xargs ls -lh)",
       "Bash(sort -k5 -rh)",
       "Bash(xargs du -ch)",
-      "Bash(curl -s 'https://feei.cn/wp-json/wp/v2/posts?slug=__TRACKED_VAR__&_fields=id,slug,status,content')"
+      "Bash(curl -s 'https://feei.cn/wp-json/wp/v2/posts?slug=__TRACKED_VAR__&_fields=id,slug,status,content')",
+      "Bash(xargs -I{} head -10 {})",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\" && grep -m1 \"^slug:\" {} || echo \"\\(no slug\\)\"')"
     ]
   }
 }

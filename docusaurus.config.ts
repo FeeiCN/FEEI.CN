@@ -91,7 +91,7 @@ const config: Config = {
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'feeicn', // Usually your GitHub org/user name.
-  projectName: 'certainty-in-life', // Usually your repo name.
+  projectName: 'wufeifei.com', // Usually your repo name.
 
   onBrokenLinks: 'throw',
 
@@ -150,7 +150,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/FeeiCN/certainty-in-life/tree/main/',
+            'https://github.com/FeeiCN/wufeifei.com/tree/main/',
         },
         blog: false,
         theme: {
@@ -219,7 +219,7 @@ const config: Config = {
           icon: 'user',
         },
         // {
-        //   href: 'https://github.com/FeeiCN/certainty-in-life',
+        //   href: 'https://github.com/FeeiCN/wufeifei.com',
         //   label: 'GitHub',
         //   position: 'right',
         //   icon: 'code-branch',

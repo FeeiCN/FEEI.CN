@@ -410,6 +410,7 @@
 }
 
 .navbar__items:not(.navbar__items--right) {
+  position: relative;
   align-self: stretch;
   align-items: stretch;
   margin-top: calc(-1 * var(--ifm-navbar-padding-vertical));
@@ -456,7 +457,7 @@
 .navbar__link--active {
   color: #111827;
   font-weight: 500;
-  box-shadow: inset 0 -2px 0 #111827;
+  box-shadow: inset 0 -2px 0 rgba(17, 24, 39, 0.35);
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
@@ -485,6 +486,7 @@
 
 [data-theme='dark'] .navbar__link:hover {
   color: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 -2px 0 #fff;
 }
 
 [data-theme='dark'] .navbar__link--active {
@@ -561,6 +563,7 @@
   background: rgba(15, 23, 42, 0.05);
   color: #374151;
 }
+
 
 .theme-doc-sidebar-menu .menu__link--active {
   background: transparent;
@@ -1059,6 +1062,7 @@
   text-decoration: none;
 }
 
+
 .table-of-contents__link--active {
   color: #111827;
 }
@@ -1082,6 +1086,7 @@
 [data-theme='dark'] .table-of-contents__link:hover {
   color: rgba(255, 255, 255, 0.8);
 }
+
 
 [data-theme='dark'] .table-of-contents__link--active {
   color: #fff;
@@ -1178,4 +1183,40 @@
   > .menu__list-item-collapsible
   .sidebarIcon {
   color: rgba(255, 255, 255, 0.3);
+}
+
+/* ── Sliding line indicator (JS-driven) ─────────────────────────────────── */
+.sliding-line-indicator {
+  position: absolute;
+  background: #111827;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.15s ease;
+  z-index: 2;
+}
+
+/* Vertical indicators (sidebar / TOC): left edge, 2px wide */
+.sliding-line-indicator[data-axis='y'] {
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 1rem;
+}
+
+/* Horizontal indicator (navbar): bottom edge, 2px tall */
+.sliding-line-indicator[data-axis='x'] {
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 2rem;
+  background: rgba(17, 24, 39, 0.35);
+}
+
+[data-theme='dark'] .sliding-line-indicator {
+  background: #fff;
 }

@@ -162,6 +162,8 @@ const config: Config = {
 
   plugins: [docMtimePlugin],
 
+  clientModules: ['./src/clientModules/slidingIndicator.ts'],
+
   themeConfig: {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.webp',

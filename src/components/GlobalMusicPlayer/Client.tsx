@@ -1,7 +1,6 @@
 import clsx from 'clsx';
 import {Music} from 'lucide-react';
 import {useEffect, useRef, useState} from 'react';
-import {createPortal} from 'react-dom';
 import type APlayerInstance from 'aplayer';
 import type {Options as APlayerOptions} from 'aplayer';
 import 'aplayer/dist/APlayer.min.css';
@@ -49,48 +48,58 @@ type ExtendedAPlayer = APlayerInstance & {
 };
 
 const readStoredPlayerState = (): StoredPlayerState => {
-  if (typeof window === 'undefined') {
-    return {};
-  }
-
+  if (typeof window === 'undefined') return {};
   try {
-    const rawState = window.localStorage.getItem(playerStateStorageKey);
-
-    if (!rawState) {
-      return {};
-    }
-
-    const parsedState = JSON.parse(rawState) as StoredPlayerState;
-    return parsedState && typeof parsedState === 'object' ? parsedState : {};
-  } catch (error) {
-    console.warn('Failed to read saved music player state.', error);
+    const raw = window.localStorage.getItem(playerStateStorageKey);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as StoredPlayerState;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
     return {};
   }
 };
 
 const writeStoredPlayerState = (state: StoredPlayerState) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
+  if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(playerStateStorageKey, JSON.stringify(state));
-  } catch (error) {
-    console.warn('Failed to save music player state.', error);
-  }
+  } catch {}
 };
 
 const normalizeStoredTime = (time?: number) => {
-  if (!Number.isFinite(time) || typeof time !== 'number') {
-    return 0;
-  }
-
+  if (!Number.isFinite(time) || typeof time !== 'number') return 0;
   return Math.max(0, Math.floor(time));
 };
 
+// ─── Module-level singletons ────────────────────────────────────────────────
+// These survive React component remounts (happens when navigating between the
+// Docusaurus "pages" plugin and the "docs" plugin, which triggers a full
+// layout remount). Keeping the APlayer instance and its DOM nodes here means
+// music never stops on cross-plugin navigation.
+let _shellEl: HTMLDivElement | null = null;
+let _mountEl: HTMLDivElement | null = null;
+let _player: ExtendedAPlayer | null = null;
+let _lastGroupId: string | null = null;
+let _wasVisible = false;
+
+function ensurePlayerDOM(): {shell: HTMLDivElement; mount: HTMLDivElement} {
+  if (!_shellEl) {
+    _shellEl = document.createElement('div');
+    _shellEl.className = styles.musicPlayerShell;
+    _shellEl.style.display = 'none';
+    document.body.appendChild(_shellEl);
+
+    _mountEl = document.createElement('div');
+    _mountEl.className = styles.musicPlayerMount;
+    _mountEl.setAttribute('aria-label', '站点音乐播放器');
+    _shellEl.appendChild(_mountEl);
+  }
+  return {shell: _shellEl, mount: _mountEl!};
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 function GlobalMusicPlayerClient() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const playerRef = useRef<APlayerInstance | null>(null);
+  const playerRef = useRef<APlayerInstance | null>(_player);
   const isListOpenRef = useRef(false);
   const shouldKeepListOpenOnNextMountRef = useRef(false);
   const shouldAutoplayOnNextMountRef = useRef(false);
@@ -102,11 +111,13 @@ function GlobalMusicPlayerClient() {
   const [activeGroupId, setActiveGroupId] = useState(
     storedStateRef.current.activeGroupId ?? siteMusicGroups[0]?.id ?? '',
   );
-  const [isReady, setIsReady] = useState(false);
-  const [isPlayerVisible, setIsPlayerVisible] = useState(false);
+  // When reusing an existing player after a cross-plugin navigation (pages ↔ docs),
+  // the player is already running — skip the pending/fade-in state entirely.
+  const [isReady, setIsReady] = useState(_wasVisible && _player !== null);
+  const [isPlayerVisible, setIsPlayerVisible] = useState(_wasVisible);
   const [isListOpen, setIsListOpen] = useState(false);
   const [isGroupPanelOpen, setIsGroupPanelOpen] = useState(false);
-  const matchedActiveGroup = groups.find((group) => group.id === activeGroupId);
+  const matchedActiveGroup = groups.find((g) => g.id === activeGroupId);
   const shouldWaitForActiveGroup = !hasResolvedGroups && activeGroupId !== '' && !matchedActiveGroup;
   const activeGroup = matchedActiveGroup ?? (shouldWaitForActiveGroup ? undefined : groups[0]);
 
@@ -122,18 +133,11 @@ function GlobalMusicPlayerClient() {
   };
 
   const persistGroupPlayback = (group: PlaylistGroup | undefined, player?: ExtendedAPlayer | null) => {
-    if (!group) {
-      return;
-    }
-
+    if (!group) return;
     const activePlayer = player ?? (playerRef.current as ExtendedAPlayer | null);
     const trackIndex = activePlayer?.list?.index ?? 0;
     const currentTrack = group.tracks[trackIndex] ?? group.tracks[0];
-
-    if (!currentTrack) {
-      return;
-    }
-
+    if (!currentTrack) return;
     persistStoredState((current) => ({
       ...current,
       groups: {
@@ -147,53 +151,36 @@ function GlobalMusicPlayerClient() {
   };
 
   useEffect(() => {
-    if (!activeGroupId) {
-      return;
-    }
-
-    persistStoredState((current) => ({
-      ...current,
-      activeGroupId,
-    }));
+    if (!activeGroupId) return;
+    persistStoredState((current) => ({...current, activeGroupId}));
   }, [activeGroupId]);
 
-
+  // Sync shell visibility and body padding class with React state
   useEffect(() => {
+    const {shell} = ensurePlayerDOM();
+    shell.style.display = isPlayerVisible ? '' : 'none';
     document.body.classList.toggle(playerVisibleBodyClassName, isPlayerVisible);
-
-    return () => {
-      document.body.classList.remove(playerVisibleBodyClassName);
-    };
   }, [isPlayerVisible]);
 
+  // Toggle the pending (fade-in) class imperatively on the shell element
   useEffect(() => {
-    if (!isGroupPanelOpen) {
-      return;
-    }
+    if (!_shellEl) return;
+    _shellEl.classList.toggle(styles.musicPlayerShellPending, !isReady);
+  }, [isReady]);
 
+  useEffect(() => {
+    if (!isGroupPanelOpen) return;
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
-
-      if (!target) {
-        return;
-      }
-
-      if (groupPanelRef.current?.contains(target) || groupToggleButtonRef.current?.contains(target)) {
-        return;
-      }
-
+      if (!target) return;
+      if (groupPanelRef.current?.contains(target) || groupToggleButtonRef.current?.contains(target)) return;
       setIsGroupPanelOpen(false);
     };
-
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsGroupPanelOpen(false);
-      }
+      if (event.key === 'Escape') setIsGroupPanelOpen(false);
     };
-
     document.addEventListener('pointerdown', handlePointerDown);
     document.addEventListener('keydown', handleKeyDown);
-
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
@@ -202,46 +189,25 @@ function GlobalMusicPlayerClient() {
 
   useEffect(() => {
     let disposed = false;
-
     async function loadBabyMusicGroups() {
       try {
         const response = await fetch(babyMusicManifestUrl);
-
-        if (!response.ok) {
-          return;
-        }
-
+        if (!response.ok) return;
         const manifest = (await response.json()) as PlaylistManifestGroup[];
-
-        if (disposed || manifest.length === 0) {
-          return;
-        }
-
+        if (disposed || manifest.length === 0) return;
         setGroups([...siteMusicGroups, ...manifest.map(playlistGroupFromManifest)]);
-      } catch (error) {
-        console.warn('Failed to load baby music groups.', error);
+      } catch {
       } finally {
-        if (!disposed) {
-          setHasResolvedGroups(true);
-        }
+        if (!disposed) setHasResolvedGroups(true);
       }
     }
-
     void loadBabyMusicGroups();
-
-    return () => {
-      disposed = true;
-    };
+    return () => { disposed = true; };
   }, []);
 
   useEffect(() => {
-    if (!hasResolvedGroups) {
-      return;
-    }
-
-    if (!matchedActiveGroup && groups[0]) {
-      setActiveGroupId(groups[0].id);
-    }
+    if (!hasResolvedGroups) return;
+    if (!matchedActiveGroup && groups[0]) setActiveGroupId(groups[0].id);
   }, [groups, hasResolvedGroups, matchedActiveGroup]);
 
   useEffect(() => {
@@ -261,25 +227,29 @@ function GlobalMusicPlayerClient() {
     const currentGroup = activeGroup;
 
     async function mountPlayer() {
-      if (!containerRef.current) {
+      const {mount} = ensurePlayerDOM();
+
+      // Reuse existing player when navigating back (same group, already running)
+      if (_player && _lastGroupId === currentGroup.id) {
+        playerRef.current = _player;
+        setIsReady(true);
         return;
       }
 
       try {
-        const module = (await import('aplayer')) as unknown as {
-          default?: APlayerConstructor;
-        };
+        const module = (await import('aplayer')) as unknown as {default?: APlayerConstructor};
         const APlayer = module.default ?? (module as unknown as APlayerConstructor);
 
-        if (disposed || !containerRef.current) {
-          return;
+        if (disposed) return;
+
+        if (_player) {
+          _player.destroy();
+          _player = null;
+          mount.innerHTML = '';
         }
 
-        playerRef.current?.destroy();
-        containerRef.current.innerHTML = '';
-
         playerRef.current = new APlayer({
-          container: containerRef.current,
+          container: mount,
           fixed: true,
           audio: currentGroup.tracks,
           autoplay: false,
@@ -294,10 +264,13 @@ function GlobalMusicPlayerClient() {
           theme: '#205d3b',
         });
 
+        _player = playerRef.current as ExtendedAPlayer;
+        _lastGroupId = currentGroup.id;
+
         const player = playerRef.current as ExtendedAPlayer;
         const savedGroupPlayback = storedStateRef.current.groups?.[currentGroup.id];
         const savedTrackIndex = savedGroupPlayback?.trackUrl
-          ? currentGroup.tracks.findIndex((track) => track.url === savedGroupPlayback.trackUrl)
+          ? currentGroup.tracks.findIndex((t) => t.url === savedGroupPlayback.trackUrl)
           : -1;
         const restoreTrackIndex = savedTrackIndex >= 0 ? savedTrackIndex : 0;
         const restoreCurrentTime = normalizeStoredTime(savedGroupPlayback?.currentTime);
@@ -308,36 +281,20 @@ function GlobalMusicPlayerClient() {
           player.lrc.update = (time = player.audio?.currentTime ?? 0) => {
             const lyricState = player.lrc;
             const currentLyrics = lyricState?.current ?? [];
-
-            if (!lyricState || currentLyrics.length === 0) {
-              return;
-            }
-
+            if (!lyricState || currentLyrics.length === 0) return;
             if (
               lyricState.index > currentLyrics.length - 1 ||
               time < currentLyrics[lyricState.index]?.[0] ||
               !currentLyrics[lyricState.index + 1] ||
               time >= currentLyrics[lyricState.index + 1][0]
             ) {
-              for (let index = 0; index < currentLyrics.length; index += 1) {
-                if (
-                  time >= currentLyrics[index][0] &&
-                  (!currentLyrics[index + 1] || time < currentLyrics[index + 1][0])
-                ) {
-                  lyricState.index = index;
-                  lyricState.container.style.transform = `translateY(${
-                    fullScreenLyricLineHeight * -index
-                  }px)`;
-                  lyricState.container.style.webkitTransform = `translateY(${
-                    fullScreenLyricLineHeight * -index
-                  }px)`;
-                  lyricState.container
-                    .querySelector('.aplayer-lrc-current')
-                    ?.classList.remove('aplayer-lrc-current');
-                  lyricState.container
-                    .getElementsByTagName('p')
-                    .item(index)
-                    ?.classList.add('aplayer-lrc-current');
+              for (let i = 0; i < currentLyrics.length; i++) {
+                if (time >= currentLyrics[i][0] && (!currentLyrics[i + 1] || time < currentLyrics[i + 1][0])) {
+                  lyricState.index = i;
+                  lyricState.container.style.transform = `translateY(${fullScreenLyricLineHeight * -i}px)`;
+                  lyricState.container.style.webkitTransform = `translateY(${fullScreenLyricLineHeight * -i}px)`;
+                  lyricState.container.querySelector('.aplayer-lrc-current')?.classList.remove('aplayer-lrc-current');
+                  lyricState.container.getElementsByTagName('p').item(i)?.classList.add('aplayer-lrc-current');
                   break;
                 }
               }
@@ -350,65 +307,41 @@ function GlobalMusicPlayerClient() {
         player.template?.lrcButton?.classList.add('aplayer-icon-lrc-inactivity');
 
         const restorePlaybackProgress = () => {
-          if (hasRestoredProgress || !player.seek || !player.audio) {
-            return;
-          }
-
+          if (hasRestoredProgress || !player.seek || !player.audio) return;
           const duration = player.duration ?? player.audio.duration;
-
-          if (!Number.isFinite(duration) || !duration || duration <= 0) {
-            return;
-          }
-
+          if (!Number.isFinite(duration) || !duration || duration <= 0) return;
           player.seek(Math.min(restoreCurrentTime, Math.max(duration - 1, 0)));
           hasRestoredProgress = true;
         };
 
-        if (restoreTrackIndex > 0) {
-          player.list?.switch?.(restoreTrackIndex);
-        }
-
+        if (restoreTrackIndex > 0) player.list?.switch?.(restoreTrackIndex);
         restorePlaybackProgress();
 
         let hasAttemptedAutoplay = false;
         const attemptAutoplay = () => {
-          if (!shouldAutoplay || hasAttemptedAutoplay) {
-            return;
-          }
-
+          if (!shouldAutoplay || hasAttemptedAutoplay) return;
           hasAttemptedAutoplay = true;
           player.play?.();
-          void player.audio?.play?.().catch((error) => {
-            console.warn('Failed to autoplay the selected music group.', error);
-          });
+          void player.audio?.play?.().catch(() => {});
         };
 
         player.on?.('loadedmetadata', restorePlaybackProgress);
         player.on?.('canplay', restorePlaybackProgress);
         player.on?.('canplay', attemptAutoplay);
-        player.on?.('listswitch', () => {
-          lastSavedPlaybackSecond = -1;
-          persistGroupPlayback(currentGroup, player);
-        });
+        player.on?.('listswitch', () => { lastSavedPlaybackSecond = -1; persistGroupPlayback(currentGroup, player); });
         player.on?.('play', () => persistGroupPlayback(currentGroup, player));
         player.on?.('pause', () => persistGroupPlayback(currentGroup, player));
         player.on?.('seeked', () => persistGroupPlayback(currentGroup, player));
         player.on?.('ended', () => persistGroupPlayback(currentGroup, player));
         player.on?.('timeupdate', () => {
-          const currentSecond = normalizeStoredTime(player.audio?.currentTime);
-
-          if (currentSecond === lastSavedPlaybackSecond || currentSecond === 0 || currentSecond % 5 !== 0) {
-            return;
-          }
-
-          lastSavedPlaybackSecond = currentSecond;
+          const s = normalizeStoredTime(player.audio?.currentTime);
+          if (s === lastSavedPlaybackSecond || s === 0 || s % 5 !== 0) return;
+          lastSavedPlaybackSecond = s;
           persistGroupPlayback(currentGroup, player);
         });
 
-        const listElement = containerRef.current.querySelector('.aplayer-list');
-        if (shouldRestoreListOpen) {
-          listElement?.classList.remove('aplayer-list-hide');
-        }
+        const listElement = mount.querySelector('.aplayer-list');
+        if (shouldRestoreListOpen) listElement?.classList.remove('aplayer-list-hide');
         updateListOpenState(
           shouldRestoreListOpen || (listElement ? !listElement.classList.contains('aplayer-list-hide') : false),
         );
@@ -423,60 +356,46 @@ function GlobalMusicPlayerClient() {
           player.list?.show?.();
         }
 
-        if (shouldAutoplay) {
-          window.requestAnimationFrame(attemptAutoplay);
-        }
+        if (shouldAutoplay) window.requestAnimationFrame(attemptAutoplay);
 
         const handlePageHide = () => persistGroupPlayback(currentGroup, player);
         window.addEventListener('pagehide', handlePageHide);
 
         setIsReady(true);
 
-        return () => {
-          window.removeEventListener('pagehide', handlePageHide);
-        };
+        return () => { window.removeEventListener('pagehide', handlePageHide); };
       } catch (error) {
         console.error('Failed to initialize global music player.', error);
       }
     }
 
     let cleanupMount: (() => void) | undefined;
-
     void mountPlayer().then((cleanup) => {
-      if (disposed) {
-        cleanup?.();
-        return;
-      }
-
+      if (disposed) { cleanup?.(); return; }
       cleanupMount = cleanup;
     });
 
     return () => {
       disposed = true;
+      // Save visibility so the next mount can restore it
+      _wasVisible = isPlayerVisible;
       persistGroupPlayback(currentGroup, playerRef.current as ExtendedAPlayer | null);
       cleanupMount?.();
-      playerRef.current?.destroy();
-      playerRef.current = null;
+      // Do NOT destroy the player — keep it alive across layout remounts
     };
   }, [activeGroup, isPlayerVisible]);
 
-  if (!activeGroup) {
-    return null;
-  }
+  if (!activeGroup) return null;
 
   const handleGroupSelect = (groupId: string) => {
     shouldKeepListOpenOnNextMountRef.current = isPlayerVisible && (isListOpen || isListOpenRef.current);
     setIsGroupPanelOpen(false);
-
     if (isPlayerVisible && groupId === activeGroup.id) {
-      const currentPlayer = playerRef.current as ExtendedAPlayer | null;
-      currentPlayer?.play?.();
-      void currentPlayer?.audio?.play?.().catch((error) => {
-        console.warn('Failed to resume playback for the current music group.', error);
-      });
+      const p = playerRef.current as ExtendedAPlayer | null;
+      p?.play?.();
+      void p?.audio?.play?.().catch(() => {});
       return;
     }
-
     shouldAutoplayOnNextMountRef.current = true;
     setActiveGroupId(groupId);
     setIsPlayerVisible(true);
@@ -500,20 +419,12 @@ function GlobalMusicPlayerClient() {
             event.stopPropagation();
             setIsGroupPanelOpen((open) => !open);
           }}>
-          <Music
-            size={24}
-            strokeWidth={2}
-            aria-hidden="true"
-            className={styles.musicGroupToggleIcon}
-          />
+          <Music size={24} strokeWidth={2} aria-hidden="true" className={styles.musicGroupToggleIcon} />
         </button>
         <div
           id="global-music-group-panel"
           ref={groupPanelRef}
-          className={clsx(
-            styles.musicGroupPanel,
-            isGroupPanelOpen && styles.musicGroupPanelOpen,
-          )}
+          className={clsx(styles.musicGroupPanel, isGroupPanelOpen && styles.musicGroupPanelOpen)}
           role="dialog"
           aria-label="音乐歌单分组">
           <div className={styles.musicGroupPanelTitle}>歌单分类</div>
@@ -541,26 +452,7 @@ function GlobalMusicPlayerClient() {
       </div>
     ) : null;
 
-  const playerPanel = isPlayerVisible ? (
-    <div
-      className={clsx(
-        styles.musicPlayerShell,
-        !isReady && styles.musicPlayerShellPending,
-      )}>
-      <div
-        ref={containerRef}
-        className={styles.musicPlayerMount}
-        aria-label="站点音乐播放器"
-      />
-    </div>
-  ) : null;
-
-  return (
-    <>
-      {groupSwitcher}
-      {playerPanel ? createPortal(playerPanel, document.body) : null}
-    </>
-  );
+  return <>{groupSwitcher}</>;
 }
 
 export default GlobalMusicPlayerClient;

@@ -14,11 +14,11 @@ export default function NavbarLogo() {
       <ShinyText
         text="FEEI"
         speed={4}
-        color={isLight ? '#111111' : '#dddddd'}
+        color={isLight ? '#111111' : '#555555'}
         shineColor={isLight ? '#888888' : '#ffffff'}
         spread={120}
         className={styles.logoText}
-        style={{WebkitTextStroke: isLight ? '2.5px #111111' : '2.5px #dddddd'}}
+        style={{WebkitTextStroke: isLight ? '2.5px #111111' : '2.5px #888888'}}
       />
     </Link>
   );

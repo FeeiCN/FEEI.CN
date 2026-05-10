@@ -163,6 +163,17 @@
   cursor: zoom-in;
 }
 
+/* Single standalone image: constrain portrait photos automatically.
+   Paragraphs with 2+ images are handled by the grid above. */
+.markdown p:not(:has(> img ~ img)) > img {
+  display: block;
+  max-height: 480px;
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
+  border-radius: 0.75rem;
+}
+
 @media (max-width: 640px) {
   .markdown p:has(> img + img) {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -39,7 +39,8 @@ class Track:
 
     @property
     def lyric_file_name(self) -> str:
-        return f"{Path(self.file_name).stem}.lrc"
+        p = Path(self.file_name)
+        return str(p.with_suffix(".lrc"))
 
     @property
     def lyric_path(self) -> Path:
@@ -321,7 +322,7 @@ def main() -> int:
         for future in concurrent.futures.as_completed(futures):
             item = future.result()
             if item.get("written"):
-                lyric_file_map[item["file_name"]] = f"{Path(item['file_name']).stem}.lrc"
+                lyric_file_map[item["file_name"]] = str(Path(item["file_name"]).with_suffix(".lrc"))
             report.append(item)
             error = item.get("error")
             if error:

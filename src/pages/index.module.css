@@ -1,13 +1,18 @@
 .hero {
-  min-height: 52vh;
+  position: relative;
+  min-height: calc(100vh - var(--ifm-navbar-height));
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 5rem 2rem 3.5rem;
   text-align: center;
+  background: #000;
+  overflow: hidden;
 }
 
 .heroContent {
+  position: relative;
+  z-index: 1;
   max-width: 580px;
 }
 
@@ -15,26 +20,29 @@
   font-size: 0.72rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.6);
   margin-bottom: 1.6rem;
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
 }
 
 .heroTitle {
   font-size: clamp(2.2rem, 5.5vw, 3.4rem);
   font-weight: 700;
-  color: #0f172a;
+  color: #ffffff;
   line-height: 1.15;
   letter-spacing: -0.035em;
   margin-bottom: 1.25rem;
+  text-shadow: 0 0 24px rgba(0, 0, 0, 0.9), 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .heroTagline {
   font-size: 1rem;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.7);
   line-height: 1.85;
   margin-bottom: 2.5rem;
   font-weight: 400;
   letter-spacing: 0.01em;
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
 }
 
 .heroCta {
@@ -42,17 +50,18 @@
   align-items: center;
   gap: 0.45rem;
   font-size: 0.875rem;
-  font-weight: 500;
-  color: #ff5b1f;
+  font-weight: 600;
+  color: #ffaa80;
   text-decoration: none;
   padding-bottom: 0.15rem;
-  border-bottom: 1px solid rgba(255, 91, 31, 0.35);
+  border-bottom: 1px solid rgba(255, 170, 128, 0.5);
   transition: color 180ms ease, border-color 180ms ease, gap 180ms ease;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
 }
 
 .heroCta:hover {
-  color: #e04a12;
-  border-color: #e04a12;
+  color: #ff8a5c;
+  border-color: rgba(255, 138, 92, 0.8);
   gap: 0.65rem;
   text-decoration: none;
 }
@@ -66,28 +75,6 @@
 @media (max-width: 996px) {
   .hero {
     padding: 4rem 2rem 2.5rem;
-    min-height: 44vh;
+    min-height: 60vh;
   }
-}
-
-[data-theme='dark'] .heroTitle {
-  color: #f9fafb;
-}
-
-[data-theme='dark'] .heroLabel {
-  color: rgba(255, 255, 255, 0.25);
-}
-
-[data-theme='dark'] .heroTagline {
-  color: rgba(255, 255, 255, 0.45);
-}
-
-[data-theme='dark'] .heroCta {
-  color: #ff8a5c;
-  border-color: rgba(255, 138, 92, 0.38);
-}
-
-[data-theme='dark'] .heroCta:hover {
-  color: #ff6e3a;
-  border-color: rgba(255, 110, 58, 0.7);
 }

@@ -34,7 +34,10 @@
       "Bash(xargs du -ch)",
       "Bash(curl -s 'https://feei.cn/wp-json/wp/v2/posts?slug=__TRACKED_VAR__&_fields=id,slug,status,content')",
       "Bash(xargs -I{} head -10 {})",
-      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\" && grep -m1 \"^slug:\" {} || echo \"\\(no slug\\)\"')"
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\" && grep -m1 \"^slug:\" {} || echo \"\\(no slug\\)\"')",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:reactbits.dev)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

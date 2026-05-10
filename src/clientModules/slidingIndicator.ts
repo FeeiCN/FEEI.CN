@@ -26,6 +26,8 @@ const CONFIGS: IndicatorConfig[] = [
   },
 ];
 
+const abortControllers = new Map<string, AbortController>();
+
 function setup({container, links, id, axis}: IndicatorConfig) {
   const containerEl = document.querySelector<HTMLElement>(container);
   if (!containerEl) return;
@@ -43,11 +45,15 @@ function setup({container, links, id, axis}: IndicatorConfig) {
 
   const indicator = ind;
 
+  // Abort previous listeners without touching DOM nodes
+  abortControllers.get(id)?.abort();
+  const ac = new AbortController();
+  abortControllers.set(id, ac);
+  const {signal} = ac;
+
   function moveTo(el: HTMLElement) {
     const cRect = containerEl!.getBoundingClientRect();
     const lRect = el.getBoundingClientRect();
-    // Absolute positioning is relative to the padding edge, not the border edge.
-    // Subtract borderLeftWidth/borderTopWidth to compensate.
     const borderLeft = parseFloat(getComputedStyle(containerEl!).borderLeftWidth) || 0;
     const borderTop = parseFloat(getComputedStyle(containerEl!).borderTopWidth) || 0;
 
@@ -66,20 +72,13 @@ function setup({container, links, id, axis}: IndicatorConfig) {
     indicator.style.opacity = '1';
   }
 
-  // Re-bind listeners (remove old ones via clone swap)
-  const linkEls = Array.from(containerEl.querySelectorAll<HTMLElement>(links));
-  linkEls.forEach(link => {
-    const fresh = link.cloneNode(true) as HTMLElement;
-    link.parentNode?.replaceChild(fresh, link);
-  });
-
   containerEl.querySelectorAll<HTMLElement>(links).forEach(link => {
-    link.addEventListener('mouseenter', () => moveTo(link));
+    link.addEventListener('mouseenter', () => moveTo(link), {signal});
   });
 
   containerEl.addEventListener('mouseleave', () => {
     indicator.style.opacity = '0';
-  });
+  }, {signal});
 }
 
 function init() {

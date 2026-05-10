@@ -218,12 +218,10 @@ const config: Config = {
           label: '何许人也',
           icon: 'user',
         },
-        // {
-        //   href: 'https://github.com/FeeiCN/wufeifei.com',
-        //   label: 'GitHub',
-        //   position: 'right',
-        //   icon: 'code-branch',
-        // },
+        {
+          type: 'custom-music-player',
+          position: 'right',
+        },
       ],
     },
     footer: {

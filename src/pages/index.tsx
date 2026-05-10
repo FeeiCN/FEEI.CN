@@ -4,6 +4,7 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {useColorMode} from '@docusaurus/theme-common';
 import Layout from '@theme/Layout';
 import LetterGlitch from '@site/src/components/LetterGlitch';
+import LightRays from '@site/src/components/LightRays';
 import TextType from '@site/src/components/TextType';
 import styles from './index.module.css';
 
@@ -22,6 +23,16 @@ function HeroSection(): ReactNode {
         glitchColors={glitchColors}
         centerVignette
         style={{ position: 'absolute', inset: 0, zIndex: 0, backgroundColor: '#000' }}
+      />
+      <LightRays
+        raysOrigin="top-center"
+        raysColor="#ffffff"
+        raysSpeed={0.8}
+        lightSpread={0.6}
+        rayLength={1.5}
+        followMouse
+        mouseInfluence={0.08}
+        style={{ position: 'absolute', inset: 0, zIndex: 1 }}
       />
       <div className={styles.heroContent}>
         <p className={styles.heroLabel}>FEEI · Personal Wiki</p>

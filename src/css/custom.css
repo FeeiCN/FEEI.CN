@@ -61,6 +61,16 @@
   line-height: 1.85;
 }
 
+/* Keep list items compact even when Markdown wraps them in paragraphs. */
+.theme-doc-markdown li > p {
+  margin-top: 0;
+  margin-bottom: 0.35rem;
+}
+
+.theme-doc-markdown li > p:last-child {
+  margin-bottom: 0;
+}
+
 
 .markdown p:has(> img + img) {
   display: grid;

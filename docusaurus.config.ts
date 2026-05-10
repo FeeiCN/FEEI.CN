@@ -44,7 +44,9 @@ function attachSidebarIcons<
     }
 
     if (item.type === 'category') {
-      nextItem.collapsed = depth > 0;
+      if (typeof item.collapsed === 'undefined') {
+        nextItem.collapsed = depth > 0;
+      }
 
       if (item.link?.type === 'doc' && item.link.id) {
         const icon = getDocIcon(docsById.get(item.link.id));

@@ -1,12 +1,15 @@
 import clsx from 'clsx';
 import {Music} from 'lucide-react';
 import {useEffect, useRef, useState} from 'react';
+import {createRoot} from 'react-dom/client';
+import type {Root} from 'react-dom/client';
 import type APlayerInstance from 'aplayer';
 import type {Options as APlayerOptions} from 'aplayer';
 import 'aplayer/dist/APlayer.min.css';
 import {playlistGroupFromManifest, siteMusicGroups} from './playlist';
 import type {PlaylistGroup, PlaylistManifestGroup} from './playlist';
 import styles from './styles.module.css';
+import Galaxy from './Galaxy';
 
 type APlayerConstructor = new (options: APlayerOptions) => APlayerInstance;
 const babyMusicManifestUrl = '/music/baby-music/manifest.json';
@@ -81,6 +84,7 @@ let _mountEl: HTMLDivElement | null = null;
 let _player: ExtendedAPlayer | null = null;
 let _lastGroupId: string | null = null;
 let _wasVisible = false;
+let _burstRoot: Root | null = null;
 
 function ensurePlayerDOM(): {shell: HTMLDivElement; mount: HTMLDivElement} {
   if (!_shellEl) {
@@ -243,6 +247,8 @@ function GlobalMusicPlayerClient() {
         if (disposed) return;
 
         if (_player) {
+          _burstRoot?.unmount();
+          _burstRoot = null;
           _player.destroy();
           _player = null;
           mount.innerHTML = '';
@@ -266,6 +272,14 @@ function GlobalMusicPlayerClient() {
 
         _player = playerRef.current as ExtendedAPlayer;
         _lastGroupId = currentGroup.id;
+
+        const lrcEl = mount.querySelector('.aplayer-lrc') as HTMLElement | null;
+        if (lrcEl) {
+          const burstContainer = document.createElement('div');
+          lrcEl.insertBefore(burstContainer, lrcEl.firstChild);
+          _burstRoot = createRoot(burstContainer);
+          _burstRoot.render(<Galaxy density={1} glowIntensity={0.3} twinkleIntensity={0.3} rotationSpeed={0.1} hueShift={140} saturation={0.4} />);
+        }
 
         const player = playerRef.current as ExtendedAPlayer;
         const savedGroupPlayback = storedStateRef.current.groups?.[currentGroup.id];

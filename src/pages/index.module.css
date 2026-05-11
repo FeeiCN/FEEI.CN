@@ -75,6 +75,6 @@
 @media (max-width: 996px) {
   .hero {
     padding: 4rem 2rem 2.5rem;
-    min-height: 60vh;
+    min-height: calc(100vh - var(--ifm-navbar-height));
   }
 }

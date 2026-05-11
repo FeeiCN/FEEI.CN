@@ -219,7 +219,7 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'aboutSidebar',
           position: 'left',
-          label: '何许人也',
+          label: '自述',
           icon: 'user',
         },
         {

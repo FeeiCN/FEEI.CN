@@ -7,23 +7,36 @@ import isInternalUrl from '@docusaurus/isInternalUrl';
 import IconExternalLink from '@theme/Icon/ExternalLink';
 import type {Props} from '@theme/DocSidebarItem/Link';
 import SidebarIcon from '@site/src/components/SidebarIcon';
+import type {AnimatedIconHandle} from '@site/src/components/ItsHoverIcon';
+import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useControlledIconAnimation';
 
 import styles from './styles.module.css';
 
 function LinkLabel({
   label,
   icon,
+  iconRef,
+  disableHover,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   label: string;
   icon?: string;
+  iconRef: React.RefObject<AnimatedIconHandle | null>;
+  disableHover: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }) {
   return (
-    <>
-      <SidebarIcon icon={icon} />
+    <span
+      className={styles.linkLabelTrigger}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}>
+      <SidebarIcon icon={icon} iconRef={iconRef} disableHover={disableHover} />
       <span title={label} className={styles.linkLabel}>
         {label}
       </span>
-    </>
+    </span>
   );
 }
 
@@ -40,6 +53,7 @@ export default function DocSidebarItemLink({
   const isInternalLink = isInternalUrl(href);
   const icon =
     typeof customProps?.icon === 'string' ? customProps.icon : undefined;
+  const iconAnimation = useControlledIconAnimation(Boolean(icon));
 
   return (
     <li
@@ -66,7 +80,14 @@ export default function DocSidebarItemLink({
           onClick: onItemClick ? () => onItemClick(item) : undefined,
         })}
         {...props}>
-        <LinkLabel label={label} icon={icon} />
+        <LinkLabel
+          label={label}
+          icon={icon}
+          iconRef={iconAnimation.iconRef}
+          disableHover={iconAnimation.disableHover}
+          onMouseEnter={iconAnimation.onMouseEnter}
+          onMouseLeave={iconAnimation.onMouseLeave}
+        />
         {!isInternalLink && <IconExternalLink />}
       </Link>
     </li>

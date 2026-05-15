@@ -1,5 +1,4 @@
 import clsx from 'clsx';
-import {Music} from 'lucide-react';
 import {useEffect, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import type {Root} from 'react-dom/client';
@@ -10,6 +9,8 @@ import {playlistGroupFromManifest, siteMusicGroups} from './playlist';
 import type {PlaylistGroup, PlaylistManifestGroup} from './playlist';
 import styles from './styles.module.css';
 import Galaxy from './Galaxy';
+import {MusicIcon} from '@site/src/components/ItsHoverIcon';
+import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useControlledIconAnimation';
 
 type APlayerConstructor = new (options: APlayerOptions) => APlayerInstance;
 const babyMusicManifestUrl = '/music/baby-music/manifest.json';
@@ -103,6 +104,7 @@ function ensurePlayerDOM(): {shell: HTMLDivElement; mount: HTMLDivElement} {
 // ────────────────────────────────────────────────────────────────────────────
 
 function GlobalMusicPlayerClient() {
+  const musicIconAnimation = useControlledIconAnimation(true);
   const playerRef = useRef<APlayerInstance | null>(_player);
   const isListOpenRef = useRef(false);
   const shouldKeepListOpenOnNextMountRef = useRef(false);
@@ -429,11 +431,19 @@ function GlobalMusicPlayerClient() {
           aria-label="切换音乐歌单分组"
           aria-expanded={isGroupPanelOpen}
           aria-controls="global-music-group-panel"
+          onMouseEnter={musicIconAnimation.onMouseEnter}
+          onMouseLeave={musicIconAnimation.onMouseLeave}
           onClick={(event) => {
             event.stopPropagation();
             setIsGroupPanelOpen((open) => !open);
           }}>
-          <Music size={24} strokeWidth={2} aria-hidden="true" className={styles.musicGroupToggleIcon} />
+          <MusicIcon
+            ref={musicIconAnimation.iconRef}
+            size={24}
+            strokeWidth={2}
+            disableHover={musicIconAnimation.disableHover}
+            className={styles.musicGroupToggleIcon}
+          />
         </button>
         <div
           id="global-music-group-panel"

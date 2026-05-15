@@ -199,7 +199,7 @@ const config: Config = {
           sidebarId: 'financeFreedomSidebar',
           position: 'left',
           label: '财务自由',
-          icon: 'chart-line',
+          icon: 'brand-bags-fm-icon',
         },
         {
           type: 'docSidebar',
@@ -212,15 +212,15 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'dailyReflectionSidebar',
           position: 'left',
-          label: '吾日三省',
-          icon: 'clipboard-check',
+          label: '三省吾身',
+          icon: 'chart-covariate-icon',
         },
         {
           type: 'docSidebar',
           sidebarId: 'aboutSidebar',
           position: 'left',
-          label: '自述',
-          icon: 'user',
+          label: '吴飞飞',
+          icon: 'at-sign-icon',
         },
         {
           type: 'custom-music-player',

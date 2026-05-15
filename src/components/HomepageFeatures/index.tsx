@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react';
 import Link from '@docusaurus/Link';
 import SidebarIcon from '@site/src/components/SidebarIcon';
+import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useControlledIconAnimation';
 import styles from './styles.module.css';
 
 type FeatureItem = {
@@ -28,7 +29,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: '财富',
-    icon: 'chart-line',
+    icon: 'brand-bags-fm-icon',
     description: '工作储蓄、控制支出、投资理财',
     to: '/wealth/overview',
     num: '03',
@@ -43,11 +44,22 @@ const FeatureList: FeatureItem[] = [
 ];
 
 function Feature({title, icon, description, to, num}: FeatureItem) {
+  const iconAnimation = useControlledIconAnimation(true);
+
   return (
-    <Link to={to} className={styles.featureCard}>
+    <Link
+      to={to}
+      className={styles.featureCard}
+      onMouseEnter={iconAnimation.onMouseEnter}
+      onMouseLeave={iconAnimation.onMouseLeave}>
       <span className={styles.featureNum}>{num}</span>
       <div className={styles.featureIconWrap}>
-        <SidebarIcon icon={icon} className={styles.featureIconSvg} />
+        <SidebarIcon
+          icon={icon}
+          className={styles.featureIconSvg}
+          iconRef={iconAnimation.iconRef}
+          disableHover={iconAnimation.disableHover}
+        />
       </div>
       <h3 className={styles.featureTitle}>{title}</h3>
       <p className={styles.featureDesc}>{description}</p>

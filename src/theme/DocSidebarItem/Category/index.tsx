@@ -26,6 +26,8 @@ import DocSidebarItems from '@theme/DocSidebarItems';
 import DocSidebarItemLink from '@theme/DocSidebarItem/Link';
 import type {Props} from '@theme/DocSidebarItem/Category';
 import SidebarIcon from '@site/src/components/SidebarIcon';
+import type {AnimatedIconHandle} from '@site/src/components/ItsHoverIcon';
+import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useControlledIconAnimation';
 
 import type {
   PropSidebarItemCategory,
@@ -119,17 +121,28 @@ function CollapseButton({
 function CategoryLinkLabel({
   label,
   icon,
+  iconRef,
+  disableHover,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   label: string;
   icon?: string;
+  iconRef: React.RefObject<AnimatedIconHandle | null>;
+  disableHover: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }) {
   return (
-    <>
-      <SidebarIcon icon={icon} />
+    <span
+      className={styles.categoryLinkLabelTrigger}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}>
+      <SidebarIcon icon={icon} iconRef={iconRef} disableHover={disableHover} />
       <span title={label} className={styles.categoryLinkLabel}>
         {label}
       </span>
-    </>
+    </span>
   );
 }
 
@@ -190,6 +203,7 @@ function DocSidebarItemCategoryCollapsible({
   const isCurrentPage = isSamePath(href, activePath);
   const icon =
     typeof customProps?.icon === 'string' ? customProps.icon : undefined;
+  const iconAnimation = useControlledIconAnimation(Boolean(icon));
 
   const {collapsed, setCollapsed} = useCollapsible({
     initialState: () => {
@@ -266,7 +280,14 @@ function DocSidebarItemCategoryCollapsible({
           aria-expanded={collapsible && !href ? !collapsed : undefined}
           href={collapsible ? hrefWithSSRFallback ?? '#' : hrefWithSSRFallback}
           {...props}>
-          <CategoryLinkLabel label={label} icon={icon} />
+          <CategoryLinkLabel
+            label={label}
+            icon={icon}
+            iconRef={iconAnimation.iconRef}
+            disableHover={iconAnimation.disableHover}
+            onMouseEnter={iconAnimation.onMouseEnter}
+            onMouseLeave={iconAnimation.onMouseLeave}
+          />
         </Link>
         {href && collapsible && (
           <CollapseButton

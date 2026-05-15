@@ -1,10 +1,12 @@
 import React, {type ReactNode} from 'react';
 import {useNavbarMobileSidebar} from '@docusaurus/theme-common/internal';
 import {translate} from '@docusaurus/Translate';
-import {Menu} from 'lucide-react';
+import {MenuIcon} from '@site/src/components/ItsHoverIcon';
+import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useControlledIconAnimation';
 
 export default function MobileSidebarToggle(): ReactNode {
   const {toggle, shown} = useNavbarMobileSidebar();
+  const iconAnimation = useControlledIconAnimation(true);
   return (
     <button
       onClick={toggle}
@@ -15,14 +17,14 @@ export default function MobileSidebarToggle(): ReactNode {
       })}
       aria-expanded={shown}
       className="navbar__toggle clean-btn"
+      onMouseEnter={iconAnimation.onMouseEnter}
+      onMouseLeave={iconAnimation.onMouseLeave}
       type="button">
-      <Menu
-        aria-hidden="true"
+      <MenuIcon
+        ref={iconAnimation.iconRef}
         size={18}
         strokeWidth={1.6}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{display: 'block'}}
+        disableHover={iconAnimation.disableHover}
       />
     </button>
   );

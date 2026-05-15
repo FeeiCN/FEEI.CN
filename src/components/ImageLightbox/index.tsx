@@ -1,6 +1,10 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {TouchEvent} from 'react';
-import {ChevronLeft, ChevronRight, X} from 'lucide-react';
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CloseIcon,
+} from '@site/src/components/ItsHoverIcon';
 
 type LightboxImage = {
   src: string;
@@ -322,7 +326,7 @@ export default function ImageLightbox() {
       onTouchEnd={handleTouchEnd}
       onClick={close}>
       <button className="imageLightbox__close" type="button" aria-label="关闭图片预览" onClick={close}>
-        <X size={22} />
+        <CloseIcon size={22} />
       </button>
 
       {hasMultipleImages && (
@@ -334,7 +338,7 @@ export default function ImageLightbox() {
             event.stopPropagation();
             showPrevious();
           }}>
-          <ChevronLeft size={30} />
+          <ChevronLeftIcon size={30} />
         </button>
       )}
 
@@ -360,7 +364,7 @@ export default function ImageLightbox() {
             event.stopPropagation();
             showNext();
           }}>
-          <ChevronRight size={30} />
+          <ChevronRightIcon size={30} />
         </button>
       )}
 

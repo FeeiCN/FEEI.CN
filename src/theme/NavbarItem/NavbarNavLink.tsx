@@ -7,6 +7,7 @@ import {isRegexpStringMatch} from '@docusaurus/theme-common';
 import IconExternalLink from '@theme/Icon/ExternalLink';
 import type {Props} from '@theme/NavbarItem/NavbarNavLink';
 import SidebarIcon from '@site/src/components/SidebarIcon';
+import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useControlledIconAnimation';
 
 type NavbarNavLinkProps = Props & {
   icon?: string;
@@ -22,12 +23,15 @@ export default function NavbarNavLink({
   icon,
   isDropdownLink,
   prependBaseUrlToHref,
+  onMouseEnter,
+  onMouseLeave,
   ...props
 }: NavbarNavLinkProps): ReactNode {
   const toUrl = useBaseUrl(to);
   const activeBaseUrl = useBaseUrl(activeBasePath);
   const normalizedHref = useBaseUrl(href, {forcePrependBaseUrl: true});
   const isExternalLink = label && href && !isInternalUrl(href);
+  const iconAnimation = useControlledIconAnimation(Boolean(icon));
 
   const linkContentProps = html
     ? {dangerouslySetInnerHTML: {__html: html}}
@@ -36,8 +40,15 @@ export default function NavbarNavLink({
           <span
             className={clsx('navbarItemLabel', {
               navbarItemLabelDropdown: isDropdownLink,
-            })}>
-            <SidebarIcon icon={icon} className="navbarItemIcon" />
+            })}
+            onMouseEnter={iconAnimation.onMouseEnter}
+            onMouseLeave={iconAnimation.onMouseLeave}>
+            <SidebarIcon
+              icon={icon}
+              className="navbarItemIcon"
+              iconRef={iconAnimation.iconRef}
+              disableHover={iconAnimation.disableHover}
+            />
             <span>{label}</span>
             {isExternalLink && (
               <IconExternalLink
@@ -52,6 +63,8 @@ export default function NavbarNavLink({
     return (
       <Link
         href={prependBaseUrlToHref ? normalizedHref : href}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
         {...props}
         {...linkContentProps}
       />
@@ -68,6 +81,8 @@ export default function NavbarNavLink({
             ? isRegexpStringMatch(activeBaseRegex, location.pathname)
             : location.pathname.startsWith(activeBaseUrl),
       })}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       {...props}
       {...linkContentProps}
     />

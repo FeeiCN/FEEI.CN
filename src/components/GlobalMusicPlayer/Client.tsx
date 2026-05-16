@@ -344,7 +344,18 @@ function GlobalMusicPlayerClient() {
         player.on?.('loadedmetadata', restorePlaybackProgress);
         player.on?.('canplay', restorePlaybackProgress);
         player.on?.('canplay', attemptAutoplay);
-        player.on?.('listswitch', () => { lastSavedPlaybackSecond = -1; persistGroupPlayback(currentGroup, player); });
+        player.on?.('listswitch', () => {
+          lastSavedPlaybackSecond = -1;
+          persistGroupPlayback(currentGroup, player);
+          const lyricState = player.lrc;
+          if (lyricState) {
+            lyricState.index = 0;
+            lyricState.container.style.transform = 'translateY(0)';
+            lyricState.container.style.webkitTransform = 'translateY(0)';
+            lyricState.container.querySelector('.aplayer-lrc-current')?.classList.remove('aplayer-lrc-current');
+            lyricState.container.getElementsByTagName('p').item(0)?.classList.add('aplayer-lrc-current');
+          }
+        });
         player.on?.('play', () => persistGroupPlayback(currentGroup, player));
         player.on?.('pause', () => persistGroupPlayback(currentGroup, player));
         player.on?.('seeked', () => persistGroupPlayback(currentGroup, player));

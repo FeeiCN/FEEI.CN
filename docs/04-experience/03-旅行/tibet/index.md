@@ -1,6 +1,6 @@
 ---
 slug: /tibet
-title: Tibet
+title: 西藏
 ---
 
 

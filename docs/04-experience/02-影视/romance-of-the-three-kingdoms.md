@@ -1,6 +1,6 @@
 ---
 slug: /romance-of-the-three-kingdoms
-title: Romance of the Three Kingdoms
+title: 三国演义
 ---
 
 

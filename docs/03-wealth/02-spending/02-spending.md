@@ -1,6 +1,6 @@
 ---
 slug: spending-overview
-icon: wallet
+icon: upload-icon
 ---
 
 # 控制支出

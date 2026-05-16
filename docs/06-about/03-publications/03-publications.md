@@ -1,5 +1,6 @@
 ---
 title: 我的出版物
+icon: book-open-text
 ---
 
 ## 《网络安全面试指南》

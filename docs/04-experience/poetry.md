@@ -1,6 +1,7 @@
 ---
 slug: /poetry
-title: Poetry
+title: 诗词歌赋
+icon: coffee
 ---
 
 

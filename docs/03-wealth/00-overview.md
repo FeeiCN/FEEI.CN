@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 slug: overview
-icon: clock
+icon: chart-pie
 ---
 
 # 财务状态

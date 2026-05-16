@@ -1,6 +1,6 @@
 ---
 slug: saving-overview
-icon: briefcase
+icon: download-icon
 ---
 
 # 工作储蓄

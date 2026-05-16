@@ -1,6 +1,6 @@
 ---
 slug: career
-icon: route
+icon: list-tree
 ---
 
 # 职业与事业

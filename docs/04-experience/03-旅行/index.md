@@ -1,6 +1,6 @@
 ---
 slug: travel
-icon: tent-tree
+icon: globe-icon
 ---
 
 # 环游全世界

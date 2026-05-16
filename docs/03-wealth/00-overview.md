@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 slug: overview
-icon: chart-pie
+icon: chart-pie-icon
 ---
 
 # 财务状态

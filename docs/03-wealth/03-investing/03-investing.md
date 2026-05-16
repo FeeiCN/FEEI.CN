@@ -1,6 +1,6 @@
 ---
 slug: investing-overview
-icon: chart-line
+icon: chart-line-icon
 ---
 
 # 投资理财

@@ -173,7 +173,15 @@ const favoriteTracks: Audio[] = [
   localTrack('See You Again', 'Wiz Khalifa&Charlie Puth ', 'SeeYouAgain-WizKhalifaCharliePuth.mp3'),
   localTrack('Rage Your Dream', 'm.o.v.e', 'Rage-Your-Dream-m.o.v.e.mp3'),
   localTrack('Welcome to New York', 'Taylor Swift', 'Welcome-to-new-york.mp3'),
-
+  localTrack('That Girl', 'Olly Murs', 'That_Girl-Olly_Murs.flac'),
+  localTrack('谁', '曾至锋', '谁-曾至锋.flac'),
+  localTrack('倔强', '五月天', '倔强-五月天.flac'),
+  localTrack('温柔', '五月天', '温柔-五月天.flac'),
+  localTrack('知足', '五月天', '知足-五月天.flac'),
+  localTrack('突然好想你', '五月天', '突然好想你-五月天.flac'),
+  localTrack('你不是真正的快乐', '五月天', '你不是真正的快乐-五月天.flac'),
+  localTrack('后来的我们', '五月天', '后来的我们.flac'),
+  localTrack('恋爱ing', '五月天', '恋爱ing-五月天.flac'),
 ];
 
 const jayTracks: Audio[] = [

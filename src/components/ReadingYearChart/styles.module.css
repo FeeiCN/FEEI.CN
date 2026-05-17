@@ -1,0 +1,18 @@
+.chartWrap {
+  --reading-chart-grid: rgba(148, 163, 184, 0.28);
+  --reading-chart-axis: rgba(148, 163, 184, 0.5);
+  --reading-chart-muted: #64748b;
+  --reading-chart-border: rgba(148, 163, 184, 0.32);
+  --reading-chart-tooltip: var(--ifm-background-color);
+
+  width: 100%;
+  min-height: 320px;
+  margin: 1rem 0 1.25rem;
+}
+
+[data-theme='dark'] .chartWrap {
+  --reading-chart-grid: rgba(148, 163, 184, 0.22);
+  --reading-chart-axis: rgba(148, 163, 184, 0.36);
+  --reading-chart-muted: #94a3b8;
+  --reading-chart-border: rgba(148, 163, 184, 0.28);
+}

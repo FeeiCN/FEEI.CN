@@ -210,13 +210,6 @@ const config: Config = {
         },
         {
           type: 'docSidebar',
-          sidebarId: 'dailyReflectionSidebar',
-          position: 'left',
-          label: '三省吾身',
-          icon: 'chart-covariate-icon',
-        },
-        {
-          type: 'docSidebar',
           sidebarId: 'aboutSidebar',
           position: 'left',
           label: '吴飞飞',

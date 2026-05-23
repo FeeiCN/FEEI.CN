@@ -1,0 +1,504 @@
+.wrap {
+  margin: 1rem 0 1.6rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 1.5rem;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(255, 255, 255, 0.98) 100%);
+  box-shadow: 0 1rem 2.8rem rgba(15, 23, 42, 0.06);
+  overflow: visible;
+}
+
+.wrap::-webkit-scrollbar {
+  height: 0.5rem;
+}
+
+.wrap::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.45);
+}
+
+.table {
+  width: 100%;
+  min-width: 980px;
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+}
+
+.table th,
+.table td {
+  padding: 0.85rem 0.8rem;
+  border: 0;
+  border-right: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  vertical-align: top;
+}
+
+.table thead th {
+  padding-top: 0.8rem;
+  padding-bottom: 0.8rem;
+  background: linear-gradient(180deg, #fbfdfc 0%, #f2f7f4 100%);
+  box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.06);
+}
+
+.table thead th:first-child {
+  width: 1%;
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  white-space: nowrap;
+}
+
+.table thead th:nth-child(2) {
+  width: 17%;
+}
+
+.table thead th:nth-child(3) {
+  width: 16%;
+}
+
+.table thead th:nth-child(4) {
+  width: 18%;
+}
+
+.table thead th:last-child {
+  width: 35%;
+  border-right: 0;
+}
+
+.table tbody tr {
+  --annual-review-row-bg: rgba(255, 255, 255, 0.98);
+}
+
+.table tbody tr:nth-child(odd) {
+  --annual-review-row-bg: rgba(250, 252, 251, 0.98);
+}
+
+.rowFeatured {
+  --annual-review-row-bg: rgba(244, 250, 246, 0.98);
+}
+
+.rowRecent {
+  --annual-review-row-bg: rgba(247, 250, 248, 0.98);
+}
+
+.rowStandard {
+}
+
+.rowLegacy {
+  --annual-review-row-bg: rgba(252, 252, 251, 0.98);
+}
+
+.table tbody tr:hover {
+  --annual-review-row-bg: rgba(244, 248, 246, 0.98);
+}
+
+.rowFeatured:hover {
+  --annual-review-row-bg: rgba(239, 247, 242, 0.98);
+}
+
+.rowRecent:hover {
+  --annual-review-row-bg: rgba(243, 248, 245, 0.98);
+}
+
+.table tbody th,
+.table tbody td {
+  background: var(--annual-review-row-bg);
+  transition: background-color var(--ifm-transition-fast) ease;
+}
+
+.table tbody td:last-child,
+.table tbody th:last-child {
+  border-right: 0;
+}
+
+.table tbody tr:last-child td,
+.table tbody tr:last-child th {
+  border-bottom: 0;
+}
+
+.heading {
+  display: inline-flex;
+  align-items: center;
+  color: #111827;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.yearCell {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  box-shadow: 1px 0 0 rgba(15, 23, 42, 0.08);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.yearLink {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.32rem;
+  color: #111827;
+  text-decoration: none;
+  text-align: center;
+}
+
+.yearLink:hover {
+  text-decoration: none;
+}
+
+.yearLink:hover .year {
+  color: var(--ifm-color-primary);
+}
+
+.yearLinkStatic:hover .year {
+  color: #111827;
+}
+
+.year {
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.age {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.16rem 0.42rem;
+  border-radius: 999px;
+  background: rgba(46, 133, 85, 0.12);
+  color: #1f6f45;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.cell {
+  --accent-rgb: 15, 23, 42;
+  --accent-strong: #111827;
+  color: #111827;
+}
+
+.metric {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 0.6rem;
+  padding: 0.2rem 0.56rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #111827;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+}
+
+.item {
+  position: relative;
+  padding-left: 0.8rem;
+}
+
+.item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.78rem;
+  width: 0.38rem;
+  height: 0.14rem;
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.35);
+  transform: translateY(-50%);
+}
+
+.itemMain {
+  color: #334155;
+  font-size: 0.92rem;
+  line-height: 1.58;
+}
+
+.itemSubtle {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 2.9rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.factLabel {
+  padding-top: 0.15rem;
+  color: rgba(var(--accent-rgb), 0.78);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.factBody {
+  min-width: 0;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem 0.38rem;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.48rem;
+  border: 1px solid rgba(var(--accent-rgb), 0.12);
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.08);
+  color: #475569;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.tagSubtle {
+  border-color: rgba(15, 23, 42, 0.08);
+  background: rgba(15, 23, 42, 0.04);
+  color: #64748b;
+}
+
+.empty {
+  color: #9ca3af;
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+.cellHealth .metric {
+  background: rgba(34, 197, 94, 0.12);
+  color: #166534;
+}
+
+.cellHealth {
+  --accent-rgb: 34, 197, 94;
+  --accent-strong: #166534;
+}
+
+.cellCareer .metric {
+  background: rgba(71, 85, 105, 0.12);
+  color: #334155;
+}
+
+.cellCareer {
+  --accent-rgb: 100, 116, 139;
+  --accent-strong: #334155;
+}
+
+.cellWealth .metric {
+  background: rgba(245, 158, 11, 0.16);
+  color: #92400e;
+}
+
+.cellWealth {
+  --accent-rgb: 245, 158, 11;
+  --accent-strong: #92400e;
+}
+
+.cellLife .metric {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0f5c82;
+}
+
+.cellLife {
+  --accent-rgb: 14, 165, 233;
+  --accent-strong: #0f5c82;
+}
+
+.rowFeatured .year {
+  color: var(--ifm-color-primary-dark);
+}
+
+.rowLegacy .year,
+.rowLegacy .itemMain,
+.rowLegacy .tag {
+  color: #475569;
+}
+
+.rowLegacy .itemSubtle {
+  color: #94a3b8;
+}
+
+@media (max-width: 996px) {
+  .wrap {
+    margin-inline: -0.35rem;
+    border-radius: 1.25rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .table {
+    min-width: 920px;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.78rem 0.72rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    border-radius: 1rem;
+  }
+
+  .table {
+    min-width: 860px;
+  }
+
+  .heading {
+    font-size: 0.84rem;
+  }
+
+  .year {
+    font-size: 1.05rem;
+  }
+
+  .age {
+    font-size: 0.7rem;
+  }
+
+  .fact {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: 0.45rem;
+  }
+}
+
+[data-theme='dark'] .wrap {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
+  box-shadow: 0 1rem 3rem rgba(2, 6, 23, 0.32);
+}
+
+[data-theme='dark'] .wrap::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.28);
+}
+
+[data-theme='dark'] .table th,
+[data-theme='dark'] .table td,
+[data-theme='dark'] .yearCell {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .table thead th {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.98) 0%, rgba(17, 24, 39, 0.98) 100%);
+}
+
+[data-theme='dark'] .table tbody tr {
+  --annual-review-row-bg: rgba(15, 23, 42, 0.88);
+}
+
+[data-theme='dark'] .table tbody tr:nth-child(odd) {
+  --annual-review-row-bg: rgba(17, 24, 39, 0.92);
+}
+
+[data-theme='dark'] .table tbody tr:hover {
+  --annual-review-row-bg: rgba(30, 41, 59, 0.96);
+}
+
+[data-theme='dark'] .heading,
+[data-theme='dark'] .yearLink,
+[data-theme='dark'] .yearLinkStatic {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .yearLinkStatic:hover .year {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .age {
+  background: rgba(74, 222, 128, 0.14);
+  color: #86efac;
+}
+
+[data-theme='dark'] .metric {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.94);
+}
+
+[data-theme='dark'] .itemMain {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+[data-theme='dark'] .itemSubtle {
+  color: rgba(226, 232, 240, 0.46);
+}
+
+[data-theme='dark'] .factLabel {
+  color: rgba(var(--accent-rgb), 0.86);
+}
+
+[data-theme='dark'] .tag {
+  border-color: rgba(var(--accent-rgb), 0.18);
+  background: rgba(var(--accent-rgb), 0.12);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+[data-theme='dark'] .tagSubtle {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(226, 232, 240, 0.66);
+}
+
+[data-theme='dark'] .empty {
+  color: rgba(255, 255, 255, 0.34);
+}
+
+[data-theme='dark'] .cellHealth .metric {
+  background: rgba(34, 197, 94, 0.16);
+  color: #86efac;
+}
+
+[data-theme='dark'] .cellCareer .metric {
+  background: rgba(148, 163, 184, 0.16);
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .cellWealth .metric {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+}
+
+[data-theme='dark'] .cellLife .metric {
+  background: rgba(14, 165, 233, 0.18);
+  color: #7dd3fc;
+}
+
+[data-theme='dark'] .rowLegacy .year,
+[data-theme='dark'] .rowLegacy .itemMain,
+[data-theme='dark'] .rowLegacy .tag {
+  color: rgba(226, 232, 240, 0.72);
+}
+
+[data-theme='dark'] .rowLegacy .itemSubtle {
+  color: rgba(148, 163, 184, 0.5);
+}

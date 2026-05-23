@@ -24,20 +24,21 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   flex: 0 0 auto;
-  width: 2rem;
-  height: 2rem;
+  gap: 0.125rem;
+  width: auto;
+  height: auto;
   margin-left: 0.25rem;
   z-index: calc(var(--ifm-z-index-fixed) + 5);
 }
 
-.musicGroupToggleButton {
+.musicGroupActionButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
+  width: 2rem;
+  height: 2rem;
   padding: 0;
   border: none;
   border-radius: 50%;
@@ -49,7 +50,7 @@
     background var(--ifm-transition-fast) ease;
 }
 
-.musicGroupToggleButton:hover {
+.musicGroupActionButton:hover {
   color: var(--ifm-navbar-link-hover-color);
   background: var(--ifm-color-emphasis-200);
 }
@@ -479,4 +480,3 @@
 [data-theme='dark'] .musicPlayerMount :global(.aplayer-list ol li.aplayer-list-light) {
   background: rgba(45, 212, 191, 0.12);
 }
-

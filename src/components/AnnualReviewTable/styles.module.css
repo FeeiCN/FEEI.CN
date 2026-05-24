@@ -4,7 +4,7 @@
   border-radius: 1.5rem;
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(255, 255, 255, 0.98) 100%);
   box-shadow: 0 1rem 2.8rem rgba(15, 23, 42, 0.06);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .wrap::-webkit-scrollbar {
@@ -31,6 +31,7 @@
   border: 0;
   border-right: 1px solid rgba(15, 23, 42, 0.08);
   border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background-clip: padding-box;
   vertical-align: top;
 }
 

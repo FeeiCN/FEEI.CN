@@ -1,9 +1,9 @@
-import React, {type ReactNode} from 'react';
+import React, {type CSSProperties, type ReactNode} from 'react';
 import clsx from 'clsx';
 import styles from './styles.module.css';
 
 type Tone = 'health' | 'career' | 'wealth' | 'life';
-type Emphasis = 'featured' | 'recent' | 'standard' | 'legacy';
+type Emphasis = 'featured' | 'recent' | 'standard' | 'legacy' | 'goal';
 
 type AnnualReviewTableProps = {
   children: ReactNode;
@@ -47,8 +47,17 @@ type AnnualReviewTagListProps = {
 };
 
 type AnnualReviewTagProps = {
+  achieved?: boolean;
   children: ReactNode;
+  progress?: number;
   subtle?: boolean;
+};
+
+type AnnualReviewBridgeRowProps = {
+  age?: string;
+  children?: ReactNode;
+  title?: ReactNode;
+  year: string;
 };
 
 const toneClassNameMap: Record<Tone, string> = {
@@ -63,6 +72,7 @@ const emphasisClassNameMap: Record<Emphasis, string> = {
   recent: styles.rowRecent,
   standard: styles.rowStandard,
   legacy: styles.rowLegacy,
+  goal: styles.rowGoal,
 };
 
 export function AnnualReviewTable({children}: AnnualReviewTableProps): ReactNode {
@@ -120,6 +130,30 @@ export function AnnualReviewRow({
         )}
       </th>
       {children}
+    </tr>
+  );
+}
+
+export function AnnualReviewBridgeRow({
+  age,
+  children,
+  title = '过渡期',
+  year,
+}: AnnualReviewBridgeRowProps): ReactNode {
+  return (
+    <tr className={styles.bridgeRow}>
+      <th scope="row" className={clsx(styles.yearCell, styles.bridgeYearCell)}>
+        <span className={clsx(styles.yearLink, styles.yearLinkStatic)}>
+          <span className={styles.year}>{year}</span>
+          {age ? <span className={clsx(styles.age, styles.bridgeAge)}>{age}</span> : null}
+        </span>
+      </th>
+      <td colSpan={4} className={styles.bridgeCell}>
+        <div className={styles.bridgeContent}>
+          <span className={styles.bridgeTitle}>{title}</span>
+          {children ? <div className={styles.bridgeBody}>{children}</div> : null}
+        </div>
+      </td>
     </tr>
   );
 }
@@ -182,12 +216,36 @@ export function AnnualReviewTagList({
 }
 
 export function AnnualReviewTag({
+  achieved = false,
   children,
+  progress,
   subtle = false,
 }: AnnualReviewTagProps): ReactNode {
+  const normalizedProgress = achieved
+    ? 100
+    : typeof progress === 'number'
+      ? Math.max(0, Math.min(Math.round(progress), 99))
+      : null;
+
+  const isPending = normalizedProgress === 0;
+  const isProgress = normalizedProgress !== null && normalizedProgress > 0 && normalizedProgress < 100;
+
+  const style = normalizedProgress !== null
+    ? ({'--tag-progress': `${normalizedProgress}%`} as CSSProperties)
+    : undefined;
+
   return (
-    <span className={clsx(styles.tag, subtle && styles.tagSubtle)}>
-      {children}
+    <span
+      className={clsx(
+        styles.tag,
+        subtle && styles.tagSubtle,
+        achieved && styles.tagAchieved,
+        isPending && styles.tagPending,
+        isProgress && styles.tagProgress,
+      )}
+      style={style}
+    >
+      <span className={styles.tagText}>{children}</span>
     </span>
   );
 }

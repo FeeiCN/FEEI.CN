@@ -2,7 +2,7 @@
   margin: 1rem 0 1.6rem;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 1.5rem;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(255, 255, 255, 0.98) 100%);
+  background: linear-gradient(180deg, rgba(250, 250, 249, 0.98) 0%, rgba(255, 255, 255, 0.98) 100%);
   box-shadow: 0 1rem 2.8rem rgba(15, 23, 42, 0.06);
   overflow: hidden;
 }
@@ -38,7 +38,7 @@
 .table thead th {
   padding-top: 0.8rem;
   padding-bottom: 0.8rem;
-  background: linear-gradient(180deg, #fbfdfc 0%, #f2f7f4 100%);
+  background: linear-gradient(180deg, #fcfcfb 0%, #f3f4f6 100%);
   box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.06);
 }
 
@@ -72,34 +72,50 @@
 }
 
 .table tbody tr:nth-child(odd) {
-  --annual-review-row-bg: rgba(250, 252, 251, 0.98);
+  --annual-review-row-bg: rgba(249, 250, 251, 0.98);
 }
 
 .rowFeatured {
-  --annual-review-row-bg: rgba(244, 250, 246, 0.98);
+  --annual-review-row-bg: rgba(246, 247, 248, 0.98);
+}
+
+.rowGoal {
+  --annual-review-row-bg: rgba(245, 245, 244, 0.98);
 }
 
 .rowRecent {
-  --annual-review-row-bg: rgba(247, 250, 248, 0.98);
+  --annual-review-row-bg: rgba(247, 247, 248, 0.98);
 }
 
 .rowStandard {
 }
 
 .rowLegacy {
-  --annual-review-row-bg: rgba(252, 252, 251, 0.98);
+  --annual-review-row-bg: rgba(250, 250, 250, 0.98);
+}
+
+.bridgeRow {
+  --annual-review-row-bg: rgba(245, 245, 244, 0.98);
 }
 
 .table tbody tr:hover {
-  --annual-review-row-bg: rgba(244, 248, 246, 0.98);
+  --annual-review-row-bg: rgba(243, 244, 246, 0.98);
 }
 
 .rowFeatured:hover {
-  --annual-review-row-bg: rgba(239, 247, 242, 0.98);
+  --annual-review-row-bg: rgba(240, 242, 244, 0.98);
+}
+
+.rowGoal:hover {
+  --annual-review-row-bg: rgba(240, 240, 239, 0.98);
 }
 
 .rowRecent:hover {
-  --annual-review-row-bg: rgba(243, 248, 245, 0.98);
+  --annual-review-row-bg: rgba(241, 243, 245, 0.98);
+}
+
+.bridgeRow:hover {
+  --annual-review-row-bg: rgba(245, 245, 244, 0.98);
 }
 
 .table tbody th,
@@ -136,6 +152,11 @@
   white-space: nowrap;
 }
 
+.bridgeYearCell,
+.bridgeCell {
+  border-bottom-style: dashed;
+}
+
 .yearLink {
   display: flex;
   flex-direction: column;
@@ -151,7 +172,7 @@
 }
 
 .yearLink:hover .year {
-  color: var(--ifm-color-primary);
+  color: #111827;
 }
 
 .yearLinkStatic:hover .year {
@@ -171,17 +192,57 @@
   width: fit-content;
   padding: 0.16rem 0.42rem;
   border-radius: 999px;
-  background: rgba(46, 133, 85, 0.12);
-  color: #1f6f45;
+  background: rgba(15, 23, 42, 0.08);
+  color: #374151;
   font-size: 0.7rem;
   font-weight: 600;
   line-height: 1;
+}
+
+.bridgeAge {
+  background: rgba(15, 23, 42, 0.06);
+  color: #4b5563;
 }
 
 .cell {
   --accent-rgb: 15, 23, 42;
   --accent-strong: #111827;
   color: #111827;
+}
+
+.bridgeCell {
+  padding-top: 0.72rem;
+  padding-bottom: 0.72rem;
+}
+
+.bridgeContent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.bridgeTitle {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.48rem;
+  border: 1px dashed rgba(15, 23, 42, 0.14);
+  border-radius: 999px;
+  color: #6b7280;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.bridgeBody {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+  flex-wrap: wrap;
+  color: #6b7280;
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 .metric {
@@ -234,7 +295,7 @@
 
 .itemSubtle {
   margin: 0;
-  color: #64748b;
+  color: #6b7280;
   font-size: 0.8rem;
   line-height: 1.45;
 }
@@ -247,8 +308,8 @@
 
 .fact {
   display: grid;
-  grid-template-columns: 2.9rem minmax(0, 1fr);
-  gap: 0.55rem;
+  grid-template-columns: 2.35rem minmax(0, 1fr);
+  gap: 0.36rem;
   align-items: start;
 }
 
@@ -273,6 +334,8 @@
 .tag {
   display: inline-flex;
   align-items: center;
+  position: relative;
+  overflow: hidden;
   padding: 0.16rem 0.48rem;
   border: 1px solid rgba(var(--accent-rgb), 0.12);
   border-radius: 999px;
@@ -283,10 +346,16 @@
   white-space: nowrap;
 }
 
+.tagText {
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
 .tagSubtle {
   border-color: rgba(15, 23, 42, 0.08);
   background: rgba(15, 23, 42, 0.04);
-  color: #64748b;
+  color: #6b7280;
 }
 
 .empty {
@@ -295,48 +364,112 @@
   font-style: italic;
 }
 
-.cellHealth .metric {
-  background: rgba(34, 197, 94, 0.12);
-  color: #166534;
-}
-
 .cellHealth {
-  --accent-rgb: 34, 197, 94;
-  --accent-strong: #166534;
-}
-
-.cellCareer .metric {
-  background: rgba(71, 85, 105, 0.12);
-  color: #334155;
+  --accent-rgb: 75, 85, 99;
+  --accent-strong: #374151;
+  --goal-progress-rgb: 55, 65, 81;
 }
 
 .cellCareer {
-  --accent-rgb: 100, 116, 139;
-  --accent-strong: #334155;
-}
-
-.cellWealth .metric {
-  background: rgba(245, 158, 11, 0.16);
-  color: #92400e;
+  --accent-rgb: 75, 85, 99;
+  --accent-strong: #374151;
+  --goal-progress-rgb: 55, 65, 81;
 }
 
 .cellWealth {
-  --accent-rgb: 245, 158, 11;
-  --accent-strong: #92400e;
-}
-
-.cellLife .metric {
-  background: rgba(14, 165, 233, 0.12);
-  color: #0f5c82;
+  --accent-rgb: 75, 85, 99;
+  --accent-strong: #374151;
+  --goal-progress-rgb: 55, 65, 81;
 }
 
 .cellLife {
-  --accent-rgb: 14, 165, 233;
-  --accent-strong: #0f5c82;
+  --accent-rgb: 75, 85, 99;
+  --accent-strong: #374151;
+  --goal-progress-rgb: 55, 65, 81;
+}
+
+.cellHealth .metric,
+.cellCareer .metric,
+.cellWealth .metric,
+.cellLife .metric {
+  background: rgba(15, 23, 42, 0.06);
+  color: #374151;
 }
 
 .rowFeatured .year {
-  color: var(--ifm-color-primary-dark);
+  color: #111827;
+}
+
+.rowGoal .year {
+  color: #44403c;
+}
+
+.rowGoal .age {
+  background: rgba(15, 23, 42, 0.08);
+  color: #4b5563;
+}
+
+.rowGoal .metric {
+  background: rgba(15, 23, 42, 0.06);
+  color: #4b5563;
+}
+
+.rowGoal .cell {
+  --accent-rgb: 75, 85, 99;
+  --accent-strong: #374151;
+}
+
+.rowGoal .factLabel {
+  color: rgba(55, 65, 81, 0.88);
+}
+
+.rowGoal .tag {
+  border-style: solid;
+  border-color: rgba(15, 23, 42, 0.12);
+  background-color: rgba(15, 23, 42, 0.05);
+  background-image: linear-gradient(
+    rgba(var(--goal-progress-rgb, 55, 65, 81), 0.78),
+    rgba(var(--goal-progress-rgb, 55, 65, 81), 0.78)
+  );
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: var(--tag-progress, 0%) 0.1rem;
+  color: #4b5563;
+}
+
+.tagAchieved {
+  font-weight: 600;
+}
+
+.rowGoal .tagAchieved {
+  border-color: rgba(15, 23, 42, 0.18);
+  background-color: rgba(15, 23, 42, 0.08);
+  color: #111827;
+  padding-right: 1.28rem;
+}
+
+.rowGoal .tagAchieved::after {
+  content: '✓';
+  position: absolute;
+  right: 0.34rem;
+  top: 50%;
+  width: 0.8rem;
+  height: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #111827;
+  color: #f9fafb;
+  font-size: 0.52rem;
+  font-weight: 700;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.rowGoal .tagAchieved,
+.rowGoal .tagProgress {
+  font-weight: 600;
 }
 
 .rowLegacy .year,
@@ -389,8 +522,8 @@
   }
 
   .fact {
-    grid-template-columns: 2.5rem minmax(0, 1fr);
-    gap: 0.45rem;
+    grid-template-columns: 2.15rem minmax(0, 1fr);
+    gap: 0.32rem;
   }
 }
 
@@ -426,6 +559,22 @@
   --annual-review-row-bg: rgba(30, 41, 59, 0.96);
 }
 
+[data-theme='dark'] .bridgeRow {
+  --annual-review-row-bg: rgba(31, 41, 55, 0.9);
+}
+
+[data-theme='dark'] .bridgeRow:hover {
+  --annual-review-row-bg: rgba(31, 41, 55, 0.9);
+}
+
+[data-theme='dark'] .rowGoal {
+  --annual-review-row-bg: rgba(31, 41, 55, 0.92);
+}
+
+[data-theme='dark'] .rowGoal:hover {
+  --annual-review-row-bg: rgba(39, 49, 63, 0.94);
+}
+
 [data-theme='dark'] .heading,
 [data-theme='dark'] .yearLink,
 [data-theme='dark'] .yearLinkStatic {
@@ -437,13 +586,27 @@
 }
 
 [data-theme='dark'] .age {
-  background: rgba(74, 222, 128, 0.14);
-  color: #86efac;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(226, 232, 240, 0.82);
+}
+
+[data-theme='dark'] .bridgeAge {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(226, 232, 240, 0.72);
 }
 
 [data-theme='dark'] .metric {
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.94);
+}
+
+[data-theme='dark'] .bridgeTitle {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(226, 232, 240, 0.72);
+}
+
+[data-theme='dark'] .bridgeBody {
+  color: rgba(203, 213, 225, 0.58);
 }
 
 [data-theme='dark'] .itemMain {
@@ -467,31 +630,67 @@
 [data-theme='dark'] .tagSubtle {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.05);
-  color: rgba(226, 232, 240, 0.66);
+  color: rgba(203, 213, 225, 0.64);
 }
 
 [data-theme='dark'] .empty {
   color: rgba(255, 255, 255, 0.34);
 }
 
-[data-theme='dark'] .cellHealth .metric {
-  background: rgba(34, 197, 94, 0.16);
-  color: #86efac;
-}
-
-[data-theme='dark'] .cellCareer .metric {
-  background: rgba(148, 163, 184, 0.16);
-  color: #e2e8f0;
-}
-
-[data-theme='dark'] .cellWealth .metric {
-  background: rgba(245, 158, 11, 0.18);
-  color: #fcd34d;
-}
-
+[data-theme='dark'] .cellHealth .metric,
+[data-theme='dark'] .cellCareer .metric,
+[data-theme='dark'] .cellWealth .metric,
 [data-theme='dark'] .cellLife .metric {
-  background: rgba(14, 165, 233, 0.18);
-  color: #7dd3fc;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(226, 232, 240, 0.82);
+}
+
+[data-theme='dark'] .rowGoal .year {
+  color: #e7e5e4;
+}
+
+[data-theme='dark'] .rowGoal .age {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(226, 232, 240, 0.72);
+}
+
+[data-theme='dark'] .rowGoal .metric {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(226, 232, 240, 0.72);
+}
+
+[data-theme='dark'] .rowGoal .cell {
+  --accent-rgb: 156, 163, 175;
+  --accent-strong: #e5e7eb;
+  --goal-progress-rgb: 229, 231, 235;
+}
+
+[data-theme='dark'] .rowGoal .factLabel {
+  color: rgba(229, 231, 235, 0.78);
+}
+
+[data-theme='dark'] .rowGoal .tag {
+  border-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.05);
+  background-image: linear-gradient(
+    rgba(var(--goal-progress-rgb, 229, 231, 235), 0.78),
+    rgba(var(--goal-progress-rgb, 229, 231, 235), 0.78)
+  );
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: var(--tag-progress, 0%) 0.1rem;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+[data-theme='dark'] .rowGoal .tagAchieved {
+  border-color: rgba(255, 255, 255, 0.16);
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #f3f4f6;
+}
+
+[data-theme='dark'] .rowGoal .tagAchieved::after {
+  background: #f3f4f6;
+  color: #111827;
 }
 
 [data-theme='dark'] .rowLegacy .year,

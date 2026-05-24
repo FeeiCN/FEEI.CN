@@ -1,9 +1,10 @@
 ---
-icon: refresh-icon
+icon: gauge-icon
 hide_table_of_contents: true
 ---
 
 import {
+  AnnualReviewBridgeRow,
   AnnualReviewCell,
   AnnualReviewFact,
   AnnualReviewFacts,
@@ -15,9 +16,119 @@ import {
   AnnualReviewTagList,
 } from '@site/src/components/AnnualReviewTable';
 
-# 年度总结
+# 人生进度
 
 <AnnualReviewTable>
+  <AnnualReviewRow year="2030" age="38岁" emphasis="goal">
+    <AnnualReviewCell tone="health">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="身体">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={65}>无病无痛</AnnualReviewTag>
+            <AnnualReviewTag progress={90}>蔬食饮食</AnnualReviewTag>
+            <AnnualReviewTag progress={10}>规律运动</AnnualReviewTag>
+            <AnnualReviewTag achieved>高质量睡眠</AnnualReviewTag>
+            <AnnualReviewTag progress={80}>BMI &lt; 22</AnnualReviewTag>
+            <AnnualReviewTag progress={30}>体脂率 &lt; 12%</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="心理">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={60}>情绪稳定</AnnualReviewTag>
+            <AnnualReviewTag progress={60}>工作开心</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="关系">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={80}>家庭合睦恩爱</AnnualReviewTag>
+            <AnnualReviewTag progress={50}>两个子女</AnnualReviewTag>
+            <AnnualReviewTag achieved>家人健康</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={70}>创始人</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={10}>拥有可持续盈利的事业</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="能力">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={30}>商业</AnnualReviewTag>
+            <AnnualReviewTag progress={80}>AI x 安全 x 技术</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="储蓄">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={20}>2000万流动资金</AnnualReviewTag>
+            <AnnualReviewTag progress={80}>0负债</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="支出">
+          <AnnualReviewTagList>
+            <AnnualReviewTag achieved>无大额</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="理财">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={50}>稳健100万理财收入/年</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="英语">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={75}>无障碍阅读、观影、旅行</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="阅读">
+          <AnnualReviewTagList>
+            <AnnualReviewTag achieved>>300天/年</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="观影">
+          <AnnualReviewTagList>
+            <AnnualReviewTag achieved>>30部/年</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={20}>走遍各大洲</AnnualReviewTag>
+            <AnnualReviewTag progress={85}>走遍各省市</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="输出">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={70}>迭代人生操作系统</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewBridgeRow year="2026-2029" age="34-37岁" title="逐步逼近目标">
+    <span>从 2025 的现实持续积累，逐步走向 2030 的阶段目标。</span>
+    <AnnualReviewTagList>
+      <AnnualReviewTag subtle>2026</AnnualReviewTag>
+      <AnnualReviewTag subtle>2027</AnnualReviewTag>
+      <AnnualReviewTag subtle>2028</AnnualReviewTag>
+      <AnnualReviewTag subtle>2029</AnnualReviewTag>
+    </AnnualReviewTagList>
+  </AnnualReviewBridgeRow>
+
   <AnnualReviewRow year="2025" age="33岁" href="/annual-review-for-2025" emphasis="featured">
     <AnnualReviewCell tone="health">
       <AnnualReviewFacts>
@@ -41,8 +152,13 @@ import {
         </AnnualReviewFact>
       </AnnualReviewFacts>
     </AnnualReviewCell>
-    <AnnualReviewCell tone="career" metric="35+">
+    <AnnualReviewCell tone="career">
       <AnnualReviewFacts>
+        <AnnualReviewFact label="层级">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>35+</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
         <AnnualReviewFact label="职责">
           <AnnualReviewTagList>
             <AnnualReviewTag>接管 IoT 安全团队</AnnualReviewTag>
@@ -120,7 +236,10 @@ import {
         <AnnualReviewItem>痛风多次发作</AnnualReviewItem>
       </AnnualReviewItems>
     </AnnualReviewCell>
-    <AnnualReviewCell tone="career" metric="35+">
+    <AnnualReviewCell tone="career">
+      <AnnualReviewTagList>
+        <AnnualReviewTag subtle>35+</AnnualReviewTag>
+      </AnnualReviewTagList>
       <AnnualReviewItems>
         <AnnualReviewItem>晋升 P9</AnnualReviewItem>
       </AnnualReviewItems>
@@ -225,7 +344,11 @@ import {
         <AnnualReviewItem>搬新家</AnnualReviewItem>
       </AnnualReviewItems>
     </AnnualReviewCell>
-    <AnnualReviewCell tone="career" metric="375" />
+    <AnnualReviewCell tone="career">
+      <AnnualReviewTagList>
+        <AnnualReviewTag subtle>375</AnnualReviewTag>
+      </AnnualReviewTagList>
+    </AnnualReviewCell>
     <AnnualReviewCell tone="wealth">
       <AnnualReviewItems>
         <AnnualReviewItem subtle="80万">买房子</AnnualReviewItem>
@@ -245,7 +368,10 @@ import {
 
   <AnnualReviewRow year="2020" age="28岁" emphasis="legacy">
     <AnnualReviewCell tone="health" empty />
-    <AnnualReviewCell tone="career" metric="35+">
+    <AnnualReviewCell tone="career">
+      <AnnualReviewTagList>
+        <AnnualReviewTag subtle>35+</AnnualReviewTag>
+      </AnnualReviewTagList>
       <AnnualReviewItems>
         <AnnualReviewItem>HW</AnnualReviewItem>
       </AnnualReviewItems>
@@ -270,7 +396,10 @@ import {
 
   <AnnualReviewRow year="2019" age="27岁" href="/a-security-engineer-2019" emphasis="legacy">
     <AnnualReviewCell tone="health" empty />
-    <AnnualReviewCell tone="career" metric="35+">
+    <AnnualReviewCell tone="career">
+      <AnnualReviewTagList>
+        <AnnualReviewTag subtle>35+</AnnualReviewTag>
+      </AnnualReviewTagList>
       <AnnualReviewItems>
         <AnnualReviewItem>晋升 P8</AnnualReviewItem>
         <AnnualReviewItem>入职阿里</AnnualReviewItem>
@@ -299,7 +428,11 @@ import {
 
   <AnnualReviewRow year="2018" age="26岁" emphasis="legacy">
     <AnnualReviewCell tone="health" empty />
-    <AnnualReviewCell tone="career" metric="375" />
+    <AnnualReviewCell tone="career">
+      <AnnualReviewTagList>
+        <AnnualReviewTag subtle>375</AnnualReviewTag>
+      </AnnualReviewTagList>
+    </AnnualReviewCell>
     <AnnualReviewCell tone="wealth">
       <AnnualReviewItems>
         <AnnualReviewItem>落户杭州</AnnualReviewItem>
@@ -324,7 +457,10 @@ import {
 
   <AnnualReviewRow year="2017" age="25岁" emphasis="legacy">
     <AnnualReviewCell tone="health" empty />
-    <AnnualReviewCell tone="career" metric="375">
+    <AnnualReviewCell tone="career">
+      <AnnualReviewTagList>
+        <AnnualReviewTag subtle>375</AnnualReviewTag>
+      </AnnualReviewTagList>
       <AnnualReviewItems>
         <AnnualReviewItem>晋升 B1</AnnualReviewItem>
       </AnnualReviewItems>
@@ -347,7 +483,10 @@ import {
 
   <AnnualReviewRow year="2016" age="24岁" emphasis="legacy">
     <AnnualReviewCell tone="health" empty />
-    <AnnualReviewCell tone="career" metric="375">
+    <AnnualReviewCell tone="career">
+      <AnnualReviewTagList>
+        <AnnualReviewTag subtle>375</AnnualReviewTag>
+      </AnnualReviewTagList>
       <AnnualReviewItems>
         <AnnualReviewItem>晋升 A3</AnnualReviewItem>
       </AnnualReviewItems>
@@ -376,7 +515,11 @@ import {
 
   <AnnualReviewRow year="2015" age="23岁" emphasis="legacy">
     <AnnualReviewCell tone="health" empty />
-    <AnnualReviewCell tone="career" metric="375" />
+    <AnnualReviewCell tone="career">
+      <AnnualReviewTagList>
+        <AnnualReviewTag subtle>375</AnnualReviewTag>
+      </AnnualReviewTagList>
+    </AnnualReviewCell>
     <AnnualReviewCell tone="wealth" empty />
     <AnnualReviewCell tone="life">
       <AnnualReviewFacts>

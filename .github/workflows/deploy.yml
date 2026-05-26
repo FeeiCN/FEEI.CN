@@ -9,6 +9,10 @@ concurrency:
   group: deploy
   cancel-in-progress: true
 
+env:
+  REPO_DIR: /var/www/wufeifei.com
+  SITE_ROOT: /var/www/wufeifei.com-site
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -25,4 +29,32 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "cd /var/www/wufeifei.com && git pull origin main && npm ci && npm run build"
+            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' bash -se" <<'EOF'
+          set -euo pipefail
+
+          repo_dir="$REPO_DIR"
+          site_root="$SITE_ROOT"
+          releases_dir="$site_root/releases"
+          current_link="$site_root/current"
+          next_current_link="$site_root/current.next"
+          releases_to_keep=5
+
+          cd "$repo_dir"
+          git pull origin main
+          npm ci
+
+          release_name="$(git rev-parse HEAD)"
+          release_dir="$releases_dir/$release_name"
+          staging_dir="${release_dir}.tmp"
+
+          mkdir -p "$releases_dir"
+          rm -rf "$staging_dir"
+          npm run build -- --out-dir "$staging_dir"
+
+          rm -rf "$release_dir"
+          mv "$staging_dir" "$release_dir"
+          ln -sfn "$release_dir" "$next_current_link"
+          mv -Tf "$next_current_link" "$current_link"
+
+          ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf
+          EOF

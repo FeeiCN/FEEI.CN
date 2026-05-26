@@ -7,13 +7,39 @@ on:
 
 concurrency:
   group: deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+  DEPLOY_ROOT: /var/www/wufeifei.com
+  RELEASE_NAME: ${{ github.sha }}
+  ARCHIVE_NAME: site-${{ github.sha }}.tar.gz
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build website
+        run: npm run build
+
+      - name: Package website
+        run: tar -C build -czf "${ARCHIVE_NAME}" .
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -21,8 +47,46 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Deploy on server
+      - name: Upload release archive
+        run: |
+          scp -i ~/.ssh/deploy_key -P "${{ secrets.SERVER_PORT }}" \
+            "${ARCHIVE_NAME}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/${ARCHIVE_NAME}"
+
+      - name: Activate release on server
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "cd /var/www/wufeifei.com && git pull origin main && npm ci && npm run build"
+            "DEPLOY_ROOT='${{ env.DEPLOY_ROOT }}' RELEASE_NAME='${{ env.RELEASE_NAME }}' ARCHIVE_NAME='${{ env.ARCHIVE_NAME }}' bash -se" <<'EOF'
+          set -euo pipefail
+
+          releases_dir="$DEPLOY_ROOT/releases"
+          release_dir="$releases_dir/$RELEASE_NAME"
+          extract_dir="$release_dir.extracting"
+          archive_path="/tmp/$ARCHIVE_NAME"
+          build_link="$DEPLOY_ROOT/build"
+          current_link="$DEPLOY_ROOT/current"
+          next_link="$DEPLOY_ROOT/build.next"
+
+          mkdir -p "$releases_dir"
+          rm -rf "$extract_dir"
+          mkdir -p "$extract_dir"
+          tar -xzf "$archive_path" -C "$extract_dir"
+
+          rm -rf "$release_dir"
+          mv "$extract_dir" "$release_dir"
+
+          ln -sfn "$release_dir" "$current_link"
+
+          if [ -L "$build_link" ]; then
+            ln -sfn "$release_dir" "$next_link"
+            mv -Tf "$next_link" "$build_link"
+          else
+            rm -rf "$build_link"
+            ln -s "$release_dir" "$build_link"
+          fi
+
+          rm -f "$archive_path"
+
+          ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +6 | xargs -r rm -rf
+          EOF

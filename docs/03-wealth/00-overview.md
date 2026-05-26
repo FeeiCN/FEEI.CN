@@ -1,10 +1,10 @@
 ---
-sidebar_position: 1
+sidebar_position: 0
 slug: overview
 icon: chart-pie-icon
 ---
 
-# 财务状态
+# 财务自由
 
 :::info
 - [ ] 收入来源仍然偏单一

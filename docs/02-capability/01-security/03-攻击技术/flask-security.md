@@ -1,11 +1,11 @@
 ---
 slug: flask-security
-title: Flask常见利用点
+title: Flask 常见利用点
 ---
 
 ## Secret Key（FlasK_Login）
 
-[Flask_Login](https://flask-login.readthedocs.io/en/latest/)维护[Flask Session](https://flask.palletsprojects.com/en/latest/api/#sessions)，实现登陆、退出等会话管理功能。Flask Login使用的是客户端的方式储存会话信息，也就是将会话相关身份信息编码后储存在客户端Cookie中，并使用密钥进行签名。而一般的网站使用的是服务端会话方案，客户端的SESSION只是一个标识符，传到服务端后会通过标识符找到对应的用户身份信息。
+[Flask_Login](https://flask-login.readthedocs.io/en/latest/)维护[Flask Session](https://flask.palletsprojects.com/en/latest/api/#sessions)，实现登录、退出等会话管理功能。Flask Login 使用的是客户端方式存储会话信息，也就是将会话相关身份信息编码后存储在客户端 Cookie 中，并使用密钥进行签名。而一般网站使用的是服务端会话方案，客户端的 Session 只是一个标识符，传到服务端后会通过该标识符找到对应的用户身份信息。
 
 客户端储存SESSION信息的方案优势是处理会话信息时速度比较快，因为没有服务端储存步骤。后段服务比较容易横向扩容，因为不用去解决一个用户访问多个服务器间的会话同步问题。缺点也很明显，客户端会话模式中编码部分的内容是可以随意解开的，所以不能储存敏感信息。另外储存内容大小也受到Cookie大小限制，默认4KB。同时Flask无法在服务端直接失效某个会话。
 
@@ -232,7 +232,7 @@ def login():
    	 return 'Login failed'
 ```
 
-password传入`' OR '1'='1'; --`，即可登陆任何账户。
+password传入`' OR '1'='1'; --`，即可登录任何账户。
 
 ```sql
 SELECT * FROM users WHERE username = '' OR '1'='1'; --' AND password = '';
@@ -265,7 +265,7 @@ def login():
    	 return 'Login failed'
 ```
 
-## 登陆爆破
+## 登录爆破
 
 ```python
 from flask import Flask, request, session

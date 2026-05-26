@@ -1,9 +1,9 @@
 ---
 slug: logic-risks-in-github-pull-request
-title: GitHub Pull Request业务逻辑风险
+title: GitHub Pull Request 业务逻辑风险
 ---
 
-最近看了几个GitHub Pull Request相关的漏洞，觉得有点意思，能侧面反应当前业界对于业务逻辑风险的一些现状，记录分享出来。
+最近看了几个 GitHub Pull Request 相关的漏洞，觉得很有意思，也能侧面反映当前业界在业务逻辑风险方面的一些现状，记录分享出来。
 
 <!-- truncate -->
 

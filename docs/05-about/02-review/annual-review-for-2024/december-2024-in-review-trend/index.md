@@ -1,11 +1,11 @@
 ---
 slug: /december-2024-in-review-trend
-title: 'December 2024 in Review: “Trend”'
+title: 'December 2024 in Review: "Trend"'
 ---
 
 
 
-December 2024 Keyword is**Trend** . Company growth trends, emerging industry trends, stock market trends, and disease trends. Discover the trends and capitalize on them to succeed.
+The keyword for December 2024 is **Trend**. Company growth trends, emerging industry trends, stock market trends, and even disease trends all matter. Discover the trends and capitalize on them to succeed.
 
 <!-- truncate -->
 
@@ -19,7 +19,7 @@ December 2024 Keyword is**Trend** . Company growth trends, emerging industry tre
 
 - At this critical moment, the company made numerous management adjustments. The CEO of Alipay was promoted to President of Ant Group, a CFO from Cainiao Network was brought in, the digital payment and digital connectivity businesses were separated, and adjustments were made for the CTO position.
 
-**Outstanding new graduates are offered very high salaries** . Recently, I discussed the salaries for new graduates and learned about other companies’s offers. An outstanding incoming master’s graduate in information security can earn a monthly salary of 40k RMB, not including signing bonuses and year-end bonuses. While not everyone or every company can offer such a salary, this compensation package still surprised me. Keep in mind that even highly experienced and excellent graduates who have been working for years do not earn such high salaries, and it took me six years to reach that level. The trend is very important. a rapidly growing business can offer higher salaries, faster promotions, larger teams, more resources, and better business development, creating a positive cycle.
+**Outstanding new graduates are offered very high salaries**. Recently, I discussed compensation for new graduates and learned about offers from other companies. An outstanding incoming master’s graduate in information security can earn a monthly salary of RMB 40k, not including signing bonuses and year-end bonuses. While not everyone or every company can offer such a package, it still surprised me. Keep in mind that even highly experienced and excellent professionals who have been working for years may not earn that much, and it took me six years to reach that level. Trends matter a lot: a rapidly growing business can offer higher salaries, faster promotions, larger teams, more resources, and better business development, creating a positive cycle.
 
 **Get anonymous labels** from coworkers about you. Recently, in a gathering with my manager and my team, we played this game. Each person drew a self-portrait and signed it on a piece of paper. With eyes closed, others wrote tags on the paper. Finally, they had to choose one tag that best described them and another that did not fit them at all and guess who wrote each tag. This game helped everyone refresh their impressions of each other and significantly increased mutual understanding within the team.
 
@@ -28,7 +28,7 @@ December 2024 Keyword is**Trend** . Company growth trends, emerging industry tre
 
 ## Condense the Most Useful Knowledge
 
-**Alipay Cybersecurity Defense System** . I have been contemplating and experimenting with different ways to accumulate knowledge, such as question-and-answer formats or tree-like structures, but none seem satisfactory. I realized that knowledge needs to be tied to specific scenarios to generate value. Therefore, I plan to use the Alipay scenario and focus on cybersecurity knowledge to develop a comprehensive security defense system for Alipay. I will start with stop-level design and gradually refine details.
+**Alipay Cybersecurity Defense System**. I have been thinking about and experimenting with different ways to accumulate knowledge, such as question-and-answer formats or tree-like structures, but none of them seem satisfactory. I realized that knowledge needs to be tied to specific scenarios to generate value. Therefore, I plan to use the Alipay scenario and focus on cybersecurity knowledge to develop a comprehensive security defense system for Alipay. I will start with top-level design and gradually refine the details.
 
 ## Learning and Practicing AI
 

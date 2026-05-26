@@ -18,7 +18,7 @@ title: 历史真实发生的网络安全事件
 - 2019，Capital One数据泄漏；WhatsApp被NSO Group入侵；
 - 2020，SolarWinds供应链攻击；Twitter钓鱼事件；
 - 2021，Colonial Pipeline勒索软件攻击；
-- 2023，**[Operation Triangulation：0click iMessage RCE 0day](https://feei.cn/operation-triangulation/)** 。收到一条包含附件的iMessage，无需任何交互即可出发代码执行漏洞，接着利用其它漏洞进行权限提升，并下载功能齐全的恶意软件，之后删除附件和原始消息。
+- 2023，**[Operation Triangulation：0click iMessage RCE 0day](https://feei.cn/operation-triangulation/)** 。收到一条包含附件的 iMessage，无需任何交互即可触发代码执行漏洞，接着再利用其他漏洞进行权限提升，并下载功能齐全的恶意软件，之后删除附件和原始消息。
 - **LockBit：各种供应链软硬件0day** 。通过钓鱼邮件以及0day/Nday漏洞（Fortinet/Citrix等软件）突破边界，进行感染以及自传播。通过窃取加密、威胁泄漏数据、DDoS等多重方式勒索赎金。勒索软件已RaaS化，通过利用Nday甚至储备0day方式进行攻击。
 - 勒索，WannaCry（CVE-2017-0145）
 - **SolarWinds：供应链软件更新源被控** 。SolarWinds遭到入侵，导致更新包被替换为存在后门的。超过18000个使用SolarWinds的企业被控制。

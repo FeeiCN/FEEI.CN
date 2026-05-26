@@ -1,6 +1,6 @@
 ---
 slug: /the-happiness-of-nov-2024
-title: November 2024 in Review:“Happiness”
+title: 'November 2024 in Review: "Happiness"'
 ---
 
 
@@ -11,16 +11,16 @@ So many things happened in November that made me feel happy.
 
 ## Do the Best at Work
 
-**The organizational survey** . This year, the company launched its first organization-wide survey. Collecting anonymous feedback from employees anonymously on the company, business, leadership, and teams, with a high participation rate required. All members of our team engaged in the survey. Our team’s score significantly exceeds that of the BU and BG, especially concerning the team, leader, and work aspects. This makes me feel a deep sense of accomplishment.
+**The organizational survey**. This year, the company launched its first organization-wide survey, collecting anonymous feedback on the company, business, leadership, and teams, while also requiring a high participation rate. All members of our team took part in the survey. Our team’s score significantly exceeded that of the BU and BG, especially on the team, leader, and work dimensions. This gave me a deep sense of accomplishment.
 
 ## Deepening Knowledge and Enhancing Cognitive
 
-**Thought of a new idea of structuring website content** . I used to like the tree structure of Yuque’s article directory, which allowed me to organize various disorganized articles into multiple levels of categories. Later, when I migrated the content to my website, I always wanted to achieve that effect. However, recently I came up with an idea better way to organize the content, which is by using diagrams. In the past, during our PPT presentations, we always used diagrams (such as architecture diagrams, flowcharts, and charts) to make various texts more intuitive and easier to understand. Now it’s possible to display diagrams using HTML and JavaScript, with clickable interactions. This method is just as applicable to websites focused on textual content. Example:[Cybersecurity Career Guide](https://feei.cn/ccg/).
+**A new idea for structuring website content**. I used to like the tree structure of Yuque’s article directory, which allowed me to organize scattered articles into multiple levels of categories. Later, when I migrated the content to my website, I always wanted to recreate that effect. Recently, however, I came up with a better way to organize the content: using diagrams. In the past, we often used diagrams in PPT presentations, such as architecture diagrams, flowcharts, and charts, to make text more intuitive and easier to understand. Now it is possible to display diagrams on websites using HTML and JavaScript, with clickable interactions. This method works just as well for text-heavy websites. Example: [Cybersecurity Career Guide](https://feei.cn/ccg/).
 
 ![](./diagrams-custom.webp)
 ![](./image-7.webp)
 
-*Used diagrams to structure of website’s content*
+*Used diagrams to structure the website’s content*
 
 [Using LLM installed on local computer](https://feei.cn/install-llm-on-macos/). Originally, I was planning to buy a PC for gaming and considered getting a better graphics card to run local LLMs. Unexpectedly, my high-end computer bought a few years ago turned out to be useful, running most open-source models smoothly. This will make it easier for me to conduct experiments in cybersecurity scenarios, and I won’t have to endure ChatGPT’s slow speed for simple questions anymore. If the internet were to disappear in the future, I hope that what remains on the computer are these LLMs with extensive knowledge, allowing me to thoroughly explore and learn about various fields of interest.
 
@@ -45,7 +45,7 @@ So many things happened in November that made me feel happy.
 ![](./IMG_5351.webp)
 ![](./IMG_5352.webp)
 
-**Remote control home computer** . Recently, while trying to[remotely control my home computer](https://feei.cn/remote-control-the-home-computer/), I found that when using Screen Sharing.app between two Macs with the latest macOS and M-series chips, you can configure the[High-Performance mode](https://support.apple.com/zh-cn/guide/remote-desktop/apdf8e09f5a9/mac). This completely resolves the lag and color distortion issues that were present with the original VNC-based remote control. Allows me to control my home computer from anywhere with the same smoothness as using a local application. This has solved my frequent problem of needing to access files and tools on my home computer from the office, and my sense of happiness at work has noticeably increased.
+**Remote control home computer**. Recently, while trying to [remotely control my home computer](https://feei.cn/remote-control-the-home-computer/), I found that when using Screen Sharing.app between two Macs with the latest macOS and M-series chips, you can enable [High-Performance mode](https://support.apple.com/zh-cn/guide/remote-desktop/apdf8e09f5a9/mac). This completely resolves the lag and color distortion issues of the original VNC-based remote control. It allows me to control my home computer from anywhere with nearly the same smoothness as using a local application. This solved my frequent need to access files and tools on my home computer from the office, and my sense of happiness at work has noticeably increased.
 
 **Keep the cats out to keep the workspace clean** . I like cats, but I don’t like cat hair. To keep the cats out of my workspace, I tried keeping the cats in their sunroom, but it was just too hot in there. I also tried blocking their entry into my workspace with various items, but all attempts failed. I installed a sliding glass door. Now, they can’t get in, I have a comfortable clean space.
 
@@ -61,13 +61,13 @@ So many things happened in November that made me feel happy.
 ![](./IMG_5288.webp)
 ![](./IMG_5285.webp)
 
-*Temporature 20.5℃ Humidity 57%*
+*Temperature 20.5℃, Humidity 57%*
 
 ![My workspace](./IMG_5282-e1732794603987.webp)
 
 *My workspace*
 
-**Hot tea in wintry weather** . In a workspace where the temperature, humidity, and air quality are perfectly comfortable. Lying on the chair, looking out at the wintry weather outside and the cats sleeping on the sofa, holding a cup of hot tea, listening to the sound of rain and my favorite music, there is nothing more happiness than this.
+**Hot tea in wintry weather**. In a workspace with perfect temperature, humidity, and air quality, lying in the chair, looking out at the wintry weather, watching the cats sleep on the sofa, holding a cup of hot tea, and listening to the rain and my favorite music, there is almost nothing more comforting than this.
 
 ![](./IMG_5291-edited.webp)
 
@@ -85,7 +85,7 @@ Happiness is resolving the issues that cause unhappiness.
 
 ### English
 
-**The best English teacher** . In the past, I had to use search engines for English-related questions, but the results were never quite satisfactory in terms of both effectiveness and efficiency. Now, I can use ChatGPT to ask**detailed** questions**anytime** and receive exactly accurate and**easy-to-understand** answers quickly, this method can enhance the happiness of learning English. Isn’t this the key function of those English teachers? By the way, I’ve been checking in on Duolingo for over a year! Duolingo scored level 42, 19/55 in the fourth stage.
+**The best English teacher**. In the past, I had to use search engines for English-related questions, but the results were never quite satisfactory in either effectiveness or efficiency. Now, I can use ChatGPT to ask **detailed** questions **anytime** and quickly receive accurate and **easy-to-understand** answers. This has made learning English much more enjoyable. Isn’t that the core function of those English teachers? By the way, I’ve been checking in on Duolingo for over a year. My current Duolingo score is level 42, 19/55 in the fourth stage.
 
 ![The best English teacher can enhance the happiness](./Pasted-Graphic.webp)
 ![Checking in on Duolingo for over a year can enhance happiness](./duolingo-a-year.webp)

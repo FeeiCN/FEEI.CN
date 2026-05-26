@@ -6,7 +6,7 @@ icon: arrow-big-up-dash-icon
 
 
 
-The 2024 annual review was completed just before the Chinese New Year, I chieved good results in work, life, travel, and finances. In terms of health, there were no significant changes—it remained consistent just as bad as previous years.
+The 2024 annual review was completed just before the Chinese New Year. I achieved good results in work, life, travel, and finances. In terms of health, there were no significant changes; it remained as poor as in previous years.
 
 <!-- truncate -->
 
@@ -16,13 +16,13 @@ The 2024 annual review was completed just before the Chinese New Year, I chieved
 
 *The Ring of 5th Anniversary*
 
-**My 5th Anniversary at Ant Group**. The most important things — houses, cars, money, career, and marriage — are all resolved within these five years. But I’m from a young man eager to change the world to a middle-aged person who hopes to survive financially if laid off at any time.
+**My 5th Anniversary at Ant Group**. The most important things in life — houses, cars, money, career, and marriage — were all settled within these five years. I have gone from a young man eager to change the world to a middle-aged person who hopes to stay financially secure even if laid off at any time.
 
 ![](./p9.webp)
 
 *From CTO’s Letter*
 
-**Promoted to P9** . Successfully promoted during the most challenging period, with only one person in the BU nominated for promotion. After joining as a P8 at 27 five years ago, I finally succeeded in getting promoted to P9 at the age of 32. Instead of happiness and excitement, I feel mostly gratitude towards the[key people in my work life](https://feei.cn/key-people-in-my-work-life/). This promotion has taught me that the alignment between hierarchy and role is crucial and that[the rules for advancement in internet companies have changed in today’s era](https://feei.cn/experiences-and-lessons-from-promotion/).
+**Promoted to P9**. I was successfully promoted during the most challenging period, with only one person in the BU nominated for promotion. After joining as a P8 at age 27 five years ago, I finally succeeded in getting promoted to P9 at the age of 32. Instead of happiness and excitement, I feel mostly gratitude toward the [key people in my work life](https://feei.cn/key-people-in-my-work-life/). This promotion taught me that alignment between hierarchy and role is crucial, and that [the rules for advancement in internet companies have changed in today’s era](https://feei.cn/experiences-and-lessons-from-promotion/).
 
 ![](./IMG_5743.webp)
 
@@ -30,7 +30,7 @@ The 2024 annual review was completed just before the Chinese New Year, I chieved
 
 **Achieved Excellent Results in Key Cybersecurity Projects** . Headline risks have been significantly controlled, and multi-layered trustworthy security protection capabilities have been fully implemented; security metrics remain at a high level, with outstanding performance in multiple high-level practical drills. Key security projects for the group have passed external reviews. Anonymous satisfaction surveys among team members received high scores, far exceeding other teams, thereby boosting the overall score of the technical team.
 
-**Objective for 2025**
+**Objectives for 2025**
 
 - O1: From BU to BG, zero major security incidents, ensuring user data and funds safety.
 - O2: Building a Valuable, Growing, Warm, Simple, Fair, and Just Cybersecurity Team.
@@ -45,14 +45,14 @@ December 2024 in Review
 
 November 2024 in Review
 
-**Objective for 2025**
+**Objectives for 2025**
 
-- O1: Completed the final version of**Alipay Cybersecurity Defense System** and**Cybersecurity Career Guide(CCG)** .
+- O1: Complete the final version of **Alipay Cybersecurity Defense System** and **Cybersecurity Career Guide (CCG)**.
 - O2: Completed monthly and annual reviews, continuously reflecting and improving.
 
 ## 🤖 Learning and Practicing AI
 
-**LLM is Now an Essential Part of My Daily Workflow** . I’ve subscribed to ChatGPT to solve issues that other LLMs can’t handle well. I’ve experimented with Gemini, Copilot, Kimi, and Dounao. Additionally, I have[locally installed Open WebUI + Ollama to run variants of Qwen, Llama, DeepSeek, and Gemma for translation, text generation, and basic question-answering tasks](https://feei.cn/install-llm-on-macos/). I also use Comfy UI + Stable Diffusion on my local machine for image generation and processing, primarily for blog post images.
+**LLM Is Now an Essential Part of My Daily Workflow**. I’ve subscribed to ChatGPT to solve issues that other LLMs can’t handle well. I’ve also experimented with Gemini, Copilot, Kimi, and Doubao. In addition, I have [locally installed Open WebUI + Ollama to run variants of Qwen, Llama, DeepSeek, and Gemma for translation, text generation, and basic question-answering tasks](https://feei.cn/install-llm-on-macos/). I also use ComfyUI + Stable Diffusion on my local machine for image generation and processing, primarily for blog post images.
 
 ![Ollma-with-Open-WebUI](./Ollma-with-Open-WebUI.webp)
 ![Install LLM on macOS](./using-local-llm-everywhere-scaled.webp)

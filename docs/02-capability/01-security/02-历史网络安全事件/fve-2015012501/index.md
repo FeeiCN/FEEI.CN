@@ -9,7 +9,7 @@ title: 某平台SQL注入影响数十万企业
 
 ## 1 漏洞入口
 
-由之前扫到的弱口令，登陆进来后找到以下注入点：
+由之前扫到的弱口令登录进来后，找到以下注入点：
 
 ```
 POST  
@@ -26,7 +26,7 @@ DNT: 1
 Referer: http://211.***.***.62/Statistics/SumStatistics/Index  
 Accept-Encoding: gzip, deflate  
 Accept-Language: zh-CN,zh;q=0.8,en;q=0.6  
-Cookie: 替换为登陆后的COOKIE  
+Cookie: 替换为登录后的 COOKIE
 MenusBlockIDs=10010,10011,10012,10013,10014,17000,12000,13000,14000,15000,18000,18200; ControllerName=SumStatistics
 startTime=2015-01-25&endTime=2015-01-25&mstype=SMS&onTime=true
 ```

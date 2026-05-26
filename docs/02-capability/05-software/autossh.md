@@ -1,6 +1,6 @@
 ---
 slug: /autossh
-title: 免密自动登陆SSH
+title: 免密自动登录 SSH
 ---
 
 
@@ -128,7 +128,7 @@ for server in $AUTO_SSH_CONFIG; do
 	        	echo 'send   '$PASS"\r" >> $FILE
         			# 自动切sudo
 				if [ "$2" == 'sudo' ]; then
-					# 以@符号来判断是否登陆成功
+					# 以@符号来判断是否登录成功
 					echo 'expect "@"' >> $FILE
 					# 输入sudo su
 					echo 'send   "sudo su\r"' >> $FILE
@@ -137,17 +137,17 @@ for server in $AUTO_SSH_CONFIG; do
 					# 输入密码
 					echo 'send   '$PASS"\r" >> $FILE
 				else
-          				# 是否是堡垒机
+					# 是否是堡垒机
 					if [ "$ISBASTION" == 1 ] && [ "$2" != "" ]; then
-							# 以>符号来判断登陆堡垒机成功
-		        			echo 'expect ">"' >> $FILE
-		        			# 发现需要登陆的目标服务器IP
-		        			echo 'send   '$2"\r" >> $FILE
-		        			# 判断是否出现需要输入密码提示
-		        			echo 'expect "password:"' >> $FILE
-		        			# 输入密码
-		        			echo 'send   '$PASS"\r" >> $FILE
-		        			# 切换sudo
+							# 以>符号来判断登录堡垒机成功
+							echo 'expect ">"' >> $FILE
+							# 发现需要登录的目标服务器 IP
+							echo 'send   '$2"\r" >> $FILE
+							# 判断是否出现需要输入密码提示
+							echo 'expect "password:"' >> $FILE
+							# 输入密码
+							echo 'send   '$PASS"\r" >> $FILE
+							# 切换sudo
 							if [ "$3" == 'sudo' ]; then
 								echo 'expect "@"' >> $FILE
 								echo 'send   "sudo su\r"' >> $FILE
@@ -203,7 +203,7 @@ $ autossh
 Server Number:(Input Server Num)
 ```
 
-**自动登陆第一台服务器**
+**自动登录第一台服务器**
 
 ```bash
 $ autossh 1
@@ -215,13 +215,13 @@ $ autossh 1
 $ autossh 1 sudo
 ```
 
-**通过编号为1的堡垒机登陆到10.12.0.123**
+**通过编号为 1 的堡垒机登录到 10.12.0.123**
 
 ```bash
 $ autossh 1 10.12.0.123
 ```
 
-**通过编号为1的堡垒机登陆到10.11.0.123并切换到sudo**
+**通过编号为 1 的堡垒机登录到 10.11.0.123 并切换到 sudo**
 
 ```bash
 $ autossh 1 10.11.0.123 sudo

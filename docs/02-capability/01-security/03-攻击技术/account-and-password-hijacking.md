@@ -1,6 +1,6 @@
 ---
 slug: account-and-password-hijacking
-title: 登陆账号密码劫持
+title: 登录账号密码劫持
 ---
 
 自己开发的浏览器插件Edge为了获得更好的数据采集能力，增加了密码输入框的检测，并同时记录账号和密码。

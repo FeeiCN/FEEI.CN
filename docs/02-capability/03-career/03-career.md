@@ -1,6 +1,6 @@
 ---
 slug: career
-icon: list-tree
+icon: rocket
 ---
 
 # 职业与事业

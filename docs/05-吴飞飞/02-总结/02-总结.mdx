@@ -1,0 +1,690 @@
+---
+icon: gauge-icon
+hide_table_of_contents: true
+slug: /review
+---
+
+import {
+  AnnualReviewBridgeRow,
+  AnnualReviewCell,
+  AnnualReviewFact,
+  AnnualReviewFacts,
+  AnnualReviewItem,
+  AnnualReviewItems,
+  AnnualReviewRow,
+  AnnualReviewTable,
+  AnnualReviewTag,
+  AnnualReviewTagList,
+} from '@site/src/components/AnnualReviewTable';
+
+# 人生进度
+
+<AnnualReviewTable>
+  <AnnualReviewRow year="2030" age="38岁" emphasis="goal">
+    <AnnualReviewCell tone="health">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="身体">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={65}>无病无痛</AnnualReviewTag>
+            <AnnualReviewTag progress={90}>蔬食饮食</AnnualReviewTag>
+            <AnnualReviewTag progress={10}>规律运动</AnnualReviewTag>
+            <AnnualReviewTag achieved>高质量睡眠</AnnualReviewTag>
+            <AnnualReviewTag progress={80}>BMI &lt; 22</AnnualReviewTag>
+            <AnnualReviewTag progress={30}>体脂率 &lt; 12%</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="心理">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={60}>情绪稳定</AnnualReviewTag>
+            <AnnualReviewTag progress={60}>工作开心</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="关系">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={80}>家庭合睦恩爱</AnnualReviewTag>
+            <AnnualReviewTag progress={50}>两个子女</AnnualReviewTag>
+            <AnnualReviewTag achieved>家人健康</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={70}>创始人</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={10}>拥有可持续盈利的事业</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="能力">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={30}>商业</AnnualReviewTag>
+            <AnnualReviewTag progress={80}>管理</AnnualReviewTag>
+            <AnnualReviewTag progress={40}>AI</AnnualReviewTag>
+            <AnnualReviewTag progress={70}>技术</AnnualReviewTag>
+            <AnnualReviewTag progress={80}>网络空间安全</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="储蓄">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={20}>2000万流动资金</AnnualReviewTag>
+            <AnnualReviewTag progress={80}>0负债</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="支出">
+          <AnnualReviewTagList>
+            <AnnualReviewTag achieved>无大额</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="理财">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={50}>稳健100万理财收入/年</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="英语">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={75}>无障碍阅读、观影、旅行</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="阅读">
+          <AnnualReviewTagList>
+            <AnnualReviewTag achieved>>300天/年</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="观影">
+          <AnnualReviewTagList>
+            <AnnualReviewTag achieved>>30部/年</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={20}>走遍各大洲</AnnualReviewTag>
+            <AnnualReviewTag progress={85}>走遍各省市</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="输出">
+          <AnnualReviewTagList>
+            <AnnualReviewTag progress={70}>迭代人生操作系统</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewBridgeRow year="2026-2029" age="34-37岁" title="逐步逼近目标">
+    <span>从 2025 的现实持续积累，逐步走向 2030 的阶段目标。</span>
+    <AnnualReviewTagList>
+      <AnnualReviewTag subtle>2026</AnnualReviewTag>
+      <AnnualReviewTag subtle>2027</AnnualReviewTag>
+      <AnnualReviewTag subtle>2028</AnnualReviewTag>
+      <AnnualReviewTag subtle>2029</AnnualReviewTag>
+    </AnnualReviewTagList>
+  </AnnualReviewBridgeRow>
+
+  <AnnualReviewRow year="2025" age="33岁" href="/annual-review-for-2025" emphasis="featured">
+    <AnnualReviewCell tone="health">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="身体">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>减重15斤</AnnualReviewTag>
+            <AnnualReviewTag>痛风得到控制</AnnualReviewTag>
+            <AnnualReviewTag>脂肪肝消失</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="心理">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>掌控感增强</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="关系">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>老婆怀孕</AnnualReviewTag>
+            <AnnualReviewTag>家人健康</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蚂蚁集团/支付宝</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>首席网络安全官</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>35+</AnnualReviewTag>
+            <AnnualReviewTag>接管 IoT 安全团队</AnnualReviewTag>
+            <AnnualReviewTag>组建多个安全方向</AnnualReviewTag>
+            <AnnualReviewTag>关键项目优异成绩</AnnualReviewTag>
+            <AnnualReviewTag>组织活力继续领先</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="储蓄">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>储蓄率 &gt; 90%</AnnualReviewTag>
+            <AnnualReviewTag>存款大幅增加</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="支出">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>无</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="理财">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>投资确定性提升</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="英语">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>108分</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="阅读">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>80本</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="观影">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>32部</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>西藏</AnnualReviewTag>
+            <AnnualReviewTag>贵云桂</AnnualReviewTag>
+            <AnnualReviewTag>沈阳大连</AnnualReviewTag>
+            <AnnualReviewTag>温州衢州</AnnualReviewTag>
+            <AnnualReviewTag>北海</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewRow year="2024" age="32岁" href="/annual-review-for-2024" emphasis="recent">
+    <AnnualReviewCell tone="health">
+      <AnnualReviewItems>
+        <AnnualReviewItem>奶奶癌症治疗完成</AnnualReviewItem>
+        <AnnualReviewItem>痛风多次发作</AnnualReviewItem>
+      </AnnualReviewItems>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蚂蚁集团/支付宝</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>首席网络安全官</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>35+</AnnualReviewTag>
+            <AnnualReviewTag>晋升P9</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth" metric="还贷" />
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="阅读">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>158小时</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>湖州·1月</AnnualReviewTag>
+            <AnnualReviewTag>南京·1月</AnnualReviewTag>
+            <AnnualReviewTag>重庆·2月</AnnualReviewTag>
+            <AnnualReviewTag>普吉岛·3月</AnnualReviewTag>
+            <AnnualReviewTag>云南自驾·4月</AnnualReviewTag>
+            <AnnualReviewTag>贵州环线·7月</AnnualReviewTag>
+            <AnnualReviewTag>绍兴·8月</AnnualReviewTag>
+            <AnnualReviewTag>青海原子城·9月</AnnualReviewTag>
+            <AnnualReviewTag>呼伦贝尔·10月</AnnualReviewTag>
+            <AnnualReviewTag>青岛 Outing·10月</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewRow year="2023" age="31岁" href="/annual-review-2023">
+    <AnnualReviewCell tone="health">
+      <AnnualReviewItems>
+        <AnnualReviewItem>结婚</AnnualReviewItem>
+      </AnnualReviewItems>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蚂蚁集团/支付宝</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>网络与信息安全负责人</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>375</AnnualReviewTag>
+            <AnnualReviewTag>入职支付宝</AnnualReviewTag>
+            <AnnualReviewTag>书籍出版</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth" empty />
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="阅读">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>58小时</AnnualReviewTag>
+            <AnnualReviewTag>7本</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>黄山·2月</AnnualReviewTag>
+            <AnnualReviewTag>南疆大环线·5月</AnnualReviewTag>
+            <AnnualReviewTag>千岛湖 TL·9月</AnnualReviewTag>
+            <AnnualReviewTag>重庆川西·10月</AnnualReviewTag>
+            <AnnualReviewTag>济州岛·10月</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewRow year="2022" age="30岁">
+    <AnnualReviewCell tone="health" empty />
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蚂蚁集团/网商银行</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>网络安全负责人</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>375</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth">
+      <AnnualReviewItems>
+        <AnnualReviewItem subtle="保时捷72万 / 坦克边境版30万">买车</AnnualReviewItem>
+      </AnnualReviewItems>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>千岛湖·5月</AnnualReviewTag>
+            <AnnualReviewTag>黄山·5月</AnnualReviewTag>
+            <AnnualReviewTag>宏村·5月</AnnualReviewTag>
+            <AnnualReviewTag>九江·5月</AnnualReviewTag>
+            <AnnualReviewTag>西海·5月</AnnualReviewTag>
+            <AnnualReviewTag>蕲春·5月</AnnualReviewTag>
+            <AnnualReviewTag>杭州·7月</AnnualReviewTag>
+            <AnnualReviewTag>乌镇·7月</AnnualReviewTag>
+            <AnnualReviewTag>珠海/海陵岛·10月</AnnualReviewTag>
+            <AnnualReviewTag>万宁 Outing·11月</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewRow year="2021" age="29岁" emphasis="legacy">
+    <AnnualReviewCell tone="health">
+      <AnnualReviewItems>
+        <AnnualReviewItem>搬新家</AnnualReviewItem>
+      </AnnualReviewItems>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蚂蚁集团/网商银行</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>首席安全架构师</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>375</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth">
+      <AnnualReviewItems>
+        <AnnualReviewItem subtle="80万">买房子</AnnualReviewItem>
+        <AnnualReviewItem>书籍出版</AnnualReviewItem>
+      </AnnualReviewItems>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>千岛湖·11月</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewRow year="2020" age="28岁" emphasis="legacy">
+    <AnnualReviewCell tone="health" empty />
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蚂蚁集团/网商银行</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>应用安全负责人</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>35+</AnnualReviewTag>
+            <AnnualReviewTag>HW</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth" empty />
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>清迈/清莱·1月</AnnualReviewTag>
+            <AnnualReviewTag>千岛湖</AnnualReviewTag>
+            <AnnualReviewTag>武汉</AnnualReviewTag>
+            <AnnualReviewTag>中卫·5月</AnnualReviewTag>
+            <AnnualReviewTag>老家·10月</AnnualReviewTag>
+            <AnnualReviewTag>三亚·11月</AnnualReviewTag>
+            <AnnualReviewTag>雪乡·12月</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewRow year="2019" age="27岁" href="/a-security-engineer-2019" emphasis="legacy">
+    <AnnualReviewCell tone="health" empty />
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蚂蚁集团/网商银行</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>应用安全负责人</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>35+</AnnualReviewTag>
+            <AnnualReviewTag>入职阿里，P8</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth">
+      <AnnualReviewItems>
+        <AnnualReviewItem subtle="80万">装修</AnnualReviewItem>
+        <AnnualReviewItem subtle="15万">买车位</AnnualReviewItem>
+      </AnnualReviewItems>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>曼谷·1月</AnnualReviewTag>
+            <AnnualReviewTag>哈尔滨·4月</AnnualReviewTag>
+            <AnnualReviewTag>新疆北环线·5月</AnnualReviewTag>
+            <AnnualReviewTag>香港·9月</AnnualReviewTag>
+            <AnnualReviewTag>长滩岛·10月</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewRow year="2018" age="26岁" emphasis="legacy">
+    <AnnualReviewCell tone="health" empty />
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蘑菇街</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>网络与信息安全负责人</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>375</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth">
+      <AnnualReviewItems>
+        <AnnualReviewItem>落户杭州</AnnualReviewItem>
+        <AnnualReviewItem subtle="8万">公寓装修</AnnualReviewItem>
+      </AnnualReviewItems>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>西北大环线·5月</AnnualReviewTag>
+            <AnnualReviewTag>西安</AnnualReviewTag>
+            <AnnualReviewTag>上海×2</AnnualReviewTag>
+            <AnnualReviewTag>千岛湖×2</AnnualReviewTag>
+            <AnnualReviewTag>舟山</AnnualReviewTag>
+            <AnnualReviewTag>北京</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewRow year="2017" age="25岁" emphasis="legacy">
+    <AnnualReviewCell tone="health" empty />
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蘑菇街</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>网络与信息安全负责人</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>375，晋升B1</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth">
+      <AnnualReviewItems>
+        <AnnualReviewItem subtle="245万">买房</AnnualReviewItem>
+      </AnnualReviewItems>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>冲绳·8月</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewRow year="2016" age="24岁" emphasis="legacy">
+    <AnnualReviewCell tone="health" empty />
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蘑菇街</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>网络与信息安全负责人</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>375，晋升A3</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth">
+      <AnnualReviewItems>
+        <AnnualReviewItem subtle="60万">买公寓</AnnualReviewItem>
+        <AnnualReviewItem subtle="宝马 32万">买车</AnnualReviewItem>
+      </AnnualReviewItems>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>岘港·4月</AnnualReviewTag>
+            <AnnualReviewTag>一路向西·5月</AnnualReviewTag>
+            <AnnualReviewTag>东极岛·6月</AnnualReviewTag>
+            <AnnualReviewTag>大阪京都·7月</AnnualReviewTag>
+            <AnnualReviewTag>环太湖·8月</AnnualReviewTag>
+            <AnnualReviewTag>环台湾岛·9月</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewRow year="2015" age="23岁" emphasis="legacy">
+    <AnnualReviewCell tone="health" empty />
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蘑菇街</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>网络与信息安全负责人</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>375</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth" empty />
+    <AnnualReviewCell tone="life">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="旅行">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>新加坡·5月</AnnualReviewTag>
+            <AnnualReviewTag>黄山·5月</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+  </AnnualReviewRow>
+
+  <AnnualReviewRow year="2014" age="22岁" emphasis="legacy">
+    <AnnualReviewCell tone="health" empty />
+    <AnnualReviewCell tone="career">
+      <AnnualReviewFacts>
+        <AnnualReviewFact label="公司">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>蘑菇街</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="身份">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>安全工程师</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+        <AnnualReviewFact label="结果">
+          <AnnualReviewTagList>
+            <AnnualReviewTag>35+</AnnualReviewTag>
+          </AnnualReviewTagList>
+        </AnnualReviewFact>
+      </AnnualReviewFacts>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="wealth">
+      <AnnualReviewItems>
+        <AnnualReviewItem>知乎日报</AnnualReviewItem>
+      </AnnualReviewItems>
+    </AnnualReviewCell>
+    <AnnualReviewCell tone="life" empty />
+  </AnnualReviewRow>
+</AnnualReviewTable>

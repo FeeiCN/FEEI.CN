@@ -51,7 +51,7 @@ function HeroSection(): ReactNode {
           />
         </h1>
         <p className={styles.heroTagline}>{siteConfig.tagline}</p>
-        <Link to="/health/overview" className={styles.heroCta}>
+        <Link to="/overview" className={styles.heroCta}>
           <span>开始阅读</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className={styles.heroCtaArrow}>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />

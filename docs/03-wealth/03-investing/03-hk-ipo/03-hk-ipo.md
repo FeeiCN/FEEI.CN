@@ -1,6 +1,6 @@
 ---
 slug: hk-ipo
-icon: chart-column
+icon: chart-bar-icon
 ---
 
 # 跟随国外知名金融机构港股打新

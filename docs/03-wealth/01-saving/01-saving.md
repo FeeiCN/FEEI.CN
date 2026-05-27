@@ -1,6 +1,6 @@
 ---
 slug: saving-overview
-icon: download-icon
+icon: wallet-icon
 ---
 
 # 工作储蓄

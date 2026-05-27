@@ -1,6 +1,6 @@
 ---
 slug: protection-overview
-icon: lock-icon
+icon: shield-check
 ---
 
 # 基础保障

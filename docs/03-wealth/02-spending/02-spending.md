@@ -1,6 +1,6 @@
 ---
 slug: spending-overview
-icon: upload-icon
+icon: shopping-cart-icon
 ---
 
 # 控制支出

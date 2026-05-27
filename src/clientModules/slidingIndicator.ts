@@ -72,13 +72,30 @@ function setup({container, links, id, axis}: IndicatorConfig) {
     indicator.style.opacity = '1';
   }
 
-  containerEl.querySelectorAll<HTMLElement>(links).forEach(link => {
-    link.addEventListener('mouseenter', () => moveTo(link), {signal});
-  });
-
-  containerEl.addEventListener('mouseleave', () => {
+  function hideIndicator() {
     indicator.style.opacity = '0';
-  }, {signal});
+  }
+
+  function handlePointerOver(event: Event) {
+    if (!(event.target instanceof Element)) {
+      hideIndicator();
+      return;
+    }
+
+    const link = event.target.closest<HTMLElement>(links);
+
+    if (link && containerEl!.contains(link)) {
+      moveTo(link);
+      return;
+    }
+
+    hideIndicator();
+  }
+
+  containerEl.addEventListener('pointerover', handlePointerOver, {signal});
+  containerEl.addEventListener('focusin', handlePointerOver, {signal});
+  containerEl.addEventListener('click', hideIndicator, {signal});
+  containerEl.addEventListener('mouseleave', hideIndicator, {signal});
 }
 
 function init() {

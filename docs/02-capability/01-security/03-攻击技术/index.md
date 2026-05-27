@@ -1,5 +1,5 @@
 ---
-slug: attack-techniques
+slug: /attack-techniques
 icon: code-branch
 ---
 

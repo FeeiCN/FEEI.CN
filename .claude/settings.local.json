@@ -44,7 +44,26 @@
       "Read(//tmp/**)",
       "Bash(grep -oP '--color-accent[^;]*|--transition-base[^;]*|--text-link[^;]*')",
       "Bash(node -e ' *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "WebFetch(domain:openclaw.ai)",
+      "Bash(gh api *)",
+      "WebSearch",
+      "WebFetch(domain:epoch.ai)",
+      "WebFetch(domain:www.coderabbit.ai)",
+      "Bash(npm run *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty'); [ -n \"$f\" ] || exit 0; base=$(basename \"$f\"); dir=$(dirname \"$f\"); if [ \"$base\" = \"AGENTS.md\" ]; then sed '1s/# Repository Guidelines/# Claude Code Guidelines/' \"$f\" > \"$dir/CLAUDE.md\"; elif [ \"$base\" = \"CLAUDE.md\" ]; then sed '1s/# Claude Code Guidelines/# Repository Guidelines/' \"$f\" > \"$dir/AGENTS.md\"; fi 2>/dev/null || true"
+          }
+        ]
+      }
     ]
   }
 }

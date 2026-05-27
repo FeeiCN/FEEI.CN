@@ -1,4 +1,5 @@
 ---
+slug: /security
 icon: shield
 ---
 

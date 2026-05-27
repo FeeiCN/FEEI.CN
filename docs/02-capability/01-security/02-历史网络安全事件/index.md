@@ -1,5 +1,5 @@
 ---
-slug: incidents
+slug: /cyber-incidents
 icon: clock
 ---
 

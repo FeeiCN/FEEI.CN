@@ -100,7 +100,14 @@ jobs:
           group_end "Prepare release directories"
 
           group_start "Build Docusaurus"
-          /usr/bin/time -v npm run build -- --out-dir "$staging_dir"
+          if [ -x /usr/bin/time ]; then
+            /usr/bin/time -v npm run build -- --out-dir "$staging_dir"
+          elif [ -x /bin/time ]; then
+            /bin/time -v npm run build -- --out-dir "$staging_dir"
+          else
+            echo "GNU time not found. Running build without resource profiling."
+            npm run build -- --out-dir "$staging_dir"
+          fi
           group_end "Build Docusaurus"
 
           group_start "Publish release"

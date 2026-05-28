@@ -40,8 +40,13 @@ jobs:
           releases_to_keep=5
 
           cd "$repo_dir"
+          old_head="$(git rev-parse HEAD)"
           git pull origin main
-          npm ci
+          new_head="$(git rev-parse HEAD)"
+
+          if ! git diff --quiet "$old_head" "$new_head" -- package.json package-lock.json; then
+            npm ci
+          fi
 
           release_name="$(git rev-parse HEAD)"
           release_dir="$releases_dir/$release_name"
@@ -49,7 +54,7 @@ jobs:
 
           mkdir -p "$releases_dir"
           rm -rf "$staging_dir"
-          npm run build -- --out-dir "$staging_dir"
+          DOCUSAURUS_FASTER=true npm run build -- --out-dir "$staging_dir"
 
           rm -rf "$release_dir"
           mv "$staging_dir" "$release_dir"

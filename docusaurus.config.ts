@@ -79,6 +79,9 @@ const config: Config = {
   markdown: {
     // .md files use CommonMark (no JSX parsing), .mdx files use MDX
     format: 'detect',
+    hooks: {
+      onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn',
+    },
     preprocessor: ({fileContent}) => {
       // Escape * inside URLs — security write-ups use *** to mask IPs/domains,
       // but Markdown parses *** as bold+italic and breaks link resolution.
@@ -98,7 +101,6 @@ const config: Config = {
   projectName: 'wufeifei.com', // Usually your repo name.
 
   onBrokenLinks: isStrictBuild ? 'throw' : 'warn',
-  onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn',
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you

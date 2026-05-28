@@ -36,11 +36,24 @@ jobs:
           start_timer() {
             timer_start="$(date +%s)"
           }
+          format_duration() {
+            local total="$1"
+            local minutes=$((total / 60))
+            local seconds=$((total % 60))
+
+            if [ "$minutes" -gt 0 ]; then
+              echo "${minutes}分${seconds}秒"
+            else
+              echo "${seconds}秒"
+            fi
+          }
           end_timer() {
             local name="$1"
             local timer_end
+            local duration
             timer_end="$(date +%s)"
-            echo "[deploy-timing] ${name}: $((timer_end - timer_start))s"
+            duration=$((timer_end - timer_start))
+            echo "[deploy-timing] ${name}: $(format_duration "$duration")"
           }
           group_start() {
             echo "::group::$1"

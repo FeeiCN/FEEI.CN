@@ -12,6 +12,8 @@ icon: code-xml-icon
 
 ## 正则编写思路
 
+**正则编写需要兼顾准确性与可维护性，缺乏系统化思路的正则往往在边界条件上产生漏洞。** 标准流程分为找锚点、去噪点、取数据三步，并通过正反用例驱动验证。
+
 - 编写正则
 
 - 找锚点：找到标记位
@@ -164,11 +166,13 @@ rgb(255, 10%, 0) rgb(10%, 255, 0) rgba(10%, 255, 0, 0.3)
 
 ## 正则安全
 
-正则主要的安全问题是绕过（Bypass）和拒绝服务（ReDoS） Bypass
+**正则表达式的安全问题主要集中在两类：逻辑绕过（Bypass）和正则拒绝服务（ReDoS）。** 前者因正则边界描述不精确导致攻击者可以构造满足匹配条件的恶意输入，后者因回溯机制被滥用导致服务响应耗尽。
 
 ‌
 
 ### 域名白名单（WooYun-2014-63321）
+
+**域名白名单正则绕过的根本原因是使用了 `.*` 这类宽松匹配，攻击者可以在域名路径参数中拼接合法域名后缀来欺骗校验。** 修复方向是将 `.*` 替换为 `[^.]*`，禁止子域中出现额外的点。
 
 ```
 var fu=$xss(decodeURIComponent($getQuery('fu')),'script'),
@@ -200,6 +204,8 @@ fu.search(/^http<strong>\:\/\/</strong>[^.]*<strong>\.</strong>paipai.com($|(<st
 
 ‌
 
+**即使修复了子域匹配，IP 十进制表示法仍可绕过基于域名字符串的白名单校验。** 浏览器和系统均可解析十进制 IP，而正则对此毫无防御。
+
 - 可通过将IP转十进制绕过，`http://www.baidu.com`->`http://115.239.210.27`->`http://1945096731`
 - 构造`http://1945096731/test_url?a=paipai.com`即可伪造
 
@@ -226,7 +232,7 @@ assert decimal2ip(decimal) == ip
 
 ### 路径穿越
 
-‌
+**路径穿越绕过的核心原因是正则只校验了后缀存在，而未约束路径中不能包含 `../` 跳转序列。** 仅用后缀限制判断文件类型是不充分的，攻击者可以在后缀之前插入跨目录的相对路径。
 
 在Buttle中出现的路径穿越漏洞[CVE-2018-3766](https://hackerone.com/reports/358112)
 
@@ -254,7 +260,7 @@ var url = req.url;
 
 ### Struts2系列命令执行
 
-‌
+**黑名单形式的正则天然处于被动，攻击者只需找到一个未被列入黑名单的参数前缀即可绕过。** Struts2 历次补丁的演进过程清晰地展示了这一规律：每次补丁只是追加新的排除规则，而攻击者总能找到新的绕过路径。
 
 黑名单形式正则不可取
 
@@ -267,7 +273,9 @@ var url = req.url;
 <param name="excludeParams">^class\..*,^dojo\..*,^struts\..*,^session\..*,^request\..*,^application\..*,^servlet(Request|Response)\..*,^parameters\..*,^action:.*,^method:.*</param>+ <param name="excludeParams">(.*\.|^)class\..*,^dojo\..*,^struts\..*,^session\..*,^request\..*,^application\..*,^servlet(Request|Response)\..*,^parameters\..*,^action:.*,^method:.*</param>
 ```
 
-ReDoS 类似于`(a+)+`这类重复匹配的正则会导致耗时异常旧。
+## ReDoS
+
+**ReDoS 的根源是正则引擎的回溯机制：当正则包含嵌套量词时，引擎会对所有可能的匹配路径逐一尝试，输入长度线性增加会导致匹配时间指数级膨胀。** 类似于 `(a+)+` 这类重复匹配的正则会在特定输入下导致耗时异常。
 
 ```
 var r = /([a-z]+)+$/

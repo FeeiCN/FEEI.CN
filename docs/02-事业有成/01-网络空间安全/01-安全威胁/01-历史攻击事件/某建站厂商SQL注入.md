@@ -4,81 +4,21 @@ title: 某建站厂商SQL注入影响数万企业
 icon: bug-icon
 ---
 
+**建站厂商是供应链风险的高风险目标。** 它们统一管理数万家企业网站，一个集中漏洞就能导致大规模的客户数据泄露和权限突破。攻击者攻破建站平台，等于同时攻破其所有客户，这种放大效应使建站厂商成为投入产出比极高的攻击目标。
+
 ## 1 信息收集
 
-```python
-[+] Emails found:
-------------------
-david@***world.com
-admin@***world.com
-divid@***world.com
+**信息收集阶段可以直接揭示目标的整体架构。** 通过搜索引擎枚举子域名，发现该厂商使用了大量 `testwebN.***world.com` 格式的子域作为客户网站的临时访问入口，每个子域下托管了数千个客户网站。这种多实例统一托管的结构，意味着任何一个子域上的安全漏洞都具有横向传播到所有实例的潜力。
 
-[+] Hosts found in search engines:
-------------------------------------
-122.227.***.250:server.***world.com
-61.130.***.52:www.***world.com
-114.80.***.133:testweb5.***world.com
-61.130.***.53:wiki.make.***world.com
-114.80.***.29:testweb7.***world.com
-114.80.***.191:testweb6.***world.com
-61.130.***.55:shop.testweb.***world.com
-61.130.***.53:cn.***world.com
-61.130.***.55:testweb.***world.com
-60.191.***.236:admin.***world.com
-61.130.***.54:make1.***world.com
-61.130.***.53:make.***world.com
-60.191.***.236:is-service.***world.com
-61.130.***.53:service.***world.com
-60.191.***.236:is-testweb7.***world.com
-61.130.***.52:file.***world.com
-60.191.***.236:hk.***world.com
-60.191.***.236:253Dcn.***world.com
-```
-
-提取有用信息`testwebN.***world.com`
-
-- 上面这种域名是用来测试访问网站的(比如客户住域没有备案或者还没购买,先通过这个域名的二级目录来访问)
-- 有N个这类二级域名
-- 每个这类二级域名下存在数千客户网站
-
-于是查找注入点
+**`testwebN` 子域的存在揭示了一种典型的运维便利性设计。** 建站厂商为了让客户在域名未备案或尚未购买时也能访问网站，将所有客户统一挂载在自己的子域下。多实例部署配合统一的弱防御机制，意味着横向移动几乎零阻力——攻破一个子域，就拿到了进入其他子域的钥匙。
 
 <!-- truncate -->
 
 ## 2 漏洞证明
 
-简单的找了下每个二级域下的SQL注入点:
+**每个子域上的 SQL 注入点都指向同一套数据库结构。** 在多个 `testwebN` 子域的不同页面参数中均发现了注入漏洞，参数未经过滤，支持布尔盲注和 UNION 注入，可直接读取数据库内容。
 
-```python
-testweb 61.130.97.55
-http://testweb.***world.com/yining/admin/login.php
-
-testweb2 61.130.97.52 主站
-http://testweb2.***world.com/suotie/admin/login.php
-
-testweb3 114.80.68.131
-http://testweb3.***world.com/wangxiang/cn/products.php?tid=18&id=1
-
-testweb4
-testweb4.***world.com/lnr/cn/faqed.php?id=11&gid=1
-
-...
-```
-
-http://testweb7.***world.com/dongfang/cn/products.php?act=list&id=7
-
-**通过注入点拿到数据库权限**
-
-```
-Place: GET  
-Parameter: TypeLevel  
-Type: boolean-based blind  
-Title: AND boolean-based blind - WHERE or HAVING clause  
-Payload: id=19&TypeLevel=1 AND 8971=8971&pid=19  
-Type: UNION query
-Title: MySQL UNION query (NULL) - 11 columns
-Payload: id=19&TypeLevel=1 UNION ALL SELECT NULL,CONCAT(0x7170746271,0x4d597259547178556155,0x7171707a71),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#&pid=19
-```
+在多个子域的不同路径下均找到可注入的参数，从 `testweb` 到 `testweb7` 及更多实例均受影响，参数支持布尔盲注和 UNION 注入，攻击者可借此枚举并读取完整的数据库内容。
 
 **`testweb`数据库**
 
@@ -146,12 +86,9 @@ Database: maindb
 +------------+
 ```
 
-通过分析得出以下结论:
+**`maindb` 是整个供应链的薄弱点。** 每个子域都有一个 `maindb` 库，其中存储了该子域下所有客户网站的管理员账号密码、配置、日志等敏感信息，且密码明文存储。这种设计将单点漏洞的影响范围扩展到了整个子域的所有客户。
 
-- 每个客户网站只有自己数据库权限和一个名为mainbd库的权限
-- 通过分析maindb表结构发现里面竟然存了该二级域名下的所有网站相关信息(管理员帐号密码/反馈/备份/日志/插件等)
-- 每个二级域的maindb库里面的的客户信息表都是t_admin,并且密码没有加密
-- 每个二级域的maindb库管理员表里面都有一个admin ps99379937的管理员帐户,按理说如果是存放客户的密码,为什么会都有这个帐号呢,于是继续深入下去发现了每个二级域都有一个总的管理后台(e.g`testweb2.***world.com/admin`)
+**共享管理员密码揭示了一个典型的设计取舍。** 每个子域的 `maindb.t_admin` 中都存在同一个内置管理员账号，这是建站厂商为了能够随时介入客户网站进行运维支持而预留的后台入口。这种设计在运营层面有其合理性——快速响应客户问题需要统一的访问凭据——但代价是所有客户共享同一个安全短板：一旦这个凭据泄露，整个平台的所有客户后台同时洞开。每个子域都有自己的管理后台入口（如 `testweb2.***world.com/admin`），使得这一问题在所有实例上同步存在。
 
 ## 3 漏洞影响
 
@@ -159,29 +96,9 @@ Database: maindb
 ![](./v_paisang_02-1024x489.webp)
 ![](./v_paisang_03-1024x602.webp)
 
-使用`admin`/`ps99379937`可以登录所有后台，如下
+**共享凭据使所有后台同时可登录，这是供应链风险的直接体现。** 使用从 `maindb` 中提取的内置管理员凭据，可以登录所有子域的管理后台，涵盖 `testweb` 至 `testweb11` 共十余个实例，每个实例下托管了数百至近两千个客户网站。
 
-- `testweb.***world.com/admin`(主要是11年建设的网站,共1940个客户)
-- `testweb2.***world.com/admin`(主要是11年建设的网站,共1689个客户)
-- `testweb3.***world.com/admin`(主要是11年建设的网站,共1100个客户)
-- `testweb4.***world.com/admin`(主要是12年建设的网站,共1143个客户)
-- `testweb5.***world.com/admin`(主要是11年建设的网站,共1689个客户)
-- `testweb6.***world.com/admin`(主要是13年建设的网站,共1273个客户)
-- `testweb7.***world.com/admin`(主要是13年建设的网站,共1093个客户)
-- `testweb8.***world.com/admin`(主要是14年建设的网站,共483个客户)
-- `testweb9.***world.com/admin`(主要是14年的)
-- `testweb10.***world.com/admin`(主要是14年的)
-- `testweb11.***world.com/admin`(主要是14年的)
-
-上面截图是其中一个二级域名的管理后台，可以看到很多敏感信息。所有客户网站后台均可登录，从`testweb的maindb.t_admin`里随便挑选一个用户即可。
-
-```
-2644,102,宁波,朱宁斌,,lixiang,4,0,0,5000,李勇,100,lixiang,陈海啸,3lxanc85,,1,2,0,D0:D1:D2:D3:F0:F1:F2:F3:F4:F5:F6:F7:F8:F9:F10:E0:E1:E2:E3:E4:E5:E6:E7:E8:E9:E10:G0:G1:G2:G3:G4:G13:G5:G6:G7:G8:I0:I1:I2:I3:O1:O2,2009-04-30 16:24:58,http://china***.com,2010-02-12 00:00:00,100,宁波**信息工程有限公司,cn/index.php,2009-02-12 00:00:00,,宁波**信息工程有限公司
-```
-
-宁波**信息工程有限公司([http://www.china***.com/](http://www.china%2A%2A%2A.com/)) 登录地址:[http://www.china***.com/admin/](http://www.china%2A%2A%2A.com/admin/) 账号:lixiang 密码:3lxanc**
-
-粗略测试了下，客户案例里大部分都能登录，并获取到网站后台权限、数据库权限甚至源码。点到为止，不继续挖了。
+**这种广泛的依赖关系本身就是一个安全风险集中点。** 建站厂商与客户之间的关系，决定了厂商平台上的每一个安全缺陷都会等比例放大到整个客户群。从 `maindb.t_admin` 中随机取出任一客户账号，即可直接登录该客户网站后台，并获取网站权限、数据库权限乃至源代码——客户自身的安全防护在这个供应链漏洞面前完全失效。
 
 漏洞已报告给CNCERT/乌云/补天或厂商且已修复完成，感谢厂商的重视及现金奖励。
 

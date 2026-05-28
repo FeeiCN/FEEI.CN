@@ -10,6 +10,8 @@ icon: github-icon
 
 ## GitHub Pull Request风险之逻辑实现不一致
 
+**相同功能在不同入口或不同阶段的实现逻辑若不一致，攻击者可通过绕过严格入口直接调用宽松入口来获取本不应拥有的权限。**
+
 ![](./image-1-1024x795.webp)
 
 正常情况下，我们在GitHub给某个开源项目A提交一个Pull Request时，会有一个“Allow edits by maintainers”的选项且默认选中。这个选项的主要作用是让项目A（Base Repository）的维护者可以有权限修改被我Fork后的项目（Head Repository）分支。
@@ -48,6 +50,8 @@ icon: github-icon
 这类风险在GitHub内应该大量存在，对于各厂商有比较大的实际风险价值，尤其是提供了多种协议实现、多种端，以及存在大量创建和修改的业务逻辑、大量的流程步骤业务，应当好好自查下。
 
 ## GitHub Pull Request风险之预设条件不一致
+
+**每个功能模块的安全性往往依赖对其他模块行为的某种假设，一旦该假设在现实中不成立，安全边界即告崩溃。**
 
 GitHub Actions是一个内置于GitHub的自动化平台，支持当仓库发生一些事件时触发在沙箱中执行一些任务。这些工作流程被配置在`github.com/REPO_NAME/.github/workflows/`下，工作流内容以及运行状态所有人可见。比如当向仓库Push代码时可以执行代码测试任务。GitHub Actions支持的事件包括`push`、`fork`、`issues`、`pull_request`等，详细列表见[GitHub事件触发文档](https://docs.github.com/en/actions/reference/events-that-trigger-workflows)。简而言之GitHub Actions是git hook的强化Web实现，每个GitHub仓库都可以免费使用。
 
@@ -117,13 +121,15 @@ jobs:
 
 该漏洞在今年初的时候由Teddy Katz发现，并上报给GitHub安全团队，并奖励了25000美元，目前该漏洞已修复，详情可以[Stealing arbitrary GitHub Actions secrets](https://blog.teddykatz.com/2021/03/17/github-actions-write-access.html)。
 
-在上面的漏洞中存在一个通用的业务逻辑风险：**单一来看某个功能是安全的，全局来看是有风险的** 。
+在上面的漏洞中存在一个通用的业务逻辑风险：**单一来看某个功能是安全的，全局来看是有风险的。**
 
 站在开发Pull Request的工程师视角，允许仓库合并分支为Commit Hash没有任何安全问题，在它的角度可能并不知道Fork后的仓库和源仓库是共享一套Commit Hash的，这套机制可能又是另外一个负责Commit的人负责的，他的安全性是依赖另外一个假设，这个假设可能随着时间推移随时发生变化，当实际过程中条件和预想的不一致时，风险就出来了。
 
 此风险的可怕之处是，单看风险是不可见的，当前业内的各类安全评估和防护能力都无法解决这类风险，给安全团队带来极大的挑战。无论是对应研发安全意识很强还是安全工程师很资深，也不一定能发现此类风险。
 
 ## GitHub Pull Request风险之安全背景不一致
+
+**平台提供了安全使用的选项和警告，但一旦将安全决策的责任交给使用者，不同背景和认知水平的研发会产生截然不同的理解，风险因此系统性地存在。**
 
 当上面两个风险彻底修复后，基于已有的GitHub Actions和Secrets现状，还是存在风险的，只不过不再是GitHub平台本身的风险，而是GitHub Actions使用不当的风险。
 

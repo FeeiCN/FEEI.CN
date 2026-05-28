@@ -100,7 +100,7 @@ jobs:
           group_end "Prepare release directories"
 
           group_start "Build Docusaurus"
-          npm run build -- --out-dir "$staging_dir"
+          /usr/bin/time -v npm run build -- --out-dir "$staging_dir"
           group_end "Build Docusaurus"
 
           group_start "Publish release"

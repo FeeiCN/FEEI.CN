@@ -34,21 +34,35 @@
 
   --ifm-line-height-base: 1.85;
   --ifm-paragraph-margin-bottom: 1.6rem;
-  --ifm-h2-font-size: 1.6rem;
-  --ifm-h3-font-size: 1.3rem;
-  --ifm-heading-margin-bottom: 0.8rem;
+  --ifm-heading-line-height: 1.22;
+  --ifm-heading-margin-bottom: 0.7rem;
+  --ifm-h1-font-size: 2.05rem;
+  --ifm-h2-font-size: 1.45rem;
+  --ifm-h3-font-size: 1.18rem;
+  --ifm-h4-font-size: 1.05rem;
+  --ifm-h5-font-size: 1rem;
+  --ifm-h6-font-size: 0.95rem;
 }
 
 .markdown h1:first-child {
-  --ifm-h1-font-size: 2.25rem;
+  --ifm-h1-font-size: 2.05rem;
 }
 
 .markdown h2 {
-  margin-top: 2.4rem;
+  margin-top: 2.1rem;
 }
 
 .markdown h3 {
-  margin-top: 1.8rem;
+  margin-top: 1.45rem;
+}
+
+.markdown h4 {
+  margin-top: 1.2rem;
+}
+
+.markdown h5,
+.markdown h6 {
+  margin-top: 1rem;
 }
 
 .markdown ul,
@@ -989,8 +1003,8 @@
 
 .markdown > header:first-child h1 {
   margin-top: 0.15rem;
-  margin-bottom: 1rem;
-  letter-spacing: -0.03em;
+  margin-bottom: 0.85rem;
+  letter-spacing: -0.02em;
 }
 
 .markdown > header:first-child + * {

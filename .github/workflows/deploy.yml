@@ -32,6 +32,25 @@ jobs:
             "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' bash -se" <<'EOF'
           set -euo pipefail
 
+          timer_start=0
+          start_timer() {
+            timer_start="$(date +%s)"
+          }
+          end_timer() {
+            local name="$1"
+            local timer_end
+            timer_end="$(date +%s)"
+            echo "[deploy-timing] ${name}: $((timer_end - timer_start))s"
+          }
+          group_start() {
+            echo "::group::$1"
+            start_timer
+          }
+          group_end() {
+            end_timer "$1"
+            echo "::endgroup::"
+          }
+
           repo_dir="$REPO_DIR"
           site_root="$SITE_ROOT"
           releases_dir="$site_root/releases"
@@ -39,27 +58,46 @@ jobs:
           next_current_link="$site_root/current.next"
           releases_to_keep=5
 
+          group_start "Prepare repository"
           cd "$repo_dir"
           old_head="$(git rev-parse HEAD)"
           git pull origin main
           new_head="$(git rev-parse HEAD)"
+          echo "old_head=$old_head"
+          echo "new_head=$new_head"
+          group_end "Prepare repository"
 
+          group_start "Install dependencies if needed"
           if ! git diff --quiet "$old_head" "$new_head" -- package.json package-lock.json; then
+            echo "package.json or package-lock.json changed. Running npm ci."
             npm ci
+          else
+            echo "Dependencies unchanged. Skipping npm ci."
           fi
+          group_end "Install dependencies if needed"
 
+          group_start "Prepare release directories"
           release_name="$(git rev-parse HEAD)"
           release_dir="$releases_dir/$release_name"
           staging_dir="${release_dir}.tmp"
-
           mkdir -p "$releases_dir"
           rm -rf "$staging_dir"
-          npm run build -- --out-dir "$staging_dir"
+          echo "release_dir=$release_dir"
+          echo "staging_dir=$staging_dir"
+          group_end "Prepare release directories"
 
+          group_start "Build Docusaurus"
+          npm run build -- --out-dir "$staging_dir"
+          group_end "Build Docusaurus"
+
+          group_start "Publish release"
           rm -rf "$release_dir"
           mv "$staging_dir" "$release_dir"
           ln -sfn "$release_dir" "$next_current_link"
           mv -Tf "$next_current_link" "$current_link"
+          group_end "Publish release"
 
+          group_start "Clean old releases"
           ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf
+          group_end "Clean old releases"
           EOF

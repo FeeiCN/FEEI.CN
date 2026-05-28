@@ -54,7 +54,7 @@ jobs:
 
           mkdir -p "$releases_dir"
           rm -rf "$staging_dir"
-          DOCUSAURUS_FASTER=true npm run build -- --out-dir "$staging_dir"
+          npm run build -- --out-dir "$staging_dir"
 
           rm -rf "$release_dir"
           mv "$staging_dir" "$release_dir"

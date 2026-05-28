@@ -66,6 +66,8 @@ function attachSidebarIcons<
   return items.map((item) => visit(item, 0) as T);
 }
 
+const isStrictBuild = process.env.CI_STRICT === 'true';
+
 const config: Config = {
   title: '创造确定性人生-安全界',
   tagline: '把所有的时间、精力和金钱都投入到长期目标中',
@@ -95,7 +97,8 @@ const config: Config = {
   organizationName: 'feeicn', // Usually your GitHub org/user name.
   projectName: 'wufeifei.com', // Usually your repo name.
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: isStrictBuild ? 'throw' : 'warn',
+  onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn',
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you

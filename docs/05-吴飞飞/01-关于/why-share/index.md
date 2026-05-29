@@ -1,6 +1,7 @@
 ---
 slug: /why-share
 title: 为什么我要分享自己的经验？
+icon: send-icon
 ---
 
 

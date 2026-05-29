@@ -1,6 +1,7 @@
 ---
 slug: /my-journey-in-cybersecurity
 title: 我的网络安全之路
+icon: history-circle-icon
 ---
 
 

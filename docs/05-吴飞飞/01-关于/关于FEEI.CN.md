@@ -1,6 +1,7 @@
 ---
 slug: /about-feei-cn
 title: 关于FEEI.CN
+icon: globe-icon
 ---
 
 ## 变更记录

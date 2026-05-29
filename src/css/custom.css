@@ -14,6 +14,9 @@
   --ifm-color-primary-lighter: #359962;
   --ifm-color-primary-lightest: #3cad6e;
   --ifm-font-family-base:
+    -apple-system,
+    BlinkMacSystemFont,
+    'Inter',
     'PingFang SC',
     'Hiragino Sans GB',
     'Noto Sans CJK SC',
@@ -23,7 +26,7 @@
     'WenQuanYi Micro Hei',
     sans-serif;
   --ifm-heading-font-family: var(--ifm-font-family-base);
-  --ifm-font-size-base: 93.75%;
+  --ifm-font-size-base: 87.5%;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 
@@ -32,8 +35,10 @@
   --ifm-breadcrumb-padding-vertical: 0;
   --ifm-breadcrumb-border-radius: 0;
 
+  --ifm-font-color-base: #333333;
+  --ifm-background-color: #fafafa;
   --ifm-line-height-base: 1.85;
-  --ifm-paragraph-margin-bottom: 1.6rem;
+  --ifm-paragraph-margin-bottom: 2rem;
   --ifm-heading-line-height: 1.22;
   --ifm-heading-margin-bottom: 0.7rem;
   --ifm-h1-font-size: 2.05rem;
@@ -44,20 +49,46 @@
   --ifm-h6-font-size: 0.95rem;
 }
 
+.theme-doc-markdown {
+  max-width: 720px;
+  font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+}
+
+.theme-doc-markdown :is(h1, h2, h3, h4, h5, h6) {
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.theme-doc-markdown blockquote {
+  font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'BiauKai', serif;
+  font-size: 1rem;
+}
+
+.theme-doc-markdown strong {
+  font-weight: 900;
+}
+
+::selection {
+  background: rgba(46, 133, 85, 0.18);
+  color: inherit;
+}
+
 .markdown h1:first-child {
   --ifm-h1-font-size: 2.05rem;
 }
 
 .markdown h2 {
   margin-top: 2.1rem;
+  letter-spacing: -0.015em;
 }
 
 .markdown h3 {
   margin-top: 1.45rem;
+  letter-spacing: -0.015em;
 }
 
 .markdown h4 {
   margin-top: 1.2rem;
+  letter-spacing: -0.012em;
 }
 
 .markdown h5,
@@ -67,7 +98,7 @@
 
 .markdown ul,
 .markdown ol {
-  margin-bottom: 1.6rem;
+  margin-bottom: 2rem;
 }
 
 .markdown li {
@@ -196,6 +227,7 @@
   max-width: 100%;
   margin: 0 auto;
   border-radius: 0.75rem;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
 @media (max-width: 640px) {
@@ -495,6 +527,8 @@
   --ifm-color-primary-lighter: #32d8b4;
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-background-color: #1b1b1d;
+  --ifm-font-color-base: #e3e3e3;
 }
 
 [data-theme='dark'] .navbar__logo img {

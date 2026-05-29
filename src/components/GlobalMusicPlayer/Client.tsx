@@ -54,8 +54,6 @@ type ExtendedAPlayer = APlayerInstance & {
   };
 };
 
-const GitHubIcon = getItsHoverIcon('github-icon');
-
 const readStoredPlayerState = (): StoredPlayerState => {
   if (typeof window === 'undefined') return {};
   try {
@@ -110,7 +108,6 @@ function ensurePlayerDOM(): {shell: HTMLDivElement; mount: HTMLDivElement} {
 
 function GlobalMusicPlayerClient() {
   const musicIconAnimation = useControlledIconAnimation(true);
-  const githubIconAnimation = useControlledIconAnimation(true);
   const playerRef = useRef<APlayerInstance | null>(_player);
   const isListOpenRef = useRef(false);
   const shouldKeepListOpenOnNextMountRef = useRef(false);
@@ -437,24 +434,6 @@ function GlobalMusicPlayerClient() {
   const groupSwitcher =
     groups.length > 1 ? (
       <div className={styles.musicGroupNavbarItem}>
-        {GitHubIcon ? (
-          <a
-            className={clsx('clean-btn', styles.musicGroupActionButton)}
-            href="https://github.com/FeeiCN"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="GitHub"
-            onMouseEnter={githubIconAnimation.onMouseEnter}
-            onMouseLeave={githubIconAnimation.onMouseLeave}>
-            <GitHubIcon
-              ref={githubIconAnimation.iconRef}
-              size={24}
-              strokeWidth={2}
-              disableHover={githubIconAnimation.disableHover}
-              className={styles.musicGroupToggleIcon}
-            />
-          </a>
-        ) : null}
         <button
           ref={groupToggleButtonRef}
           type="button"

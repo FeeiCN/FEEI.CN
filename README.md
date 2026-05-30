@@ -27,4 +27,4 @@ npm run typecheck
 
 ## 站点
 
-https://wufeifei.com
+https://feei.cn

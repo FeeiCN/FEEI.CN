@@ -172,14 +172,21 @@ const config: Config = {
   clientModules: ['./src/clientModules/slidingIndicator.ts'],
 
   themeConfig: {
+    docs: {
+      sidebar: {
+        hideable: true,
+        autoCollapseCategories: true,
+      },
+    },
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.webp',
     colorMode: {
       defaultMode: 'light',
       disableSwitch: false,
-      respectPrefersColorScheme: false,
+      respectPrefersColorScheme: true,
     },
     navbar: {
+      hideOnScroll: true,
       logo: {
         alt: 'My Site Logo',
         src: 'img/logo.webp',

@@ -10,7 +10,8 @@ export default function VerticalPoem({ title, author, children }: Props) {
   return (
     <div style={{
       writingMode: 'vertical-rl',
-      height: '75vh',
+      height: 'fit-content',
+      maxHeight: '75vh',
       overflowX: 'auto',
       overflowY: 'hidden',
       fontFamily: "'Kaiti SC', 'STKaiti', 'KaiTi', 'BiauKai', serif",

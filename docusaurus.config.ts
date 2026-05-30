@@ -186,7 +186,7 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      hideOnScroll: true,
+      hideOnScroll: false,
       logo: {
         alt: 'My Site Logo',
         src: 'img/logo.webp',

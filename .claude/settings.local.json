@@ -55,7 +55,20 @@
       "Bash(gh issue *)",
       "Skill(claude-api)",
       "WebFetch(domain:www.guwendao.net)",
-      "WebFetch(domain:zh.wikisource.org)"
+      "WebFetch(domain:zh.wikisource.org)",
+      "Bash(grep -n \"^$\\\\|^[^!]\" /Users/feei/Projects/my-website/docs/05-吴飞飞/02-总结/annual-review-for-2025/index.md)",
+      "Bash(awk '/^!\\\\[/{found=1} /^[^!\\\\[]/{if\\(found\\){print NR\": \"$0; found=0}}' /Users/feei/Projects/my-website/docs/05-吴飞飞/02-总结/annual-review-for-2025/index.md)",
+      "Bash(awk 'NR>=100 && NR<=250 {print NR\": \"$0}' /Users/feei/Projects/my-website/docs/05-吴飞飞/02-总结/annual-review-for-2025/index.md)",
+      "Bash(grep -E \"^[0-9]+: $|^[0-9]+: !\\\\[\")",
+      "Bash(node *)",
+      "Bash(grep -c ★★★★ /Users/feei/Projects/my-website/docs/02-事业有成/01-网络空间安全/02-安全组织/网络安全面试指南/03-面试题库/__TRACKED_VAR__)",
+      "WebFetch(domain:github-production-user-asset-6210df.s3.amazonaws.com)",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:www.vanguard.com)",
+      "WebFetch(domain:investor.vanguard.com)",
+      "WebFetch(domain:advisors.vanguard.com)",
+      "WebFetch(domain:corporate.vanguard.com)",
+      "WebFetch(domain:personal1.vanguard.com)"
     ]
   },
   "hooks": {

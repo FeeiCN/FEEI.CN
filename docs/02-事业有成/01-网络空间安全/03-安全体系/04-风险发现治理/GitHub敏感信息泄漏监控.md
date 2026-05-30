@@ -4,6 +4,21 @@ title: GSIL：GitHub敏感信息泄漏监控
 icon: github-icon
 ---
 
+<iframe
+  src="/files/GitHub敏感信息泄漏监控.pdf"
+  title="GitHub敏感信息泄漏监控 PDF"
+  width="100%"
+  height="640"
+  style={{border: '1px solid rgba(15, 23, 42, 0.12)', borderRadius: '12px', background: '#fff'}}
+>
+</iframe>
+
+<div style={{margin: '12px 0 24px'}}>
+  <a className="button button--primary" href="/files/GitHub敏感信息泄漏监控.pdf" target="_blank" rel="noopener noreferrer">
+    打开 / 下载 PDF
+  </a>
+</div>
+
 ## 漏洞背景
 
 GitHub作为开源代码平台，给程序员提供了交流学习的地方，提供了很多便利，但如果使用不当，比如将包含了账号密码、密钥等配置文件的代码上传了，导致攻击者能发现并进一步利用这些泄露的信息，就是一个典型的GitHub敏感信息泄露漏洞。 ‌

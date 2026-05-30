@@ -116,101 +116,22 @@
 }
 
 
-.markdown p:has(> img + img) {
+/* Justified layout: JS applies dimensions directly via inline styles.
+   CSS grid is kept as a fallback for paragraphs where JS hasn't run yet
+   (e.g. during SSR or when image dimensions are unavailable). */
+.markdown p:has(> img + img):not([data-justified]) {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
-  gap: 0.7rem;
-  align-items: stretch;
-}
-
-.markdown p[data-image-count='2'] {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.markdown p[data-image-count='3'] {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.markdown p[data-image-count='4'] {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.markdown p.markdownImageGroup--posters {
-  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr));
+  gap: 0.6rem;
   align-items: start;
 }
 
-.markdown p.markdownImageGroup--cards {
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-  align-items: start;
-}
-
-.markdown p.markdownImageGroup--appSnapshots {
-  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
-  align-items: start;
-}
-
-.markdown p.markdownImageGroup--documents {
-  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
-  align-items: start;
-}
-
-.markdown p.markdownImageGroup--wideScreenshots {
-  grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr));
-}
-
-.markdown p:has(> img + img) img {
+.markdown p:has(> img + img):not([data-justified]) img {
   display: block;
   width: 100%;
-  height: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  object-position: center;
-}
-
-.markdown p:has(> img + img) img.markdownImage--screenshot {
-  object-fit: contain;
-  padding: 0.35rem;
-  background: #f7f8fa;
-}
-
-.markdown p:has(> img + img) img.markdownImage--wideScreenshot {
-  aspect-ratio: 16 / 9;
-  padding: 0.2rem;
-}
-
-.markdown p:has(> img + img) img.markdownImage--document {
-  height: auto;
-  aspect-ratio: auto;
-  object-fit: contain;
-  padding: 0;
-  background: transparent;
-}
-
-.markdown p:has(> img + img) img.markdownImage--photo {
-  background: #f3f4f6;
-}
-
-.markdown p:has(> img + img) img.markdownImage--poster {
-  aspect-ratio: 2 / 3;
-  object-fit: cover;
-  background: #f3f4f6;
-}
-
-.markdown p:has(> img + img) img.markdownImage--card {
-  aspect-ratio: 9 / 16;
-  object-fit: contain;
-  padding: 0;
-  background: #f7f8fa;
-}
-
-.markdown p:has(> img + img) img.markdownImage--appSnapshot {
-  height: auto;
-  max-height: 21rem;
-  aspect-ratio: auto;
-  object-fit: contain;
-  padding: 0.35rem;
-  background: #f7f8fa;
+  border-radius: 0.5rem;
 }
 
 .markdown img {
@@ -230,33 +151,9 @@
 }
 
 @media (max-width: 640px) {
-  .markdown p:has(> img + img) {
+  .markdown p:has(> img + img):not([data-justified]) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem;
-  }
-
-  .markdown p:has(> img + img) img {
-    aspect-ratio: 1 / 1;
-  }
-
-  .markdown p:has(> img + img) img.markdownImage--screenshot {
-    aspect-ratio: 4 / 3;
-  }
-
-  .markdown p:has(> img + img) img.markdownImage--wideScreenshot {
-    aspect-ratio: 16 / 9;
-  }
-
-  .markdown p.markdownImageGroup--posters {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .markdown p.markdownImageGroup--cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .markdown p.markdownImageGroup--appSnapshots {
-    grid-template-columns: 1fr;
+    gap: 0.4rem;
   }
 }
 

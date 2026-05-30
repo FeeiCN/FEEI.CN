@@ -1,45 +1,30 @@
-# Website
+# FEEI.CN
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+吴飞飞的个人知识站点，基于 Docusaurus + Markdown 构建，内容涵盖健康幸福、事业有成、财务自由、人生丰富四个方向。
 
-## Installation
-
-```bash
-yarn
-```
-
-## Local Development
+## 本地开发
 
 ```bash
-yarn start
+npm install
+npm run start
 ```
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
-
-## Build
+## 构建
 
 ```bash
-yarn build
+npm run build
 ```
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
-
-## Deployment
-
-Using SSH:
+## 类型检查
 
 ```bash
-USE_SSH=true yarn deploy
+npm run typecheck
 ```
 
-Not using SSH:
+## 部署架构
 
-```bash
-GIT_USER=<Your GitHub username> yarn deploy
-```
+编辑 Markdown / 源码 → 提交 Pull Request → GitHub Action 执行构建 → 托管主机 Nginx 提供静态文件
 
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+## 站点
 
-
-
-https://lucide.dev/icons/categories#people
+https://wufeifei.com

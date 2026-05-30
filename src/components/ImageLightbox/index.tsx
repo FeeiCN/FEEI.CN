@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {TouchEvent} from 'react';
+import justifiedLayout from 'justified-layout';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -90,6 +91,67 @@ function updateImageGroupType(group: Element) {
   group.classList.toggle('markdownImageGroup--cards', count('markdownImage--card') >= enough);
   group.classList.toggle('markdownImageGroup--appSnapshots', count('markdownImage--appSnapshot') >= enough);
   group.classList.toggle('markdownImageGroup--wideScreenshots', count('markdownImage--wideScreenshot') >= enough);
+}
+
+// Store original image order per paragraph for resize recalculation
+const justifiedImages = new WeakMap<HTMLElement, HTMLImageElement[]>();
+
+function applyJustifiedLayout(paragraph: HTMLElement, images: HTMLImageElement[]) {
+  const containerWidth = paragraph.offsetWidth;
+  if (!containerWidth || images.length < 2) return;
+
+  const dimensions = images.map(img => ({
+    width: parseInt(img.getAttribute('width') ?? '0') || img.naturalWidth,
+    height: parseInt(img.getAttribute('height') ?? '0') || img.naturalHeight,
+  }));
+
+  if (dimensions.some(d => !d.width || !d.height)) return;
+
+  const isMobile = containerWidth < 640;
+  const spacing = isMobile ? 4 : 6;
+
+  const layout = justifiedLayout(dimensions, {
+    containerWidth,
+    targetRowHeight: isMobile ? 150 : 240,
+    targetRowHeightTolerance: 0.2,
+    boxSpacing: spacing,
+    containerPadding: 0,
+  });
+
+  // Group boxes into rows by top position
+  const rowMap = new Map<number, Array<{box: typeof layout.boxes[0]; img: HTMLImageElement}>>();
+  layout.boxes.forEach((box, i) => {
+    const rowKey = Math.round(box.top);
+    if (!rowMap.has(rowKey)) rowMap.set(rowKey, []);
+    rowMap.get(rowKey)!.push({box, img: images[i]});
+  });
+
+  // Rebuild paragraph with row structure
+  while (paragraph.firstChild) paragraph.removeChild(paragraph.firstChild);
+  paragraph.dataset.justified = 'true';
+  paragraph.style.display = 'flex';
+  paragraph.style.flexDirection = 'column';
+  paragraph.style.gap = `${spacing}px`;
+
+  for (const [, items] of [...rowMap.entries()].sort((a, b) => a[0] - b[0])) {
+    const row = document.createElement('div');
+    row.className = 'justifiedImageRow';
+    row.style.display = 'flex';
+    row.style.gap = `${spacing}px`;
+
+    items.forEach(({box, img}) => {
+      img.style.cssText = `width:${box.width}px;height:${box.height}px;display:block;object-fit:cover;flex-shrink:0;border-radius:0.5rem;`;
+      row.appendChild(img);
+    });
+
+    paragraph.appendChild(row);
+  }
+}
+
+function refreshJustifiedParagraph(paragraph: HTMLElement) {
+  const images = justifiedImages.get(paragraph);
+  if (!images) return;
+  applyJustifiedLayout(paragraph, images);
 }
 
 export default function ImageLightbox() {
@@ -209,9 +271,14 @@ export default function ImageLightbox() {
     function enhanceMarkdownImages() {
       document.querySelectorAll<HTMLImageElement>('.markdown img').forEach(enhanceImage);
       document.querySelectorAll<HTMLElement>('.markdown p').forEach((paragraph) => {
-        const paragraphImages = paragraph.querySelectorAll(':scope > img');
-        if (paragraphImages.length > 1) {
-          paragraph.dataset.imageCount = String(paragraphImages.length);
+        // Skip already-justified paragraphs — avoid infinite loop with MutationObserver
+        if (paragraph.dataset.justified) return;
+
+        const images = Array.from(paragraph.querySelectorAll<HTMLImageElement>(':scope > img'));
+        if (images.length > 1) {
+          paragraph.dataset.imageCount = String(images.length);
+          justifiedImages.set(paragraph, images);
+          applyJustifiedLayout(paragraph, images);
           updateImageGroupType(paragraph);
         }
       });
@@ -221,6 +288,16 @@ export default function ImageLightbox() {
 
     const observer = new MutationObserver(enhanceMarkdownImages);
     observer.observe(document.body, {childList: true, subtree: true});
+
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    const resizeObserver = new ResizeObserver(() => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        document.querySelectorAll<HTMLElement>('.markdown p[data-justified]').forEach(refreshJustifiedParagraph);
+      }, 150);
+    });
+    const markdownEl = document.querySelector('.markdown');
+    if (markdownEl) resizeObserver.observe(markdownEl);
 
     function handleClick(event: MouseEvent) {
       const target = event.target;
@@ -250,6 +327,8 @@ export default function ImageLightbox() {
     document.addEventListener('click', handleClick);
     return () => {
       observer.disconnect();
+      resizeObserver.disconnect();
+      clearTimeout(resizeTimer);
       document.removeEventListener('click', handleClick);
     };
   }, []);

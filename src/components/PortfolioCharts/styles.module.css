@@ -1,0 +1,46 @@
+.wrap {
+  width: 100%;
+  margin: 0.5rem 0 1.5rem;
+}
+
+.section {
+  margin-bottom: 2rem;
+}
+
+.sectionTitle {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+[data-theme='dark'] .sectionTitle {
+  color: #94a3b8;
+}
+
+.pieRow {
+  display: flex;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .pieRow {
+    flex-direction: column;
+  }
+}
+
+.pieCell {
+  flex: 1;
+  min-width: 0;
+}
+
+.pieLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-align: center;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.25rem;
+}

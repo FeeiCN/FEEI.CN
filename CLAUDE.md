@@ -22,6 +22,8 @@
 
 每次执行 `git push` 前，必须先运行 `npm run build 2>&1 | grep -E "WARNING|SUCCESS|ERROR"` 确认输出为 `[SUCCESS]` 且无 `[WARNING]`，才可以推送。
 
+`git push` 前必须向用户确认，得到明确同意后才能执行。
+
 ## 编码风格与命名约定
 
 TypeScript 使用严格模式。延续现有配置和主题文件风格：2 空格缩进、保留分号、尽量保持小函数和单一职责。React 主题覆盖应尽量小而明确，并放在 `src/theme/<组件名>/` 下。

@@ -3,7 +3,66 @@ slug: /hk-ipo-data
 icon: chart-histogram-icon
 ---
 
+import HKIPOCharts from '@site/src/components/HKIPOCharts';
+
+export const ipoData = {
+  cumulative: [
+    {month: '2024-12', monthlyPnl: 14280, cumulativePnl: 14280},
+    {month: '2025-01', monthlyPnl: 12795, cumulativePnl: 27075},
+    {month: '2025-02', monthlyPnl: 9420, cumulativePnl: 36495},
+    {month: '2025-03', monthlyPnl: 0, cumulativePnl: 36495},
+    {month: '2025-04', monthlyPnl: 0, cumulativePnl: 36495},
+    {month: '2025-05', monthlyPnl: 23060, cumulativePnl: 59555},
+    {month: '2025-06', monthlyPnl: 23777, cumulativePnl: 83332},
+    {month: '2025-07', monthlyPnl: 15430, cumulativePnl: 98762},
+    {month: '2025-08', monthlyPnl: 14866, cumulativePnl: 113628},
+    {month: '2025-09', monthlyPnl: 6867, cumulativePnl: 120495},
+    {month: '2025-10', monthlyPnl: 6458, cumulativePnl: 126953},
+    {month: '2025-11', monthlyPnl: 0, cumulativePnl: 126953},
+    {month: '2025-12', monthlyPnl: 0, cumulativePnl: 126953},
+    {month: '2026-01', monthlyPnl: 2756, cumulativePnl: 129709},
+    {month: '2026-02', monthlyPnl: 5346, cumulativePnl: 135055},
+    {month: '2026-03', monthlyPnl: 2479, cumulativePnl: 137534},
+    {month: '2026-04', monthlyPnl: 50001, cumulativePnl: 187535},
+    {month: '2026-05', monthlyPnl: 18285, cumulativePnl: 205820},
+  ],
+  stocks: [
+    {name: '曦智科技-P', pnl: 32061},
+    {name: '恒瑞医药', pnl: 21360},
+    {name: '群核科技', pnl: 17940},
+    {name: '维立志博-B', pnl: 15430},
+    {name: '毛戈平', pnl: 14280},
+    {name: 'IFBH', pnl: 13110},
+    {name: '布鲁可', pnl: 12795},
+    {name: '银诺医药-B', pnl: 10244},
+    {name: '剂泰科技-P', pnl: 9760},
+    {name: '三花智控', pnl: 9737},
+    {name: '蜜雪集团', pnl: 9420},
+    {name: '挚达科技', pnl: 5564},
+    {name: '大行科工', pnl: 4950},
+    {name: '深演智能', pnl: 4850},
+    {name: '中慧生物-B', pnl: 3840},
+    {name: '丹诺医药-B', pnl: 3515},
+    {name: '卓正医疗', pnl: 3390},
+    {name: '奇瑞汽车', pnl: 1917},
+    {name: '智谱', pnl: 1900},
+    {name: '大族数控', pnl: 1780},
+    {name: '宁德时代', pnl: 1700},
+    {name: '广合科技', pnl: 1397},
+    {name: '飞速创新', pnl: 1010},
+    {name: '海天味业', pnl: 930},
+    {name: '聚水潭', pnl: 894},
+    {name: 'MINIMAX-WP', pnl: 856},
+    {name: '天岳先进', pnl: 782},
+    {name: '牧原股份', pnl: 176},
+    {name: '驭势科技', pnl: 160},
+    {name: '美格智能', pnl: 72},
+  ],
+};
+
 # 港股打新数据
+
+<HKIPOCharts data={ipoData} />
 
 共 57 条，合计盈亏 +205820 HKD
 

@@ -4,43 +4,33 @@
 }
 
 .section {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
-.sectionTitle {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #64748b;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin-bottom: 0.5rem;
-}
-
-[data-theme='dark'] .sectionTitle {
-  color: #94a3b8;
-}
-
-.pieRow {
+.pnlRow {
   display: flex;
   gap: 1rem;
+  align-items: flex-start;
 }
 
-@media (max-width: 600px) {
-  .pieRow {
-    flex-direction: column;
-  }
-}
-
-.pieCell {
+.pnlCell {
   flex: 1;
   min-width: 0;
 }
 
-.pieLabel {
+.currencyLabel {
   font-size: 0.72rem;
   font-weight: 600;
   color: #94a3b8;
-  text-align: center;
   letter-spacing: 0.08em;
+  margin: 0.5rem 0 0.1rem;
+}
+
+.sectionTitle {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #94a3b8;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   margin-bottom: 0.25rem;
 }

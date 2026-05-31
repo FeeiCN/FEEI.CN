@@ -1,4 +1,77 @@
-# 账户资产
+---
+slug: /stock-data
+icon: chart-line-icon
+title: 个股账号资产数据
+---
+
+import PortfolioCharts from '@site/src/components/PortfolioCharts';
+
+export const portfolioData = {
+  history: [
+    {date: '04-18', totalAssets: 644684.7, securitiesValue: 643144.8, dailyChange: 0},
+    {date: '04-19', totalAssets: 644684.7, securitiesValue: 643144.8, dailyChange: 0},
+    {date: '04-20', totalAssets: 645806.6, securitiesValue: 644264.0, dailyChange: 1122.0},
+    {date: '04-21', totalAssets: 640887.3, securitiesValue: 639347.3, dailyChange: -4919.4},
+    {date: '04-22', totalAssets: 639159.3, securitiesValue: 637616.6, dailyChange: -1728.0},
+    {date: '04-23', totalAssets: 638511.0, securitiesValue: 636967.8, dailyChange: -648.3},
+    {date: '04-25', totalAssets: 637915.1, securitiesValue: 638879.6, dailyChange: -595.9},
+    {date: '04-26', totalAssets: 637915.1, securitiesValue: 638879.6, dailyChange: 0},
+    {date: '04-27', totalAssets: 638153.2, securitiesValue: 639118.3, dailyChange: 238.1},
+    {date: '04-28', totalAssets: 642032.9, securitiesValue: 642996.0, dailyChange: 3879.8},
+    {date: '04-29', totalAssets: 647857.7, securitiesValue: 637424.6, dailyChange: 5824.8},
+    {date: '04-30', totalAssets: 639599.6, securitiesValue: 629157.1, dailyChange: -8258.2},
+    {date: '05-01', totalAssets: 642332.5, securitiesValue: 631905.4, dailyChange: 2733.0},
+    {date: '05-02', totalAssets: 651443.8, securitiesValue: 641134.1, dailyChange: 9111.2},
+    {date: '05-03', totalAssets: 651230.8, securitiesValue: 640921.1, dailyChange: -213.0},
+    {date: '05-04', totalAssets: 651110.9, securitiesValue: 640803.0, dailyChange: -119.9},
+    {date: '05-05', totalAssets: 655581.9, securitiesValue: 645269.9, dailyChange: 4471.0},
+    {date: '05-06', totalAssets: 655232.6, securitiesValue: 644929.0, dailyChange: -349.3},
+    {date: '05-07', totalAssets: 661941.4, securitiesValue: 651747.9, dailyChange: 6708.8},
+    {date: '05-08', totalAssets: 669601.0, securitiesValue: 659410.9, dailyChange: 7659.6},
+    {date: '05-09', totalAssets: 685463.1, securitiesValue: 675372.8, dailyChange: 15862.2},
+    {date: '05-10', totalAssets: 685919.7, securitiesValue: 675829.4, dailyChange: 456.6},
+    {date: '05-11', totalAssets: 686332.0, securitiesValue: 676235.3, dailyChange: 412.3},
+    {date: '05-12', totalAssets: 688269.0, securitiesValue: 682784.3, dailyChange: 1937.0},
+    {date: '05-13', totalAssets: 690437.2, securitiesValue: 671965.5, dailyChange: 2168.2},
+    {date: '05-14', totalAssets: 694362.3, securitiesValue: 675992.9, dailyChange: 3925.1},
+    {date: '05-15', totalAssets: 698203.7, securitiesValue: 679841.3, dailyChange: 3841.4},
+    {date: '05-16', totalAssets: 687380.3, securitiesValue: 669080.4, dailyChange: -10823.4},
+    {date: '05-17', totalAssets: 689415.0, securitiesValue: 671115.1, dailyChange: 2034.7},
+    {date: '05-18', totalAssets: 689365.2, securitiesValue: 671067.9, dailyChange: -49.9},
+    {date: '05-19', totalAssets: 681553.8, securitiesValue: 663296.3, dailyChange: -7811.4},
+    {date: '05-20', totalAssets: 679596.0, securitiesValue: 661382.1, dailyChange: -1957.8},
+    {date: '05-21', totalAssets: 688397.7, securitiesValue: 673547.8, dailyChange: 8801.7},
+    {date: '05-22', totalAssets: 692931.9, securitiesValue: 671857.6, dailyChange: 4534.3},
+    {date: '05-23', totalAssets: 695359.0, securitiesValue: 674296.1, dailyChange: 2427.1},
+    {date: '05-24', totalAssets: 696648.2, securitiesValue: 675585.3, dailyChange: 1289.2},
+    {date: '05-25', totalAssets: 696108.2, securitiesValue: 675063.4, dailyChange: -540.0},
+    {date: '05-26', totalAssets: 695290.2, securitiesValue: 674264.2, dailyChange: -818.0},
+    {date: '05-27', totalAssets: 703282.3, securitiesValue: 682343.1, dailyChange: 7992.1},
+    {date: '05-28', totalAssets: 712769.6, securitiesValue: 691853.3, dailyChange: 9487.3},
+    {date: '05-29', totalAssets: 722267.9, securitiesValue: 701366.7, dailyChange: 9498.4},
+    {date: '05-30', totalAssets: 725409.7, securitiesValue: 704540.4, dailyChange: 3141.7},
+    {date: '05-31', totalAssets: 725254.9, securitiesValue: 704385.7, dailyChange: -154.8},
+  ],
+  holdings: [
+    {name: '特斯拉', value: 23096.9, currency: 'USD'},
+    {name: 'Tempus AI', value: 656.1, currency: 'USD'},
+    {name: 'Palantir', value: 5009.3, currency: 'USD'},
+    {name: '拼多多', value: 1688.8, currency: 'USD'},
+    {name: '英伟达', value: 10979.3, currency: 'USD'},
+    {name: 'Meta Platforms', value: 15180.2, currency: 'USD'},
+    {name: '英特尔', value: 5734.0, currency: 'USD'},
+    {name: 'Illumina', value: 3748.1, currency: 'USD'},
+    {name: 'Gitlab', value: 6893.1, currency: 'USD'},
+    {name: 'Coinbase', value: 945.1, currency: 'USD'},
+    {name: 'Applovin', value: 9809.4, currency: 'USD'},
+    {name: '亚马逊', value: 6495.4, currency: 'USD'},
+    {name: '苹果', value: 7115.0, currency: 'USD'},
+    {name: '奥克斯电气', value: 36312.0, currency: 'HKD'},
+    {name: '小米集团-W', value: 16824.0, currency: 'HKD'},
+  ],
+};
+
+<PortfolioCharts data={portfolioData} />
 
 ## 资金
 

@@ -1,7 +1,6 @@
 ---
 slug: /sms-sniffing
 title: 短信嗅探实践
-icon: radio-icon
 ---
 
 ## 1 背景知识

@@ -1,7 +1,6 @@
 ---
 slug: /ssrf-getshell
 title: 某社交平台SSRF到GET SHELL
-icon: router-icon
 ---
 
 **SSRF 漏洞能升级为 RCE 的关键在于内网的隐式信任关系。** 这个案例中，Redis 的匿名访问和可写的 cron 文件，是从 SSRF 到 GetShell 的两个关键跳板。外网的请求伪造漏洞之所以能最终完成服务器接管，是因为内网服务默认被当作可信环境，完全没有独立的认证防线。

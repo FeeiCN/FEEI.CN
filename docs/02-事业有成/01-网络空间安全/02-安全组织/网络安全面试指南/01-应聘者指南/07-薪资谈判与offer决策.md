@@ -1,7 +1,6 @@
 ---
 slug: /sig/offer
 title: 薪资谈判与offer决策
-icon: credit-card
 ---
 
 拿到 offer 前最后一道关卡，往往也是最容易留下遗憾的环节。很多人在技术面试表现出色，但在薪资谈判上过于保守，或者收到多个 offer 时不知道如何决策。

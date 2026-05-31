@@ -1,7 +1,6 @@
 ---
 slug: /esd
 title: 枚举子域名
-icon: globe-icon
 ---
 
 ## 事情背景

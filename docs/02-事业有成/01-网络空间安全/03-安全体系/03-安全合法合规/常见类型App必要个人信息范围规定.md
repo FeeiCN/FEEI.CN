@@ -1,7 +1,6 @@
 ---
 slug: /app-necessary-personal-info
 title: 常见类型移动互联网应用程序必要个人信息范围规定
-icon: file-description-icon
 sidebar_position: 16
 ---
 

@@ -1,7 +1,6 @@
 ---
 slug: /ssrf
 title: SSRF（服务端请求伪造）
-icon: router-icon
 ---
 
 ## 漏洞介绍

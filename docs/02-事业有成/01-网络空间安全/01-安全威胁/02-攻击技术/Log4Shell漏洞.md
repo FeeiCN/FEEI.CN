@@ -1,7 +1,6 @@
 ---
 slug: /log4shell
 title: Log4shell（Log4j2 RCE）
-icon: flame-icon
 ---
 
 **Log4Shell 的根本危害在于日志框架将用户可控内容作为 JNDI 查找表达式执行，攻击者只需让目标应用打印一条包含 `${jndi:ldap://...}` 的日志，即可触发远程代码执行。** Log4j2是一个广泛使用的Java日志框架，允许开发者通过简单的方式记录日志。该漏洞被标识为CVE-2021-44228，通常称为”Log4Shell”，影响范围极广且能造成严重后果，是有史以来最危险的漏洞之一。

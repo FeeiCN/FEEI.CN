@@ -1,7 +1,6 @@
 ---
 slug: /flask-security
 title: Flask 常见利用点
-icon: python-icon
 ---
 
 ## Secret Key（Flask-Login）

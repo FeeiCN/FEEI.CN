@@ -1,7 +1,6 @@
 ---
 slug: /github-pr-risks
 title: GitHub Pull Request 业务逻辑风险
-icon: github-icon
 ---
 
 最近看了几个 GitHub Pull Request 相关的漏洞，觉得很有意思，也能侧面反映当前业界在业务逻辑风险方面的一些现状，记录分享出来。

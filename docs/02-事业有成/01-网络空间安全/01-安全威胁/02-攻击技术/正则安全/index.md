@@ -1,7 +1,6 @@
 ---
 slug: /regex-security
 title: 正则安全
-icon: code-xml-icon
 ---
 
 正则基础知识

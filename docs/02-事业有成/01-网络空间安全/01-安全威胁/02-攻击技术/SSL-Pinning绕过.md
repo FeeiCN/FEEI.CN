@@ -1,7 +1,6 @@
 ---
 slug: /ssl-pinning-bypass
 title: SSL Pinning 绕过
-icon: lock-icon
 ---
 
 SSL Pinning（证书固定）是移动端防止中间人抓包的常见机制——应用在代码中内置了信任的证书或其哈希，只接受与之匹配的服务端证书，使 Burp Suite 等代理工具的证书默认无效。以下是常见的绕过方式，iOS 和 Android 均有对应思路，但各方法都有前提条件和局限性。

@@ -1,6 +1,6 @@
 ---
 slug: /claude
-icon: anthropic-icon
+icon: brand-anthropic-icon
 ---
 
 # Claude

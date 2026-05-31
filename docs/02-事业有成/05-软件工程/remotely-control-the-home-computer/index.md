@@ -1,6 +1,7 @@
 ---
 slug: /remotely-control-the-home-computer
 title: Remotely Control Your Home Computer
+icon: home-icon
 ---
 
 

@@ -1,6 +1,7 @@
 ---
 slug: /around-the-world-equipment
 title: 环游世界装备
+icon: globe-icon
 ---
 
 

@@ -1,6 +1,7 @@
 ---
 slug: /tibet
 title: 西藏
+icon: globe-icon
 ---
 
 

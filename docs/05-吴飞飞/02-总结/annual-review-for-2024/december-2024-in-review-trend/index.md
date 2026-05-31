@@ -1,6 +1,7 @@
 ---
 slug: /december-2024-in-review-trend
 title: 'December 2024 in Review: "Trend"'
+icon: arrow-big-up-dash-icon
 ---
 
 

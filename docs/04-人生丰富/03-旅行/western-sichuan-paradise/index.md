@@ -1,6 +1,7 @@
 ---
 slug: /western-sichuan-paradise
 title: 自驾极限穿越川西世外桃源
+icon: globe-icon
 ---
 
 

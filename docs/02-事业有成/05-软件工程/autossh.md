@@ -1,6 +1,7 @@
 ---
 slug: /autossh
 title: 免密自动登录 SSH
+icon: terminal-icon
 ---
 
 

@@ -1,6 +1,7 @@
 ---
 slug: /southern-xinjiang
 title: 自驾南疆大环线
+icon: globe-icon
 ---
 
 

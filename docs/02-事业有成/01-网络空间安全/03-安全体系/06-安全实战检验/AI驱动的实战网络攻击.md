@@ -1,6 +1,7 @@
 ---
 slug: /ai-driven-offensive-cyber-operations-in-the-real-world
 title: 基于AI驱动的实战网络攻击
+icon: brain-circuit-icon
 ---
 
 

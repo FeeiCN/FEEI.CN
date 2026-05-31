@@ -1,6 +1,7 @@
 ---
 slug: /install-windows-on-macos
 title: Install Windows on macOS
+icon: terminal-icon
 ---
 
 

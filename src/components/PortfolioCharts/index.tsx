@@ -1,3 +1,4 @@
+import {useEffect, useState} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
@@ -23,14 +24,14 @@ type PortfolioData = {
   holdings: Holding[];
 };
 
-function buildLineOption(data: PortfolioData, isDark: boolean) {
+function buildLineOption(data: PortfolioData, isDark: boolean, isMobile: boolean) {
   const axisColor = isDark ? '#475569' : '#cbd5e1';
   const labelColor = isDark ? '#94a3b8' : '#64748b';
   const splitColor = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(148,163,184,0.2)';
 
   return {
     backgroundColor: 'transparent',
-    grid: {top: 36, right: 64, bottom: 28, left: 12, containLabel: true},
+    grid: {top: 36, right: isMobile ? 36 : 64, bottom: 28, left: 12, containLabel: true},
     legend: {
       data: ['总资产', '证券市值', '昨日差额'],
       top: 0,
@@ -131,7 +132,7 @@ function buildLineOption(data: PortfolioData, isDark: boolean) {
   };
 }
 
-function buildPnlOption(holdings: Holding[], isDark: boolean) {
+function buildPnlOption(holdings: Holding[], isDark: boolean, isMobile: boolean) {
   const labelColor = isDark ? '#94a3b8' : '#64748b';
   const splitColor = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(148,163,184,0.2)';
 
@@ -139,7 +140,13 @@ function buildPnlOption(holdings: Holding[], isDark: boolean) {
 
   return {
     backgroundColor: 'transparent',
-    grid: {top: 8, right: 120, bottom: 8, left: 16, containLabel: true},
+    grid: {
+      top: 8,
+      right: isMobile ? 12 : 120,
+      bottom: 8,
+      left: isMobile ? 88 : 16,
+      containLabel: !isMobile,
+    },
     tooltip: {
       trigger: 'item',
       formatter: (params: {name: string; dataIndex: number}) => {
@@ -152,17 +159,23 @@ function buildPnlOption(holdings: Holding[], isDark: boolean) {
     xAxis: {
       type: 'value',
       axisLabel: {
+        show: !isMobile,
         formatter: (v: number) => `${v > 0 ? '+' : ''}${(v / 1000).toFixed(0)}k`,
         color: labelColor,
         fontSize: 11,
       },
-      splitLine: {lineStyle: {color: splitColor}},
+      splitLine: {show: !isMobile, lineStyle: {color: splitColor}},
       axisLine: {show: false},
     },
     yAxis: {
       type: 'category',
       data: sorted.map((h) => h.name),
-      axisLabel: {color: labelColor, fontSize: 12},
+      axisLabel: {
+        color: labelColor,
+        fontSize: isMobile ? 10 : 12,
+        width: isMobile ? 76 : undefined,
+        overflow: isMobile ? 'truncate' : 'none',
+      },
       axisTick: {show: false},
       axisLine: {show: false},
     },
@@ -177,7 +190,7 @@ function buildPnlOption(holdings: Holding[], isDark: boolean) {
             borderRadius: h.pnl >= 0 ? [0, 4, 4, 0] : [4, 0, 0, 4],
           },
           label: {
-            show: true,
+            show: !isMobile,
             position: 'right',
             formatter: () => {
               const sign = h.pnl >= 0 ? '+' : '';
@@ -195,67 +208,60 @@ function buildPnlOption(holdings: Holding[], isDark: boolean) {
   };
 }
 
-function buildPieOption(data: PortfolioData, isDark: boolean) {
+function buildPieOption(data: PortfolioData, isDark: boolean, isMobile: boolean) {
   const labelColor = isDark ? '#94a3b8' : '#64748b';
   const usd = data.holdings.filter((h) => h.currency === 'USD');
   const hkd = data.holdings.filter((h) => h.currency === 'HKD');
 
   const pieColors = ['#2563eb', '#0891b2', '#7c3aed', '#db2777', '#ea580c', '#65a30d', '#0d9488'];
 
+  const layout = isMobile
+    ? {
+        usdCenter: ['50%', '26%'] as [string, string],
+        hkdCenter: ['50%', '74%'] as [string, string],
+        radius: ['28%', '46%'] as [string, string],
+        usdTitle: {left: '50%', top: '1%'},
+        hkdTitle: {left: '50%', top: '50%'},
+        legend: {show: false} as Record<string, unknown>,
+      }
+    : {
+        usdCenter: ['26%', '50%'] as [string, string],
+        hkdCenter: ['74%', '50%'] as [string, string],
+        radius: ['36%', '62%'] as [string, string],
+        usdTitle: {left: '25%', top: '4%'},
+        hkdTitle: {left: '75%', top: '4%'},
+        legend: {type: 'scroll', orient: 'horizontal', bottom: 0, textStyle: {fontSize: 11, color: labelColor}} as Record<string, unknown>,
+      };
+
   return {
     backgroundColor: 'transparent',
     title: [
-      {
-        text: 'USD',
-        left: '25%',
-        top: '4%',
-        textAlign: 'center',
-        textStyle: {fontSize: 12, fontWeight: 500, color: labelColor},
-      },
-      {
-        text: 'HKD',
-        left: '75%',
-        top: '4%',
-        textAlign: 'center',
-        textStyle: {fontSize: 12, fontWeight: 500, color: labelColor},
-      },
+      {text: 'USD', ...layout.usdTitle, textAlign: 'center', textStyle: {fontSize: 12, fontWeight: 500, color: labelColor}},
+      {text: 'HKD', ...layout.hkdTitle, textAlign: 'center', textStyle: {fontSize: 12, fontWeight: 500, color: labelColor}},
     ],
     tooltip: {
       trigger: 'item',
       formatter: (params: {name: string; value: number; percent: number; seriesName: string}) =>
         `${params.name}<br/>${params.value.toLocaleString()} ${params.seriesName}　${params.percent}%`,
     },
-    legend: {
-      type: 'scroll',
-      orient: 'horizontal',
-      bottom: 0,
-      textStyle: {fontSize: 11, color: labelColor},
-    },
+    legend: layout.legend,
     color: pieColors,
     series: [
       {
         name: 'USD',
         type: 'pie',
-        radius: ['36%', '62%'],
-        center: ['26%', '50%'],
-        label: {
-          formatter: '{d}%',
-          fontSize: 11,
-          color: labelColor,
-        },
+        radius: layout.radius,
+        center: layout.usdCenter,
+        label: {formatter: '{d}%', fontSize: 11, color: labelColor},
         labelLine: {length: 8, length2: 6},
         data: usd.map((h) => ({name: h.name, value: h.value})),
       },
       {
         name: 'HKD',
         type: 'pie',
-        radius: ['36%', '62%'],
-        center: ['74%', '50%'],
-        label: {
-          formatter: '{d}%',
-          fontSize: 11,
-          color: labelColor,
-        },
+        radius: layout.radius,
+        center: layout.hkdCenter,
+        label: {formatter: '{d}%', fontSize: 11, color: labelColor},
         labelLine: {length: 8, length2: 6},
         data: hkd.map((h) => ({name: h.name, value: h.value})),
       },
@@ -267,13 +273,20 @@ function Charts({data}: {data: PortfolioData}) {
   const {colorMode} = useColorMode();
   const isDark = colorMode === 'dark';
   const theme = isDark ? 'dark' : undefined;
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    const handle = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handle);
+    return () => window.removeEventListener('resize', handle);
+  }, []);
 
   return (
     <div className={styles.wrap}>
       <div className={styles.section}>
         <div className={styles.sectionTitle}>资产走势</div>
         <ReactECharts
-          option={buildLineOption(data, isDark)}
+          option={buildLineOption(data, isDark, isMobile)}
           theme={theme}
           style={{height: 300}}
           opts={{renderer: 'svg'}}
@@ -282,15 +295,15 @@ function Charts({data}: {data: PortfolioData}) {
       <div className={styles.section}>
         <div className={styles.sectionTitle}>持仓分布</div>
         <ReactECharts
-          option={buildPieOption(data, isDark)}
+          option={buildPieOption(data, isDark, isMobile)}
           theme={theme}
-          style={{height: 320}}
+          style={{height: isMobile ? 500 : 320}}
           opts={{renderer: 'svg'}}
         />
       </div>
       <div className={styles.section}>
         <div className={styles.sectionTitle}>盈亏明细</div>
-        <div className={styles.pnlRow}>
+        <div className={styles.pnlRow} style={isMobile ? {flexDirection: 'column', alignItems: 'stretch'} : undefined}>
           {(['USD', 'HKD'] as const).map((currency) => {
             const group = data.holdings.filter((h) => h.currency === currency);
             if (group.length === 0) return null;
@@ -298,7 +311,7 @@ function Charts({data}: {data: PortfolioData}) {
               <div key={currency} className={styles.pnlCell}>
                 <div className={styles.currencyLabel}>{currency}</div>
                 <ReactECharts
-                  option={buildPnlOption(group, isDark)}
+                  option={buildPnlOption(group, isDark, isMobile)}
                   theme={theme}
                   style={{height: group.length * 44 + 24}}
                   opts={{renderer: 'svg'}}

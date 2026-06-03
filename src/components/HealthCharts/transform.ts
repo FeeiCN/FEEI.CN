@@ -59,26 +59,29 @@ function series(metrics: RawMetric[], name: string, conv?: (v: number) => number
   const m = metrics.find((x) => x.name === name);
   if (!m) return [];
   return (m.data as RawEntry[])
-    .filter((d) => typeof d.qty === 'number')
+    .filter((d) => typeof d.qty === 'number' && typeof d.date === 'string' && d.date.length >= 10)
     .map((d) => [d.date.slice(0, 10), r(conv ? conv(d.qty!) : d.qty!)]);
 }
 
 function sleep(metrics: RawMetric[]): [string, number, number, number, number, number][] {
   const m = metrics.find((x) => x.name === 'sleep_analysis');
   if (!m) return [];
-  return (m.data as SleepEntry[]).map((d) => [
-    d.date.slice(0, 10),
-    r(d.totalSleep ?? 0), r(d.deep ?? 0), r(d.rem ?? 0), r(d.core ?? 0), r(d.awake ?? 0),
-  ]);
+  return (m.data as SleepEntry[])
+    .filter((d) => typeof d.date === 'string' && d.date.length >= 10)
+    .map((d) => [
+      d.date.slice(0, 10),
+      r(d.totalSleep ?? 0), r(d.deep ?? 0), r(d.rem ?? 0), r(d.core ?? 0), r(d.awake ?? 0),
+    ]);
 }
 
 function workouts(ws: RawWorkout[]): [string, string, number, number, number][] {
   return [...ws]
-    .sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''))
+    .filter((w) => typeof w.start === 'string' && w.start.length >= 10)
+    .sort((a, b) => a.start.localeCompare(b.start))
     .map((w) => [
-      (w.start ?? '').slice(0, 10),
+      w.start.slice(0, 10),
       w.name ?? '其他',
-      r(((w.duration ?? 0)) / 60, 1),
+      r((w.duration ?? 0) / 60, 1),
       Math.round((w.activeEnergyBurned?.qty ?? 0) / 4.184),
       Math.round(typeof w.avgHeartRate === 'object' ? (w.avgHeartRate?.qty ?? 0) : 0),
     ]);
@@ -87,7 +90,8 @@ function workouts(ws: RawWorkout[]): [string, string, number, number, number][] 
 function medications(meds: RawMed[]): {nah: [string, number, number][]; bns: [string, number, number][]; monthly: [string, number, number][]} {
   const byDay: Record<string, Record<string, [number, number]>> = {};
   for (const m of meds) {
-    const date = (m.scheduledDate ?? '').slice(0, 10);
+    if (typeof m.scheduledDate !== 'string' || m.scheduledDate.length < 10) continue;
+    const date = m.scheduledDate.slice(0, 10);
     const name = (m.displayText ?? '').replace(/[^一-龥a-zA-Z]/g, '');
     if (!byDay[date]) byDay[date] = {};
     if (!byDay[date][name]) byDay[date][name] = [0, 0];
@@ -169,6 +173,7 @@ export function transform(raw: any): HealthData {
     bns_daily:      med.bns,
     med_monthly:    med.monthly,
     state_of_mind:  moods
+      .filter((s) => typeof s.start === 'string' && s.start.length >= 10 && typeof s.valence === 'number')
       .sort((a, b) => a.start.localeCompare(b.start))
       .map((s) => [
         s.start.slice(0, 10),
@@ -177,7 +182,9 @@ export function transform(raw: any): HealthData {
         (s.labels ?? []).join(','),
         (s.associations ?? []).join(','),
       ]),
-    hr_notifications: alerts.map((n) => [n.start.slice(0, 10), n.threshold]),
+    hr_notifications: alerts
+      .filter((n) => typeof n.start === 'string' && n.start.length >= 10)
+      .map((n) => [n.start.slice(0, 10), n.threshold]),
   };
 }
 
@@ -225,4 +232,125 @@ export function getDateRange(D: HealthData): string | null {
     return `${start.slice(0, 4)} · ${start.slice(5)} ~ ${end.slice(5)}`;
   }
   return `${start.slice(0, 7)} ~ ${end.slice(0, 7)}`;
+}
+
+// ── dashboard cards ───────────────────────────────────────────────────────────
+
+export type DashCard = {
+  label: string;
+  value: string;
+  unit: string;
+  rangeLabel: string;
+  rangeStatus: 'good' | 'warn' | 'bad' | 'neutral';
+  change7d: string;
+  changeDir: 'up' | 'down' | 'flat';
+  changeGood: boolean | null;
+  sparkline: number[];
+  sparklineDates: string[];
+  rangeMin: number;
+  rangeMax: number;
+};
+
+function lastRecent(arr: [string, number][], days: number, conv?: (v: number) => number): number | null {
+  if (arr.length < 2) return null;
+  const latest = arr[arr.length - 1][0];
+  const cutoff = new Date(latest);
+  cutoff.setDate(cutoff.getDate() - days);
+  const cs = cutoff.toISOString().slice(0, 10);
+  const older = [...arr].reverse().find(([d]) => d <= cs);
+  if (!older) return null;
+  return conv ? conv(older[1]) : older[1];
+}
+
+export function computeDashboard(D: HealthData): DashCard[] {
+  const cards: DashCard[] = [];
+
+  function addCard(
+    data: [string, number][],
+    label: string,
+    unit: string,
+    rangeLabel: string,
+    goodMin: number, goodMax: number,
+    warnMin: number, warnMax: number,
+    higherBetter: boolean,
+    fmtVal: (v: number) => string,
+    fmtMag: (mag: number) => string,
+    conv?: (v: number) => number,
+    changeThreshold?: number,
+  ): void {
+    if (!data.length) return;
+    const rawLatest = data[data.length - 1][1];
+    const val = conv ? conv(rawLatest) : rawLatest;
+    const status: 'good' | 'warn' | 'bad' =
+      val >= goodMin && val <= goodMax ? 'good' :
+      val >= warnMin && val <= warnMax ? 'warn' : 'bad';
+    const old7 = lastRecent(data, 7, conv);
+    const delta = old7 !== null ? r(val - old7, 2) : null;
+    const threshold = changeThreshold ?? Math.max((goodMax - goodMin) * 0.02, 0.1);
+    const changeDir: 'up' | 'down' | 'flat' =
+      delta === null || Math.abs(delta) < threshold ? 'flat' : delta > 0 ? 'up' : 'down';
+    let changeGood: boolean | null = null;
+    if (changeDir !== 'flat' && delta !== null) {
+      if (val < goodMin) changeGood = delta > 0;
+      else if (val > goodMax) changeGood = delta < 0;
+      else changeGood = higherBetter ? delta > 0 : delta < 0;
+    }
+    cards.push({
+      label, value: fmtVal(val), unit, rangeLabel, rangeStatus: status,
+      change7d: changeDir !== 'flat' && delta !== null ? fmtMag(Math.abs(delta)) : '—',
+      changeDir, changeGood,
+      sparkline: data.slice(Math.max(0, data.length - 30)).map(([, v]) => conv ? conv(v) : v),
+      sparklineDates: data.slice(Math.max(0, data.length - 30)).map(([d]) => d),
+      rangeMin: goodMin,
+      rangeMax: goodMax,
+    });
+  }
+
+  addCard(D.weight, '体重', '斤', '理想区间 136~144斤', 136, 144, 130, 150,
+    false, (v) => v.toFixed(1), (m) => `${m.toFixed(1)}斤`, (v) => r(v * 2, 1));
+  addCard(D.bmi, 'BMI', '', '正常区间 18.5~23.9', 18.5, 23.9, 17.5, 25,
+    false, (v) => v.toFixed(1), (m) => m.toFixed(2), undefined, 0.05);
+  addCard(D.fat, '体脂率', '%', '理想区间 10~20%', 10, 20, 8, 25,
+    false, (v) => v.toFixed(1), (m) => `${m.toFixed(1)}%`);
+  addCard(D.rhr, '静息心率', 'bpm', '理想区间 50~70', 50, 70, 45, 80,
+    false, (v) => String(Math.round(v)), (m) => `${Math.round(m)}bpm`);
+
+  const sleepSeries: [string, number][] = D.sleep.map(([d, total]) => [d, total]);
+  addCard(sleepSeries, '睡眠', 'h', '理想区间 7~9h', 7, 9, 6, 10,
+    true, (v) => v.toFixed(1), (m) => `${m.toFixed(1)}h`);
+  addCard(D.hrv, 'HRV', 'ms', '理想区间 40~80ms', 40, 80, 25, 100,
+    true, (v) => String(Math.round(v)), (m) => `${Math.round(m)}ms`);
+
+  return cards;
+}
+
+export function filterByTimeRange(D: HealthData, days: number): HealthData {
+  const ref = D.steps.length ? D.steps : D.rhr.length ? D.rhr : null;
+  const latestDate = ref ? ref[ref.length - 1][0] : new Date().toISOString().slice(0, 10);
+  const cutoff = new Date(latestDate);
+  cutoff.setDate(cutoff.getDate() - days);
+  const cs = cutoff.toISOString().slice(0, 10);
+  const f = (arr: [string, number][]): [string, number][] => arr.filter(([d]) => d >= cs);
+  return {
+    steps: f(D.steps), distance: f(D.distance), exercise: f(D.exercise),
+    energy_active: f(D.energy_active), energy_basal: f(D.energy_basal),
+    flights: f(D.flights), stand_time: f(D.stand_time), stand_hour: f(D.stand_hour),
+    sleep: D.sleep.filter(([d]) => d >= cs),
+    wrist_temp: f(D.wrist_temp), rhr: f(D.rhr), hrv: f(D.hrv),
+    walking_hr: f(D.walking_hr), resp_rate: f(D.resp_rate), spo2: f(D.spo2),
+    weight: f(D.weight), fat: f(D.fat), bmi: f(D.bmi), lean: f(D.lean),
+    walk_speed: f(D.walk_speed), step_length: f(D.step_length),
+    asym: f(D.asym), double_supp: f(D.double_supp),
+    stair_up: f(D.stair_up), stair_down: f(D.stair_down),
+    six_min_walk: f(D.six_min_walk), audio_env: f(D.audio_env),
+    audio_hp: f(D.audio_hp), daylight: f(D.daylight), mindful: f(D.mindful),
+    handwash: f(D.handwash), physical_effort: f(D.physical_effort),
+    cardio_recovery: f(D.cardio_recovery), vo2: f(D.vo2),
+    workouts: D.workouts.filter(([d]) => d >= cs),
+    nah_daily: D.nah_daily.filter(([d]) => d >= cs),
+    bns_daily: D.bns_daily.filter(([d]) => d >= cs),
+    med_monthly: D.med_monthly.filter(([d]) => d >= cs),
+    state_of_mind: D.state_of_mind.filter(([d]) => d >= cs),
+    hr_notifications: D.hr_notifications.filter(([d]) => d >= cs),
+  };
 }

@@ -1,12 +1,16 @@
 import React, {createContext, useContext, useEffect, useMemo, useState} from 'react';
+import ReactDOM from 'react-dom';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
 import {D as DEFAULT_DATA} from './data';
-import {transform, computeStats, getDateRange, HealthData, StatStatus} from './transform';
+import {transform, computeDashboard, getDateRange, filterByTimeRange, HealthData, DashCard} from './transform';
 import styles from './styles.module.css';
 
 const YEARS = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+
+const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
+const RANGE_LABELS: Record<string, string> = {'7d': '7天', '30d': '30天', '90d': '90天', '1y': '1年'};
 
 type CC = {axis: string; label: string; split: string};
 
@@ -22,7 +26,7 @@ function xCat(c: CC, data: [string, number][], interval?: number) {
   const n = data.length;
   const isLong = n > 400;
   const auto = interval ?? (isLong ? Math.max(1, Math.floor(n / 14)) : 13);
-  const fmt = isLong ? (v: string) => v.slice(0, 7) : (v: string) => v.slice(5);
+  const fmt = isLong ? (v: string) => v?.slice(0, 7) ?? '' : (v: string) => v?.slice(5) ?? '';
   return {
     type: 'category',
     data: data.map(([d]) => d),
@@ -80,7 +84,7 @@ function rolling7(data: [string, number][]): number[] {
 function xSparse(c: CC, data: [string, number][]) {
   const n = data.length;
   const interval = n > 50 ? Math.max(1, Math.floor(n / 10)) : 1;
-  const fmt = n > 50 ? (v: string) => v.slice(0, 7) : (v: string) => v.slice(5);
+  const fmt = n > 50 ? (v: string) => v?.slice(0, 7) ?? '' : (v: string) => v?.slice(5) ?? '';
   return {
     type: 'category', data: data.map(([d]) => d),
     axisTick: {show: false}, axisLine: {lineStyle: {color: c.axis}},
@@ -115,7 +119,19 @@ function dynRange(arr: [string, number][], pad = 2, conv?: (v: number) => number
 }
 
 function base(isDark: boolean) {
-  return {backgroundColor: 'transparent', grid: {top: 32, right: 16, bottom: 28, left: 12, containLabel: true}};
+  return {backgroundColor: 'transparent', grid: chartGrid(16)};
+}
+
+function chartGrid(right = 16, left = 12, top = 32, bottom = 28) {
+  return {top, right, bottom, left, containLabel: true};
+}
+
+function topLegend(c: CC, data: string[]) {
+  return {data, top: 2, left: 'center', textStyle: {fontSize: 11, color: c.label}, itemHeight: 8};
+}
+
+function scrollLegend(c: CC, data: string[]) {
+  return {type: 'scroll', data, top: 2, left: 120, right: 16, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8, pageIconColor: c.label, pageTextStyle: {color: c.label}};
 }
 
 function baseTip() {
@@ -124,31 +140,54 @@ function baseTip() {
 
 // ── chart option builders ────────────────────────────────────────────────────
 
-function stepsOpt(isDark: boolean, D: HealthData) {
+function stepsDistanceOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
+  const {dates, a, b} = alignTwo(D.steps, D.distance);
+  const stepsArr = a as (number | null)[];
+  const r7 = dates.map((_, i) => {
+    const w = stepsArr.slice(Math.max(0, i - 6), i + 1).filter((v): v is number => v !== null);
+    return w.length ? Math.round(w.reduce((s, v) => s + v, 0) / w.length) : null;
+  });
   return {
-    ...base(isDark), ...baseTip(),
-    legend: {data: ['步数', '7日均线'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
-    xAxis: xCat(c, D.steps),
-    yAxis: yVal(c, {unit: '步', fmt: (v) => v >= 1000 ? `${v / 1000}k` : String(v)}),
+    ...base(isDark),
+    grid: chartGrid(52),
+    legend: topLegend(c, ['步数', '7日均', '距离']),
+    tooltip: {
+      trigger: 'axis',
+      formatter: (p: {seriesName: string; value: number | null; axisValue?: string}[]) => {
+        const lines = p.filter((x) => x.value != null).map((x) => {
+          if (x.seriesName === '距离') return `距离：${Number(x.value).toFixed(1)} km`;
+          return `${x.seriesName}：${Number(x.value).toLocaleString()}`;
+        });
+        return `${p[0]?.axisValue ?? ''}<br/>${lines.join('<br/>')}`;
+      },
+    },
+    xAxis: xCat(c, dates.map((d) => [d, 0] as [string, number])),
+    yAxis: [
+      yVal(c, {unit: '步', fmt: (v) => v >= 1000 ? `${v / 1000}k` : String(v)}),
+      yVal(c, {unit: 'km', right: true, fmt: (v) => `${v}`}),
+    ],
     series: [
       {
-        name: '步数', type: 'bar', barMaxWidth: 6,
-        data: D.steps.map(([, v]) => ({value: v, itemStyle: {color: v >= 8000 ? '#22c55e' : '#3b82f6', borderRadius: [2, 2, 0, 0]}})),
+        name: '步数', type: 'bar', yAxisIndex: 0, barMaxWidth: 6,
+        data: stepsArr.map((v) => v === null ? null : {value: v, itemStyle: {color: v >= 8000 ? '#22c55e' : '#3b82f6', borderRadius: [2, 2, 0, 0]}}),
         markLine: ml('#f59e0b', 8000, '目标 8000'),
       },
-      {name: '7日均线', type: 'line', data: rolling7(D.steps), smooth: true, symbol: 'none', lineStyle: {color: '#f59e0b', width: 1.5}},
+      {
+        name: '7日均', type: 'line', yAxisIndex: 0, data: r7,
+        smooth: true, symbol: 'none', connectNulls: true,
+        lineStyle: {color: '#f59e0b', width: 1.5},
+      },
+      {
+        name: '距离', type: 'line', yAxisIndex: 1,
+        data: b as (number | null)[],
+        smooth: true, symbol: 'none', connectNulls: true,
+        lineStyle: {color: '#2563eb', width: 1.5},
+        areaStyle: {color: {type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
+          {offset: 0, color: 'rgba(37,99,235,0.12)'}, {offset: 1, color: 'rgba(37,99,235,0)'},
+        ]}},
+      },
     ],
-  };
-}
-
-function distanceOpt(isDark: boolean, D: HealthData) {
-  const c = cc(isDark);
-  return {
-    ...base(isDark), ...baseTip(),
-    xAxis: xCat(c, D.distance),
-    yAxis: yVal(c, {unit: 'km', fmt: (v) => `${v}`}),
-    series: [areaLine('步行距离', D.distance.map(([, v]) => v), '#2563eb')],
   };
 }
 
@@ -170,9 +209,9 @@ function energyOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 52, bottom: 28, left: 12, containLabel: true},
+    grid: chartGrid(52),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
-    legend: {data: ['活跃热量', '基础代谢'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    legend: topLegend(c, ['活跃热量', '基础代谢']),
     ...(() => {
       const {dates, a, b} = alignTwo(D.energy_active, D.energy_basal);
       return {
@@ -204,9 +243,9 @@ function standOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 52, bottom: 28, left: 12, containLabel: true},
+    grid: chartGrid(52),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
-    legend: {data: ['站立时间', '站立小时数'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    legend: topLegend(c, ['站立时间', '站立小时数']),
     ...(() => {
       const {dates, a, b} = alignTwo(D.stand_time, D.stand_hour);
       return {
@@ -224,8 +263,33 @@ function standOpt(isDark: boolean, D: HealthData) {
 function sleepOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   const dates = D.sleep.map(([d]) => d);
+  const isDense = D.sleep.length > 35;
+  if (isDense) {
+    return {
+      ...base(isDark),
+      grid: chartGrid(16),
+      tooltip: {
+        trigger: 'axis',
+        formatter: (p: {seriesName: string; value: number; axisValue: string}[]) =>
+          `${p[0]?.axisValue ?? ''}<br/>${p.map((x) => `${x.seriesName}：${Number(x.value).toFixed(1)}h`).join('<br/>')}`,
+      },
+      legend: topLegend(c, ['总睡眠', '深睡', 'REM', '清醒']),
+      xAxis: xCat(c, D.sleep.map(([d]) => [d, 0] as [string, number])),
+      yAxis: yVal(c, {unit: 'h', max: 12, fmt: (v) => `${v}h`}),
+      series: [
+        {
+          name: '总睡眠', type: 'bar', barMaxWidth: 6,
+          data: D.sleep.map(([, total]) => ({value: total, itemStyle: {color: total >= 7 && total <= 9 ? '#22c55e' : total >= 6 ? '#f59e0b' : '#ef4444', borderRadius: [2, 2, 0, 0]}})),
+        },
+        {...smoothLine('深睡', D.sleep.map((x) => x[2]), '#1d4ed8'), connectNulls: true},
+        {...smoothLine('REM', D.sleep.map((x) => x[3]), '#7c3aed'), connectNulls: true},
+        {...smoothLine('清醒', D.sleep.map((x) => x[5]), '#fb923c'), connectNulls: true},
+      ],
+    };
+  }
   return {
     ...base(isDark),
+    grid: chartGrid(16, 42),
     tooltip: {
       trigger: 'axis', axisPointer: {type: 'shadow'},
       formatter: (p: {seriesName: string; value: number; axisValue: string}[]) => {
@@ -233,14 +297,14 @@ function sleepOpt(isDark: boolean, D: HealthData) {
         return `${p[0]?.axisValue ?? ''}<br/>合计：${total.toFixed(1)}h<br/>${p.filter(x => x.value > 0).map(x => `${x.seriesName}：${x.value.toFixed(1)}h`).join('<br/>')}`;
       },
     },
-    legend: {data: ['深睡', 'REM', '浅睡', '清醒'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
-    xAxis: {type: 'category', data: dates, axisTick: {show: false}, axisLine: {lineStyle: {color: c.axis}}, axisLabel: {color: c.label, fontSize: 10, interval: 13, formatter: (v: string) => v.slice(5)}},
-    yAxis: {type: 'value', axisLabel: {color: c.label, fontSize: 10, formatter: (v: number) => `${v}h`}, splitLine: {lineStyle: {color: c.split}}, max: 12},
+    legend: topLegend(c, ['深睡', 'REM', '浅睡', '清醒']),
+    xAxis: {type: 'value', axisLabel: {color: c.label, fontSize: 10, formatter: (v: number) => `${v}h`}, splitLine: {lineStyle: {color: c.split}}, max: 12},
+    yAxis: {type: 'category', data: dates, inverse: true, axisTick: {show: false}, axisLine: {lineStyle: {color: c.axis}}, axisLabel: {color: c.label, fontSize: 10, interval: 0, formatter: (v: string) => v?.slice(5) ?? ''}},
     series: [
-      {name: '深睡', type: 'bar', stack: 'sleep', barMaxWidth: 8, data: D.sleep.map(x => x[2]), itemStyle: {color: '#1d4ed8'}},
-      {name: 'REM', type: 'bar', stack: 'sleep', barMaxWidth: 8, data: D.sleep.map(x => x[3]), itemStyle: {color: '#7c3aed'}},
-      {name: '浅睡', type: 'bar', stack: 'sleep', barMaxWidth: 8, data: D.sleep.map(x => x[4]), itemStyle: {color: '#38bdf8'}},
-      {name: '清醒', type: 'bar', stack: 'sleep', barMaxWidth: 8, data: D.sleep.map(x => x[5]), itemStyle: {color: '#fb923c', borderRadius: [2, 2, 0, 0]}},
+      {name: '深睡', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[2]), itemStyle: {color: '#1d4ed8', borderRadius: [2, 0, 0, 2]}},
+      {name: 'REM', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[3]), itemStyle: {color: '#7c3aed'}},
+      {name: '浅睡', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[4]), itemStyle: {color: '#38bdf8'}},
+      {name: '清醒', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[5]), itemStyle: {color: '#fb923c', borderRadius: [0, 2, 2, 0]}},
     ],
   };
 }
@@ -263,9 +327,9 @@ function heartOpt(isDark: boolean, D: HealthData) {
   const hrvR = dynRange(D.hrv, 5);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 52, bottom: 28, left: 12, containLabel: true},
+    grid: chartGrid(52),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
-    legend: {data: ['静息心率', 'HRV'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    legend: topLegend(c, ['静息心率', 'HRV']),
     ...(() => {
       const {dates, a, b} = alignTwo(D.rhr, D.hrv);
       return {
@@ -304,7 +368,7 @@ function cardioRecoveryOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 16, bottom: 28, left: 40, containLabel: true},
+    grid: chartGrid(16, 40),
     tooltip: {trigger: 'item', formatter: (p: {value: (string | number)[]; name: string}) => `${p.value[0]}<br/>心肺恢复：${p.value[1]} bpm`},
     xAxis: xSparse(c, D.cardio_recovery),
     yAxis: yVal(c, {unit: 'bpm', min: 0}),
@@ -317,28 +381,45 @@ function cardioRecoveryOpt(isDark: boolean, D: HealthData) {
   };
 }
 
-function respOpt(isDark: boolean, D: HealthData) {
+function respSpo2Opt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
+  const {dates, a, b} = alignTwo(D.resp_rate, D.spo2);
   return {
-    ...base(isDark), ...baseTip(),
-    xAxis: xCat(c, D.resp_rate),
-    yAxis: yVal(c, {unit: '次/分', ...dynRange(D.resp_rate, 1)}),
-    series: [areaLine('呼吸频率', D.resp_rate.map(([, v]) => v), '#0891b2')],
-  };
-}
-
-function spo2Opt(isDark: boolean, D: HealthData) {
-  const c = cc(isDark);
-  const r = dynRange(D.spo2, 0.5);
-  return {
-    ...base(isDark), ...baseTip(),
-    xAxis: xCat(c, D.spo2),
-    yAxis: yVal(c, {unit: '%', ...r, fmt: (v) => `${v}%`}),
-    series: [{
-      name: '血氧', type: 'line', data: D.spo2.map(([, v]) => v), smooth: false, symbol: 'none',
-      lineStyle: {color: '#0891b2', width: 1.5},
-      markLine: ml('#ef4444', 95, '95% 警戒'),
-    }],
+    ...base(isDark),
+    grid: chartGrid(52),
+    tooltip: {
+      trigger: 'axis',
+      formatter: (p: {seriesName: string; value: number | null; axisValue?: string}[]) => {
+        const lines = p.filter((x) => x.value != null).map((x) =>
+          x.seriesName === '血氧' ? `血氧：${Number(x.value).toFixed(1)}%` : `呼吸频率：${Number(x.value).toFixed(1)} 次/分`
+        );
+        return `${p[0]?.axisValue ?? ''}<br/>${lines.join('<br/>')}`;
+      },
+    },
+    legend: topLegend(c, ['呼吸频率', '血氧']),
+    xAxis: xCat(c, dates.map((d) => [d, 0] as [string, number])),
+    yAxis: [
+      yVal(c, {unit: '次/分', ...dynRange(D.resp_rate, 1)}),
+      yVal(c, {unit: '%', right: true, ...dynRange(D.spo2, 0.5), fmt: (v) => `${v}%`}),
+    ],
+    series: [
+      {
+        name: '呼吸频率', type: 'line', yAxisIndex: 0,
+        data: a as (number | null)[],
+        smooth: true, symbol: 'none', connectNulls: true,
+        lineStyle: {color: '#0891b2', width: 1.5},
+        areaStyle: {color: {type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
+          {offset: 0, color: 'rgba(8,145,178,0.12)'}, {offset: 1, color: 'rgba(8,145,178,0)'},
+        ]}},
+      },
+      {
+        name: '血氧', type: 'line', yAxisIndex: 1,
+        data: b as (number | null)[],
+        smooth: false, symbol: 'none', connectNulls: true,
+        lineStyle: {color: '#7c3aed', width: 1.5},
+        markLine: ml('#ef4444', 95, '95% 警戒'),
+      },
+    ],
   };
 }
 
@@ -348,9 +429,9 @@ function bodyOpt(isDark: boolean, D: HealthData) {
   const fR = dynRange(D.fat, 1);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 52, bottom: 28, left: 12, containLabel: true},
+    grid: chartGrid(52),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
-    legend: {data: ['体重', '体脂率'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    legend: topLegend(c, ['体重', '体脂率']),
     ...(() => {
       const {dates, a, b} = alignTwo(D.weight, D.fat, (v) => Math.round(v * 2 * 10) / 10);
       return {
@@ -371,9 +452,9 @@ function bmiLeanOpt(isDark: boolean, D: HealthData) {
   const leanR = dynRange(D.lean, 1, (v) => v * 2);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 52, bottom: 28, left: 12, containLabel: true},
+    grid: chartGrid(52),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
-    legend: {data: ['BMI', '瘦体重'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    legend: topLegend(c, ['BMI', '瘦体重']),
     ...(() => {
       const {dates, a, b} = alignTwo(D.bmi, D.lean, undefined, (v) => Math.round(v * 2 * 10) / 10);
       return {
@@ -392,9 +473,9 @@ function walkQualityOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 52, bottom: 28, left: 12, containLabel: true},
+    grid: chartGrid(52),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
-    legend: {data: ['步行速度', '步长'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    legend: topLegend(c, ['步行速度', '步长']),
     ...(() => {
       const {dates, a, b} = alignTwo(D.walk_speed, D.step_length);
       return {
@@ -413,9 +494,9 @@ function gaitOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 52, bottom: 28, left: 12, containLabel: true},
+    grid: chartGrid(52),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
-    legend: {data: ['步态不对称性', '双支撑时间占比'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    legend: topLegend(c, ['步态不对称性', '双支撑时间占比']),
     ...(() => {
       const {dates, a, b} = alignTwo(D.asym, D.double_supp);
       return {
@@ -434,9 +515,9 @@ function stairOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 52, bottom: 28, left: 12, containLabel: true},
+    grid: chartGrid(52),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
-    legend: {data: ['上楼梯速度', '下楼梯速度'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    legend: topLegend(c, ['上楼梯速度', '下楼梯速度']),
     ...(() => {
       const {dates, a, b} = alignTwo(D.stair_up, D.stair_down);
       const r = dynRange([...D.stair_up, ...D.stair_down], 0.05);
@@ -456,7 +537,7 @@ function sixMinWalkOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 16, bottom: 28, left: 40, containLabel: true},
+    grid: chartGrid(16, 40),
     tooltip: {trigger: 'axis', formatter: (p: {value: number; axisValue: string}[]) => `${p[0]?.axisValue ?? ''}<br/>六分钟步行：${p[0]?.value} m`},
     xAxis: xSparse(c, D.six_min_walk),
     yAxis: yVal(c, {unit: '米', ...dynRange(D.six_min_walk, 10)}),
@@ -473,9 +554,9 @@ function audioOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 52, bottom: 28, left: 12, containLabel: true},
+    grid: chartGrid(52),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
-    legend: {data: ['环境音量', '耳机音量'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    legend: topLegend(c, ['环境音量', '耳机音量']),
     xAxis: xCat(c, D.audio_env),
     yAxis: [yVal(c, {unit: 'dB', ...dynRange(D.audio_env, 2), fmt: (v) => `${v}dB`}), yVal(c, {unit: 'dB', right: true, ...dynRange(D.audio_hp, 2), fmt: (v) => `${v}dB`})],
     series: [
@@ -506,7 +587,7 @@ function mindfulOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 16, bottom: 28, left: 40, containLabel: true},
+    grid: chartGrid(16, 40),
     tooltip: {trigger: 'axis', formatter: (p: {value: number; axisValue: string}[]) => `${p[0]?.axisValue ?? ''}<br/>正念时长：${p[0]?.value} 分钟`},
     xAxis: xSparse(c, D.mindful),
     yAxis: yVal(c, {unit: '分钟', min: 0}),
@@ -542,7 +623,7 @@ function vo2Opt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 16, bottom: 28, left: 40, containLabel: true},
+    grid: chartGrid(16, 40),
     tooltip: {trigger: 'axis', formatter: (p: {value: number; axisValue: string}[]) => `${p[0]?.axisValue ?? ''}<br/>VO₂ Max：${p[0]?.value} ml/(kg·min)`},
     xAxis: xSparse(c, D.vo2),
     yAxis: yVal(c, {unit: 'ml/(kg·min)', ...dynRange(D.vo2, 0.5)}),
@@ -567,8 +648,8 @@ function workoutTimelineOpt(isDark: boolean, D: HealthData) {
   const types = [...new Set(D.workouts.map(([, n]) => n))];
   return {
     ...base(isDark),
-    grid: {top: 32, right: 16, bottom: 28, left: 12, containLabel: true},
-    legend: {data: types, top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    grid: chartGrid(16),
+    legend: scrollLegend(c, types),
     tooltip: {
       trigger: 'item',
       formatter: (p: {value: [string, number, number, number, number, number]}) => {
@@ -588,6 +669,50 @@ function workoutTimelineOpt(isDark: boolean, D: HealthData) {
   };
 }
 
+function workoutCalendarOpt(isDark: boolean, D: HealthData) {
+  const c = cc(isDark);
+  const byDay = new Map<string, {mins: number; kcal: number; count: number}>();
+  for (const [date,, dur, kcal] of D.workouts) {
+    const cur = byDay.get(date) ?? {mins: 0, kcal: 0, count: 0};
+    cur.mins += dur;
+    cur.kcal += kcal;
+    cur.count += 1;
+    byDay.set(date, cur);
+  }
+  const dates = D.workouts.map(([d]) => d).sort();
+  const start = dates[0] ?? new Date().toISOString().slice(0, 10);
+  const end = dates.at(-1) ?? start;
+  const values = [...byDay.entries()].map(([date, v]) => [date, Math.round(v.mins), Math.round(v.kcal), v.count]);
+  const maxMins = Math.max(30, ...values.map(([, mins]) => mins as number));
+  return {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      formatter: (p: {value: [string, number, number, number]}) =>
+        `${p.value[0]}<br/>运动：${p.value[3]} 次<br/>时长：${p.value[1]} 分钟<br/>消耗：${p.value[2]} kcal`,
+    },
+    visualMap: {
+      min: 0, max: maxMins, show: true, orient: 'horizontal', left: 'center', bottom: 0,
+      itemWidth: 10, itemHeight: 70, textStyle: {color: c.label, fontSize: 10},
+      inRange: {color: isDark ? ['#1e293b', '#16a34a'] : ['#e2e8f0', '#22c55e']},
+    },
+    calendar: {
+      top: 22, left: 34, right: 16, bottom: 34,
+      range: [start, end],
+      cellSize: ['auto', 14],
+      splitLine: {lineStyle: {color: c.split}},
+      itemStyle: {borderWidth: 1, borderColor: c.split},
+      yearLabel: {show: false},
+      monthLabel: {color: c.label, fontSize: 10},
+      dayLabel: {color: c.label, fontSize: 10, firstDay: 1, nameMap: ['日', '一', '二', '三', '四', '五', '六']},
+    },
+    series: [{
+      name: '运动时长', type: 'heatmap', coordinateSystem: 'calendar',
+      data: values.map(([date, mins]) => [date, mins]),
+    }],
+  };
+}
+
 function workoutTypeOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   const totals: Record<string, {sessions: number; mins: number; kcal: number}> = {};
@@ -600,7 +725,7 @@ function workoutTypeOpt(isDark: boolean, D: HealthData) {
   const sorted = Object.entries(totals).sort((a, b) => b[1].mins - a[1].mins);
   return {
     ...base(isDark),
-    grid: {top: 32, right: 60, bottom: 8, left: 12, containLabel: true},
+    grid: chartGrid(60, 12, 32, 8),
     tooltip: {
       trigger: 'axis', axisPointer: {type: 'shadow'},
       formatter: (p: {name: string; seriesName: string; value: number}[]) => {
@@ -609,7 +734,7 @@ function workoutTypeOpt(isDark: boolean, D: HealthData) {
         return `${name}<br/>次数：${t.sessions} 次<br/>总时长：${t.mins.toFixed(0)} 分钟<br/>总消耗：${t.kcal.toFixed(0)} kcal`;
       },
     },
-    legend: {data: ['总时长', '次数'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    legend: topLegend(c, ['总时长', '次数']),
     xAxis: {type: 'value', axisLabel: {color: c.label, fontSize: 10}, splitLine: {lineStyle: {color: c.split}}},
     yAxis: {type: 'category', data: sorted.map(([n]) => n), axisLabel: {color: c.label, fontSize: 11}, axisTick: {show: false}, axisLine: {show: false}},
     series: [
@@ -629,13 +754,13 @@ function medMonthlyOpt(isDark: boolean, D: HealthData) {
   const months = D.med_monthly.map(([m]) => m.slice(5));
   return {
     ...base(isDark),
-    grid: {top: 32, right: 16, bottom: 28, left: 12, containLabel: true},
+    grid: chartGrid(16),
     tooltip: {
       trigger: 'axis',
       formatter: (p: {seriesName: string; value: number; axisValue: string}[]) =>
         `${p[0]?.axisValue ?? ''}<br/>${p.map((x) => `${x.seriesName}：${x.value}%`).join('<br/>')}`,
     },
-    legend: {data: ['碳酸氢钠片', '苯溴马隆片'], top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8},
+    legend: topLegend(c, ['碳酸氢钠片', '苯溴马隆片']),
     xAxis: {type: 'category', data: months, axisTick: {show: false}, axisLine: {lineStyle: {color: c.axis}}, axisLabel: {color: c.label, fontSize: 11}},
     yAxis: {type: 'value', min: 0, max: 100, axisLabel: {color: c.label, fontSize: 10, formatter: (v: number) => `${v}%`}, splitLine: {lineStyle: {color: c.split}}},
     series: [
@@ -653,31 +778,56 @@ function medMonthlyOpt(isDark: boolean, D: HealthData) {
   };
 }
 
-function medDailyOpt(isDark: boolean, D: HealthData, drug: '碳酸氢钠片' | '苯溴马隆片') {
+function medDailyCombinedOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
-  const data = drug === '碳酸氢钠片' ? D.nah_daily : D.bns_daily;
-  const maxDose = drug === '碳酸氢钠片' ? 3 : 1;
-  const color = drug === '碳酸氢钠片' ? '#22c55e' : '#0891b2';
+  const nahMap = new Map(D.nah_daily.map(([d, t]) => [d, t]));
+  const bnsMap = new Map(D.bns_daily.map(([d, t]) => [d, t]));
+  const dates = [...new Set([...D.nah_daily.map(([d]) => d), ...D.bns_daily.map(([d]) => d)])].sort();
+  const rows = ['碳酸氢钠片', '苯溴马隆片'];
+  const value = (drug: string, date: string) => {
+    const v = drug === '碳酸氢钠片' ? nahMap.get(date) : bnsMap.get(date);
+    if (v === undefined) return -1;
+    const total = drug === '碳酸氢钠片' ? 3 : 1;
+    return v >= total ? 2 : v > 0 ? 1 : 0;
+  };
   return {
     ...base(isDark),
-    grid: {top: 16, right: 16, bottom: 28, left: 12, containLabel: true},
+    grid: chartGrid(16, 82, 32, 42),
     tooltip: {
-      trigger: 'axis',
-      formatter: (p: {axisValue: string; value: number}[]) => `${p[0]?.axisValue ?? ''}<br/>${drug}：${p[0]?.value}/${maxDose}`,
+      trigger: 'item',
+      formatter: (p: {value: [number, number, number]}) => {
+        const [x, y, status] = p.value;
+        const drug = rows[y];
+        const date = dates[x];
+        const taken = drug === '碳酸氢钠片' ? nahMap.get(date) : bnsMap.get(date);
+        const total = drug === '碳酸氢钠片' ? 3 : 1;
+        const label = status === 2 ? '已完成' : status === 1 ? '部分完成' : status === 0 ? '未完成' : '无记录';
+        return `${date}<br/>${drug}<br/>${label}${taken === undefined ? '' : `：${taken}/${total}`}`;
+      },
+    },
+    visualMap: {
+      show: false, min: -1, max: 2,
+      pieces: [
+        {value: -1, color: 'rgba(148,163,184,0.18)'},
+        {value: 0, color: '#ef4444'},
+        {value: 1, color: '#f59e0b'},
+        {value: 2, color: '#22c55e'},
+      ],
     },
     xAxis: {
-      type: 'category', data: data.map(([d]) => d),
+      type: 'category', data: dates,
       axisTick: {show: false}, axisLine: {lineStyle: {color: c.axis}},
-      axisLabel: {color: c.label, fontSize: 10, interval: 13, formatter: (v: string) => v.slice(5)},
+      axisLabel: {color: c.label, fontSize: 10, interval: Math.max(0, Math.floor(dates.length / 10)), formatter: (v: string) => v?.slice(5) ?? ''},
     },
-    yAxis: {type: 'value', min: 0, max: maxDose, axisLabel: {color: c.label, fontSize: 10}, splitLine: {lineStyle: {color: c.split}}, interval: 1},
-    series: [{
-      name: drug, type: 'bar', barMaxWidth: 6,
-      data: data.map(([, taken, total]) => ({
-        value: taken,
-        itemStyle: {color: taken === total ? color : taken > 0 ? '#f59e0b' : '#ef4444', borderRadius: [2, 2, 0, 0]},
-      })),
-    }],
+    yAxis: {type: 'category', data: rows, axisTick: {show: false}, axisLine: {show: false}, axisLabel: {color: c.label, fontSize: 11}},
+    series: [
+      {
+        name: '每日服药', type: 'heatmap',
+        data: rows.flatMap((drug, y) => dates.map((date, x) => [x, y, value(drug, date)])),
+        itemStyle: {borderColor: c.split, borderWidth: 1, borderRadius: 2},
+        label: {show: false},
+      },
+    ],
   };
 }
 
@@ -710,11 +860,8 @@ function stateOfMindOpt(isDark: boolean, D: HealthData) {
   const clsList = ['very_pleasant','pleasant','slightly_pleasant','neutral','slightly_unpleasant','unpleasant','very_unpleasant'];
   return {
     backgroundColor: 'transparent',
-    grid: {top: 32, right: 16, bottom: 28, left: 40, containLabel: true},
-    legend: {
-      data: Object.entries(KIND_ZH).map(([, v]) => v),
-      top: 0, right: 0, textStyle: {fontSize: 11, color: c.label}, itemHeight: 8,
-    },
+    grid: chartGrid(16, 40),
+    legend: topLegend(c, Object.entries(KIND_ZH).map(([, v]) => v)),
     tooltip: {
       trigger: 'item',
       formatter: (p: {value: [string, number, string, string, string]}) => {
@@ -755,12 +902,115 @@ function stateOfMindOpt(isDark: boolean, D: HealthData) {
   };
 }
 
+// ── weekend highlighting ──────────────────────────────────────────────────────
+
+function addWeekends(option: object, isDark: boolean): object {
+  const opt = option as Record<string, unknown>;
+  const xAxisRaw = opt.xAxis as Record<string, unknown> | undefined;
+  const xObj = Array.isArray(xAxisRaw) ? (xAxisRaw as Record<string, unknown>[])[0] : xAxisRaw;
+  if (!xObj) return option;
+
+  const bgColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+  const series = opt.series as Record<string, unknown>[];
+  if (!series?.length) return option;
+
+  const mkArea = (data: unknown[]) => ({silent: true, label: {show: false}, itemStyle: {color: bgColor}, data});
+  // Ghost line series to host markArea — explicit axis indices for dual-axis charts
+  const ghostLine = (data: unknown[], pointCount = 0) => ({
+    type: 'line', data: Array.from({length: pointCount}, () => 0), markArea: mkArea(data),
+    silent: true, symbol: 'none', lineStyle: {opacity: 0},
+    tooltip: {show: false},
+    xAxisIndex: 0, yAxisIndex: 0, z: -1, animation: false,
+  });
+
+  const fmt = (dt: Date) =>
+    `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+
+  // ── Time axis (运动时间轴, 愉悦度走势) ──────────────────────────────────
+  if (xObj.type === 'time') {
+    const ds: string[] = [];
+    for (const s of series) {
+      for (const pt of ((s as {data?: unknown[]}).data ?? []) as {value?: unknown[]}[]) {
+        const v0 = pt?.value?.[0];
+        if (typeof v0 === 'string' && v0.length >= 10) ds.push(v0.slice(0, 10));
+      }
+    }
+    if (!ds.length) return option;
+    const minD = ds.reduce((a, b) => a < b ? a : b);
+    const maxD = ds.reduce((a, b) => a > b ? a : b);
+
+    // Use timestamps so ECharts time axis parses them unambiguously
+    const areas: [{xAxis: number}, {xAxis: number}][] = [];
+    const cur = new Date(minD + 'T12:00:00');
+    const endDt = new Date(maxD + 'T12:00:00');
+    while (cur <= endDt) {
+      if (cur.getDay() === 6) {
+        const satTs = new Date(fmt(cur) + 'T00:00:00').getTime();
+        cur.setDate(cur.getDate() + 2);
+        areas.push([{xAxis: satTs}, {xAxis: new Date(fmt(cur) + 'T00:00:00').getTime()}]);
+      } else {
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+    if (!areas.length) return option;
+    // Attach to series[0] — ghost line with data:[] won't render its markArea in ECharts
+    const newSeries = series.map((s, i) => i === 0 ? {...s, markArea: mkArea(areas)} : s);
+    return {...opt, series: newSeries};
+  }
+
+  // ── Category axis ─────────────────────────────────────────────────────────
+  if (xObj.type !== 'category') return option;
+  const dates = xObj.data as string[];
+  if (!dates?.length || dates[0].length < 10) return option;
+
+  // Map each unique date → its first/last index (handles duplicate raw entries)
+  const dateIdx = new Map<string, {first: number; last: number}>();
+  for (let i = 0; i < dates.length; i++) {
+    const d = dates[i];
+    const r = dateIdx.get(d);
+    if (!r) dateIdx.set(d, {first: i, last: i}); else r.last = i;
+  }
+
+  // Unique sorted dates → keep only weekends
+  const wkDates = [...dateIdx.keys()].sort().filter(d => { const day = new Date(d + 'T12:00:00').getDay(); return day === 0 || day === 6; });
+  if (!wkDates.length) return option;
+
+  const nextDay = (d: string) => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() + 1); return fmt(dt); };
+
+  // Group calendar-consecutive weekend dates → index-based areas
+  const areas: [{xAxis: number}, {xAxis: number}][] = [];
+  let wi = 0;
+  while (wi < wkDates.length) {
+    let wj = wi;
+    while (wj + 1 < wkDates.length && wkDates[wj + 1] === nextDay(wkDates[wj])) wj++;
+    const startIdx = dateIdx.get(wkDates[wi])!.first;
+    const rawEnd = dateIdx.get(wkDates[wj])!.last;
+    const endIdx = rawEnd > startIdx ? rawEnd : Math.min(startIdx + 1, dates.length - 1);
+    areas.push([{xAxis: startIdx}, {xAxis: endIdx}]);
+    wi = wj + 1;
+  }
+
+  if (!areas.length) return option;
+  const markArea = mkArea(areas);
+
+  const lineIdx = series.findIndex((s) => (s as {type?: string}).type === 'line');
+  if (lineIdx >= 0) {
+    const newSeries = series.map((s, i) => i === lineIdx ? {...s, markArea} : s);
+    return {...opt, series: newSeries};
+  }
+  // Bar-only charts need a non-empty host series for markArea to render reliably.
+  const barIdx = series.findIndex((s) => (s as {type?: string}).type === 'bar');
+  if (barIdx >= 0) {
+    return {...opt, series: [ghostLine(areas, dates.length), ...series]};
+  }
+  return {...opt, series: [...series, ghostLine(areas, dates.length)]};
+}
+
 // ── layout ───────────────────────────────────────────────────────────────────
 
 const SECTIONS = [
   {title: '活动', charts: [
-    {label: '每日步数', opt: stepsOpt},
-    {label: '步行跑步距离', opt: distanceOpt},
+    {label: '每日步数 & 距离', opt: stepsDistanceOpt},
     {label: '运动时长', opt: exerciseOpt},
     {label: '爬楼层数', opt: flightsOpt},
     {label: '活跃热量 & 基础代谢', opt: energyOpt},
@@ -769,6 +1019,7 @@ const SECTIONS = [
   ]},
   {title: '运动记录', charts: [
     {label: '运动时间轴', opt: workoutTimelineOpt},
+    {label: '运动日历热力图', opt: workoutCalendarOpt},
     {label: '运动类型统计', opt: workoutTypeOpt},
   ]},
   {title: '睡眠', charts: [
@@ -779,8 +1030,7 @@ const SECTIONS = [
     {label: '静息心率 & HRV', opt: heartOpt},
     {label: '步行平均心率', opt: walkingHrOpt},
     {label: '心肺恢复速率', opt: cardioRecoveryOpt},
-    {label: '呼吸频率', opt: respOpt},
-    {label: '血氧饱和度', opt: spo2Opt},
+    {label: '呼吸频率 & 血氧饱和度', opt: respSpo2Opt},
     {label: '最大摄氧量 VO₂ Max', opt: vo2Opt},
   ]},
   {title: '体成分', charts: [
@@ -795,8 +1045,7 @@ const SECTIONS = [
   ]},
   {title: '用药', charts: [
     {label: '月度服药依从率', opt: medMonthlyOpt},
-    {label: '碳酸氢钠片·每日服用', opt: (d: boolean, D: HealthData) => medDailyOpt(d, D, '碳酸氢钠片')},
-    {label: '苯溴马隆片·每日服用', opt: (d: boolean, D: HealthData) => medDailyOpt(d, D, '苯溴马隆片')},
+    {label: '每日服药（碳酸氢钠片 & 苯溴马隆片）', opt: medDailyCombinedOpt},
   ]},
   {title: '环境 & 习惯', charts: [
     {label: '声音暴露（环境 & 耳机）', opt: audioOpt},
@@ -842,16 +1091,20 @@ type YearCtxType = {
   data: HealthData;
   loading: boolean;
   availableYears: number[];
+  timeRange: string;
+  setTimeRange: (r: string) => void;
 };
 const YearCtx = createContext<YearCtxType>({
-  selectedYear: null, setYear: () => {}, data: DEFAULT_DATA, loading: true, availableYears: [2026],
+  selectedYear: 2026, setYear: () => {}, data: DEFAULT_DATA, loading: true, availableYears: [2026],
+  timeRange: '30d', setTimeRange: () => {},
 });
 
 function HealthProviderInner({children}: {children: React.ReactNode}) {
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | null>(2026);
   const [allData, setAllData] = useState<Record<number, HealthData>>({2026: DEFAULT_DATA});
   const [loading, setLoading] = useState(true);
   const [availableYears, setAvailableYears] = useState<number[]>([2026]);
+  const [timeRange, setTimeRange] = useState('30d');
 
   useEffect(() => {
     const others = YEARS.filter((y) => y !== 2026);
@@ -877,54 +1130,200 @@ function HealthProviderInner({children}: {children: React.ReactNode}) {
 
   const setYear = (y: number | null) => setSelectedYear(y);
 
-  return <YearCtx.Provider value={{selectedYear, setYear, data, loading, availableYears}}>{children}</YearCtx.Provider>;
+  return <YearCtx.Provider value={{selectedYear, setYear, data, loading, availableYears, timeRange, setTimeRange}}>{children}</YearCtx.Provider>;
 }
 
 // ── inner components ──────────────────────────────────────────────────────────
 
-const DOT_CLASS: Record<StatStatus, string> = {
-  good: styles.statDotGood, warn: styles.statDotWarn,
-  bad: styles.statDotBad, neutral: styles.statDotNeutral,
+function Sparkline({values, dates, color, uid, unit, rangeMin, rangeMax}: {
+  values: number[]; dates: string[]; color: string; uid: string; unit: string;
+  rangeMin: number; rangeMax: number;
+}) {
+  const [hovIdx, setHovIdx] = useState<number | null>(null);
+
+  if (values.length < 2) return <div style={{height: 24}} />;
+  const W = 100, H = 44, pad = 3;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const pts = values.map((v, i) => [
+    pad + (i / (values.length - 1)) * (W - 2 * pad),
+    H - pad - ((v - min) / span) * (H - 2 * pad),
+  ]);
+  const polyline = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const area = [
+    `M${pts[0][0].toFixed(1)},${H}`,
+    ...pts.map(([x, y]) => `L${x.toFixed(1)},${y.toFixed(1)}`),
+    `L${pts[pts.length - 1][0].toFixed(1)},${H}`,
+    'Z',
+  ].join(' ');
+  const gid = `sg-${uid.replace(/[^a-z0-9]/gi, '')}`;
+
+  // Ideal range band: map goodMin/goodMax to SVG y-coords and clamp to chart area
+  const toY = (v: number) => H - pad - ((v - min) / span) * (H - 2 * pad);
+  const bandTop = Math.min(H - pad, Math.max(pad, toY(rangeMax)));
+  const bandBot = Math.min(H - pad, Math.max(pad, toY(rangeMin)));
+  const showBand = bandBot > bandTop + 0.5;
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relX = (e.clientX - rect.left) / rect.width;
+    setHovIdx(Math.min(values.length - 1, Math.max(0, Math.round(relX * (values.length - 1)))));
+  };
+
+  const hovPt = hovIdx !== null ? pts[hovIdx] : null;
+  const tooltipPct = hovIdx !== null ? `${(hovIdx / (values.length - 1)) * 100}%` : '50%';
+  const fmtV = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(1);
+
+  return (
+    <div style={{position: 'relative'}}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        style={{width: '100%', height: H, display: 'block', cursor: 'crosshair'}}
+        preserveAspectRatio="none"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHovIdx(null)}
+      >
+        <defs>
+          <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.2} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        {showBand && (
+          <rect
+            x={pad} y={bandTop.toFixed(1)}
+            width={W - 2 * pad} height={(bandBot - bandTop).toFixed(1)}
+            fill="#22c55e" fillOpacity={0.12}
+          />
+        )}
+        <path d={area} fill={`url(#${gid})`} />
+        <polyline points={polyline} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        {hovPt && (
+          <line
+            x1={hovPt[0].toFixed(1)} y1={pad.toString()}
+            x2={hovPt[0].toFixed(1)} y2={(H - pad).toString()}
+            stroke={color} strokeWidth="0.6" opacity="0.7"
+          />
+        )}
+      </svg>
+      {hovIdx !== null && (
+        <div style={{
+          position: 'absolute',
+          bottom: 'calc(100% + 4px)',
+          left: tooltipPct,
+          transform: 'translateX(-50%)',
+          background: 'var(--ifm-background-color)',
+          border: `1px solid ${color}`,
+          borderRadius: 4,
+          padding: '2px 6px',
+          fontSize: '0.65rem',
+          color: 'var(--ifm-color-content)',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          zIndex: 100,
+          lineHeight: 1.5,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+        }}>
+          {dates[hovIdx]?.slice(5)} {fmtV(values[hovIdx])}{unit}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const STATUS_COLOR: Record<string, string> = {
+  good: '#22c55e', warn: '#f59e0b', bad: '#ef4444', neutral: '#94a3b8',
 };
 
-function StatsInner() {
-  const {selectedYear, setYear, data, loading, availableYears} = useContext(YearCtx);
-  const stats = computeStats(data);
-  const dateRange = getDateRange(data);
-  const noData = selectedYear !== null && !availableYears.includes(selectedYear);
+const STATUS_LABEL: Record<string, string> = {
+  good: '理想', warn: '关注', bad: '偏离', neutral: '观察',
+};
+
+const STATUS_CLASS: Record<string, string> = {
+  good: styles.dashCardGood, warn: styles.dashCardWarn, bad: styles.dashCardBad, neutral: styles.dashCardNeutral,
+};
+
+function DashCardComp({card}: {card: DashCard}) {
+  const color = STATUS_COLOR[card.rangeStatus];
+  const changeColor = card.changeGood === true ? '#22c55e' : card.changeGood === false ? '#ef4444' : '#94a3b8';
+  const arrow = card.changeDir === 'up' ? '↑' : card.changeDir === 'down' ? '↓' : null;
   return (
-    <>
-      <div className={styles.yearRow}>
+    <div className={`${styles.dashCard} ${STATUS_CLASS[card.rangeStatus]}`}>
+      <div className={styles.dashCardTop}>
+        <span className={styles.dashCardLabel}>{card.label}</span>
+        <div className={styles.dashCardMeta}>
+          <span className={styles.dashCardStatus} style={{color}}>{STATUS_LABEL[card.rangeStatus]}</span>
+          {card.change7d !== '—' && arrow && (
+            <span className={styles.dashCardChange} style={{color: changeColor}}>
+              {arrow}{card.change7d}
+              <span className={styles.dashCardChangePeriod}>7d</span>
+            </span>
+          )}
+        </div>
+      </div>
+      <div className={styles.dashCardMain}>
+        <span className={styles.dashCardValue} style={{color}}>{card.value}</span>
+        <span className={styles.dashCardUnit}>{card.unit}</span>
+      </div>
+      <div className={styles.dashCardRange}>{card.rangeLabel}</div>
+      <div className={styles.dashCardSpark}>
+        <Sparkline values={card.sparkline} dates={card.sparklineDates} color={color} uid={card.label} unit={card.unit} rangeMin={card.rangeMin} rangeMax={card.rangeMax} />
+      </div>
+    </div>
+  );
+}
+
+function FloatingBar() {
+  const {selectedYear, setYear, availableYears, timeRange, setTimeRange, loading} = useContext(YearCtx);
+
+  const handleSetYear = (y: number | null) => {
+    setYear(y);
+    setTimeRange(y !== null ? '1y' : '30d');
+  };
+
+  return ReactDOM.createPortal(
+    <div className={styles.floatingStack}>
+      <div className={styles.floatingBar}>
+        {(['7d', '30d', '90d', '1y'] as const).map((r) => (
+          <button
+            key={r}
+            className={`${styles.floatingBtn} ${r === timeRange ? styles.floatingBtnActive : ''}`}
+            onClick={() => setTimeRange(r)}
+          >{RANGE_LABELS[r]}</button>
+        ))}
+      </div>
+      <div className={styles.floatingBar}>
         <button
-          className={`${styles.yearBtn} ${selectedYear === null ? styles.yearBtnActive : ''}`}
-          onClick={() => setYear(null)}
+          className={`${styles.floatingBtn} ${selectedYear === null ? styles.floatingBtnActive : ''}`}
+          onClick={() => handleSetYear(null)}
         >全部</button>
         {availableYears.map((y) => (
           <button
             key={y}
-            className={`${styles.yearBtn} ${y === selectedYear ? styles.yearBtnActive : ''}`}
-            onClick={() => setYear(y)}
+            className={`${styles.floatingBtn} ${y === selectedYear ? styles.floatingBtnActive : ''}`}
+            onClick={() => handleSetYear(y)}
           >{y}</button>
         ))}
-        {YEARS.filter((y) => !availableYears.includes(y)).map((y) => (
-          <button key={y} className={styles.yearBtn} style={{opacity: 0.35, cursor: 'default'}}>{y}</button>
-        ))}
-        {loading && <span style={{fontSize: '0.8rem', color: '#94a3b8', marginLeft: 4}}>加载中…</span>}
+        {loading && <span className={styles.floatingLoading}>…</span>}
       </div>
-      {!noData && dateRange && (
-        <div className={styles.dateRange}>{dateRange}</div>
-      )}
-      {!noData && (
-        <div className={styles.stats}>
-          {stats.map((s) => (
-            <div key={s.l} className={styles.statCard}>
-              <div className={styles.statValue}>
-                <span className={`${styles.statDot} ${DOT_CLASS[s.status]}`} />
-                {s.v}
-              </div>
-              <div className={styles.statLabel}>{s.l}</div>
-            </div>
-          ))}
+    </div>,
+    document.body,
+  );
+}
+
+function StatsInner() {
+  const {selectedYear, data, availableYears} = useContext(YearCtx);
+  const dashboard = computeDashboard(data);
+  const dateRange = getDateRange(data);
+  const noData = selectedYear !== null && !availableYears.includes(selectedYear);
+  return (
+    <>
+      <FloatingBar />
+      {!noData && dateRange && <div className={styles.dateRange}>{dateRange}</div>}
+      {!noData && dashboard.length > 0 && (
+        <div className={styles.dashGrid}>
+          {dashboard.map((card) => <DashCardComp key={card.label} card={card} />)}
         </div>
       )}
     </>
@@ -932,7 +1331,7 @@ function StatsInner() {
 }
 
 function SectionInner({name}: {name: string}) {
-  const {data, loading, selectedYear, availableYears} = useContext(YearCtx);
+  const {data, loading, selectedYear, availableYears, timeRange} = useContext(YearCtx);
   const {colorMode} = useColorMode();
   const isDark = colorMode === 'dark';
   const theme = isDark ? 'dark' : undefined;
@@ -948,6 +1347,7 @@ function SectionInner({name}: {name: string}) {
   if (noData) return <div className={styles.noData}>暂无 {selectedYear} 年数据</div>;
   if (loading && data.steps.length === 0) return <div className={styles.loading}>加载中…</div>;
 
+  const displayData = RANGE_DAYS[timeRange] ? filterByTimeRange(data, RANGE_DAYS[timeRange]) : data;
   const h = isMobile ? 200 : 240;
   const opts = {renderer: 'svg' as const};
   const sec = SECTIONS.find((s) => s.title === name);
@@ -958,7 +1358,7 @@ function SectionInner({name}: {name: string}) {
       {sec.charts.map(({label, opt}: {label: string; opt: OptionFn}) => (
         <div key={label} className={styles.section}>
           <div className={styles.sectionTitle}>{label}</div>
-          <ReactECharts option={opt(isDark, data)} theme={theme} style={{height: h}} opts={opts} />
+          <ReactECharts option={addWeekends(opt(isDark, displayData), isDark)} theme={theme} style={{height: h}} opts={opts} />
         </div>
       ))}
     </div>

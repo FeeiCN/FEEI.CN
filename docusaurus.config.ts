@@ -73,7 +73,13 @@ const config: Config = {
   tagline: '把所有的时间、精力和金钱都投入到长期目标中',
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
-    v4: true, // Improve compatibility with the upcoming Docusaurus v4
+    v4: {
+      removeLegacyPostBuildHeadAttribute: true,
+      useCssCascadeLayers: true,
+      siteStorageNamespacing: true,
+      mdx1CompatDisabledByDefault: true,
+      fasterByDefault: false,
+    }, // Improve compatibility with the upcoming Docusaurus v4
   },
 
   markdown: {

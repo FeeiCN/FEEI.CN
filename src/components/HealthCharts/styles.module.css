@@ -3,36 +3,6 @@
   margin: 0.5rem 0 1.5rem;
 }
 
-.yearRow {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-  align-items: center;
-}
-
-.yearBtn {
-  padding: 0.2rem 0.7rem;
-  border-radius: 999px;
-  border: 1px solid var(--ifm-color-emphasis-300, #cbd5e1);
-  background: transparent;
-  color: var(--ifm-color-content-secondary);
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.yearBtn:hover {
-  border-color: var(--ifm-color-primary);
-  color: var(--ifm-color-primary);
-}
-
-.yearBtnActive {
-  background: var(--ifm-color-primary);
-  border-color: var(--ifm-color-primary);
-  color: #fff;
-  font-weight: 600;
-}
 
 .loading {
   text-align: center;
@@ -48,53 +18,175 @@
   font-size: 0.9rem;
 }
 
-.stats {
+.floatingStack {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  z-index: 999;
+}
+
+.floatingBar {
+  display: flex;
+  gap: 0.2rem;
+  background: var(--ifm-background-color);
+  border: 1px solid var(--ifm-color-emphasis-300, #cbd5e1);
+  border-radius: 999px;
+  padding: 0.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(12px);
+  align-items: center;
+}
+
+.floatingLoading {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  padding: 0 0.4rem;
+}
+
+.floatingBtn {
+  padding: 0.28rem 0.9rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--ifm-color-content-secondary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.floatingBtn:not(.floatingBtnActive):hover {
+  color: var(--ifm-color-primary);
+  background: var(--ifm-color-emphasis-100, rgba(0,0,0,0.04));
+}
+
+.floatingBtnActive {
+  background: var(--ifm-color-primary);
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.dashGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
-.statCard {
+.dashCard {
   background: var(--ifm-card-background-color, #f8fafc);
   border: 1px solid var(--ifm-color-emphasis-200, #e2e8f0);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  text-align: center;
-}
-
-.statValue {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--ifm-color-primary);
-  line-height: 1.2;
-}
-
-.statLabel {
+  border-radius: 10px;
+  padding: 0.875rem;
   display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 0.7rem;
+  flex-direction: column;
+  gap: 0.15rem;
+  border-left-width: 3px;
+}
+
+.dashCardGood {
+  border-left-color: #22c55e;
+}
+
+.dashCardWarn {
+  border-left-color: #f59e0b;
+  background:
+    linear-gradient(90deg, rgba(245, 158, 11, 0.08), transparent 38%),
+    var(--ifm-card-background-color, #f8fafc);
+}
+
+.dashCardBad {
+  border-left-color: #ef4444;
+  background:
+    linear-gradient(90deg, rgba(239, 68, 68, 0.08), transparent 38%),
+    var(--ifm-card-background-color, #f8fafc);
+}
+
+.dashCardNeutral {
+  border-left-color: #94a3b8;
+}
+
+.dashCardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.dashCardLabel {
+  font-size: 0.72rem;
   color: #94a3b8;
-  margin-top: 0.2rem;
+  font-weight: 500;
   letter-spacing: 0.04em;
 }
 
-.statDot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  margin-bottom: 3px;
-  margin-right: 4px;
-  vertical-align: middle;
-  flex-shrink: 0;
+.dashCardChange {
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
-.statDotGood   { background: #22c55e; }
-.statDotWarn   { background: #f59e0b; }
-.statDotBad    { background: #ef4444; }
-.statDotNeutral{ background: #cbd5e1; }
+.dashCardMeta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  min-height: 1rem;
+}
+
+.dashCardStatus {
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 0.16rem 0.34rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.dashCardChangePeriod {
+  opacity: 0.45;
+  font-size: 0.6rem;
+  margin-left: 2px;
+}
+
+.dashCardMain {
+  display: flex;
+  align-items: baseline;
+  gap: 0.22rem;
+  margin-top: 0.2rem;
+  min-height: 1.7rem;
+}
+
+.dashCardValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashCardUnit {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  min-width: 1.2em;
+  line-height: 1;
+}
+
+.dashCardRange {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  margin-top: 0.1rem;
+}
+
+.dashCardSpark {
+  margin-top: 0.5rem;
+}
 
 .dateRange {
   font-size: 0.72rem;
@@ -144,7 +236,7 @@
 
 
 @media (max-width: 767px) {
-  .stats {
+  .dashGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 

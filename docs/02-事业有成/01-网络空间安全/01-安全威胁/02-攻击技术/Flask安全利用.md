@@ -1,6 +1,7 @@
 ---
 slug: /flask-security
 title: Flask 常见利用点
+sidebar_position: 17
 ---
 
 ## Secret Key（Flask-Login）

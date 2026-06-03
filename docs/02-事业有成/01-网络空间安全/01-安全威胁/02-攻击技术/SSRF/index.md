@@ -1,6 +1,7 @@
 ---
 slug: /ssrf
 title: SSRF（服务端请求伪造）
+sidebar_position: 15
 ---
 
 ## 漏洞介绍

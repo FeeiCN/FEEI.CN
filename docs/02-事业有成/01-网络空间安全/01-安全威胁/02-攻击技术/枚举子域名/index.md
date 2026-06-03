@@ -1,6 +1,7 @@
 ---
 slug: /esd
 title: 枚举子域名
+sidebar_position: 27
 ---
 
 ## 事情背景

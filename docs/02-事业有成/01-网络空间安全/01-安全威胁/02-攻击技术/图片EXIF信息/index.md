@@ -1,6 +1,7 @@
 ---
 slug: /exif
 title: 隐藏在图片背后的信息
+sidebar_position: 29
 ---
 
 ## 1 技术原理

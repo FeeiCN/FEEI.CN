@@ -1,6 +1,7 @@
 ---
 slug: /sms-sniffing
 title: 短信嗅探实践
+sidebar_position: 26
 ---
 
 ## 1 背景知识

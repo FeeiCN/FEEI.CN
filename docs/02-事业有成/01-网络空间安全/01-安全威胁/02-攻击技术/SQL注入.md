@@ -76,6 +76,14 @@ GET /news?id=-1 UNION SELECT 1,username,password FROM admin-- -
 
 **跨协议参数转移绕过 WAF**：同一注入参数可通过 GET、POST、Cookie 三种方式提交，而 WAF 的检测规则往往只针对其中一种或两种通道。当 GET 参数触发拦截时，将同名参数移至 POST Body 或 Cookie 字段，同时把 `=` 替换为 `LIKE` 构造等价条件，可绕过多重防注入机制。这一模式在 ASP/ASP.NET 技术栈中尤为常见，因为这些框架默认对 GET、POST、Cookie 统一读取，后端代码无需修改即可接收来自不同通道的参数值。
 
+**ASP.NET `.aspx` 隐藏字段注入**：ASP.NET WebForms 的表单控件在 POST 请求中以 `ctl00$ContentPlaceHolder1$username` 这类长名称提交，外观不像普通参数，渗透测试时容易被忽略。数字图书馆、政务信息公开、在线考试等采用 ASP.NET WebForms 开发的通用系统大量使用此结构，登录处、注册处的控件字段同样未经参数化时构成注入点，影响范围随系统通用性成倍扩大。
+
+**分页与排序参数注入**：CRM、OA、政务系统的列表接口常以 `pageIndex`、`pageSize`、`page` 等参数控制分页，开发者往往将这些整型参数直接拼入 `LIMIT` 或 `TOP` 子句，认为整数不需要参数化。实际上，POST 请求体中的 `pageIndex=1&pageSize=50` 若未强制类型转换，同样可注入布尔盲注或时间盲注 payload；部分案例中 `ORDER BY` 列名也由前端参数控制，构成另一类难以参数化的注入面。
+
+**MSSQL `WAITFOR DELAY` 时间盲注**：MSSQL 环境下的时间盲注使用 `WAITFOR DELAY '0:0:10'` 而非 MySQL 的 `SLEEP()`，常见于政府、电信、能源等采用 SQL Server 的系统。条件执行形如 `IF(condition) WAITFOR DELAY '0:0:5'`，通过响应时间判断真假；WAF 过滤了 `AND`、`=` 等关键词时，可改用 `NOT BETWEEN ... AND ...` 等等价结构绕过，仍能实现稳定的延时判断。
+
+**报错响应直接暴露完整 SQL 语句**：部分系统在发生数据库错误时，将完整 SQL 语句（含表名、字段名、拼接逻辑）原样输出到 HTTP 响应体中，如 `SQL: SELECT payment_id,biz_code,... WHERE pid=<输入>`。攻击者无需任何枚举即可读取数据库结构，将注入由盲注变为有回显注入，同时暴露业务逻辑（如支付流水表结构）。这一现象在未关闭调试模式的生产环境中较为普遍，PHP `mysql_error()` 直接输出和 .NET 默认错误页均是常见触发路径。
+
 ## 绕过方式
 
 | 绕过类别 | 典型手法 |

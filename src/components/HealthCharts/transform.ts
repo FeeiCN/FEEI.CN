@@ -8,6 +8,20 @@ type RawMed = {scheduledDate: string; displayText?: string; status?: string};
 type RawMood = {start: string; valence: number; kind: string; valenceClassification: string; labels?: string[]; associations?: string[]};
 type RawHeartAlert = {start: string; threshold: number};
 
+const DAILY_STEPS_GOAL = 3000;
+const DAILY_EXERCISE_GOAL = 20;
+const WEIGHT_GOAL_JIN = 140;
+
+const WORKOUT_NAME_ALIASES: Record<string, string> = {
+  'Outdoor Walk': '户外步行',
+  'Indoor Walk': '室内步行',
+  'Rowing': '划船',
+  'Badminton': '羽毛球',
+  'Indoor Cycling': '室内骑行',
+  'Indoor Run': '室内跑步',
+  'Core Training': '核心训练',
+};
+
 export type HealthData = {
   steps: [string, number][];
   distance: [string, number][];
@@ -80,7 +94,7 @@ function workouts(ws: RawWorkout[]): [string, string, number, number, number][] 
     .sort((a, b) => a.start.localeCompare(b.start))
     .map((w) => [
       w.start.slice(0, 10),
-      w.name ?? '其他',
+      WORKOUT_NAME_ALIASES[w.name ?? ''] ?? w.name ?? '其他',
       r((w.duration ?? 0) / 60, 1),
       Math.round((w.activeEnergyBurned?.qty ?? 0) / 4.184),
       Math.round(typeof w.avgHeartRate === 'object' ? (w.avgHeartRate?.qty ?? 0) : 0),
@@ -212,14 +226,14 @@ export function computeStats(D: HealthData): {v: string; l: string; status: Stat
   const fatAvg = avg(D.fat);
   const sleepSt: StatStatus = !sleepAvg ? 'neutral' : sleepAvg >= 7 && sleepAvg <= 9 ? 'good' : sleepAvg >= 6 ? 'warn' : 'bad';
   return [
-    {v: D.steps.length ? Math.round(stepsAvg).toLocaleString() : '—', l: '日均步数', status: st(stepsAvg, 8000, 5000)},
+    {v: D.steps.length ? Math.round(stepsAvg).toLocaleString() : '—', l: '日均步数', status: st(stepsAvg, DAILY_STEPS_GOAL, DAILY_STEPS_GOAL * 0.7)},
     {v: D.sleep.length ? `${sleepAvg.toFixed(1)}h` : '—', l: '日均睡眠', status: sleepSt},
     {v: D.rhr.length ? Math.round(rhrAvg).toString() : '—', l: '静息心率 bpm', status: st(rhrAvg, 0, 0) === 'neutral' ? 'neutral' : rhrAvg <= 60 ? 'good' : rhrAvg <= 75 ? 'warn' : 'bad'},
     {v: D.hrv.length ? `${hrvAvg.toFixed(1)}ms` : '—', l: '心率变异性 HRV', status: st(hrvAvg, 50, 30)},
     {v: D.weight.length ? `${weightJin.toFixed(1)}斤` : '—', l: '平均体重', status: 'neutral'},
     {v: D.fat.length ? `${fatAvg.toFixed(1)}%` : '—', l: '平均体脂率', status: st(fatAvg, 0, 0) === 'neutral' ? 'neutral' : fatAvg <= 20 ? 'good' : fatAvg <= 25 ? 'warn' : 'bad'},
     {v: D.spo2.length ? `${spo2Avg.toFixed(1)}%` : '—', l: '平均血氧', status: st(spo2Avg, 97, 95)},
-    {v: D.exercise.length ? `${Math.round(exerciseAvg)}min` : '—', l: '日均运动时长', status: st(exerciseAvg, 30, 15)},
+    {v: D.exercise.length ? `${Math.round(exerciseAvg)}min` : '—', l: '日均运动时长', status: st(exerciseAvg, DAILY_EXERCISE_GOAL, DAILY_EXERCISE_GOAL * 0.7)},
   ];
 }
 
@@ -306,7 +320,7 @@ export function computeDashboard(D: HealthData): DashCard[] {
     });
   }
 
-  addCard(D.weight, '体重', '斤', '理想区间 136~144斤', 136, 144, 130, 150,
+  addCard(D.weight, '体重', '斤', `目标 ${WEIGHT_GOAL_JIN}斤`, WEIGHT_GOAL_JIN - 2, WEIGHT_GOAL_JIN + 2, WEIGHT_GOAL_JIN - 5, WEIGHT_GOAL_JIN + 5,
     false, (v) => v.toFixed(1), (m) => `${m.toFixed(1)}斤`, (v) => r(v * 2, 1));
   addCard(D.bmi, 'BMI', '', '正常区间 18.5~23.9', 18.5, 23.9, 17.5, 25,
     false, (v) => v.toFixed(1), (m) => m.toFixed(2), undefined, 0.05);

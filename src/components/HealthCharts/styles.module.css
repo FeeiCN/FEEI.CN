@@ -33,6 +33,9 @@
 .floatingBar {
   display: flex;
   gap: 0.2rem;
+  max-width: calc(100vw - 1rem);
+  overflow-x: auto;
+  scrollbar-width: none;
   background: var(--ifm-background-color);
   border: 1px solid var(--ifm-color-emphasis-300, #cbd5e1);
   border-radius: 999px;
@@ -40,6 +43,10 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(12px);
   align-items: center;
+}
+
+.floatingBar::-webkit-scrollbar {
+  display: none;
 }
 
 .floatingLoading {
@@ -126,8 +133,8 @@
 }
 
 .dashCardChange {
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.86rem;
+  font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -141,19 +148,19 @@
 }
 
 .dashCardStatus {
-  font-size: 0.64rem;
+  font-size: 0.7rem;
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
-  padding: 0.16rem 0.34rem;
+  padding: 0.18rem 0.38rem;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.12);
 }
 
 .dashCardChangePeriod {
   opacity: 0.45;
-  font-size: 0.6rem;
-  margin-left: 2px;
+  font-size: 0.66rem;
+  margin-left: 3px;
 }
 
 .dashCardMain {
@@ -236,6 +243,10 @@
 
 
 @media (max-width: 767px) {
+  .floatingStack {
+    width: calc(100vw - 1rem);
+  }
+
   .dashGrid {
     grid-template-columns: repeat(2, 1fr);
   }

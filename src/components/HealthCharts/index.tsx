@@ -3,11 +3,16 @@ import ReactDOM from 'react-dom';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
-import {D as DEFAULT_DATA} from './data';
 import {transform, computeDashboard, getDateRange, filterByTimeRange, HealthData, DashCard} from './transform';
 import styles from './styles.module.css';
 
 const YEARS = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+
+const DAILY_STEPS_GOAL = 3000;
+const DAILY_EXERCISE_GOAL = 20;
+const DAILY_FLIGHTS_GOAL = 10;
+const WEIGHT_GOAL_JIN = 140;
+const DAILY_DAYLIGHT_GOAL = 30;
 
 const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
 const RANGE_LABELS: Record<string, string> = {'7d': '7天', '30d': '30天', '90d': '90天', '1y': '1年'};
@@ -126,6 +131,10 @@ function chartGrid(right = 16, left = 12, top = 32, bottom = 28) {
   return {top, right, bottom, left, containLabel: true};
 }
 
+function dualAxisGrid(isMobile: boolean) {
+  return chartGrid(isMobile ? 16 : 52);
+}
+
 function topLegend(c: CC, data: string[]) {
   return {data, top: 2, left: 'center', textStyle: {fontSize: 11, color: c.label}, itemHeight: 8};
 }
@@ -140,7 +149,7 @@ function baseTip() {
 
 // ── chart option builders ────────────────────────────────────────────────────
 
-function stepsDistanceOpt(isDark: boolean, D: HealthData) {
+function stepsDistanceOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   const {dates, a, b} = alignTwo(D.steps, D.distance);
   const stepsArr = a as (number | null)[];
@@ -150,7 +159,7 @@ function stepsDistanceOpt(isDark: boolean, D: HealthData) {
   });
   return {
     ...base(isDark),
-    grid: chartGrid(52),
+    grid: dualAxisGrid(isMobile),
     legend: topLegend(c, ['步数', '7日均', '距离']),
     tooltip: {
       trigger: 'axis',
@@ -170,8 +179,8 @@ function stepsDistanceOpt(isDark: boolean, D: HealthData) {
     series: [
       {
         name: '步数', type: 'bar', yAxisIndex: 0, barMaxWidth: 6,
-        data: stepsArr.map((v) => v === null ? null : {value: v, itemStyle: {color: v >= 8000 ? '#22c55e' : '#3b82f6', borderRadius: [2, 2, 0, 0]}}),
-        markLine: ml('#f59e0b', 8000, '目标 8000'),
+        data: stepsArr.map((v) => v === null ? null : {value: v, itemStyle: {color: v >= DAILY_STEPS_GOAL ? '#22c55e' : '#3b82f6', borderRadius: [2, 2, 0, 0]}}),
+        markLine: ml('#f59e0b', DAILY_STEPS_GOAL, `目标 ${DAILY_STEPS_GOAL}`),
       },
       {
         name: '7日均', type: 'line', yAxisIndex: 0, data: r7,
@@ -199,17 +208,17 @@ function exerciseOpt(isDark: boolean, D: HealthData) {
     yAxis: yVal(c, {unit: '分钟'}),
     series: [{
       name: '运动时长', type: 'bar', barMaxWidth: 6,
-      data: D.exercise.map(([, v]) => ({value: v, itemStyle: {color: v >= 30 ? '#22c55e' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
-      markLine: ml('#f59e0b', 30, '30 分钟'),
+      data: D.exercise.map(([, v]) => ({value: v, itemStyle: {color: v >= DAILY_EXERCISE_GOAL ? '#22c55e' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
+      markLine: ml('#f59e0b', DAILY_EXERCISE_GOAL, `${DAILY_EXERCISE_GOAL} 分钟`),
     }],
   };
 }
 
-function energyOpt(isDark: boolean, D: HealthData) {
+function energyOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: chartGrid(52),
+    grid: dualAxisGrid(isMobile),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
     legend: topLegend(c, ['活跃热量', '基础代谢']),
     ...(() => {
@@ -234,16 +243,17 @@ function flightsOpt(isDark: boolean, D: HealthData) {
     yAxis: yVal(c, {unit: '层'}),
     series: [{
       name: '爬楼层数', type: 'bar', barMaxWidth: 6,
-      data: D.flights.map(([, v]) => ({value: v, itemStyle: {color: '#0891b2', borderRadius: [2, 2, 0, 0]}})),
+      data: D.flights.map(([, v]) => ({value: v, itemStyle: {color: v >= DAILY_FLIGHTS_GOAL ? '#22c55e' : '#0891b2', borderRadius: [2, 2, 0, 0]}})),
+      markLine: ml('#f59e0b', DAILY_FLIGHTS_GOAL, `目标 ${DAILY_FLIGHTS_GOAL}`),
     }],
   };
 }
 
-function standOpt(isDark: boolean, D: HealthData) {
+function standOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: chartGrid(52),
+    grid: dualAxisGrid(isMobile),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
     legend: topLegend(c, ['站立时间', '站立小时数']),
     ...(() => {
@@ -321,13 +331,13 @@ function wristTempOpt(isDark: boolean, D: HealthData) {
   };
 }
 
-function heartOpt(isDark: boolean, D: HealthData) {
+function heartOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   const rhrR = dynRange(D.rhr, 3);
   const hrvR = dynRange(D.hrv, 5);
   return {
     ...base(isDark),
-    grid: chartGrid(52),
+    grid: dualAxisGrid(isMobile),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
     legend: topLegend(c, ['静息心率', 'HRV']),
     ...(() => {
@@ -381,12 +391,12 @@ function cardioRecoveryOpt(isDark: boolean, D: HealthData) {
   };
 }
 
-function respSpo2Opt(isDark: boolean, D: HealthData) {
+function respSpo2Opt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   const {dates, a, b} = alignTwo(D.resp_rate, D.spo2);
   return {
     ...base(isDark),
-    grid: chartGrid(52),
+    grid: dualAxisGrid(isMobile),
     tooltip: {
       trigger: 'axis',
       formatter: (p: {seriesName: string; value: number | null; axisValue?: string}[]) => {
@@ -423,13 +433,13 @@ function respSpo2Opt(isDark: boolean, D: HealthData) {
   };
 }
 
-function bodyOpt(isDark: boolean, D: HealthData) {
+function bodyOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   const wR = dynRange(D.weight, 2, (v) => v * 2);
   const fR = dynRange(D.fat, 1);
   return {
     ...base(isDark),
-    grid: chartGrid(52),
+    grid: dualAxisGrid(isMobile),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
     legend: topLegend(c, ['体重', '体脂率']),
     ...(() => {
@@ -438,7 +448,7 @@ function bodyOpt(isDark: boolean, D: HealthData) {
         xAxis: xCat(c, dates.map((d) => [d, 0] as [string, number])),
         yAxis: [yVal(c, {unit: '斤', ...wR, fmt: (v) => `${v}`}), yVal(c, {unit: '%', right: true, ...fR, fmt: (v) => `${v}%`})],
         series: [
-          {...smoothLine('体重', a as number[], '#2563eb', 0), connectNulls: true},
+          {...smoothLine('体重', a as number[], '#2563eb', 0), connectNulls: true, markLine: ml('#f59e0b', WEIGHT_GOAL_JIN, `目标 ${WEIGHT_GOAL_JIN}`)},
           {...smoothLine('体脂率', b as number[], '#f97316', 1), connectNulls: true},
         ],
       };
@@ -446,13 +456,13 @@ function bodyOpt(isDark: boolean, D: HealthData) {
   };
 }
 
-function bmiLeanOpt(isDark: boolean, D: HealthData) {
+function bmiLeanOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   const bmiR = dynRange(D.bmi, 0.5);
   const leanR = dynRange(D.lean, 1, (v) => v * 2);
   return {
     ...base(isDark),
-    grid: chartGrid(52),
+    grid: dualAxisGrid(isMobile),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
     legend: topLegend(c, ['BMI', '瘦体重']),
     ...(() => {
@@ -469,11 +479,11 @@ function bmiLeanOpt(isDark: boolean, D: HealthData) {
   };
 }
 
-function walkQualityOpt(isDark: boolean, D: HealthData) {
+function walkQualityOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: chartGrid(52),
+    grid: dualAxisGrid(isMobile),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
     legend: topLegend(c, ['步行速度', '步长']),
     ...(() => {
@@ -490,11 +500,11 @@ function walkQualityOpt(isDark: boolean, D: HealthData) {
   };
 }
 
-function gaitOpt(isDark: boolean, D: HealthData) {
+function gaitOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: chartGrid(52),
+    grid: dualAxisGrid(isMobile),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
     legend: topLegend(c, ['步态不对称性', '双支撑时间占比']),
     ...(() => {
@@ -511,11 +521,11 @@ function gaitOpt(isDark: boolean, D: HealthData) {
   };
 }
 
-function stairOpt(isDark: boolean, D: HealthData) {
+function stairOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: chartGrid(52),
+    grid: dualAxisGrid(isMobile),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
     legend: topLegend(c, ['上楼梯速度', '下楼梯速度']),
     ...(() => {
@@ -550,11 +560,11 @@ function sixMinWalkOpt(isDark: boolean, D: HealthData) {
   };
 }
 
-function audioOpt(isDark: boolean, D: HealthData) {
+function audioOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   return {
     ...base(isDark),
-    grid: chartGrid(52),
+    grid: dualAxisGrid(isMobile),
     tooltip: {trigger: 'axis', formatter: tooltipFmt},
     legend: topLegend(c, ['环境音量', '耳机音量']),
     xAxis: xCat(c, D.audio_env),
@@ -577,8 +587,8 @@ function daylightOpt(isDark: boolean, D: HealthData) {
     yAxis: yVal(c, {unit: '分钟', min: 0, fmt: (v) => `${v}m`}),
     series: [{
       name: '日晒时间', type: 'bar', barMaxWidth: 6,
-      data: D.daylight.map(([, v]) => ({value: v, itemStyle: {color: v >= 30 ? '#f59e0b' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
-      markLine: ml('#f59e0b', 30, '建议 30 分钟'),
+      data: D.daylight.map(([, v]) => ({value: v, itemStyle: {color: v >= DAILY_DAYLIGHT_GOAL ? '#f59e0b' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
+      markLine: ml('#f59e0b', DAILY_DAYLIGHT_GOAL, `目标 ${DAILY_DAYLIGHT_GOAL} 分钟`),
     }],
   };
 }
@@ -638,9 +648,9 @@ function vo2Opt(isDark: boolean, D: HealthData) {
 // ── workouts ─────────────────────────────────────────────────────────────────
 
 const WORKOUT_COLORS: Record<string, string> = {
-  '户外 步行': '#22c55e', '室内 步行': '#86efac',
+  '户外步行': '#22c55e', '室内步行': '#86efac',
   '划船': '#0891b2', '羽毛球': '#f97316',
-  '室内 骑行': '#ef4444', '室内 跑步': '#f59e0b', '核心训练': '#94a3b8',
+  '室内骑行': '#ef4444', '室内跑步': '#f59e0b', '核心训练': '#94a3b8',
 };
 
 function workoutTimelineOpt(isDark: boolean, D: HealthData) {
@@ -669,27 +679,33 @@ function workoutTimelineOpt(isDark: boolean, D: HealthData) {
   };
 }
 
-function workoutCalendarOpt(isDark: boolean, D: HealthData) {
+function workoutCalendarOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
-  const byDay = new Map<string, {mins: number; kcal: number; count: number}>();
-  for (const [date,, dur, kcal] of D.workouts) {
-    const cur = byDay.get(date) ?? {mins: 0, kcal: 0, count: 0};
+  const byDay = new Map<string, {mins: number; kcal: number; count: number; names: Set<string>}>();
+  for (const [date, name, dur, kcal] of D.workouts) {
+    const cur = byDay.get(date) ?? {mins: 0, kcal: 0, count: 0, names: new Set<string>()};
     cur.mins += dur;
     cur.kcal += kcal;
     cur.count += 1;
+    cur.names.add(name);
     byDay.set(date, cur);
   }
   const dates = D.workouts.map(([d]) => d).sort();
   const start = dates[0] ?? new Date().toISOString().slice(0, 10);
   const end = dates.at(-1) ?? start;
-  const values = [...byDay.entries()].map(([date, v]) => [date, Math.round(v.mins), Math.round(v.kcal), v.count]);
-  const maxMins = Math.max(30, ...values.map(([, mins]) => mins as number));
+  const values: Array<{value: [string, number]; kcal: number; count: number; names: string}> = [...byDay.entries()].map(([date, v]) => ({
+    value: [date, Math.round(v.mins)],
+    kcal: Math.round(v.kcal),
+    count: v.count,
+    names: [...v.names].join('、'),
+  }));
+  const maxMins = Math.max(30, ...values.map((item) => item.value[1]));
   return {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      formatter: (p: {value: [string, number, number, number]}) =>
-        `${p.value[0]}<br/>运动：${p.value[3]} 次<br/>时长：${p.value[1]} 分钟<br/>消耗：${p.value[2]} kcal`,
+      formatter: (p: {value: [string, number]; data: {kcal: number; count: number; names: string}}) =>
+        `${p.value[0]}<br/>运动：${p.data.names}<br/>次数：${p.data.count} 次<br/>时长：${p.value[1]} 分钟<br/>消耗：${p.data.kcal} kcal`,
     },
     visualMap: {
       min: 0, max: maxMins, show: true, orient: 'horizontal', left: 'center', bottom: 0,
@@ -699,7 +715,7 @@ function workoutCalendarOpt(isDark: boolean, D: HealthData) {
     calendar: {
       top: 22, left: 34, right: 16, bottom: 34,
       range: [start, end],
-      cellSize: ['auto', 14],
+      cellSize: ['auto', isMobile ? 22 : 20],
       splitLine: {lineStyle: {color: c.split}},
       itemStyle: {borderWidth: 1, borderColor: c.split},
       yearLabel: {show: false},
@@ -708,7 +724,18 @@ function workoutCalendarOpt(isDark: boolean, D: HealthData) {
     },
     series: [{
       name: '运动时长', type: 'heatmap', coordinateSystem: 'calendar',
-      data: values.map(([date, mins]) => [date, mins]),
+      data: values,
+      label: {
+        show: true,
+        color: c.label,
+        fontSize: 8,
+        lineHeight: 10,
+        formatter: (p: {value: [string, number]; data: {names: string}}) => {
+          const day = p.value[0].slice(8, 10).replace(/^0/, '');
+          const name = p.data.names.split('、')[0] ?? '';
+          return `${day}\n${name}`;
+        },
+      },
     }],
   };
 }
@@ -1008,6 +1035,13 @@ function addWeekends(option: object, isDark: boolean): object {
 
 // ── layout ───────────────────────────────────────────────────────────────────
 
+function chartHeight(label: string, isMobile: boolean) {
+  if (label === '运动日历热力图') {
+    return isMobile ? 260 : 280;
+  }
+  return isMobile ? 200 : 240;
+}
+
 const SECTIONS = [
   {title: '活动', charts: [
     {label: '每日步数 & 距离', opt: stepsDistanceOpt},
@@ -1058,7 +1092,7 @@ const SECTIONS = [
   ]},
 ];
 
-type OptionFn = (isDark: boolean, D: HealthData) => object;
+type OptionFn = (isDark: boolean, D: HealthData, isMobile?: boolean) => object;
 
 // ── year / data context ───────────────────────────────────────────────────────
 
@@ -1095,31 +1129,29 @@ type YearCtxType = {
   setTimeRange: (r: string) => void;
 };
 const YearCtx = createContext<YearCtxType>({
-  selectedYear: 2026, setYear: () => {}, data: DEFAULT_DATA, loading: true, availableYears: [2026],
+  selectedYear: 2026, setYear: () => {}, data: EMPTY, loading: true, availableYears: [],
   timeRange: '30d', setTimeRange: () => {},
 });
 
 function HealthProviderInner({children}: {children: React.ReactNode}) {
   const [selectedYear, setSelectedYear] = useState<number | null>(2026);
-  const [allData, setAllData] = useState<Record<number, HealthData>>({2026: DEFAULT_DATA});
+  const [allData, setAllData] = useState<Record<number, HealthData>>({});
   const [loading, setLoading] = useState(true);
-  const [availableYears, setAvailableYears] = useState<number[]>([2026]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [timeRange, setTimeRange] = useState('30d');
 
   useEffect(() => {
-    const others = YEARS.filter((y) => y !== 2026);
     let done = 0;
-    if (others.length === 0) { setLoading(false); return; }
-    others.forEach((y) => {
+    YEARS.forEach((y) => {
       fetch(`/health/health_data_${y}.json`)
         .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
         .then((raw) => {
           const d = transform(raw);
           setAllData((prev) => ({...prev, [y]: d}));
-          setAvailableYears((prev) => [...prev, y].sort((a, b) => a - b));
+          setAvailableYears((prev) => Array.from(new Set([...prev, y])).sort((a, b) => a - b));
         })
         .catch(() => {})
-        .finally(() => { if (++done === others.length) setLoading(false); });
+        .finally(() => { if (++done === YEARS.length) setLoading(false); });
     });
   }, []);
 
@@ -1313,10 +1345,10 @@ function FloatingBar() {
 }
 
 function StatsInner() {
-  const {selectedYear, data, availableYears} = useContext(YearCtx);
+  const {selectedYear, data, availableYears, loading} = useContext(YearCtx);
   const dashboard = computeDashboard(data);
   const dateRange = getDateRange(data);
-  const noData = selectedYear !== null && !availableYears.includes(selectedYear);
+  const noData = !loading && selectedYear !== null && !availableYears.includes(selectedYear);
   return (
     <>
       <FloatingBar />
@@ -1343,12 +1375,11 @@ function SectionInner({name}: {name: string}) {
     return () => window.removeEventListener('resize', handle);
   }, []);
 
-  const noData = selectedYear !== null && !availableYears.includes(selectedYear);
+  const noData = !loading && selectedYear !== null && !availableYears.includes(selectedYear);
   if (noData) return <div className={styles.noData}>暂无 {selectedYear} 年数据</div>;
   if (loading && data.steps.length === 0) return <div className={styles.loading}>加载中…</div>;
 
   const displayData = RANGE_DAYS[timeRange] ? filterByTimeRange(data, RANGE_DAYS[timeRange]) : data;
-  const h = isMobile ? 200 : 240;
   const opts = {renderer: 'svg' as const};
   const sec = SECTIONS.find((s) => s.title === name);
   if (!sec) return null;
@@ -1358,7 +1389,7 @@ function SectionInner({name}: {name: string}) {
       {sec.charts.map(({label, opt}: {label: string; opt: OptionFn}) => (
         <div key={label} className={styles.section}>
           <div className={styles.sectionTitle}>{label}</div>
-          <ReactECharts option={addWeekends(opt(isDark, displayData), isDark)} theme={theme} style={{height: h}} opts={opts} />
+          <ReactECharts option={addWeekends(opt(isDark, displayData, isMobile), isDark)} theme={theme} style={{height: chartHeight(label, isMobile)}} opts={opts} />
         </div>
       ))}
     </div>

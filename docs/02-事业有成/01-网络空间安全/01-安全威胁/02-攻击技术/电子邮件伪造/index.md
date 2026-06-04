@@ -1,6 +1,7 @@
 ---
 slug: /email-spoofing
-title: 电子邮件伪造实践
+title: 电子邮件伪造
+icon: mail-filled-icon
 sidebar_position: 28
 ---
 

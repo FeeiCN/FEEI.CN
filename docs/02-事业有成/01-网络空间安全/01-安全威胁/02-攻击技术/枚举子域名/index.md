@@ -1,6 +1,7 @@
 ---
 slug: /esd
 title: 枚举子域名
+icon: magnifier-icon
 sidebar_position: 27
 ---
 

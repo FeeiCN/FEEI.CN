@@ -1,6 +1,7 @@
 ---
-slug: /github-pr-risks
-title: GitHub Pull Request 业务逻辑风险
+slug: /github-security
+title: GitHub 安全
+icon: github-icon
 sidebar_position: 25
 ---
 

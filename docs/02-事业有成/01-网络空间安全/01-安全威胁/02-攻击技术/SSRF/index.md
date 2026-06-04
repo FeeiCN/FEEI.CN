@@ -1,6 +1,7 @@
 ---
 slug: /ssrf
-title: SSRF（服务端请求伪造）
+title: SSRF 服务端请求伪造
+icon: globe-icon
 sidebar_position: 15
 ---
 

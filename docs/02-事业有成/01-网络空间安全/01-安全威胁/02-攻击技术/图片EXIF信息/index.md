@@ -1,6 +1,7 @@
 ---
 slug: /exif
-title: 隐藏在图片背后的信息
+title: 图片 EXIF 信息
+icon: camera-icon
 sidebar_position: 29
 ---
 

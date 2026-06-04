@@ -1,6 +1,7 @@
 ---
 slug: /iot-security
-title: IoT Security
+title: IoT 安全
+icon: cpu-icon
 sidebar_position: 22
 ---
 

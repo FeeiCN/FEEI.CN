@@ -1,6 +1,7 @@
 ---
 slug: /sim-cloning
-title: 手机SIM卡复制
+title: 手机 SIM 卡复制
+icon: dialpad-icon
 sidebar_position: 30
 ---
 

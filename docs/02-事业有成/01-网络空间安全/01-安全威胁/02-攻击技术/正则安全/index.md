@@ -1,6 +1,7 @@
 ---
 slug: /regex-security
 title: 正则安全
+icon: filter-icon
 sidebar_position: 24
 ---
 

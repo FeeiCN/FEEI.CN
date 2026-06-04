@@ -1,35 +1,43 @@
 import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.dirname(scriptDir);
 const args = parseArgs(process.argv.slice(2));
 const exportArgs = args.date ? ['--', '--year', targetYear(), '--end-date', args.date] : [];
 const commitMessage = args.message ?? '更新健康数据';
 const remote = args.remote ?? 'origin';
 const branch = args.branch ?? currentBranch();
 const healthFile = path.join('static', 'health', `health_data_${targetYear()}.json`);
+const statusFile = path.join('docs', '05-吴飞飞', '01-关于', 'FEEI.CN状态.md');
 
 ensureNoStagedChanges();
 
 run('git', ['pull', '--rebase', '--autostash']);
 run('npm', ['run', 'export-health-year', ...exportArgs]);
 
-if (!fs.existsSync(healthFile)) {
-  throw new Error(`Health data file does not exist: ${healthFile}`);
+const healthFilePath = path.join(repoRoot, healthFile);
+if (!fs.existsSync(healthFilePath)) {
+  throw new Error(`Health data file does not exist: ${healthFilePath}`);
 }
 
-if (isPathClean(healthFile)) {
-  console.log(`No health data changes to commit: ${healthFile}`);
+updateStatusPage();
+
+const changedFiles = [healthFile, statusFile].filter((file) => !isPathClean(file));
+if (changedFiles.length === 0) {
+  console.log(`No changes to commit: ${healthFile}, ${statusFile}`);
   process.exit(0);
 }
 
-run('git', ['add', healthFile]);
+run('git', ['add', ...changedFiles]);
 run('git', ['commit', '-m', commitMessage]);
 run('git', ['push', remote, branch]);
 
 function run(command, commandArgs, options = {}) {
   const result = spawnSync(command, commandArgs, {
-    cwd: process.cwd(),
+    cwd: repoRoot,
     encoding: 'utf8',
     stdio: options.capture ? 'pipe' : 'inherit',
   });
@@ -47,7 +55,7 @@ function run(command, commandArgs, options = {}) {
 
 function ensureNoStagedChanges() {
   const result = spawnSync('git', ['diff', '--cached', '--quiet'], {
-    cwd: process.cwd(),
+    cwd: repoRoot,
     encoding: 'utf8',
   });
 
@@ -57,12 +65,37 @@ function ensureNoStagedChanges() {
 }
 
 function isPathClean(file) {
-  const result = spawnSync('git', ['diff', '--quiet', '--', file], {
-    cwd: process.cwd(),
+  const result = spawnSync('git', ['status', '--short', '--', file], {
+    cwd: repoRoot,
     encoding: 'utf8',
+    stdio: 'pipe',
   });
 
-  return result.status === 0;
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (result.status !== 0) {
+    throw new Error(`git status --short -- ${file} failed with exit code ${result.status}`);
+  }
+
+  return result.stdout.trim() === '';
+}
+
+function updateStatusPage() {
+  run('python3', [
+    'scripts/status_page.py',
+    '--key',
+    'health-data',
+    '--name',
+    '健康数据',
+    '--script',
+    'scripts/sync_health_data.mjs',
+    '--status',
+    '成功',
+    '--output',
+    '健康数据=/health-data',
+  ]);
 }
 
 function currentBranch() {

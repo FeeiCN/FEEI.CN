@@ -19,7 +19,7 @@ const commitMessage = args.message ?? '更新健康数据';
 const remote = args.remote ?? 'origin';
 const branch = args.branch ?? currentBranch();
 const healthFile = path.join('static', 'health', `health_data_${targetYear()}.json`);
-const statusFile = path.join('docs', '05-吴飞飞', '01-关于', 'FEEI.CN状态.md');
+const statusFile = path.join('docs', '05-吴飞飞', '01-关于', '关于FEEI.CN', 'FEEI.CN状态.md');
 
 ensureNoStagedChanges();
 

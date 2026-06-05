@@ -9,7 +9,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
-STATUS_OUTPUT_TARGET = REPO_ROOT / "docs/05-吴飞飞/01-关于/FEEI.CN状态.md"
+STATUS_OUTPUT_TARGET = REPO_ROOT / "docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN状态.md"
 DATA_START = "<!-- status-page-data"
 DATA_END = "-->"
 
@@ -77,7 +77,7 @@ def render_status_page(entries):
     return "\n".join([
         "---",
         "slug: /status",
-        "title: FEEI.CN状态",
+        "title: FEEI.CN运行状态",
         "icon: simple-checked-icon",
         "---",
         "",

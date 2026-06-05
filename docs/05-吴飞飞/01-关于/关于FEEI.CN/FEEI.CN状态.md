@@ -1,6 +1,6 @@
 ---
 slug: /status
-title: FEEI.CN状态
+title: FEEI.CN运行状态
 icon: simple-checked-icon
 ---
 

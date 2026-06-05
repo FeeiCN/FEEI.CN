@@ -5,6 +5,14 @@ import {fileURLToPath} from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.dirname(scriptDir);
+const commandEnv = {
+  ...process.env,
+  PATH: [
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    process.env.PATH ?? '/usr/bin:/bin:/usr/sbin:/sbin',
+  ].join(':'),
+};
 const args = parseArgs(process.argv.slice(2));
 const exportArgs = args.date ? ['--', '--year', targetYear(), '--end-date', args.date] : [];
 const commitMessage = args.message ?? '更新健康数据';
@@ -39,6 +47,7 @@ function run(command, commandArgs, options = {}) {
   const result = spawnSync(command, commandArgs, {
     cwd: repoRoot,
     encoding: 'utf8',
+    env: commandEnv,
     stdio: options.capture ? 'pipe' : 'inherit',
   });
 
@@ -57,6 +66,7 @@ function ensureNoStagedChanges() {
   const result = spawnSync('git', ['diff', '--cached', '--quiet'], {
     cwd: repoRoot,
     encoding: 'utf8',
+    env: commandEnv,
   });
 
   if (result.status !== 0) {
@@ -68,6 +78,7 @@ function isPathClean(file) {
   const result = spawnSync('git', ['status', '--short', '--', file], {
     cwd: repoRoot,
     encoding: 'utf8',
+    env: commandEnv,
     stdio: 'pipe',
   });
 

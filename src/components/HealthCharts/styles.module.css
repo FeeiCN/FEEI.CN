@@ -242,6 +242,58 @@
 }
 
 
+.workoutDetail {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--ifm-color-emphasis-200, #e2e8f0);
+  background: var(--ifm-background-color);
+}
+
+.workoutDetailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.workoutDetailDate {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-700);
+  letter-spacing: 0.04em;
+}
+
+.workoutDetailClose {
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--ifm-color-emphasis-500);
+  background: none;
+  border: none;
+  padding: 0.1rem 0.3rem;
+  line-height: 1;
+}
+
+.workoutDetailItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--ifm-color-emphasis-100, #f1f5f9);
+  font-size: 0.78rem;
+}
+
+.workoutDetailName {
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-800);
+}
+
+.workoutDetailMeta {
+  color: var(--ifm-color-emphasis-600);
+  display: flex;
+  gap: 0.6rem;
+}
+
 @media (max-width: 767px) {
   .floatingStack {
     width: calc(100vw - 1rem);

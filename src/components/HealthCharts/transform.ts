@@ -3,7 +3,15 @@
 type RawEntry = {qty?: number; date: string};
 type SleepEntry = {date: string; totalSleep?: number; deep?: number; rem?: number; core?: number; awake?: number};
 type RawMetric = {name: string; data: (RawEntry | SleepEntry)[]};
-type RawWorkout = {name?: string; start: string; duration?: number; activeEnergyBurned?: {qty?: number}; avgHeartRate?: {qty?: number} | number};
+type RawWorkout = {
+  name?: string; start: string; end?: string; duration?: number;
+  activeEnergyBurned?: {qty?: number};
+  avgHeartRate?: {qty?: number} | number;
+  heartRate?: {min?: {qty?: number}; max?: {qty?: number}};
+  distance?: {qty?: number};
+  stepCount?: Array<{qty?: number}>;
+  elevationUp?: {qty?: number};
+};
 type RawMed = {scheduledDate: string; displayText?: string; status?: string};
 type RawMood = {start: string; valence: number; kind: string; valenceClassification: string; labels?: string[]; associations?: string[]};
 type RawHeartAlert = {start: string; threshold: number};
@@ -57,7 +65,7 @@ export type HealthData = {
   physical_effort: [string, number][];
   cardio_recovery: [string, number][];
   vo2: [string, number][];
-  workouts: [string, string, number, number, number][];
+  workouts: [string, string, number, number, number, number, number, number, number, number, string][];
   nah_daily: [string, number, number][];
   bns_daily: [string, number, number][];
   med_monthly: [string, number, number][];
@@ -88,7 +96,7 @@ function sleep(metrics: RawMetric[]): [string, number, number, number, number, n
     ]);
 }
 
-function workouts(ws: RawWorkout[]): [string, string, number, number, number][] {
+function workouts(ws: RawWorkout[]): [string, string, number, number, number, number, number, number, number, number, string][] {
   return [...ws]
     .filter((w) => typeof w.start === 'string' && w.start.length >= 10)
     .sort((a, b) => a.start.localeCompare(b.start))
@@ -98,6 +106,12 @@ function workouts(ws: RawWorkout[]): [string, string, number, number, number][] 
       r((w.duration ?? 0) / 60, 1),
       Math.round((w.activeEnergyBurned?.qty ?? 0) / 4.184),
       Math.round(typeof w.avgHeartRate === 'object' ? (w.avgHeartRate?.qty ?? 0) : 0),
+      Math.round(w.heartRate?.min?.qty ?? 0),
+      Math.round(w.heartRate?.max?.qty ?? 0),
+      r(w.distance?.qty ?? 0, 2),
+      Math.round((w.stepCount ?? []).reduce((s, e) => s + (e.qty ?? 0), 0)),
+      Math.round(w.elevationUp?.qty ?? 0),
+      w.start.slice(11, 16),
     ]);
 }
 

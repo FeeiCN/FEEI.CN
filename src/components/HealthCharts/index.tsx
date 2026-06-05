@@ -679,33 +679,53 @@ function workoutTimelineOpt(isDark: boolean, D: HealthData) {
   };
 }
 
+type WorkoutItem = {name: string; dur: number; kcal: number; avgHr: number; minHr: number; maxHr: number; dist: number; steps: number; elev: number; time: string};
+
 function workoutCalendarOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
-  const byDay = new Map<string, {mins: number; kcal: number; count: number; names: Set<string>}>();
-  for (const [date, name, dur, kcal] of D.workouts) {
-    const cur = byDay.get(date) ?? {mins: 0, kcal: 0, count: 0, names: new Set<string>()};
+  const byDay = new Map<string, {mins: number; kcal: number; count: number; names: Set<string>; items: WorkoutItem[]}>();
+  for (const [date, name, dur, kcal, avgHr, minHr, maxHr, dist, steps, elev, time] of D.workouts) {
+    const cur = byDay.get(date) ?? {mins: 0, kcal: 0, count: 0, names: new Set<string>(), items: []};
     cur.mins += dur;
     cur.kcal += kcal;
     cur.count += 1;
     cur.names.add(name);
+    cur.items.push({name, dur, kcal, avgHr, minHr, maxHr, dist, steps, elev, time});
     byDay.set(date, cur);
   }
   const dates = D.workouts.map(([d]) => d).sort();
   const start = dates[0] ?? new Date().toISOString().slice(0, 10);
   const end = dates.at(-1) ?? start;
-  const values: Array<{value: [string, number]; kcal: number; count: number; names: string}> = [...byDay.entries()].map(([date, v]) => ({
-    value: [date, Math.round(v.mins)],
-    kcal: Math.round(v.kcal),
-    count: v.count,
-    names: [...v.names].join('、'),
-  }));
+  const values: Array<{value: [string, number]; kcal: number; count: number; names: string; items: WorkoutItem[]}> = [];
+  const cur = new Date(start);
+  const endDate = new Date(end);
+  while (cur <= endDate) {
+    const dateStr = cur.toISOString().slice(0, 10);
+    const v = byDay.get(dateStr);
+    values.push(v
+      ? {value: [dateStr, Math.round(v.mins)], kcal: Math.round(v.kcal), count: v.count, names: [...v.names].join('、'), items: v.items}
+      : {value: [dateStr, 0], kcal: 0, count: 0, names: '', items: []},
+    );
+    cur.setDate(cur.getDate() + 1);
+  }
   const maxMins = Math.max(30, ...values.map((item) => item.value[1]));
   return {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      formatter: (p: {value: [string, number]; data: {kcal: number; count: number; names: string}}) =>
-        `${p.value[0]}<br/>运动：${p.data.names}<br/>次数：${p.data.count} 次<br/>时长：${p.value[1]} 分钟<br/>消耗：${p.data.kcal} kcal`,
+      formatter: (p: {value: [string, number]; data: {items: WorkoutItem[]}}) => {
+        if (!p.data.items.length) return p.value[0];
+        const lines = [`<b>${p.value[0]}</b>`];
+        for (const w of p.data.items) {
+          const parts: string[] = [`<b>${w.name}</b>`, w.time, `${Math.round(w.dur)}分钟`, `${w.kcal}kcal`];
+          if (w.avgHr > 0) parts.push(`${w.avgHr}bpm${w.minHr > 0 && w.maxHr > 0 ? `(${w.minHr}~${w.maxHr})` : ''}`);
+          if (w.dist > 0) parts.push(`${w.dist}km`);
+          if (w.steps > 0) parts.push(`${w.steps.toLocaleString()}步`);
+          if (w.elev > 0) parts.push(`↑${w.elev}m`);
+          lines.push(parts.join('&nbsp;&nbsp;'));
+        }
+        return lines.join('<br/>');
+      },
     },
     visualMap: {
       min: 0, max: maxMins, show: true, orient: 'horizontal', left: 'center', bottom: 0,
@@ -731,9 +751,9 @@ function workoutCalendarOpt(isDark: boolean, D: HealthData, isMobile = false) {
         fontSize: 8,
         lineHeight: 10,
         formatter: (p: {value: [string, number]; data: {names: string}}) => {
-          const day = p.value[0].slice(8, 10).replace(/^0/, '');
+          const monthDay = p.value[0].slice(5, 10);
           const name = p.data.names.split('、')[0] ?? '';
-          return `${day}\n${name}`;
+          return name ? `${monthDay}\n${name}` : monthDay;
         },
       },
     }],

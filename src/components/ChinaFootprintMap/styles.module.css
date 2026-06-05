@@ -1,0 +1,145 @@
+.wrap {
+  width: 100%;
+  margin: 1rem 0 1.5rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.stat {
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 8px;
+  background: var(--ifm-background-surface-color);
+}
+
+.statValue {
+  font-size: 1.45rem;
+  font-weight: 650;
+  line-height: 1.1;
+  color: var(--ifm-heading-color);
+}
+
+.statLabel {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 0.75rem;
+}
+
+.button {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-font-color-base);
+  cursor: pointer;
+  font-size: 0.86rem;
+  line-height: 1;
+  padding: 0.55rem 0.75rem;
+}
+
+.button:hover {
+  border-color: var(--ifm-color-primary);
+  color: var(--ifm-color-primary);
+}
+
+.chart {
+  width: 100%;
+  min-height: 560px;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 8px;
+  background: var(--ifm-background-surface-color);
+  overflow: hidden;
+}
+
+.loading {
+  min-height: 560px;
+  display: grid;
+  place-items: center;
+  color: var(--ifm-color-emphasis-700);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 8px;
+  background: var(--ifm-background-surface-color);
+}
+
+.tableWrap {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.table th,
+.table td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--ifm-color-emphasis-700);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.yearCell {
+  width: 7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.footprintList {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.footprintItem {
+  line-height: 1.55;
+}
+
+.footprintItemIndented {
+  padding-left: 1.25rem;
+}
+
+.provinceName {
+  display: inline-block;
+  min-width: 3.5rem;
+  margin-right: 0.35rem;
+  color: var(--ifm-color-primary);
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .chart,
+  .loading {
+    min-height: 440px;
+  }
+
+  .table {
+    font-size: 0.86rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.55rem 0.6rem;
+  }
+}

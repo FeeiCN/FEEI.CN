@@ -55,6 +55,8 @@ const visitedProvinces: ProvinceVisit[] = [
   {name: '黑龙江省', shortName: '黑龙江', value: 2, trips: [{year: 2019, places: ['牡丹江']}, {year: 2021, places: ['牡丹江市（雪乡）', '哈尔滨']}]},
   {name: '陕西省', shortName: '陕西', value: 2, trips: [{year: 2017, places: ['西安']}, {year: 2018, places: ['西安']}]},
   {name: '重庆市', shortName: '重庆', value: 1, trips: [{year: 2023, places: ['重庆']}]},
+  {name: '宁夏回族自治区', shortName: '宁夏', value: 1, trips: [{year: 2020, places: ['中卫', '银川']}]},
+  {name: '河南省', shortName: '河南', value: 2, trips: [{year: 2017, places: ['郑州']}, {year: 2018, places: ['郑州']}]},
 ];
 
 const visitedCountries: CountryVisit[] = [
@@ -321,6 +323,7 @@ const worldYearRows: YearFootprintRow[] = [
       '中国(China) · 浙江：千岛湖',
       '中国(China) · 海南：三亚',
       '中国(China) · 湖北：武汉、蕲春',
+      '中国(China) · 宁夏：中卫、银川',
     ],
   },
   {
@@ -348,6 +351,7 @@ const worldYearRows: YearFootprintRow[] = [
       '中国(China) · 陕西：西安',
       '中国(China) · 福建：泉州、石狮',
       '中国(China) · 湖北：蕲春',
+      '中国(China) · 河南：郑州',
     ],
   },
   {
@@ -358,6 +362,7 @@ const worldYearRows: YearFootprintRow[] = [
       '中国(China) · 浙江：千岛湖、舟山',
       '中国(China) · 陕西：西安',
       '中国(China) · 北京：北京',
+      '中国(China) · 河南：郑州',
     ],
   },
   {

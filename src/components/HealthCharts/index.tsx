@@ -8,11 +8,6 @@ import styles from './styles.module.css';
 
 const YEARS = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
 
-const DAILY_STEPS_GOAL = 3000;
-const DAILY_EXERCISE_GOAL = 20;
-const DAILY_FLIGHTS_GOAL = 10;
-const WEIGHT_GOAL_JIN = 140;
-const DAILY_DAYLIGHT_GOAL = 30;
 
 const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
 const RANGE_LABELS: Record<string, string> = {'7d': '7天', '30d': '30天', '90d': '90天', '1y': '1年'};
@@ -58,7 +53,7 @@ function ml(color: string, yVal_: number, label: string) {
   return {
     silent: true, symbol: 'none',
     lineStyle: {color, type: 'dashed', width: 1},
-    label: {show: true, position: 'end', formatter: label, color, fontSize: 10},
+    label: {show: true, position: 'insideEndTop', formatter: label, color, fontSize: 10},
     data: [{yAxis: yVal_}],
   };
 }
@@ -117,6 +112,12 @@ function alignTwo(
 }
 
 // Dynamic y-axis range from actual data with optional padding
+function dynGoal(arr: [string, number][], pct: number, minCount = 5): number | null {
+  if (arr.length < minCount) return null;
+  const vals = arr.map(([, v]) => v).sort((a, b) => a - b);
+  return Math.round(vals[Math.floor(vals.length * pct)]);
+}
+
 function dynRange(arr: [string, number][], pad = 2, conv?: (v: number) => number) {
   const vals = arr.map(([, v]) => conv ? conv(v) : v);
   if (!vals.length) return {};
@@ -132,7 +133,7 @@ function chartGrid(right = 16, left = 12, top = 32, bottom = 28) {
 }
 
 function dualAxisGrid(isMobile: boolean) {
-  return chartGrid(isMobile ? 16 : 52);
+  return chartGrid(isMobile ? 16 : 40);
 }
 
 function topLegend(c: CC, data: string[]) {
@@ -151,6 +152,7 @@ function baseTip() {
 
 function stepsDistanceOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
+  const stepsGoal = dynGoal(D.steps, 0.75);
   const {dates, a, b} = alignTwo(D.steps, D.distance);
   const stepsArr = a as (number | null)[];
   const r7 = dates.map((_, i) => {
@@ -179,8 +181,8 @@ function stepsDistanceOpt(isDark: boolean, D: HealthData, isMobile = false) {
     series: [
       {
         name: '步数', type: 'bar', yAxisIndex: 0, barMaxWidth: 6,
-        data: stepsArr.map((v) => v === null ? null : {value: v, itemStyle: {color: v >= DAILY_STEPS_GOAL ? '#22c55e' : '#3b82f6', borderRadius: [2, 2, 0, 0]}}),
-        markLine: ml('#f59e0b', DAILY_STEPS_GOAL, `目标 ${DAILY_STEPS_GOAL}`),
+        data: stepsArr.map((v) => v === null ? null : {value: v, itemStyle: {color: stepsGoal !== null && v >= stepsGoal ? '#22c55e' : '#3b82f6', borderRadius: [2, 2, 0, 0]}}),
+        ...(stepsGoal !== null ? {markLine: ml('#f59e0b', stepsGoal, `目标 ${stepsGoal.toLocaleString()}`)} : {}),
       },
       {
         name: '7日均', type: 'line', yAxisIndex: 0, data: r7,
@@ -202,14 +204,15 @@ function stepsDistanceOpt(isDark: boolean, D: HealthData, isMobile = false) {
 
 function exerciseOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
+  const goal = dynGoal(D.exercise, 0.75);
   return {
     ...base(isDark), ...baseTip(),
     xAxis: xCat(c, D.exercise),
     yAxis: yVal(c, {unit: '分钟'}),
     series: [{
       name: '运动时长', type: 'bar', barMaxWidth: 6,
-      data: D.exercise.map(([, v]) => ({value: v, itemStyle: {color: v >= DAILY_EXERCISE_GOAL ? '#22c55e' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
-      markLine: ml('#f59e0b', DAILY_EXERCISE_GOAL, `${DAILY_EXERCISE_GOAL} 分钟`),
+      data: D.exercise.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#22c55e' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
+      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal} 分钟`)} : {}),
     }],
   };
 }
@@ -237,14 +240,15 @@ function energyOpt(isDark: boolean, D: HealthData, isMobile = false) {
 
 function flightsOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
+  const goal = dynGoal(D.flights, 0.75);
   return {
     ...base(isDark), ...baseTip(),
     xAxis: xCat(c, D.flights),
     yAxis: yVal(c, {unit: '层'}),
     series: [{
       name: '爬楼层数', type: 'bar', barMaxWidth: 6,
-      data: D.flights.map(([, v]) => ({value: v, itemStyle: {color: v >= DAILY_FLIGHTS_GOAL ? '#22c55e' : '#0891b2', borderRadius: [2, 2, 0, 0]}})),
-      markLine: ml('#f59e0b', DAILY_FLIGHTS_GOAL, `目标 ${DAILY_FLIGHTS_GOAL}`),
+      data: D.flights.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#22c55e' : '#0891b2', borderRadius: [2, 2, 0, 0]}})),
+      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal}`)} : {}),
     }],
   };
 }
@@ -437,6 +441,11 @@ function bodyOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
   const wR = dynRange(D.weight, 2, (v) => v * 2);
   const fR = dynRange(D.fat, 1);
+  const weightGoal = (() => {
+    if (D.weight.length < 5) return null;
+    const vals = D.weight.map(([, v]) => Math.round(v * 2 * 10) / 10).sort((a, b) => a - b);
+    return vals[Math.floor(vals.length * 0.1)];
+  })();
   return {
     ...base(isDark),
     grid: dualAxisGrid(isMobile),
@@ -448,7 +457,11 @@ function bodyOpt(isDark: boolean, D: HealthData, isMobile = false) {
         xAxis: xCat(c, dates.map((d) => [d, 0] as [string, number])),
         yAxis: [yVal(c, {unit: '斤', ...wR, fmt: (v) => `${v}`}), yVal(c, {unit: '%', right: true, ...fR, fmt: (v) => `${v}%`})],
         series: [
-          {...smoothLine('体重', a as number[], '#2563eb', 0), connectNulls: true, markLine: ml('#f59e0b', WEIGHT_GOAL_JIN, `目标 ${WEIGHT_GOAL_JIN}`)},
+          {
+            ...smoothLine('体重', a as number[], '#2563eb', 0),
+            connectNulls: true,
+            ...(weightGoal !== null ? {markLine: ml('#f59e0b', weightGoal, `目标 ${weightGoal.toFixed(1)}`)} : {}),
+          },
           {...smoothLine('体脂率', b as number[], '#f97316', 1), connectNulls: true},
         ],
       };
@@ -581,14 +594,15 @@ function audioOpt(isDark: boolean, D: HealthData, isMobile = false) {
 
 function daylightOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
+  const goal = dynGoal(D.daylight, 0.75);
   return {
     ...base(isDark), ...baseTip(),
     xAxis: xCat(c, D.daylight, 5),
     yAxis: yVal(c, {unit: '分钟', min: 0, fmt: (v) => `${v}m`}),
     series: [{
       name: '日晒时间', type: 'bar', barMaxWidth: 6,
-      data: D.daylight.map(([, v]) => ({value: v, itemStyle: {color: v >= DAILY_DAYLIGHT_GOAL ? '#f59e0b' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
-      markLine: ml('#f59e0b', DAILY_DAYLIGHT_GOAL, `目标 ${DAILY_DAYLIGHT_GOAL} 分钟`),
+      data: D.daylight.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#f59e0b' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
+      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal} 分钟`)} : {}),
     }],
   };
 }

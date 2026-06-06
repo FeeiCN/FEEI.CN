@@ -18,12 +18,12 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: source
 
       - name: Checkout target
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: FeeiCN/security-engineering
           ref: master

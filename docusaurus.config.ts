@@ -206,11 +206,16 @@ const config: Config = {
           icon: 'heart',
         },
         {
-          type: 'docSidebar',
-          sidebarId: 'careerSuccessSidebar',
+          type: 'dropdown',
           position: 'left',
           label: '事业有成',
           icon: 'rocket',
+          items: [
+            {type: 'docSidebar', sidebarId: 'securityEngineeringSidebar', label: '安全工程', icon: 'shield'},
+            {type: 'docSidebar', sidebarId: 'softwareEngineeringSidebar', label: '软件工程', icon: 'terminal-icon'},
+            {type: 'docSidebar', sidebarId: 'aiSidebar', label: '人工智能', icon: 'brand-openai-icon'},
+            {type: 'docSidebar', sidebarId: 'careerJobSidebar', label: '职业与事业', icon: 'rocket'},
+          ],
         },
         {
           type: 'docSidebar',

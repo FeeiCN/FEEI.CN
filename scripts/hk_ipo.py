@@ -352,16 +352,18 @@ def render_markdown(account_results):
     total_count = len(all_orders)
     sign = "+" if total_pnl >= 0 else ""
 
-    # ipoTrades：只含有盈亏数据的订单，按日期升序
-    trades_with_pnl = [o for o in all_orders if o.get("pnl") is not None]
-    trades_with_pnl.sort(key=lambda o: o.get("create_time", ""))
+    # ipoTrades：包含所有打新订单，未卖出时保留在图表里，方便看见未兑现仓位
+    trades_for_chart = sorted(all_orders, key=lambda o: o.get("create_time", ""))
     trade_lines = []
-    for o in trades_with_pnl:
+    for o in trades_for_chart:
         date = (o.get("create_time") or "")[:10]
         account = o["label"]
         name = str(o.get("stock_name", "")).replace("'", "\\'")
-        pnl = int(round(o["pnl"]))
-        trade_lines.append(f"  {{date: '{date}', account: '{account}', name: '{name}', pnl: {pnl}}},")
+        pnl = int(round(o["pnl"])) if o.get("pnl") is not None else 0
+        sold = "true" if o.get("pnl") is not None else "false"
+        trade_lines.append(
+            f"  {{date: '{date}', account: '{account}', name: '{name}', pnl: {pnl}, sold: {sold}}},"
+        )
 
     lines = [
         "---",

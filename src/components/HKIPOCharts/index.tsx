@@ -8,6 +8,7 @@ type Trade = {
   account: 'FeeiCN' | 'FeeiCN2';
   name: string;
   pnl: number;
+  sold?: boolean;
 };
 
 function processData(trades: Trade[]) {
@@ -73,10 +74,18 @@ function buildOption(trades: Trade[], isDark: boolean) {
         const lines: string[] = [date];
 
         if (cnDay.length > 0) {
-          lines.push(`FeeiCN：${cnDay.map((t) => `${t.name} +${t.pnl.toLocaleString()}`).join('、')}`);
+          lines.push(
+            `FeeiCN：${cnDay
+              .map((t) => `${t.name}${t.sold !== false ? ` +${t.pnl.toLocaleString()}` : ' 未卖出'}`)
+              .join('、')}`,
+          );
         }
         if (cn2Day.length > 0) {
-          lines.push(`FeeiCN2：${cn2Day.map((t) => `${t.name} +${t.pnl.toLocaleString()}`).join('、')}`);
+          lines.push(
+            `FeeiCN2：${cn2Day
+              .map((t) => `${t.name}${t.sold !== false ? ` +${t.pnl.toLocaleString()}` : ' 未卖出'}`)
+              .join('、')}`,
+          );
         }
 
         params

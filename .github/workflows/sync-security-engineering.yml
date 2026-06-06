@@ -1,0 +1,53 @@
+name: Sync security engineering
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/02-事业有成/01-安全工程/**'
+  workflow_dispatch:
+
+concurrency:
+  group: sync-security-engineering
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Checkout target
+        uses: actions/checkout@v4
+        with:
+          repository: FeeiCN/security-engineering
+          ref: master
+          token: ${{ secrets.SECURITY_ENGINEERING_SYNC_TOKEN }}
+          path: target
+
+      - name: Sync content
+        run: |
+          rsync -a --delete \
+            --exclude='.git/' \
+            "source/docs/02-事业有成/01-安全工程/" \
+            "target/"
+
+      - name: Commit and push
+        run: |
+          cd target
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to sync"
+            exit 0
+          fi
+
+          git add -A
+          git commit -m "同步安全工程内容"
+          git push origin HEAD:master

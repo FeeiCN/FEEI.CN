@@ -18,7 +18,7 @@
 
 运行环境要求 Node.js `>=20`，以 `package.json` 为准。
 
-修改代码后（md文档除外），默认执行 `npm run typecheck` 和 `npm run build`，确认无报错后再提交。
+修改代码后（仅修改 Markdown 文档除外），默认执行 `npm run typecheck` 和 `npm run build`，确认无报错后再提交。若只修改 `.md` 或 `.mdx` 内容文档，不需要执行 `npm run typecheck`、`npm run build` 或其它构建检查，除非用户明确要求。
 
 每次执行 `git push` 前，必须先运行 `npm run build 2>&1 | grep -E "WARNING|SUCCESS|ERROR"` 确认输出为 `[SUCCESS]` 且无 `[WARNING]`，才可以推送。
 
@@ -67,10 +67,16 @@ GitHub Issue 可作为新的想法和观点收集入口。处理这类 issue 时
    - 人生丰富、体验、探索世界：`docs/04-experience/`
    - 全局人生框架：`docs/overview.mdx`
 3. 对原始观点进行探讨和完善，补足逻辑链条，去掉口号化、重复或过于临时的表达。
-4. 将内容融入对应文档的合适位置，优先调整上下文和段落结构，而不是孤立追加。
-5. 修改后执行 `npm run typecheck` 和 `npm run build`。
-6. 处理完成后，向用户确认是否需要关闭对应 issue。
-7. 若用户确认关闭，关闭前在 issue 中评论处理结果，说明观点已融入哪些文件和位置。
+4. 在修改任何内容文档前，先向用户说明处理方案，包括：
+   - issue 的核心观点和适用边界
+   - 建议融入的文件和具体位置
+   - 准备如何重写、合并或拆分原始观点
+   - 可能影响的上下文、导航或已有表达
+5. 等用户明确确认方案后，才将内容融入对应文档的合适位置，优先调整上下文和段落结构，而不是孤立追加。用户未确认前，不要直接修改文档内容。
+6. 修改后按改动类型执行检查：若仅修改 Markdown 内容文档，不需要执行 `npm run typecheck` 和 `npm run build`；若涉及代码、配置、主题、插件或非 Markdown 资源，执行 `npm run typecheck` 和 `npm run build`。
+7. 处理完成后，向用户确认是否需要关闭对应 issue。
+8. 若用户确认关闭，必须先提交本次处理相关改动，提交信息需包含对应 issue 编号，例如 `处理 #64 癌症风险认知`。
+9. 提交完成后，再在 issue 中评论处理结果，说明观点已融入哪些文件和位置，然后关闭 issue。
 
 ## 提交与合并请求规范
 

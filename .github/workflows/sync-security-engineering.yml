@@ -12,11 +12,25 @@ concurrency:
   group: sync-security-engineering
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   sync:
     runs-on: ubuntu-latest
+    env:
+      TARGET_REPOSITORY: FeeiCN/security-engineering
 
     steps:
+      - name: Check sync token
+        run: |
+          if [ -z "${SECURITY_ENGINEERING_SYNC_TOKEN}" ]; then
+            echo "SECURITY_ENGINEERING_SYNC_TOKEN is not configured"
+            exit 1
+          fi
+        env:
+          SECURITY_ENGINEERING_SYNC_TOKEN: ${{ secrets.SECURITY_ENGINEERING_SYNC_TOKEN }}
+
       - name: Checkout source
         uses: actions/checkout@v6
         with:
@@ -25,9 +39,9 @@ jobs:
       - name: Checkout target
         uses: actions/checkout@v6
         with:
-          repository: FeeiCN/security-engineering
+          repository: ${{ env.TARGET_REPOSITORY }}
           ref: master
-          token: ${{ secrets.SECURITY_ENGINEERING_SYNC_TOKEN }}
+          persist-credentials: false
           path: target
 
       - name: Sync content
@@ -50,4 +64,6 @@ jobs:
 
           git add -A
           git commit -m "同步安全工程内容"
-          git push origin HEAD:master
+          git push "https://x-access-token:${SECURITY_ENGINEERING_SYNC_TOKEN}@github.com/${TARGET_REPOSITORY}.git" HEAD:master
+        env:
+          SECURITY_ENGINEERING_SYNC_TOKEN: ${{ secrets.SECURITY_ENGINEERING_SYNC_TOKEN }}

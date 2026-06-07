@@ -1067,6 +1067,144 @@ function addWeekends(option: object, isDark: boolean): object {
   return {...opt, series: [...series, ghostLine(areas, dates.length)]};
 }
 
+// ── today latest-point highlighting ──────────────────────────────────────────
+
+type ChartSeries = Record<string, unknown> & {
+  data?: unknown[];
+  encode?: {y?: number};
+  markPoint?: Record<string, unknown> & {data?: unknown[]};
+};
+
+function todayLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function numericValue(raw: unknown): number | null {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (raw && typeof raw === 'object' && 'value' in raw) {
+    return numericValue((raw as {value?: unknown}).value);
+  }
+  return null;
+}
+
+function latestCategoryPoint(series: ChartSeries, dates: string[]): {date: string; coord: [string, number]} | null {
+  const data = series.data ?? [];
+  for (let i = Math.min(data.length, dates.length) - 1; i >= 0; i--) {
+    const value = numericValue(data[i]);
+    if (value !== null) return {date: dates[i], coord: [dates[i], value]};
+  }
+  return null;
+}
+
+function latestValueCategoryPoint(series: ChartSeries, dates: string[]): {date: string; coord: [number, string]} | null {
+  const data = series.data ?? [];
+  for (let i = Math.min(data.length, dates.length) - 1; i >= 0; i--) {
+    const value = numericValue(data[i]);
+    if (value !== null) return {date: dates[i], coord: [value, dates[i]]};
+  }
+  return null;
+}
+
+function latestTimePoint(series: ChartSeries): {date: string; coord: [string, number]} | null {
+  const data = series.data ?? [];
+  for (let i = data.length - 1; i >= 0; i--) {
+    const raw = data[i];
+    const value = raw && typeof raw === 'object' && 'value' in raw ? (raw as {value?: unknown}).value : raw;
+    if (!Array.isArray(value) || typeof value[0] !== 'string' || value[0].length < 10) continue;
+
+    const yIndex = typeof series.encode?.y === 'number' ? series.encode.y : 1;
+    const encoded = numericValue(value[yIndex]);
+    const fallback = value.find((item, idx) => idx > 0 && numericValue(item) !== null);
+    const y = encoded ?? numericValue(fallback);
+    if (y !== null) return {date: value[0].slice(0, 10), coord: [value[0], y]};
+  }
+  return null;
+}
+
+function latestCalendarPoint(series: ChartSeries): {date: string; coord: [string, number]} | null {
+  const data = series.data ?? [];
+  for (let i = data.length - 1; i >= 0; i--) {
+    const raw = data[i];
+    const value = raw && typeof raw === 'object' && 'value' in raw ? (raw as {value?: unknown}).value : raw;
+    if (!Array.isArray(value) || typeof value[0] !== 'string' || value[0].length < 10) continue;
+    const y = numericValue(value[1]);
+    if (y !== null) return {date: value[0].slice(0, 10), coord: [value[0], y]};
+  }
+  return null;
+}
+
+function withTodayMark(series: ChartSeries, coord: unknown, isDark: boolean): ChartSeries {
+  const oldMarkPoint = series.markPoint ?? {};
+  const oldData = Array.isArray(oldMarkPoint.data) ? oldMarkPoint.data : [];
+  return {
+    ...series,
+    markPoint: {
+      ...oldMarkPoint,
+      symbol: oldMarkPoint.symbol ?? 'circle',
+      symbolSize: oldMarkPoint.symbolSize ?? 14,
+      data: [
+        ...oldData,
+        {
+          name: '今日最新',
+          coord,
+          itemStyle: {color: '#ec4899', borderColor: isDark ? '#fce7f3' : '#831843', borderWidth: 2},
+          label: {show: true, formatter: '今日', position: 'top', color: '#ec4899', fontSize: 10},
+        },
+      ],
+    },
+  };
+}
+
+function addTodayLatestHighlight(option: object, isDark: boolean): object {
+  const opt = option as Record<string, unknown>;
+  const series = opt.series as ChartSeries[] | undefined;
+  if (!series?.length) return option;
+
+  const xAxisRaw = opt.xAxis as Record<string, unknown> | Record<string, unknown>[] | undefined;
+  const yAxisRaw = opt.yAxis as Record<string, unknown> | Record<string, unknown>[] | undefined;
+  const xObj = Array.isArray(xAxisRaw) ? xAxisRaw[0] : xAxisRaw;
+  const yObj = Array.isArray(yAxisRaw) ? yAxisRaw[0] : yAxisRaw;
+  const today = todayLocal();
+
+  if (opt.calendar) {
+    const newSeries = series.map((s) => {
+      const point = latestCalendarPoint(s);
+      return point?.date === today ? withTodayMark(s, point.coord, isDark) : s;
+    });
+    return {...opt, series: newSeries};
+  }
+
+  if (xObj?.type === 'time') {
+    const newSeries = series.map((s) => {
+      const point = latestTimePoint(s);
+      return point?.date === today ? withTodayMark(s, point.coord, isDark) : s;
+    });
+    return {...opt, series: newSeries};
+  }
+
+  if (xObj?.type === 'category' && Array.isArray(xObj.data) && typeof xObj.data.at(-1) === 'string') {
+    const dates = (xObj.data as string[]).filter((d) => d.length >= 10);
+    const newSeries = series.map((s) => {
+      if (s.type === 'heatmap') return s;
+      const point = latestCategoryPoint(s, dates);
+      return point?.date === today ? withTodayMark(s, point.coord, isDark) : s;
+    });
+    return {...opt, series: newSeries};
+  }
+
+  if (xObj?.type === 'value' && yObj?.type === 'category' && Array.isArray(yObj.data) && typeof yObj.data.at(-1) === 'string') {
+    const dates = yObj.data as string[];
+    const newSeries = series.map((s) => {
+      const point = latestValueCategoryPoint(s, dates);
+      return point?.date === today ? withTodayMark(s, point.coord, isDark) : s;
+    });
+    return {...opt, series: newSeries};
+  }
+
+  return option;
+}
+
 // ── layout ───────────────────────────────────────────────────────────────────
 
 function chartHeight(label: string, isMobile: boolean) {
@@ -1423,7 +1561,7 @@ function SectionInner({name}: {name: string}) {
       {sec.charts.map(({label, opt}: {label: string; opt: OptionFn}) => (
         <div key={label} className={styles.section}>
           <div className={styles.sectionTitle}>{label}</div>
-          <ReactECharts option={addWeekends(opt(isDark, displayData, isMobile), isDark)} theme={theme} style={{height: chartHeight(label, isMobile)}} opts={opts} />
+          <ReactECharts option={addWeekends(addTodayLatestHighlight(opt(isDark, displayData, isMobile), isDark), isDark)} theme={theme} style={{height: chartHeight(label, isMobile)}} opts={opts} />
         </div>
       ))}
     </div>

@@ -225,11 +225,17 @@ const config: Config = {
           icon: 'brand-bags-fm-icon',
         },
         {
-          type: 'docSidebar',
-          sidebarId: 'exploreWorldSidebar',
+          type: 'dropdown',
           position: 'left',
           label: '人生丰富',
           icon: 'compass',
+          items: [
+            {type: 'docSidebar', sidebarId: 'readingSidebar', label: '阅读', icon: 'book-open-text'},
+            {type: 'docSidebar', sidebarId: 'filmSidebar', label: '影视', icon: 'film'},
+            {type: 'docSidebar', sidebarId: 'travelSidebar', label: '旅行', icon: 'globe-icon'},
+            {type: 'docSidebar', sidebarId: 'musicSidebar', label: '音乐', icon: 'vinyl-icon'},
+            {type: 'docSidebar', sidebarId: 'miscHobbiesSidebar', label: '杂项爱好', icon: 'star-icon'},
+          ],
         },
         {
           type: 'docSidebar',

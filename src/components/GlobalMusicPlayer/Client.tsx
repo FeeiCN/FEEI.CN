@@ -5,7 +5,7 @@ import type {Root} from 'react-dom/client';
 import type APlayerInstance from 'aplayer';
 import type {Options as APlayerOptions} from 'aplayer';
 import 'aplayer/dist/APlayer.min.css';
-import {playlistGroupFromManifest, siteMusicGroups} from './playlist';
+import {buildMusicFilterGroups, playlistGroupFromManifest, siteMusicGroups} from './playlist';
 import type {PlaylistGroup, PlaylistManifestGroup} from './playlist';
 import styles from './styles.module.css';
 import Galaxy from './Galaxy';
@@ -17,6 +17,8 @@ import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useCon
 
 type APlayerConstructor = new (options: APlayerOptions) => APlayerInstance;
 const babyMusicManifestUrl = '/music/baby-music/manifest.json';
+const musicPlayerPlayEventName = 'feei:music-player-play';
+const initialMusicGroups = [...siteMusicGroups, ...buildMusicFilterGroups(siteMusicGroups)];
 const fullScreenLyricLineHeight = 48;
 const playerStateStorageKey = 'feei-global-music-player-state-v1';
 const playerVisibleBodyClassName = 'global-music-player-visible';
@@ -29,6 +31,11 @@ type StoredGroupPlayback = {
 type StoredPlayerState = {
   activeGroupId?: string;
   groups?: Record<string, StoredGroupPlayback>;
+};
+
+type MusicPlayerPlayDetail = {
+  groupId?: string;
+  trackIndex?: number;
 };
 
 type ExtendedAPlayer = APlayerInstance & {
@@ -90,6 +97,13 @@ let _lastGroupId: string | null = null;
 let _wasVisible = false;
 let _burstRoot: Root | null = null;
 
+function safeDestroyPlayer(player: ExtendedAPlayer | null) {
+  if (!player) return;
+  try {
+    player.destroy();
+  } catch {}
+}
+
 function ensurePlayerDOM(): {shell: HTMLDivElement; mount: HTMLDivElement} {
   if (!_shellEl) {
     _shellEl = document.createElement('div');
@@ -112,13 +126,14 @@ function GlobalMusicPlayerClient() {
   const isListOpenRef = useRef(false);
   const shouldKeepListOpenOnNextMountRef = useRef(false);
   const shouldAutoplayOnNextMountRef = useRef(false);
+  const requestedTrackIndexRef = useRef<number | undefined>(undefined);
   const groupPanelRef = useRef<HTMLDivElement | null>(null);
   const groupToggleButtonRef = useRef<HTMLButtonElement | null>(null);
   const storedStateRef = useRef<StoredPlayerState>(readStoredPlayerState());
-  const [groups, setGroups] = useState<PlaylistGroup[]>(siteMusicGroups);
+  const [groups, setGroups] = useState<PlaylistGroup[]>(initialMusicGroups);
   const [hasResolvedGroups, setHasResolvedGroups] = useState(false);
   const [activeGroupId, setActiveGroupId] = useState(
-    storedStateRef.current.activeGroupId ?? siteMusicGroups[0]?.id ?? '',
+    storedStateRef.current.activeGroupId ?? initialMusicGroups[0]?.id ?? '',
   );
   // When reusing an existing player after a cross-plugin navigation (pages ↔ docs),
   // the player is already running — skip the pending/fade-in state entirely.
@@ -157,6 +172,22 @@ function GlobalMusicPlayerClient() {
         },
       },
     }));
+  };
+
+  const playRequestedTrack = (group: PlaylistGroup | undefined, trackIndex?: number) => {
+    const player = playerRef.current as ExtendedAPlayer | null;
+    if (!group || !player) return false;
+    const safeTrackIndex =
+      typeof trackIndex === 'number' && trackIndex >= 0 && trackIndex < group.tracks.length ? trackIndex : 0;
+    try {
+      player.list?.switch?.(safeTrackIndex);
+      player.play?.();
+      void player.audio?.play?.().catch(() => {});
+      persistGroupPlayback(group, player);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   useEffect(() => {
@@ -204,7 +235,8 @@ function GlobalMusicPlayerClient() {
         if (!response.ok) return;
         const manifest = (await response.json()) as PlaylistManifestGroup[];
         if (disposed || manifest.length === 0) return;
-        setGroups([...siteMusicGroups, ...manifest.map(playlistGroupFromManifest)]);
+        const playlistGroups = [...siteMusicGroups, ...manifest.map(playlistGroupFromManifest)];
+        setGroups([...playlistGroups, ...buildMusicFilterGroups(playlistGroups)]);
       } catch {
       } finally {
         if (!disposed) setHasResolvedGroups(true);
@@ -218,6 +250,27 @@ function GlobalMusicPlayerClient() {
     if (!hasResolvedGroups) return;
     if (!matchedActiveGroup && groups[0]) setActiveGroupId(groups[0].id);
   }, [groups, hasResolvedGroups, matchedActiveGroup]);
+
+  useEffect(() => {
+    const handleMusicPlayerPlay = (event: Event) => {
+      const detail = (event as CustomEvent<MusicPlayerPlayDetail>).detail;
+      const requestedGroup = groups.find((group) => group.id === detail?.groupId) ?? groups[0];
+      if (!requestedGroup) return;
+      requestedTrackIndexRef.current = detail?.trackIndex;
+      shouldAutoplayOnNextMountRef.current = true;
+      shouldKeepListOpenOnNextMountRef.current = true;
+      setIsGroupPanelOpen(false);
+      setIsPlayerVisible(true);
+      if (requestedGroup.id === activeGroup?.id && _player) {
+        playRequestedTrack(requestedGroup, detail?.trackIndex);
+        return;
+      }
+      setActiveGroupId(requestedGroup.id);
+    };
+
+    window.addEventListener(musicPlayerPlayEventName, handleMusicPlayerPlay);
+    return () => window.removeEventListener(musicPlayerPlayEventName, handleMusicPlayerPlay);
+  }, [activeGroup?.id, groups]);
 
   useEffect(() => {
     let disposed = false;
@@ -241,6 +294,11 @@ function GlobalMusicPlayerClient() {
       // Reuse existing player when navigating back (same group, already running)
       if (_player && _lastGroupId === currentGroup.id) {
         playerRef.current = _player;
+        const requestedTrackIndex = requestedTrackIndexRef.current;
+        requestedTrackIndexRef.current = undefined;
+        if (shouldAutoplay || typeof requestedTrackIndex === 'number') {
+          playRequestedTrack(currentGroup, requestedTrackIndex);
+        }
         setIsReady(true);
         return;
       }
@@ -254,7 +312,7 @@ function GlobalMusicPlayerClient() {
         if (_player) {
           _burstRoot?.unmount();
           _burstRoot = null;
-          _player.destroy();
+          safeDestroyPlayer(_player);
           _player = null;
           mount.innerHTML = '';
         }
@@ -268,7 +326,7 @@ function GlobalMusicPlayerClient() {
           order: 'list',
           preload: 'metadata',
           volume: 0.45,
-          mutex: true,
+          mutex: false,
           listFolded: !shouldRestoreListOpen,
           listMaxHeight: '14rem',
           lrcType: 3,
@@ -291,7 +349,12 @@ function GlobalMusicPlayerClient() {
         const savedTrackIndex = savedGroupPlayback?.trackUrl
           ? currentGroup.tracks.findIndex((t) => t.url === savedGroupPlayback.trackUrl)
           : -1;
-        const restoreTrackIndex = savedTrackIndex >= 0 ? savedTrackIndex : 0;
+        const requestedTrackIndex = requestedTrackIndexRef.current;
+        requestedTrackIndexRef.current = undefined;
+        const restoreTrackIndex =
+          typeof requestedTrackIndex === 'number' && requestedTrackIndex >= 0 && requestedTrackIndex < currentGroup.tracks.length
+            ? requestedTrackIndex
+            : savedTrackIndex >= 0 ? savedTrackIndex : 0;
         const restoreCurrentTime = normalizeStoredTime(savedGroupPlayback?.currentTime);
         let lastSavedPlaybackSecond = -1;
         let hasRestoredProgress = restoreCurrentTime === 0;
@@ -300,7 +363,8 @@ function GlobalMusicPlayerClient() {
           player.lrc.update = (time = player.audio?.currentTime ?? 0) => {
             const lyricState = player.lrc;
             const currentLyrics = lyricState?.current ?? [];
-            if (!lyricState || currentLyrics.length === 0) return;
+            const lyricContainer = lyricState?.container;
+            if (!lyricState || !lyricContainer || currentLyrics.length === 0) return;
             if (
               lyricState.index > currentLyrics.length - 1 ||
               time < currentLyrics[lyricState.index]?.[0] ||
@@ -310,10 +374,10 @@ function GlobalMusicPlayerClient() {
               for (let i = 0; i < currentLyrics.length; i++) {
                 if (time >= currentLyrics[i][0] && (!currentLyrics[i + 1] || time < currentLyrics[i + 1][0])) {
                   lyricState.index = i;
-                  lyricState.container.style.transform = `translateY(${fullScreenLyricLineHeight * -i}px)`;
-                  lyricState.container.style.webkitTransform = `translateY(${fullScreenLyricLineHeight * -i}px)`;
-                  lyricState.container.querySelector('.aplayer-lrc-current')?.classList.remove('aplayer-lrc-current');
-                  lyricState.container.getElementsByTagName('p').item(i)?.classList.add('aplayer-lrc-current');
+                  lyricContainer.style.transform = `translateY(${fullScreenLyricLineHeight * -i}px)`;
+                  lyricContainer.style.webkitTransform = `translateY(${fullScreenLyricLineHeight * -i}px)`;
+                  lyricContainer.querySelector('.aplayer-lrc-current')?.classList.remove('aplayer-lrc-current');
+                  lyricContainer.getElementsByTagName('p').item(i)?.classList.add('aplayer-lrc-current');
                   break;
                 }
               }
@@ -333,14 +397,20 @@ function GlobalMusicPlayerClient() {
           hasRestoredProgress = true;
         };
 
-        if (restoreTrackIndex > 0) player.list?.switch?.(restoreTrackIndex);
+        if (restoreTrackIndex > 0) {
+          try {
+            player.list?.switch?.(restoreTrackIndex);
+          } catch {}
+        }
         restorePlaybackProgress();
 
         let hasAttemptedAutoplay = false;
         const attemptAutoplay = () => {
           if (!shouldAutoplay || hasAttemptedAutoplay) return;
           hasAttemptedAutoplay = true;
-          player.play?.();
+          try {
+            player.play?.();
+          } catch {}
           void player.audio?.play?.().catch(() => {});
         };
 
@@ -351,12 +421,13 @@ function GlobalMusicPlayerClient() {
           lastSavedPlaybackSecond = -1;
           persistGroupPlayback(currentGroup, player);
           const lyricState = player.lrc;
-          if (lyricState) {
+          const lyricContainer = lyricState?.container;
+          if (lyricState && lyricContainer) {
             lyricState.index = 0;
-            lyricState.container.style.transform = 'translateY(0)';
-            lyricState.container.style.webkitTransform = 'translateY(0)';
-            lyricState.container.querySelector('.aplayer-lrc-current')?.classList.remove('aplayer-lrc-current');
-            lyricState.container.getElementsByTagName('p').item(0)?.classList.add('aplayer-lrc-current');
+            lyricContainer.style.transform = 'translateY(0)';
+            lyricContainer.style.webkitTransform = 'translateY(0)';
+            lyricContainer.querySelector('.aplayer-lrc-current')?.classList.remove('aplayer-lrc-current');
+            lyricContainer.getElementsByTagName('p').item(0)?.classList.add('aplayer-lrc-current');
           }
         });
         player.on?.('play', () => persistGroupPlayback(currentGroup, player));
@@ -381,9 +452,13 @@ function GlobalMusicPlayerClient() {
         if (shouldRestoreListOpen) {
           window.requestAnimationFrame(() => {
             listElement?.classList.remove('aplayer-list-hide');
-            player.list?.show?.();
+            try {
+              player.list?.show?.();
+            } catch {}
           });
-          player.list?.show?.();
+          try {
+            player.list?.show?.();
+          } catch {}
         }
 
         if (shouldAutoplay) window.requestAnimationFrame(attemptAutoplay);

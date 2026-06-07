@@ -368,4 +368,27 @@ export const siteMusicGroups: PlaylistGroup[] = [
   },
 ];
 
+const musicFilterDefinitions = [
+  {
+    id: 'ktv',
+    label: 'KTV 拿手曲目',
+    trackNames: ['突然的自我', '这世界这么多人'],
+  },
+];
+
+export const buildMusicFilterGroups = (groups: PlaylistGroup[]): PlaylistGroup[] =>
+  musicFilterDefinitions
+    .map((filter) => {
+      const tracks = filter.trackNames
+        .map((trackName) => groups.flatMap((group) => group.tracks).find((track) => track.name === trackName))
+        .filter((track): track is Audio => Boolean(track));
+
+      return {
+        id: filter.id,
+        label: filter.label,
+        tracks,
+      };
+    })
+    .filter((group) => group.tracks.length > 0);
+
 export const siteMusicPlaylist: Audio[] = favoriteTracks;

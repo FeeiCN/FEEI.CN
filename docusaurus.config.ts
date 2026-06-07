@@ -69,7 +69,7 @@ function attachSidebarIcons<
 const isStrictBuild = process.env.CI_STRICT === 'true';
 
 const config: Config = {
-  title: '创造确定性人生-安全界',
+  title: '吴飞飞-安全界',
   tagline: '把所有的时间、精力和金钱都投入到长期目标中',
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -185,7 +185,7 @@ const config: Config = {
       },
     },
     // Replace with your project's social card
-    image: 'img/docusaurus-social-card.webp',
+    image: 'img/icons/feei-icon-270.webp',
     colorMode: {
       defaultMode: 'light',
       disableSwitch: false,

@@ -16,6 +16,8 @@
 - `npm run typecheck`：执行 TypeScript 类型检查。
 - `npm run clear`：清理 Docusaurus 缓存，适用于路由或主题异常。
 
+禁止主动启动本地 Docusaurus 开发服务器。除非用户明确要求，不要执行 `npm run start` 或其它会启动本地开发服务器的命令；需要验证时优先使用 `npm run typecheck`、`npm run build`，或检查用户已经运行的本地服务。
+
 运行环境要求 Node.js `>=20`，以 `package.json` 为准。
 
 修改代码后（仅修改 Markdown 文档除外），默认执行 `npm run typecheck` 和 `npm run build`，确认无报错后再提交。若只修改 `.md` 或 `.mdx` 内容文档，不需要执行 `npm run typecheck`、`npm run build` 或其它构建检查，除非用户明确要求。

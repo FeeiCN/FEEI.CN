@@ -14,11 +14,13 @@ const RANGE_LABELS: Record<string, string> = {'7d': '7天', '30d': '30天', '90d
 
 type CC = {axis: string; label: string; split: string};
 
+const HEALTH_CHART_COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#7c3aed', '#0891b2', '#ef4444', '#64748b'];
+
 function cc(isDark: boolean): CC {
   return {
-    axis: isDark ? '#475569' : '#cbd5e1',
+    axis: isDark ? 'rgba(148,163,184,0.22)' : 'rgba(100,116,139,0.20)',
     label: isDark ? '#94a3b8' : '#64748b',
-    split: isDark ? 'rgba(148,163,184,0.08)' : 'rgba(148,163,184,0.18)',
+    split: isDark ? 'rgba(148,163,184,0.10)' : 'rgba(100,116,139,0.14)',
   };
 }
 
@@ -49,23 +51,19 @@ function yVal(c: CC, opts: {unit?: string; min?: number; max?: number; right?: b
   };
 }
 
-function ml(color: string, yVal_: number, label: string, isDark = false) {
+function ml(color: string, yVal_: number, label: string) {
   return {
     silent: true, symbol: 'none',
-    lineStyle: {color, type: 'dashed', width: 1.5},
+    lineStyle: {color, type: 'dashed', width: 1, opacity: 0.72},
     label: {
       show: true,
       position: 'insideEndTop',
-      distance: 6,
+      distance: 4,
       formatter: label,
       color,
-      fontSize: 11,
-      fontWeight: 600,
-      backgroundColor: isDark ? 'rgba(15,23,42,0.92)' : 'rgba(255,255,255,0.92)',
-      borderColor: color,
-      borderWidth: 1,
-      borderRadius: 4,
-      padding: [3, 6],
+      fontSize: 10,
+      fontWeight: 400,
+      padding: [0, 2],
     },
     data: [{yAxis: yVal_}],
   };
@@ -138,7 +136,7 @@ function dynRange(arr: [string, number][], pad = 2, conv?: (v: number) => number
 }
 
 function base(isDark: boolean) {
-  return {backgroundColor: 'transparent', grid: chartGrid(16)};
+  return {backgroundColor: 'transparent', color: HEALTH_CHART_COLORS, grid: chartGrid(16)};
 }
 
 function chartGrid(right = 16, left = 12, top = 32, bottom = 28) {
@@ -195,7 +193,7 @@ function stepsDistanceOpt(isDark: boolean, D: HealthData, isMobile = false) {
       {
         name: '步数', type: 'bar', yAxisIndex: 0, barMaxWidth: 6,
         data: stepsArr.map((v) => v === null ? null : {value: v, itemStyle: {color: stepsGoal !== null && v >= stepsGoal ? '#22c55e' : '#3b82f6', borderRadius: [2, 2, 0, 0]}}),
-        ...(stepsGoal !== null ? {markLine: ml('#f59e0b', stepsGoal, `目标 ${stepsGoal.toLocaleString()}`, isDark)} : {}),
+        ...(stepsGoal !== null ? {markLine: ml('#f59e0b', stepsGoal, `目标 ${stepsGoal.toLocaleString()}`)} : {}),
       },
       {
         name: '7日均', type: 'line', yAxisIndex: 0, data: r7,
@@ -225,7 +223,7 @@ function exerciseOpt(isDark: boolean, D: HealthData) {
     series: [{
       name: '运动时长', type: 'bar', barMaxWidth: 6,
       data: D.exercise.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#22c55e' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
-      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal} 分钟`, isDark)} : {}),
+      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal} 分钟`)} : {}),
     }],
   };
 }
@@ -261,7 +259,7 @@ function flightsOpt(isDark: boolean, D: HealthData) {
     series: [{
       name: '爬楼层数', type: 'bar', barMaxWidth: 6,
       data: D.flights.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#22c55e' : '#0891b2', borderRadius: [2, 2, 0, 0]}})),
-      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal}`, isDark)} : {}),
+      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal}`)} : {}),
     }],
   };
 }
@@ -284,7 +282,7 @@ function standOpt(isDark: boolean, D: HealthData, isMobile = false) {
           {
             ...smoothLine('站立小时数', b as number[], '#22c55e', 1),
             connectNulls: true,
-            markLine: ml('#f59e0b', standHourGoal, `目标 ${standHourGoal} 小时`, isDark),
+            markLine: ml('#f59e0b', standHourGoal, `目标 ${standHourGoal} 小时`),
           },
         ],
       };
@@ -449,7 +447,7 @@ function respSpo2Opt(isDark: boolean, D: HealthData, isMobile = false) {
         data: b as (number | null)[],
         smooth: false, symbol: 'none', connectNulls: true,
         lineStyle: {color: '#7c3aed', width: 1.5},
-        markLine: ml('#ef4444', 95, '95% 警戒', isDark),
+        markLine: ml('#ef4444', 95, '95% 警戒'),
       },
     ],
   };
@@ -478,7 +476,7 @@ function bodyOpt(isDark: boolean, D: HealthData, isMobile = false) {
           {
             ...smoothLine('体重', a as number[], '#2563eb', 0),
             connectNulls: true,
-            ...(weightGoal !== null ? {markLine: ml('#f59e0b', weightGoal, `目标 ${weightGoal.toFixed(1)}`, isDark)} : {}),
+            ...(weightGoal !== null ? {markLine: ml('#f59e0b', weightGoal, `目标 ${weightGoal.toFixed(1)}`)} : {}),
           },
           {...smoothLine('体脂率', b as number[], '#f97316', 1), connectNulls: true},
         ],
@@ -620,7 +618,7 @@ function daylightOpt(isDark: boolean, D: HealthData) {
     series: [{
       name: '日晒时间', type: 'bar', barMaxWidth: 6,
       data: D.daylight.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#f59e0b' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
-      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal} 分钟`, isDark)} : {}),
+      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal} 分钟`)} : {}),
     }],
   };
 }
@@ -650,7 +648,7 @@ function handwashOpt(isDark: boolean, D: HealthData) {
     yAxis: yVal(c, {unit: '秒', min: 0, fmt: (v) => `${v}s`}),
     series: [{
       ...areaLine('洗手时长', D.handwash.map(([, v]) => v), '#22c55e'),
-      markLine: ml('#f59e0b', goal, `目标 ${goal} 秒`, isDark),
+      markLine: ml('#f59e0b', goal, `目标 ${goal} 秒`),
     }],
   };
 }
@@ -1097,6 +1095,8 @@ type ChartSeries = Record<string, unknown> & {
   markPoint?: Record<string, unknown> & {data?: unknown[]};
 };
 
+type TodayPoint<X, Y> = {date: string; coord: [X, Y]; color?: string};
+
 function todayLocal() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -1110,25 +1110,39 @@ function numericValue(raw: unknown): number | null {
   return null;
 }
 
-function latestCategoryPoint(series: ChartSeries, dates: string[]): {date: string; coord: [string, number]} | null {
+function colorValue(raw: unknown): string | null {
+  return typeof raw === 'string' && raw.startsWith('#') ? raw : null;
+}
+
+function objectColor(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as {color?: unknown; itemStyle?: {color?: unknown}; lineStyle?: {color?: unknown}};
+  return colorValue(obj.color) ?? colorValue(obj.itemStyle?.color) ?? colorValue(obj.lineStyle?.color);
+}
+
+function seriesColor(series: ChartSeries): string {
+  return objectColor(series) ?? '#64748b';
+}
+
+function latestCategoryPoint(series: ChartSeries, dates: string[]): TodayPoint<string, number> | null {
   const data = series.data ?? [];
   for (let i = Math.min(data.length, dates.length) - 1; i >= 0; i--) {
     const value = numericValue(data[i]);
-    if (value !== null) return {date: dates[i], coord: [dates[i], value]};
+    if (value !== null) return {date: dates[i], coord: [dates[i], value], color: objectColor(data[i]) ?? seriesColor(series)};
   }
   return null;
 }
 
-function latestValueCategoryPoint(series: ChartSeries, dates: string[]): {date: string; coord: [number, string]} | null {
+function latestValueCategoryPoint(series: ChartSeries, dates: string[]): TodayPoint<number, string> | null {
   const data = series.data ?? [];
   for (let i = Math.min(data.length, dates.length) - 1; i >= 0; i--) {
     const value = numericValue(data[i]);
-    if (value !== null) return {date: dates[i], coord: [value, dates[i]]};
+    if (value !== null) return {date: dates[i], coord: [value, dates[i]], color: objectColor(data[i]) ?? seriesColor(series)};
   }
   return null;
 }
 
-function latestTimePoint(series: ChartSeries): {date: string; coord: [string, number]} | null {
+function latestTimePoint(series: ChartSeries): TodayPoint<string, number> | null {
   const data = series.data ?? [];
   for (let i = data.length - 1; i >= 0; i--) {
     const raw = data[i];
@@ -1139,26 +1153,27 @@ function latestTimePoint(series: ChartSeries): {date: string; coord: [string, nu
     const encoded = numericValue(value[yIndex]);
     const fallback = value.find((item, idx) => idx > 0 && numericValue(item) !== null);
     const y = encoded ?? numericValue(fallback);
-    if (y !== null) return {date: value[0].slice(0, 10), coord: [value[0], y]};
+    if (y !== null) return {date: value[0].slice(0, 10), coord: [value[0], y], color: objectColor(raw) ?? seriesColor(series)};
   }
   return null;
 }
 
-function latestCalendarPoint(series: ChartSeries): {date: string; coord: [string, number]} | null {
+function latestCalendarPoint(series: ChartSeries): TodayPoint<string, number> | null {
   const data = series.data ?? [];
   for (let i = data.length - 1; i >= 0; i--) {
     const raw = data[i];
     const value = raw && typeof raw === 'object' && 'value' in raw ? (raw as {value?: unknown}).value : raw;
     if (!Array.isArray(value) || typeof value[0] !== 'string' || value[0].length < 10) continue;
     const y = numericValue(value[1]);
-    if (y !== null) return {date: value[0].slice(0, 10), coord: [value[0], y]};
+    if (y !== null) return {date: value[0].slice(0, 10), coord: [value[0], y], color: objectColor(raw) ?? seriesColor(series)};
   }
   return null;
 }
 
-function withTodayMark(series: ChartSeries, coord: unknown, isDark: boolean): ChartSeries {
+function withTodayMark(series: ChartSeries, coord: unknown, color?: string): ChartSeries {
   const oldMarkPoint = series.markPoint ?? {};
   const oldData = Array.isArray(oldMarkPoint.data) ? oldMarkPoint.data : [];
+  const markColor = color ?? seriesColor(series);
   return {
     ...series,
     markPoint: {
@@ -1170,8 +1185,14 @@ function withTodayMark(series: ChartSeries, coord: unknown, isDark: boolean): Ch
         {
           name: '今日最新',
           coord,
-          itemStyle: {color: '#ec4899', borderColor: isDark ? '#fce7f3' : '#831843', borderWidth: 2},
-          label: {show: true, formatter: '今日', position: 'top', color: '#ec4899', fontSize: 10},
+          symbol: 'circle',
+          symbolSize: 8,
+          itemStyle: {
+            color: 'transparent',
+            borderColor: markColor,
+            borderWidth: 2,
+          },
+          label: {show: false},
         },
       ],
     },
@@ -1192,7 +1213,7 @@ function addTodayLatestHighlight(option: object, isDark: boolean): object {
   if (opt.calendar) {
     const newSeries = series.map((s) => {
       const point = latestCalendarPoint(s);
-      return point?.date === today ? withTodayMark(s, point.coord, isDark) : s;
+      return point?.date === today ? withTodayMark(s, point.coord, point.color) : s;
     });
     return {...opt, series: newSeries};
   }
@@ -1200,7 +1221,7 @@ function addTodayLatestHighlight(option: object, isDark: boolean): object {
   if (xObj?.type === 'time') {
     const newSeries = series.map((s) => {
       const point = latestTimePoint(s);
-      return point?.date === today ? withTodayMark(s, point.coord, isDark) : s;
+      return point?.date === today ? withTodayMark(s, point.coord, point.color) : s;
     });
     return {...opt, series: newSeries};
   }
@@ -1210,7 +1231,7 @@ function addTodayLatestHighlight(option: object, isDark: boolean): object {
     const newSeries = series.map((s) => {
       if (s.type === 'heatmap') return s;
       const point = latestCategoryPoint(s, dates);
-      return point?.date === today ? withTodayMark(s, point.coord, isDark) : s;
+      return point?.date === today ? withTodayMark(s, point.coord, point.color) : s;
     });
     return {...opt, series: newSeries};
   }
@@ -1219,12 +1240,128 @@ function addTodayLatestHighlight(option: object, isDark: boolean): object {
     const dates = yObj.data as string[];
     const newSeries = series.map((s) => {
       const point = latestValueCategoryPoint(s, dates);
-      return point?.date === today ? withTodayMark(s, point.coord, isDark) : s;
+      return point?.date === today ? withTodayMark(s, point.coord, point.color) : s;
     });
     return {...opt, series: newSeries};
   }
 
   return option;
+}
+
+// ── shared chart visual style ────────────────────────────────────────────────
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function mapAxis(axis: unknown, c: CC) {
+  const normalize = (raw: unknown) => {
+    const obj = asRecord(raw);
+    const axisLine = asRecord(obj.axisLine);
+    const axisTick = asRecord(obj.axisTick);
+    const axisLabel = asRecord(obj.axisLabel);
+    const splitLine = asRecord(obj.splitLine);
+    const lineStyle = asRecord(splitLine.lineStyle);
+    const nameTextStyle = asRecord(obj.nameTextStyle);
+    return {
+      ...obj,
+      axisLine: {...axisLine, lineStyle: {...asRecord(axisLine.lineStyle), color: c.axis}},
+      axisTick: {show: false, ...axisTick},
+      axisLabel: {
+        margin: 8,
+        hideOverlap: true,
+        color: c.label,
+        fontSize: 10,
+        fontWeight: 400,
+        ...axisLabel,
+      },
+      nameTextStyle: {color: c.label, fontSize: 10, fontWeight: 500, ...nameTextStyle},
+      splitLine: {
+        ...splitLine,
+        lineStyle: {color: c.split, width: 1, ...lineStyle},
+      },
+    };
+  };
+  return Array.isArray(axis) ? axis.map(normalize) : normalize(axis);
+}
+
+function mapSeries(series: unknown) {
+  const normalize = (raw: unknown) => {
+    const obj = asRecord(raw);
+    const type = obj.type;
+    const markLine = asRecord(obj.markLine);
+    const markPoint = asRecord(obj.markPoint);
+    return {
+      ...obj,
+      ...(type === 'line' ? {
+        symbol: obj.symbol ?? 'none',
+        lineStyle: {width: 1.75, ...asRecord(obj.lineStyle)},
+      } : {}),
+      ...(type === 'bar' ? {
+        barCategoryGap: obj.barCategoryGap ?? '42%',
+      } : {}),
+      ...(obj.markLine ? {
+        markLine: {
+          ...markLine,
+          z: markLine.z ?? 6,
+          label: {
+            overflow: 'truncate',
+            width: 92,
+            ...asRecord(markLine.label),
+          },
+        },
+      } : {}),
+      ...(obj.markPoint ? {
+        markPoint: {
+          ...markPoint,
+          z: markPoint.z ?? 8,
+          silent: markPoint.silent ?? true,
+        },
+      } : {}),
+      emphasis: {focus: 'series', ...asRecord(obj.emphasis)},
+    };
+  };
+  return Array.isArray(series) ? series.map(normalize) : series;
+}
+
+function applyHealthChartStyle(option: object, isDark: boolean): object {
+  const opt = option as Record<string, unknown>;
+  const c = cc(isDark);
+  const tooltip = asRecord(opt.tooltip);
+  const legend = asRecord(opt.legend);
+  return {
+    ...opt,
+    color: opt.color ?? HEALTH_CHART_COLORS,
+    animationDuration: opt.animationDuration ?? 450,
+    animationDurationUpdate: opt.animationDurationUpdate ?? 250,
+    tooltip: opt.tooltip ? {
+      confine: true,
+      trigger: 'axis',
+      backgroundColor: isDark ? 'rgba(15,23,42,0.96)' : 'rgba(255,255,255,0.96)',
+      borderColor: isDark ? 'rgba(148,163,184,0.22)' : 'rgba(100,116,139,0.18)',
+      borderWidth: 1,
+      padding: [8, 10],
+      textStyle: {color: isDark ? '#e2e8f0' : '#334155', fontSize: 12, lineHeight: 18},
+      extraCssText: 'box-shadow:0 8px 28px rgba(15,23,42,0.14);border-radius:8px;',
+      axisPointer: {
+        type: 'line',
+        lineStyle: {color: isDark ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.30)', width: 1},
+        shadowStyle: {color: isDark ? 'rgba(148,163,184,0.08)' : 'rgba(100,116,139,0.08)'},
+      },
+      ...tooltip,
+    } : opt.tooltip,
+    legend: opt.legend ? {
+      itemWidth: 18,
+      itemHeight: 8,
+      itemGap: 16,
+      icon: 'roundRect',
+      ...legend,
+      textStyle: {color: c.label, fontSize: 12, fontWeight: 500, ...asRecord(legend.textStyle)},
+    } : opt.legend,
+    xAxis: opt.xAxis ? mapAxis(opt.xAxis, c) : opt.xAxis,
+    yAxis: opt.yAxis ? mapAxis(opt.yAxis, c) : opt.yAxis,
+    series: opt.series ? mapSeries(opt.series) : opt.series,
+  };
 }
 
 // ── layout ───────────────────────────────────────────────────────────────────
@@ -1583,7 +1720,7 @@ function SectionInner({name}: {name: string}) {
       {sec.charts.map(({label, opt}: {label: string; opt: OptionFn}) => (
         <div key={label} className={styles.section}>
           <div className={styles.sectionTitle}>{label}</div>
-          <ReactECharts option={addWeekends(addTodayLatestHighlight(opt(isDark, displayData, isMobile), isDark), isDark)} theme={theme} style={{height: chartHeight(label, isMobile)}} opts={opts} />
+          <ReactECharts option={applyHealthChartStyle(addWeekends(addTodayLatestHighlight(opt(isDark, displayData, isMobile), isDark), isDark), isDark)} theme={theme} style={{height: chartHeight(label, isMobile)}} opts={opts} />
         </div>
       ))}
     </div>

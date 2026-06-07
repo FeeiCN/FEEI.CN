@@ -20,7 +20,16 @@
 
 修改代码后（仅修改 Markdown 文档除外），默认执行 `npm run typecheck` 和 `npm run build`，确认无报错后再提交。若只修改 `.md` 或 `.mdx` 内容文档，不需要执行 `npm run typecheck`、`npm run build` 或其它构建检查，除非用户明确要求。
 
-每次执行 `git push` 前，必须先运行 `npm run build 2>&1 | grep -E "WARNING|SUCCESS|ERROR"` 确认输出为 `[SUCCESS]` 且无 `[WARNING]`，才可以推送。
+每次执行 `git push` 前，应先同步远端主分支，保持线性历史，避免远端已有新提交导致推送被拒或产生不必要的 merge commit。推荐流程：
+
+```bash
+git fetch origin
+git rebase origin/main
+npm run build 2>&1 | grep -E "WARNING|SUCCESS|ERROR"
+git push origin main
+```
+
+不要用普通 `git pull` 处理推送前同步，因为它可能生成 merge commit。若使用 pull，应使用 `git pull --rebase`。同步完成后，必须运行 `npm run build 2>&1 | grep -E "WARNING|SUCCESS|ERROR"` 确认输出为 `[SUCCESS]` 且无 `[WARNING]`，才可以推送。
 
 `git push` 前必须向用户确认，得到明确同意后才能执行。
 

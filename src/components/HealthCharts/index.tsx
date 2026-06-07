@@ -49,11 +49,24 @@ function yVal(c: CC, opts: {unit?: string; min?: number; max?: number; right?: b
   };
 }
 
-function ml(color: string, yVal_: number, label: string) {
+function ml(color: string, yVal_: number, label: string, isDark = false) {
   return {
     silent: true, symbol: 'none',
-    lineStyle: {color, type: 'dashed', width: 1},
-    label: {show: true, position: 'insideEndTop', formatter: label, color, fontSize: 10},
+    lineStyle: {color, type: 'dashed', width: 1.5},
+    label: {
+      show: true,
+      position: 'insideEndTop',
+      distance: 6,
+      formatter: label,
+      color,
+      fontSize: 11,
+      fontWeight: 600,
+      backgroundColor: isDark ? 'rgba(15,23,42,0.92)' : 'rgba(255,255,255,0.92)',
+      borderColor: color,
+      borderWidth: 1,
+      borderRadius: 4,
+      padding: [3, 6],
+    },
     data: [{yAxis: yVal_}],
   };
 }
@@ -182,7 +195,7 @@ function stepsDistanceOpt(isDark: boolean, D: HealthData, isMobile = false) {
       {
         name: '步数', type: 'bar', yAxisIndex: 0, barMaxWidth: 6,
         data: stepsArr.map((v) => v === null ? null : {value: v, itemStyle: {color: stepsGoal !== null && v >= stepsGoal ? '#22c55e' : '#3b82f6', borderRadius: [2, 2, 0, 0]}}),
-        ...(stepsGoal !== null ? {markLine: ml('#f59e0b', stepsGoal, `目标 ${stepsGoal.toLocaleString()}`)} : {}),
+        ...(stepsGoal !== null ? {markLine: ml('#f59e0b', stepsGoal, `目标 ${stepsGoal.toLocaleString()}`, isDark)} : {}),
       },
       {
         name: '7日均', type: 'line', yAxisIndex: 0, data: r7,
@@ -212,7 +225,7 @@ function exerciseOpt(isDark: boolean, D: HealthData) {
     series: [{
       name: '运动时长', type: 'bar', barMaxWidth: 6,
       data: D.exercise.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#22c55e' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
-      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal} 分钟`)} : {}),
+      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal} 分钟`, isDark)} : {}),
     }],
   };
 }
@@ -248,13 +261,14 @@ function flightsOpt(isDark: boolean, D: HealthData) {
     series: [{
       name: '爬楼层数', type: 'bar', barMaxWidth: 6,
       data: D.flights.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#22c55e' : '#0891b2', borderRadius: [2, 2, 0, 0]}})),
-      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal}`)} : {}),
+      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal}`, isDark)} : {}),
     }],
   };
 }
 
 function standOpt(isDark: boolean, D: HealthData, isMobile = false) {
   const c = cc(isDark);
+  const standHourGoal = 12;
   return {
     ...base(isDark),
     grid: dualAxisGrid(isMobile),
@@ -267,7 +281,11 @@ function standOpt(isDark: boolean, D: HealthData, isMobile = false) {
         yAxis: [yVal(c, {unit: '分钟', fmt: (v) => `${v}m`}), yVal(c, {unit: '小时', right: true, min: 0, max: 16})],
         series: [
           {...smoothLine('站立时间', a as number[], '#0891b2', 0), connectNulls: true},
-          {...smoothLine('站立小时数', b as number[], '#22c55e', 1), connectNulls: true},
+          {
+            ...smoothLine('站立小时数', b as number[], '#22c55e', 1),
+            connectNulls: true,
+            markLine: ml('#f59e0b', standHourGoal, `目标 ${standHourGoal} 小时`, isDark),
+          },
         ],
       };
     })(),
@@ -431,7 +449,7 @@ function respSpo2Opt(isDark: boolean, D: HealthData, isMobile = false) {
         data: b as (number | null)[],
         smooth: false, symbol: 'none', connectNulls: true,
         lineStyle: {color: '#7c3aed', width: 1.5},
-        markLine: ml('#ef4444', 95, '95% 警戒'),
+        markLine: ml('#ef4444', 95, '95% 警戒', isDark),
       },
     ],
   };
@@ -460,7 +478,7 @@ function bodyOpt(isDark: boolean, D: HealthData, isMobile = false) {
           {
             ...smoothLine('体重', a as number[], '#2563eb', 0),
             connectNulls: true,
-            ...(weightGoal !== null ? {markLine: ml('#f59e0b', weightGoal, `目标 ${weightGoal.toFixed(1)}`)} : {}),
+            ...(weightGoal !== null ? {markLine: ml('#f59e0b', weightGoal, `目标 ${weightGoal.toFixed(1)}`, isDark)} : {}),
           },
           {...smoothLine('体脂率', b as number[], '#f97316', 1), connectNulls: true},
         ],
@@ -602,7 +620,7 @@ function daylightOpt(isDark: boolean, D: HealthData) {
     series: [{
       name: '日晒时间', type: 'bar', barMaxWidth: 6,
       data: D.daylight.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#f59e0b' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
-      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal} 分钟`)} : {}),
+      ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal} 分钟`, isDark)} : {}),
     }],
   };
 }
@@ -625,11 +643,15 @@ function mindfulOpt(isDark: boolean, D: HealthData) {
 
 function handwashOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
+  const goal = 20;
   return {
     ...base(isDark), ...baseTip(),
     xAxis: xCat(c, D.handwash),
     yAxis: yVal(c, {unit: '秒', min: 0, fmt: (v) => `${v}s`}),
-    series: [areaLine('洗手时长', D.handwash.map(([, v]) => v), '#22c55e')],
+    series: [{
+      ...areaLine('洗手时长', D.handwash.map(([, v]) => v), '#22c55e'),
+      markLine: ml('#f59e0b', goal, `目标 ${goal} 秒`, isDark),
+    }],
   };
 }
 

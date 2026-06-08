@@ -1,16 +1,17 @@
-import React, {createContext, useContext, useEffect, useMemo, useState} from 'react';
+import React, {useContext, useEffect, useMemo, useState} from 'react';
 import ReactDOM from 'react-dom';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
-import {transform, computeDashboard, getDateRange, filterByTimeRange, HealthData, DashCard} from './transform';
+import {transform, computeDashboard, getDateRange, filterByTimeRange, type HealthData, type DashCard} from './transform';
+import {
+  YEARS, RANGE_DAYS, RANGE_LABELS, EMPTY,
+  YearCtx, type RecentRange, type TimeScope, type YearCtxType,
+} from './index-shared';
 import styles from './styles.module.css';
 
-const YEARS = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
-
-
-const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
-const RANGE_LABELS: Record<string, string> = {'7d': '7天', '30d': '30天', '90d': '90天', '1y': '近1年'};
+export {YearCtx} from './index-shared';
+export type {TimeScope, YearCtxType} from './index-shared';
 
 type CC = {axis: string; label: string; split: string};
 
@@ -1545,17 +1546,6 @@ type OptionFn = (isDark: boolean, D: HealthData, isMobile?: boolean) => object;
 
 // ── year / data context ───────────────────────────────────────────────────────
 
-const EMPTY: HealthData = {
-  steps:[], distance:[], exercise:[], energy_active:[], energy_basal:[],
-  flights:[], stand_time:[], stand_hour:[], sleep:[], wrist_temp:[],
-  rhr:[], hrv:[], walking_hr:[], resp_rate:[], spo2:[], weight:[],
-  fat:[], bmi:[], lean:[], walk_speed:[], step_length:[], asym:[],
-  double_supp:[], stair_up:[], stair_down:[], six_min_walk:[],
-  audio_env:[], audio_hp:[], daylight:[], mindful:[], handwash:[],
-  physical_effort:[], cardio_recovery:[], vo2:[], workouts:[],
-  nah_daily:[], bns_daily:[], med_monthly:[], state_of_mind:[], hr_notifications:[],
-};
-
 function mergeData(all: Record<number, HealthData>): HealthData {
   const years = Object.keys(all).map(Number).sort();
   if (years.length === 0) return EMPTY;
@@ -1567,23 +1557,6 @@ function mergeData(all: Record<number, HealthData>): HealthData {
   }
   return result as unknown as HealthData;
 }
-
-type RecentRange = keyof typeof RANGE_DAYS;
-type TimeScope =
-  | {mode: 'recent'; range: RecentRange}
-  | {mode: 'year'; year: number}
-  | {mode: 'all'};
-
-type YearCtxType = {
-  scope: TimeScope;
-  setScope: (scope: TimeScope) => void;
-  data: HealthData;
-  loading: boolean;
-  availableYears: number[];
-};
-const YearCtx = createContext<YearCtxType>({
-  scope: {mode: 'recent', range: '7d'}, setScope: () => {}, data: EMPTY, loading: true, availableYears: YEARS,
-});
 
 function HealthProviderInner({children}: {children: React.ReactNode}) {
   const [scope, setScope] = useState<TimeScope>({mode: 'recent', range: '7d'});
@@ -1895,5 +1868,7 @@ export function HealthSection({name}: {name: string}) {
     </BrowserOnly>
   );
 }
+
+export {HealthAnalysis} from './HealthAnalysis';
 
 export default HealthSection;

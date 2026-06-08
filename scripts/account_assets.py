@@ -77,8 +77,18 @@ ACCOUNT_OUTPUT_TARGETS = {
     "FeeiCN": FEEICN_REPO_ROOT / "docs/03-财务自由/03-投资/02-个股/01-个股数据.mdx",
 }
 ACCOUNT_MDX_CONFIG = {
-    "FeeiCN2": {"slug": "/index-data", "icon": "chart-line-icon", "title": "指数账号资产数据"},
-    "FeeiCN": {"slug": "/stock-data", "icon": "chart-line-icon", "title": "个股账号资产数据"},
+    "FeeiCN2": {
+        "slug": "/index-data",
+        "icon": "chart-line-icon",
+        "title": "指数账号资产数据",
+        "sidebar_badge": {"text": "数据", "color": "info"},
+    },
+    "FeeiCN": {
+        "slug": "/stock-data",
+        "icon": "chart-line-icon",
+        "title": "个股账号资产数据",
+        "sidebar_badge": {"text": "数据", "color": "info"},
+    },
 }
 
 
@@ -594,11 +604,21 @@ def render_account_mdx(result, config):
     if markdown_body.startswith("# 账户资产\n\n"):
         markdown_body = markdown_body[len("# 账户资产\n\n"):]
 
+    badge = config.get("sidebar_badge")
+    badge_lines = []
+    if badge:
+        badge_lines = [
+            "sidebar_badge:",
+            f"  text: {badge['text']}",
+            f"  color: {badge.get('color', 'info')}",
+        ]
+
     return "\n".join([
         "---",
         f"slug: {config['slug']}",
         f"icon: {config.get('icon', 'chart-line-icon')}",
         f"title: {config['title']}",
+        *badge_lines,
         "---",
         "",
         "import PortfolioCharts from '@site/src/components/PortfolioCharts';",

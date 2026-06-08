@@ -1,4 +1,4 @@
-# Claude Code Guidelines
+# Repository Guidelines
 
 ## 项目结构与内容组织
 

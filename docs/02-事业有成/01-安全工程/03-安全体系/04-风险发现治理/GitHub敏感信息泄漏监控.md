@@ -2,6 +2,9 @@
 slug: /gsil
 title: GSIL：GitHub敏感信息泄漏监控
 icon: github-icon
+sidebar_badge:
+  text: 演讲
+  color: secondary
 ---
 
 <iframe

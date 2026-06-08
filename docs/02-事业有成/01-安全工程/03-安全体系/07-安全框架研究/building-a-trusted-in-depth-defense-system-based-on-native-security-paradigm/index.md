@@ -2,6 +2,9 @@
 slug: /building-a-trusted-in-depth-defense-system-based-on-native-security-paradigm
 title: 基于原生安全范式构建可信纵深防御体系
 icon: layers-icon
+sidebar_badge:
+  text: 演讲
+  color: secondary
 ---
 
 

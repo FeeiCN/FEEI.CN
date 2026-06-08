@@ -2,6 +2,9 @@
 slug: /gugu
 title: 一种干掉所有密码的安全实践
 icon: shield-check
+sidebar_badge:
+  text: 演讲
+  color: secondary
 ---
 
 <iframe

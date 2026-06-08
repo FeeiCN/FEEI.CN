@@ -54,6 +54,11 @@ export default function DocSidebarItemLink({
   const icon =
     typeof customProps?.icon === 'string' ? customProps.icon : undefined;
   const iconAnimation = useControlledIconAnimation(Boolean(icon));
+  const badge = (customProps?.sidebar_badge ?? null) as {
+    text: string;
+    color?: string;
+  } | null;
+  const badgeColor = badge?.color ?? 'info';
 
   return (
     <li
@@ -88,6 +93,11 @@ export default function DocSidebarItemLink({
           onMouseEnter={iconAnimation.onMouseEnter}
           onMouseLeave={iconAnimation.onMouseLeave}
         />
+        {badge && (
+          <span className={clsx('badge', `badge--${badgeColor}`)}>
+            {badge.text}
+          </span>
+        )}
         {!isInternalLink && <IconExternalLink />}
       </Link>
     </li>

@@ -27,20 +27,44 @@ function getDocIcon(doc?: LoadedDocWithFrontMatter): string | undefined {
   return typeof icon === 'string' && icon.trim() ? icon.trim() : undefined;
 }
 
-function attachSidebarIcons<
+function getDocSidebarBadge(
+  doc?: LoadedDocWithFrontMatter,
+): {text: string; color: string} | undefined {
+  const badge = doc?.frontMatter?.sidebar_badge;
+  if (!badge || typeof badge !== 'object') return undefined;
+  const text = (badge as Record<string, unknown>).text;
+  const color = (badge as Record<string, unknown>).color;
+  if (typeof text !== 'string' || !text.trim()) return undefined;
+  return {
+    text: text.trim(),
+    color: typeof color === 'string' && color.trim() ? color.trim() : 'info',
+  };
+}
+
+function attachDocFrontMatterToSidebar<
   T extends SidebarItemWithProps,
   D extends LoadedDocWithFrontMatter,
 >(items: T[], docs: D[]): T[] {
   const docsById = new Map(docs.map((doc) => [doc.id, doc]));
 
+  function applyDocFields(
+    item: SidebarItemWithProps,
+    docId: string,
+  ): Record<string, unknown> {
+    const doc = docsById.get(docId);
+    const icon = getDocIcon(doc);
+    const sidebarBadge = getDocSidebarBadge(doc);
+    const fields: Record<string, unknown> = {...item.customProps};
+    if (icon) fields.icon = icon;
+    if (sidebarBadge) fields.sidebar_badge = sidebarBadge;
+    return fields;
+  }
+
   function visit(item: SidebarItemWithProps, depth: number): SidebarItemWithProps {
     const nextItem = {...item};
 
     if (item.type === 'doc' && item.id) {
-      const icon = getDocIcon(docsById.get(item.id));
-      if (icon) {
-        nextItem.customProps = {...item.customProps, icon};
-      }
+      nextItem.customProps = applyDocFields(item, item.id);
     }
 
     if (item.type === 'category') {
@@ -49,10 +73,7 @@ function attachSidebarIcons<
       }
 
       if (item.link?.type === 'doc' && item.link.id) {
-        const icon = getDocIcon(docsById.get(item.link.id));
-        if (icon) {
-          nextItem.customProps = {...item.customProps, icon};
-        }
+        nextItem.customProps = applyDocFields(item, item.link.id);
       }
 
       if (item.items) {
@@ -158,7 +179,7 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           async sidebarItemsGenerator(args) {
             const items = await args.defaultSidebarItemsGenerator(args);
-            return attachSidebarIcons(items, args.docs);
+            return attachDocFrontMatterToSidebar(items, args.docs);
           },
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.

@@ -7,6 +7,7 @@ import json
 import re
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from html import unescape
 from html.parser import HTMLParser
@@ -22,7 +23,9 @@ DEFAULT_BOOKMARKS_PATH = Path.home() / "Library/Safari/Bookmarks.plist"
 READING_LIST_TITLE = "com.apple.ReadingList"
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1.15 Safari/605.1.15"
 DEFAULT_GITHUB_REPO = "FeeiCN/feei.cn"
-MAX_ISSUE_BODY_LENGTH = 60000
+GITHUB_ISSUE_BODY_LIMIT = 65536
+MAX_ISSUE_BODY_LENGTH = GITHUB_ISSUE_BODY_LIMIT - 1024
+EXISTING_ISSUE_CACHE_FILE = Path.home() / ".cache/export_safari_reading_list/existing_issues.json"
 BLOCK_TAGS = {"address", "article", "aside", "blockquote", "body", "div", "footer", "header", "main", "nav", "section"}
 IGNORED_TAGS = {"script", "style", "noscript", "template", "svg", "canvas", "form"}
 
@@ -83,14 +86,13 @@ def extract_entry(item: dict[str, Any]) -> dict[str, Any] | None:
 
     uri = item.get("URIDictionary") or {}
     reading_list = item.get("ReadingList") or {}
-
-    title = (
-        uri.get("title")
-        or reading_list.get("Title")
-        or item.get("title")
-        or item.get("Title")
-        or url
+    title_candidates = (
+        uri.get("title"),
+        reading_list.get("Title"),
+        item.get("title"),
+        item.get("Title"),
     )
+    title = next((candidate for candidate in title_candidates if candidate), url)
 
     return {
         "title": title,
@@ -109,7 +111,7 @@ def collapse_whitespace(value: str) -> str:
 
 
 def slugify(value: str, fallback: str) -> str:
-    slug = re.sub(r"[^\w\u4e00-\u9fff-]+", "-", value.lower(), flags=re.UNICODE)
+    slug = re.sub(r"[^\w一-鿿-]+", "-", value.lower(), flags=re.UNICODE)
     slug = re.sub(r"-+", "-", slug).strip("-")
     return slug[:80] or fallback
 
@@ -135,23 +137,7 @@ def parse_charset(content_type: str | None) -> str:
     return match.group(1).strip("\"'") if match else "utf-8"
 
 
-def fetch_html(url: str, timeout: float) -> tuple[str, str]:
-    request = Request(url, headers={"User-Agent": USER_AGENT})
-    try:
-        with urlopen(request, timeout=timeout) as response:
-            content_type = response.headers.get("content-type")
-            charset = parse_charset(content_type)
-            body = response.read()
-    except HTTPError as error:
-        raise RuntimeError(f"HTTP {error.code}") from error
-    except URLError as error:
-        reason = getattr(error, "reason", error)
-        raise RuntimeError(str(reason)) from error
-
-    return body.decode(charset, errors="replace"), content_type or ""
-
-
-def fetch_text(url: str, timeout: float) -> tuple[str, str]:
+def fetch(url: str, timeout: float) -> tuple[str, str]:
     request = Request(url, headers={"User-Agent": USER_AGENT})
     try:
         with urlopen(request, timeout=timeout) as response:
@@ -355,7 +341,7 @@ def fetch_entry_content(entry: dict[str, Any], timeout: float) -> dict[str, Any]
         readme_url = github_readme_url(entry["url"])
         if readme_url:
             try:
-                markdown, content_type = fetch_text(readme_url, timeout=timeout)
+                markdown, content_type = fetch(readme_url, timeout=timeout)
                 entry["content"] = {
                     "status": "success",
                     "content_type": content_type,
@@ -367,7 +353,7 @@ def fetch_entry_content(entry: dict[str, Any], timeout: float) -> dict[str, Any]
             except RuntimeError:
                 pass
 
-        html, content_type = fetch_html(entry["url"], timeout=timeout)
+        html, content_type = fetch(entry["url"], timeout=timeout)
         page_title, markdown = html_to_markdown(html)
         entry["content"] = {
             "status": "success",
@@ -541,7 +527,23 @@ def run_gh(args: list[str], input_text: str | None = None) -> subprocess.Complet
         raise RuntimeError("未找到 GitHub CLI: gh。请先安装并执行 gh auth login。") from None
 
 
-def find_existing_issue(repo: str, url: str) -> dict[str, Any] | None:
+def load_existing_issue_cache() -> dict[str, dict[str, Any]]:
+    if not EXISTING_ISSUE_CACHE_FILE.exists():
+        return {}
+    try:
+        return json.loads(EXISTING_ISSUE_CACHE_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_existing_issue_cache(cache: dict[str, dict[str, Any]]) -> None:
+    EXISTING_ISSUE_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    EXISTING_ISSUE_CACHE_FILE.write_text(
+        json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def list_repo_issues(repo: str) -> list[dict[str, Any]]:
     completed = run_gh([
         "issue",
         "list",
@@ -549,19 +551,29 @@ def find_existing_issue(repo: str, url: str) -> dict[str, Any] | None:
         repo,
         "--state",
         "all",
-        "--search",
-        f'"{url}"',
         "--json",
-        "number,title,url",
+        "number,title,body,url",
         "--limit",
-        "10",
+        "1000",
     ])
     if completed.returncode != 0:
         details = (completed.stderr or completed.stdout).strip()
         raise RuntimeError(f"gh issue list 失败: {details}")
 
-    issues = json.loads(completed.stdout or "[]")
-    return issues[0] if issues else None
+    return json.loads(completed.stdout or "[]")
+
+
+def find_existing_issue(repo: str, url: str) -> dict[str, Any] | None:
+    cache = load_existing_issue_cache()
+    if url in cache:
+        return cache[url]
+
+    issues = list_repo_issues(repo)
+    cache = {issue.get("body", ""): issue for issue in issues}
+    for body, issue in cache.items():
+        if url in body:
+            return issue
+    return None
 
 
 def create_github_issue(repo: str, title: str, body: str, labels: list[str]) -> dict[str, Any]:
@@ -585,6 +597,14 @@ def create_github_issues(
     dry_run: bool,
     skip_existing: bool,
 ) -> list[dict[str, Any]]:
+    if skip_existing:
+        try:
+            issues = list_repo_issues(repo)
+            cache = {issue.get("body", ""): issue for issue in issues}
+            save_existing_issue_cache(cache)
+        except RuntimeError as error:
+            print(f"无法拉取已有 issue 列表，跳过去重: {error}", file=sys.stderr)
+
     results = []
     for index, entry in enumerate(entries, 1):
         title = build_issue_title(entry)
@@ -680,22 +700,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--unread-only", action="store_true", help="只输出未读条目")
     parser.add_argument("--fetch-content", action="store_true", help="抓取每个链接的网页内容并转成 Markdown")
     parser.add_argument("--timeout", type=float, default=20, help="网页抓取超时时间，默认 20 秒")
+    parser.add_argument("--concurrency", type=positive_int, default=4, help="网页抓取并发数，默认 4")
     parser.add_argument("--content-output-dir", type=Path, help="把每个网页内容分别输出为 Markdown 文件")
     parser.add_argument(
         "--create-github-issues",
         dest="create_github_issues",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
         default=True,
-        help="把每条稍后阅读创建为 GitHub issue，默认开启",
-    )
-    parser.add_argument(
-        "--no-create-github-issues",
-        dest="create_github_issues",
-        action="store_false",
-        help="只导出，不创建 GitHub issue",
+        help="把每条稍后阅读创建为 GitHub issue（默认开启，--no-create-github-issues 关闭）",
     )
     parser.add_argument("--github-repo", default=DEFAULT_GITHUB_REPO, help=f"目标 GitHub 仓库，默认 {DEFAULT_GITHUB_REPO}")
-    parser.add_argument("--issue-label", action="append", default=[], help="创建 issue 时附加的 label，可重复传入")
+    parser.add_argument("--issue-label", action="append", default=None, help="创建 issue 时附加的 label，可重复传入")
     parser.add_argument("--issue-dry-run", action="store_true", help="只预览将要创建的 issue，不实际创建")
     parser.add_argument("--no-skip-existing", action="store_true", help="不按原文 URL 检查并跳过已有 issue")
     parser.add_argument(
@@ -708,6 +723,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    labels = args.issue_label or []
     entries = export_reading_list(
         path=args.source.expanduser(),
         include_archived=args.include_archived,
@@ -717,9 +733,16 @@ def main() -> None:
         entries = entries[: args.limit]
 
     if args.fetch_content or args.content_output_dir or args.create_github_issues:
-        for index, entry in enumerate(entries, 1):
-            print(f"[{index}/{len(entries)}] 抓取 {entry['url']}", file=sys.stderr)
-            fetch_entry_content(entry, timeout=args.timeout)
+        if args.concurrency > 1 and len(entries) > 1:
+            with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
+                list(pool.map(
+                    lambda entry: fetch_entry_content(entry, timeout=args.timeout),
+                    entries,
+                ))
+        else:
+            for index, entry in enumerate(entries, 1):
+                print(f"[{index}/{len(entries)}] 抓取 {entry['url']}", file=sys.stderr)
+                fetch_entry_content(entry, timeout=args.timeout)
 
     if args.content_output_dir:
         write_entry_markdown_files(entries, args.content_output_dir)
@@ -729,7 +752,7 @@ def main() -> None:
         issue_results = create_github_issues(
             entries,
             repo=args.github_repo,
-            labels=args.issue_label,
+            labels=labels,
             dry_run=args.issue_dry_run,
             skip_existing=not args.no_skip_existing,
         )

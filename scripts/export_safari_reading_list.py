@@ -101,7 +101,7 @@ def extract_entry(item: dict[str, Any]) -> dict[str, Any] | None:
         "added_at": normalize_datetime(reading_list.get("DateAdded")),
         "last_viewed_at": normalize_datetime(reading_list.get("DateLastViewed")),
         "last_fetched_at": normalize_datetime(reading_list.get("DateLastFetched")),
-        "unread": bool(reading_list.get("IsUnread", False)),
+        "unread": "DateLastViewed" not in reading_list,
         "archived": bool(reading_list.get("IsArchived", False)),
     }
 
@@ -394,7 +394,7 @@ def export_reading_list(path: Path, include_archived: bool, unread_only: bool) -
     return entries
 
 
-def remove_reading_list_entries(path: Path, urls: set[str]) -> int:
+def mark_reading_list_entries_read(path: Path, urls: set[str]) -> int:
     if not urls:
         return 0
 
@@ -407,19 +407,24 @@ def remove_reading_list_entries(path: Path, urls: set[str]) -> int:
     if not isinstance(children, list):
         return 0
 
-    kept_children = []
-    removed_count = 0
+    marked_count = 0
+    now = datetime.now().astimezone()
     for item in children:
-        if isinstance(item, dict) and item.get("URLString") in urls:
-            removed_count += 1
+        if not isinstance(item, dict) or item.get("URLString") not in urls:
             continue
-        kept_children.append(item)
 
-    if removed_count:
-        reading_list["Children"] = kept_children
+        reading_list_data = item.get("ReadingList")
+        if not isinstance(reading_list_data, dict):
+            continue
+
+        if "DateLastViewed" not in reading_list_data:
+            reading_list_data["DateLastViewed"] = now
+            marked_count += 1
+
+    if marked_count:
         write_bookmarks(path, bookmarks)
 
-    return removed_count
+    return marked_count
 
 
 def render_json(entries: list[dict[str, Any]]) -> str:
@@ -563,17 +568,54 @@ def list_repo_issues(repo: str) -> list[dict[str, Any]]:
     return json.loads(completed.stdout or "[]")
 
 
+def extract_url_from_issue_body(body: str) -> str | None:
+    """从 build_issue_body 生成的正文中提取「原文」URL。"""
+    match = re.search(r"^- 原文: (.+)$", body, re.MULTILINE)
+    return match.group(1).strip() if match else None
+
+
+def extract_issue_number(issue_url: str) -> int | None:
+    """从 GitHub issue URL 中提取 issue 编号。"""
+    match = re.search(r"/issues/(\d+)", issue_url)
+    return int(match.group(1)) if match else None
+
+
 def find_existing_issue(repo: str, url: str) -> dict[str, Any] | None:
+    """按 URL 查找已存在的 issue。优先查本地缓存，缓存未命中再回源 GitHub 并回填。"""
     cache = load_existing_issue_cache()
     if url in cache:
         return cache[url]
 
-    issues = list_repo_issues(repo)
-    cache = {issue.get("body", ""): issue for issue in issues}
-    for body, issue in cache.items():
-        if url in body:
-            return issue
-    return None
+    # 缓存未命中：查询 GitHub，按 URL 索引后写回缓存
+    try:
+        issues = list_repo_issues(repo)
+    except RuntimeError:
+        return None
+
+    new_cache: dict[str, dict[str, Any]] = {}
+    for issue in issues:
+        body = issue.get("body", "") or ""
+        issue_url = extract_url_from_issue_body(body)
+        if issue_url:
+            new_cache[issue_url] = {
+                "number": issue.get("number"),
+                "title": issue.get("title"),
+                "url": issue.get("url"),
+            }
+
+    save_existing_issue_cache(new_cache)
+    return new_cache.get(url)
+
+
+def remember_created_issue(source_url: str, issue_url: str, title: str) -> None:
+    """把本地刚创建的 issue 写入缓存，下次直接跳过。"""
+    cache = load_existing_issue_cache()
+    cache[source_url] = {
+        "number": extract_issue_number(issue_url),
+        "title": title,
+        "url": issue_url,
+    }
+    save_existing_issue_cache(cache)
 
 
 def create_github_issue(repo: str, title: str, body: str, labels: list[str]) -> dict[str, Any]:
@@ -597,14 +639,6 @@ def create_github_issues(
     dry_run: bool,
     skip_existing: bool,
 ) -> list[dict[str, Any]]:
-    if skip_existing:
-        try:
-            issues = list_repo_issues(repo)
-            cache = {issue.get("body", ""): issue for issue in issues}
-            save_existing_issue_cache(cache)
-        except RuntimeError as error:
-            print(f"无法拉取已有 issue 列表，跳过去重: {error}", file=sys.stderr)
-
     results = []
     for index, entry in enumerate(entries, 1):
         title = build_issue_title(entry)
@@ -625,6 +659,8 @@ def create_github_issues(
 
         created = create_github_issue(repo, title, body, labels)
         print(f"  已创建: {created['url']}", file=sys.stderr)
+        if skip_existing:
+            remember_created_issue(entry["url"], created["url"], title)
         results.append({"status": "created", "title": title, "source_url": entry["url"], **created})
 
     return results
@@ -697,7 +733,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", type=Path, help="输出文件路径，默认打印到 stdout")
     parser.add_argument("--limit", type=positive_int, help="最多输出多少条")
     parser.add_argument("--include-archived", action="store_true", help="包含已归档条目")
-    parser.add_argument("--unread-only", action="store_true", help="只输出未读条目")
+    parser.add_argument(
+        "--unread-only",
+        dest="unread_only",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="只处理未读条目（默认开启，--no-unread-only 关闭以重复处理已读条目）",
+    )
     parser.add_argument("--fetch-content", action="store_true", help="抓取每个链接的网页内容并转成 Markdown")
     parser.add_argument("--timeout", type=float, default=20, help="网页抓取超时时间，默认 20 秒")
     parser.add_argument("--concurrency", type=positive_int, default=4, help="网页抓取并发数，默认 4")
@@ -714,9 +756,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--issue-dry-run", action="store_true", help="只预览将要创建的 issue，不实际创建")
     parser.add_argument("--no-skip-existing", action="store_true", help="不按原文 URL 检查并跳过已有 issue")
     parser.add_argument(
-        "--no-remove-created-from-reading-list",
+        "--no-mark-processed-as-read",
         action="store_true",
-        help="issue 创建成功后不从 Safari 稍后阅读中移除对应条目",
+        help="不把已处理（新建或已存在）的 Safari 稍后阅读条目标记为已读",
     )
     return parser
 
@@ -756,14 +798,14 @@ def main() -> None:
             dry_run=args.issue_dry_run,
             skip_existing=not args.no_skip_existing,
         )
-        created_urls = {
+        processed_urls = {
             result["source_url"]
             for result in issue_results
-            if result.get("status") == "created" and result.get("source_url")
+            if result.get("source_url") and result.get("status") in {"created", "skipped"}
         }
-        if created_urls and not args.no_remove_created_from_reading_list:
-            removed_count = remove_reading_list_entries(args.source.expanduser(), created_urls)
-            print(f"已从 Safari 稍后阅读移除 {removed_count} 条已创建 issue 的条目", file=sys.stderr)
+        if processed_urls and not args.no_mark_processed_as_read:
+            marked_count = mark_reading_list_entries_read(args.source.expanduser(), processed_urls)
+            print(f"已把 {marked_count} 条已处理（新建或已存在）的 Safari 稍后阅读标记为已读", file=sys.stderr)
 
     output = render_entries(entries, args.format)
     if args.output:

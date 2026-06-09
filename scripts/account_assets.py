@@ -153,7 +153,7 @@ def git_commit_and_push_target_repo(paths):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     log("git commit ...")
     run_git_command(
-        ["commit", "--only", "-m", f"更新投资数据 {timestamp}", "--", *relative_paths],
+        ["commit", "--only", "-m", f"[auto] 更新投资数据 {timestamp}", "--", *relative_paths],
         FEEICN_REPO_ROOT,
     )
     log("git push ...")

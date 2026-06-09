@@ -317,7 +317,7 @@ def write_to_feeicn(account_results):
         return
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     log("git commit ...")
-    run_git_command(["commit", "--only", "-m", f"更新港股打新数据 {timestamp}", "--", *relative_paths], FEEICN_REPO_ROOT)
+    run_git_command(["commit", "--only", "-m", f"[auto] 更新港股打新数据 {timestamp}", "--", *relative_paths], FEEICN_REPO_ROOT)
     log("git push ...")
     run_git_command(["push"], FEEICN_REPO_ROOT)
     log("git push 完成")

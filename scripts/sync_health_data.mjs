@@ -15,7 +15,7 @@ const commandEnv = {
 };
 const args = parseArgs(process.argv.slice(2));
 const exportArgs = args.date ? ['--', '--year', targetYear(), '--end-date', args.date] : [];
-const commitMessage = args.message ?? '更新健康数据';
+const commitMessage = args.message ?? `[auto] 更新健康数据 ${formatLocalDateTime(new Date())}`;
 const remote = args.remote ?? 'origin';
 const branch = args.branch ?? currentBranch();
 const healthFile = path.join('static', 'health', `health_data_${targetYear()}.json`);
@@ -131,6 +131,18 @@ function formatLocalDate(date) {
     month: '2-digit',
     day: '2-digit',
   }).format(date);
+}
+
+function formatLocalDateTime(date) {
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date).replace(' ', ' ');
 }
 
 function parseArgs(argv) {

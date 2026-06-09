@@ -394,6 +394,124 @@
   font-weight: 500;
 }
 
+.partialList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.partialRow {
+  padding: 0.6rem 0.75rem;
+  background: var(--ifm-background-color);
+  border-radius: 8px;
+  border: 1px solid var(--ifm-color-emphasis-200, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.partialPair {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-800, #1e293b);
+}
+
+.partialSep {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.partialNumbers {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--ifm-color-emphasis-700, #475569);
+  flex-wrap: wrap;
+}
+
+.partialArrow {
+  color: #94a3b8;
+}
+
+.partialStable {
+  color: #16a34a;
+}
+
+.partialDropped {
+  color: #f59e0b;
+}
+
+.partialConfounders {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.anomalyList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.anomalyItem {
+  padding: 0.55rem 0.75rem;
+  background: var(--ifm-background-color);
+  border-radius: 8px;
+  border: 1px solid var(--ifm-color-emphasis-200, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.anomalyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.anomalyDate {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ifm-color-emphasis-800, #1e293b);
+  font-size: 0.85rem;
+}
+
+.anomalyScore {
+  font-size: 0.72rem;
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.anomalyDetail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.anomalyChip {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+.anomalyChipUp {
+  background: #ef4444;
+}
+
+.anomalyChipDown {
+  background: #3b82f6;
+}
+
 .workoutDetail {
   margin-top: 0.75rem;
   padding: 0.75rem;

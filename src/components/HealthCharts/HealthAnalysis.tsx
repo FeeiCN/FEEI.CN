@@ -6,10 +6,20 @@ import {
   computeLagCorrelations,
   computeClusters,
   generateInsights,
+  computeMutualInformation,
+  computePartialCorrelations,
+  computeRecoveryScore,
+  computeAnomalies,
+  computeCounterfactuals,
   type CorrelationResult,
   type LagResult,
   type ClusterResult,
   type Insight,
+  type MIRank,
+  type PartialCorr,
+  type RecoveryResult,
+  type Anomaly,
+  type Counterfactual,
 } from './analyze';
 import {YearCtx} from './index-shared';
 import styles from './styles.module.css';
@@ -38,7 +48,7 @@ const INSIGHT_TAG_CLASS: Record<Insight['category'], string> = {
   coverage: styles.insightTagCoverage ?? '',
 };
 
-const MAX_METRICS_HEATMAP = 12;
+const MAX_METRICS_HEATMAP = 16;
 const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
 
 function analysisEnabled(scope: {mode: string; range?: string; year?: number}): {enabled: boolean; days: number} {
@@ -178,6 +188,55 @@ function lagChartOption(isDark: boolean, lags: LagResult[]): object {
   };
 }
 
+function recoveryChartOption(isDark: boolean, recovery: RecoveryResult): object {
+  const dates = recovery.daily.map((d) => d.date);
+  return {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: isDark ? 'rgba(15,23,42,0.96)' : 'rgba(255,255,255,0.96)',
+      borderColor: isDark ? 'rgba(148,163,184,0.22)' : 'rgba(100,116,139,0.18)',
+      borderWidth: 1,
+      textStyle: {color: isDark ? '#e2e8f0' : '#334155', fontSize: 12},
+      formatter: (p: {seriesName: string; value: [string, number]; axisValue: string; marker: string}[]) =>
+        `${p[0]?.axisValue ?? ''}<br/>${p.map((x) => `${x.marker}${x.seriesName}：${x.value[1]}`).join('<br/>')}`,
+    },
+    legend: {
+      top: 4, left: 'center',
+      textStyle: {color: isDark ? '#94a3b8' : '#64748b', fontSize: 11},
+      itemWidth: 14, itemHeight: 8,
+      data: ['每日恢复', '7日均'],
+    },
+    grid: {top: 40, right: 16, bottom: 28, left: 36, containLabel: true},
+    xAxis: {
+      type: 'category',
+      data: dates,
+      axisLabel: {color: isDark ? '#94a3b8' : '#64748b', fontSize: 10, interval: Math.max(0, Math.floor(dates.length / 10))},
+      axisLine: {lineStyle: {color: isDark ? 'rgba(148,163,184,0.22)' : 'rgba(100,116,139,0.20)'}},
+    },
+    yAxis: {
+      type: 'value', min: 0, max: 100,
+      axisLabel: {color: isDark ? '#94a3b8' : '#64748b', fontSize: 10},
+      splitLine: {lineStyle: {color: isDark ? 'rgba(148,163,184,0.10)' : 'rgba(100,116,139,0.14)'}},
+    },
+    series: [
+      {
+        name: '每日恢复', type: 'line', data: recovery.daily.map((d) => d.score),
+        smooth: true, symbol: 'none',
+        lineStyle: {color: '#0d9488', width: 1.2, opacity: 0.6},
+        areaStyle: {color: {type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
+          {offset: 0, color: 'rgba(13,148,136,0.12)'}, {offset: 1, color: 'rgba(13,148,136,0)'},
+        ]}},
+      },
+      {
+        name: '7日均', type: 'line', data: recovery.moving7.map((d) => d.score),
+        smooth: true, symbol: 'none',
+        lineStyle: {color: '#16a34a', width: 2.4},
+      },
+    ],
+  };
+}
+
 function clusterCard(c: {label: string; count: number; distinctive: string[]; meanProfile: {label: string; mean: number; unit?: string}[]}, metrics: Map<string, {unit?: string}>) {
   return (
     <div key={c.label + c.count} className={styles.clusterCard}>
@@ -226,6 +285,26 @@ export function HealthAnalysis() {
   );
   const clusters: ClusterResult | null = useMemo(
     () => enabled && !loading ? computeClusters(data) : null,
+    [data, enabled, loading],
+  );
+  const mi: MIRank[] = useMemo(
+    () => corr ? computeMutualInformation(data, corr, Math.max(7, Math.floor(days * 0.25))) : [],
+    [data, corr, days],
+  );
+  const partialCorrs: PartialCorr[] = useMemo(
+    () => corr ? computePartialCorrelations(data, corr, 6, 3, Math.max(10, Math.floor(days * 0.3))) : [],
+    [data, corr, days],
+  );
+  const recovery: RecoveryResult | null = useMemo(
+    () => enabled && !loading ? computeRecoveryScore(data) : null,
+    [data, enabled, loading],
+  );
+  const anomalies: Anomaly[] = useMemo(
+    () => enabled && !loading ? computeAnomalies(data, clusters) : [],
+    [data, clusters, enabled, loading],
+  );
+  const counterfactuals: Counterfactual[] = useMemo(
+    () => enabled && !loading ? computeCounterfactuals(data) : [],
     [data, enabled, loading],
   );
   const insights: Insight[] = useMemo(() => {
@@ -322,6 +401,111 @@ export function HealthAnalysis() {
         </div>
       )}
 
+      {recovery && (
+        <div className={styles.analysisSection}>
+          <div className={styles.analysisSectionTitle}>
+            <span className={styles.analysisSectionLabel}>每日恢复评分</span>
+            <span className={styles.analysisSectionHint}>
+              综合 HRV · 静息心率 · 深睡 · 总睡眠 · 区间 {recovery.rangeMin}–{recovery.rangeMax}，均值 {recovery.mean}
+            </span>
+          </div>
+          <ReactECharts
+            option={recoveryChartOption(isDark, recovery)}
+            theme={theme}
+            style={{height: isMobile ? 200 : 240}}
+            opts={{renderer: 'svg'}}
+          />
+        </div>
+      )}
+
+      {partialCorrs.length > 0 && (
+        <div className={styles.analysisSection}>
+          <div className={styles.analysisSectionTitle}>
+            <span className={styles.analysisSectionLabel}>偏相关核验</span>
+            <span className={styles.analysisSectionHint}>控制最相关的 {partialCorrs[0]?.confounders.length ?? 3} 个变量后，关系是否仍然成立</span>
+          </div>
+          <div className={styles.partialList}>
+            {partialCorrs.map((p) => {
+              const a = corr.metrics[p.i];
+              const b = corr.metrics[p.j];
+              const dropped = Math.abs(p.rPartial) < Math.abs(p.r) * 0.5;
+              const confounderLabels = p.confounders.map((k) => corr.metrics[k].label).join(' · ');
+              return (
+                <div key={`${a.key}-${b.key}`} className={styles.partialRow}>
+                  <div className={styles.partialPair}>
+                    <span>{a.label}</span>
+                    <span className={styles.partialSep}>↔</span>
+                    <span>{b.label}</span>
+                  </div>
+                  <div className={styles.partialNumbers}>
+                    <span className={styles.partialRaw}>
+                      原始 r = <b>{p.r.toFixed(2)}</b>
+                    </span>
+                    <span className={styles.partialArrow}>→</span>
+                    <span className={dropped ? styles.partialDropped : styles.partialStable}>
+                      控制后 r = <b>{p.rPartial.toFixed(2)}</b>
+                    </span>
+                  </div>
+                  <div className={styles.partialConfounders}>控制变量：{confounderLabels}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {mi.length > 0 && (
+        <div className={styles.analysisSection}>
+          <div className={styles.analysisSectionTitle}>
+            <span className={styles.analysisSectionLabel}>互信息 · 非线性关联</span>
+            <span className={styles.analysisSectionHint}>Pearson 漏掉的非线性关系</span>
+          </div>
+          <ul className={styles.insightList}>
+            {mi.slice(0, 5).map((m, idx) => {
+              const a = corr.metrics[m.i];
+              const b = corr.metrics[m.j];
+              const linearStrong = Math.abs(m.r) >= 0.4;
+              return (
+                <li key={idx} className={styles.insightItem}>
+                  <span className={`${styles.insightTag} ${linearStrong ? styles.insightTagLag : styles.insightTagTrend}`}>
+                    {linearStrong ? '线性' : '非线性'}
+                  </span>
+                  <span>
+                    {a.label} ↔ {b.label}：MI 归一 {m.normalized.toFixed(2)} · r={m.r.toFixed(2)} · n={m.n}
+                    {linearStrong ? '' : '（Pearson 弱相关，但 MI 高，存在非线性关系）'}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {counterfactuals.length > 0 && (
+        <div className={styles.analysisSection}>
+          <div className={styles.analysisSectionTitle}>
+            <span className={styles.analysisSectionLabel}>反事实对比</span>
+            <span className={styles.analysisSectionHint}>高于 / 低于中位数时，其他指标的差异</span>
+          </div>
+          <ul className={styles.insightList}>
+            {counterfactuals.map((c, idx) => {
+              const dir = c.delta > 0 ? '↑' : '↓';
+              const unit = c.unit;
+              const thresholdText = unit ? `${c.causeLabel} ≥ ${c.threshold.toFixed(unit === '步' ? 0 : 1)}${unit}` : `${c.causeLabel} 高于中位数`;
+              return (
+                <li key={idx} className={styles.insightItem}>
+                  <span className={`${styles.insightTag} ${styles.insightTagCluster}`}>反事实</span>
+                  <span>
+                    当 {thresholdText} 时，{c.effectLabel} 中位数 {dir} {Math.abs(c.delta).toFixed(unit === '步' ? 0 : 2)}{unit || ''}
+                    （p={c.pValue.toFixed(3)}，n={c.n}）
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       {clusters && clusters.clusters.length > 0 && (
         <div className={styles.analysisSection}>
           <div className={styles.analysisSectionTitle}>
@@ -331,6 +515,40 @@ export function HealthAnalysis() {
           <div className={styles.clusterGrid}>
             {clusters.clusters.map((c) => clusterCard(c, metricsMap))}
           </div>
+        </div>
+      )}
+
+      {anomalies.length > 0 && (
+        <div className={styles.analysisSection}>
+          <div className={styles.analysisSectionTitle}>
+            <span className={styles.analysisSectionLabel}>异常日</span>
+            <span className={styles.analysisSectionHint}>综合得分偏离你常态最远的 {anomalies.length} 天</span>
+          </div>
+          <ul className={styles.anomalyList}>
+            {anomalies.map((a) => (
+              <li key={a.date} className={styles.anomalyItem}>
+                <div className={styles.anomalyHeader}>
+                  <span className={styles.anomalyDate}>{a.date}</span>
+                  <span className={styles.anomalyScore}>综合偏离 {a.score}</span>
+                </div>
+                <div className={styles.anomalyDetail}>
+                  {a.topMetrics.map((m) => {
+                    const arrow = m.z > 0 ? '↑' : '↓';
+                    const intensity = Math.min(3, Math.ceil(Math.abs(m.z)));
+                    return (
+                      <span
+                        key={m.key}
+                        className={`${styles.anomalyChip} ${m.z > 0 ? styles.anomalyChipUp : styles.anomalyChipDown}`}
+                        style={{opacity: 0.4 + 0.2 * intensity}}
+                      >
+                        {m.label} {arrow}{Math.abs(m.z).toFixed(1)}σ
+                      </span>
+                    );
+                  })}
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

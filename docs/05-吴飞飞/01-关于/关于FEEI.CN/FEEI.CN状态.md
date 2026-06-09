@@ -11,6 +11,7 @@ icon: simple-checked-icon
 | 健康数据 | 成功 | 2026-06-09 20:31:20 | [健康数据](/health-data) |
 | 港股打新数据 | 成功 | 2026-06-09 06:10:05 | [港股打新数据](/hk-ipo-data) |
 | 财务自由数据 | 成功 | 2026-06-09 06:00:01 | [个股账号资产数据](/stock-data)<br />[指数账号资产数据](/index-data) |
+| 阅读日历 | 成功 | 2026-06-09 22:59:30 | [阅读数据](/read-data) |
 
 <!-- status-page-data
 {
@@ -52,6 +53,18 @@ icon: simple-checked-icon
     ],
     "run_time": "2026-06-09 06:10:05",
     "script": "scripts/hk_ipo.py",
+    "status": "成功"
+  },
+  "reading-heatmap": {
+    "name": "阅读日历",
+    "outputs": [
+      {
+        "slug": "/read-data",
+        "title": "阅读数据"
+      }
+    ],
+    "run_time": "2026-06-09 22:59:30",
+    "script": "scripts/export_weread_daily_activity.py",
     "status": "成功"
   }
 }

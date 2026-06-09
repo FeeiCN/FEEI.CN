@@ -1,0 +1,112 @@
+.heatmap {
+  --hm-empty: #ebedf0;
+  --hm-l1: #9be9a8;
+  --hm-l2: #40c463;
+  --hm-l3: #30a14e;
+  --hm-l4: #216e39;
+  --hm-l5: #0a4622;
+  --hm-split: rgba(15, 23, 42, 0.08);
+  --hm-label: #64748b;
+  --hm-tooltip-bg: var(--ifm-background-color, #ffffff);
+  --hm-tooltip-border: rgba(148, 163, 184, 0.32);
+  margin: 1.5rem 0 2rem;
+}
+
+[data-theme='dark'] .heatmap {
+  --hm-empty: #161b22;
+  --hm-l1: #0e4429;
+  --hm-l2: #006d32;
+  --hm-l3: #26a641;
+  --hm-l4: #39d353;
+  --hm-l5: #7ee787;
+  --hm-split: rgba(148, 163, 184, 0.12);
+  --hm-label: #94a3b8;
+  --hm-tooltip-bg: #1e293b;
+  --hm-tooltip-border: rgba(148, 163, 184, 0.28);
+}
+
+.scrollWrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: max-content;
+}
+
+.yearRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.yearLabel {
+  width: 44px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--hm-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.skeleton {
+  min-height: 132px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hm-label);
+  font-size: 13px;
+  background: var(--hm-empty);
+  border-radius: 6px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meta {
+  color: var(--hm-label);
+  font-size: 12px;
+}
+
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--hm-label);
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legendCell {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.legendText {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .yearLabel {
+    width: 36px;
+    font-size: 11px;
+  }
+}

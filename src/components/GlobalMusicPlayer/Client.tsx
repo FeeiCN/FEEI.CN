@@ -5,7 +5,7 @@ import type {Root} from 'react-dom/client';
 import type APlayerInstance from 'aplayer';
 import type {Options as APlayerOptions} from 'aplayer';
 import 'aplayer/dist/APlayer.min.css';
-import {buildMusicFilterGroups, playlistGroupFromManifest, siteMusicGroups} from './playlist';
+import {buildAllDerivedGroups, playlistGroupFromManifest, siteMusicGroups} from './playlist';
 import type {PlaylistGroup, PlaylistManifestGroup} from './playlist';
 import styles from './styles.module.css';
 import Galaxy from './Galaxy';
@@ -18,7 +18,7 @@ import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useCon
 type APlayerConstructor = new (options: APlayerOptions) => APlayerInstance;
 const babyMusicManifestUrl = '/music/baby-music/manifest.json';
 const musicPlayerPlayEventName = 'feei:music-player-play';
-const initialMusicGroups = [...siteMusicGroups, ...buildMusicFilterGroups(siteMusicGroups)];
+const initialMusicGroups = [...siteMusicGroups, ...buildAllDerivedGroups(siteMusicGroups)];
 const fullScreenLyricLineHeight = 48;
 const playerStateStorageKey = 'feei-global-music-player-state-v1';
 const playerVisibleBodyClassName = 'global-music-player-visible';
@@ -236,7 +236,7 @@ function GlobalMusicPlayerClient() {
         const manifest = (await response.json()) as PlaylistManifestGroup[];
         if (disposed || manifest.length === 0) return;
         const playlistGroups = [...siteMusicGroups, ...manifest.map(playlistGroupFromManifest)];
-        setGroups([...playlistGroups, ...buildMusicFilterGroups(playlistGroups)]);
+        setGroups([...playlistGroups, ...buildAllDerivedGroups(playlistGroups)]);
       } catch {
       } finally {
         if (!disposed) setHasResolvedGroups(true);

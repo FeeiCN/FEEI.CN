@@ -391,4 +391,87 @@ export const buildMusicFilterGroups = (groups: PlaylistGroup[]): PlaylistGroup[]
     })
     .filter((group) => group.tracks.length > 0);
 
+type TrackLanguage = 'zh' | 'en' | 'ja' | 'other';
+
+const HIRAGANA_KATAKANA = /[぀-ヿ]/;
+const HANGUL = /[가-힯]/;
+const CJK = /[一-鿿]/;
+const LATIN = /[A-Za-z]/;
+
+export const detectTrackLanguage = (track: Audio): TrackLanguage => {
+  const sample = `${track.name ?? ''} ${track.artist ?? ''}`;
+  if (HIRAGANA_KATAKANA.test(sample)) return 'ja';
+  if (HANGUL.test(sample)) return 'other';
+  if (CJK.test(sample)) return 'zh';
+  if (LATIN.test(sample)) return 'en';
+  return 'other';
+};
+
+const languageLabels: Record<TrackLanguage, {id: string; label: string}> = {
+  zh: {id: 'lang-zh', label: '华语'},
+  en: {id: 'lang-en', label: '英文'},
+  ja: {id: 'lang-ja', label: '日文'},
+  other: {id: 'lang-other', label: '其他语种'},
+};
+
+export const buildLanguageGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => {
+  const allTracks = groups.flatMap((group) => group.tracks);
+  const buckets: Record<TrackLanguage, Audio[]> = {zh: [], en: [], ja: [], other: []};
+  allTracks.forEach((track) => buckets[detectTrackLanguage(track)].push(track));
+  return (Object.keys(buckets) as TrackLanguage[])
+    .map((lang) => ({
+      id: languageLabels[lang].id,
+      label: languageLabels[lang].label,
+      tracks: buckets[lang],
+    }))
+    .filter((group) => group.tracks.length > 0);
+};
+
+export const buildArtistGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => {
+  const allTracks = groups.flatMap((group) => group.tracks);
+  const buckets = new Map<string, Audio[]>();
+  allTracks.forEach((track) => {
+    const artist = (track.artist ?? '').trim() || '未知歌手';
+    if (!buckets.has(artist)) buckets.set(artist, []);
+    buckets.get(artist)!.push(track);
+  });
+  return Array.from(buckets.entries())
+    .sort(([a], [b]) => {
+      if (a === '未知歌手') return 1;
+      if (b === '未知歌手') return -1;
+      return a.localeCompare(b, 'zh-Hans-CN');
+    })
+    .map(([artist, tracks]) => ({
+      id: `artist-${artist}`,
+      label: artist,
+      tracks,
+    }));
+};
+
+const sceneTrackFilterGroups: Array<{id: string; label: string; predicate: (track: Audio) => boolean}> = [
+  {
+    id: 'scene-foreign',
+    label: '外语金曲',
+    predicate: (track) => detectTrackLanguage(track) !== 'zh',
+  },
+];
+
+export const buildSceneGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => {
+  const allTracks = groups.flatMap((group) => group.tracks);
+  return sceneTrackFilterGroups
+    .map((scene) => ({
+      id: scene.id,
+      label: scene.label,
+      tracks: allTracks.filter(scene.predicate),
+    }))
+    .filter((group) => group.tracks.length > 0);
+};
+
+export const buildAllDerivedGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => [
+  ...buildMusicFilterGroups(groups),
+  ...buildLanguageGroups(groups),
+  ...buildSceneGroups(groups),
+  ...buildArtistGroups(groups),
+];
+
 export const siteMusicPlaylist: Audio[] = favoriteTracks;

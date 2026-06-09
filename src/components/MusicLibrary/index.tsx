@@ -1,8 +1,11 @@
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import clsx from 'clsx';
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
+  buildArtistGroups,
+  buildLanguageGroups,
   buildMusicFilterGroups,
+  buildSceneGroups,
   playlistGroupFromManifest,
   siteMusicGroups,
 } from '@site/src/components/GlobalMusicPlayer/playlist';
@@ -14,20 +17,29 @@ import styles from './styles.module.css';
 
 const babyMusicManifestUrl = '/music/baby-music/manifest.json';
 const musicPlayerPlayEventName = 'feei:music-player-play';
-const initialGroups = [...siteMusicGroups, ...buildMusicFilterGroups(siteMusicGroups)];
 
 type MusicPlayerPlayDetail = {
   groupId: string;
   trackIndex?: number;
 };
 
+const primaryArtist = (artist: string | undefined): string => {
+  if (!artist) return '未知';
+  return artist.split('&')[0].trim() || '未知';
+};
+
+function isArtistGroup(group: PlaylistGroup): boolean {
+  return group.id.startsWith('artist-');
+}
+
 function MusicLibraryClient() {
-  const [groups, setGroups] = useState<PlaylistGroup[]>(initialGroups);
+  const [baseGroups, setBaseGroups] = useState<PlaylistGroup[]>(siteMusicGroups);
   const [activeGroupId, setActiveGroupId] = useState(siteMusicGroups[0]?.id ?? '');
-  const activeGroup = useMemo(
-    () => groups.find((group) => group.id === activeGroupId) ?? groups[0],
-    [activeGroupId, groups],
-  );
+  const [searchQuery, setSearchQuery] = useState('');
+  const [singerDrawerOpen, setSingerDrawerOpen] = useState(false);
+  const [currentTrackKey, setCurrentTrackKey] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let disposed = false;
@@ -37,10 +49,8 @@ function MusicLibraryClient() {
         const response = await fetch(babyMusicManifestUrl);
         if (!response.ok) return;
         const manifest = (await response.json()) as PlaylistManifestGroup[];
-        if (!disposed) {
-          const playlistGroups = [...siteMusicGroups, ...manifest.map(playlistGroupFromManifest)];
-          setGroups([...playlistGroups, ...buildMusicFilterGroups(playlistGroups)]);
-        }
+        if (disposed || manifest.length === 0) return;
+        setBaseGroups([...siteMusicGroups, ...manifest.map(playlistGroupFromManifest)]);
       } catch {}
     }
 
@@ -51,54 +61,407 @@ function MusicLibraryClient() {
     };
   }, []);
 
-  const playFromGlobalPlayer = (detail: MusicPlayerPlayDetail) => {
-    window.dispatchEvent(new CustomEvent<MusicPlayerPlayDetail>(musicPlayerPlayEventName, {detail}));
-  };
+  const derived = useMemo(
+    () => ({
+      fixed: baseGroups,
+      filter: [
+        ...buildMusicFilterGroups(baseGroups),
+        ...buildLanguageGroups(baseGroups),
+        ...buildSceneGroups(baseGroups),
+      ],
+      artist: buildArtistGroups(baseGroups),
+    }),
+    [baseGroups],
+  );
 
-  if (!activeGroup) return null;
+  const activeGroup = useMemo(() => {
+    return (
+      derived.fixed.find((g) => g.id === activeGroupId) ??
+      derived.filter.find((g) => g.id === activeGroupId) ??
+      derived.artist.find((g) => g.id === activeGroupId) ??
+      derived.fixed[0]
+    );
+  }, [derived, activeGroupId]);
+
+  const searchActive = searchQuery.trim().length > 0;
+  const searchedTracks = useMemo(() => {
+    if (!searchActive) return null;
+    const q = searchQuery.trim().toLowerCase();
+    return baseGroups.flatMap((g) => g.tracks).filter((t) => {
+      const name = (t.name ?? '').toLowerCase();
+      const artist = (t.artist ?? '').toLowerCase();
+      return name.includes(q) || artist.includes(q);
+    });
+  }, [baseGroups, searchActive, searchQuery]);
+
+  const tracksToShow = useMemo(() => {
+    return searchActive && searchedTracks ? searchedTracks : activeGroup?.tracks ?? [];
+  }, [searchActive, searchedTracks, activeGroup]);
+
+  const groupedTracks = useMemo(() => {
+    const buckets = new Map<string, PlaylistGroup['tracks']>();
+    tracksToShow.forEach((track) => {
+      const artist = primaryArtist(track.artist);
+      if (!buckets.has(artist)) buckets.set(artist, []);
+      buckets.get(artist)!.push(track);
+    });
+    if (buckets.size < 2) {
+      return [{artist: null as string | null, tracks: tracksToShow}];
+    }
+    return Array.from(buckets.entries())
+      .sort(([a], [b]) => a.localeCompare(b, 'zh-Hans-CN'))
+      .map(([artist, tracks]) => ({artist, tracks}));
+  }, [tracksToShow]);
+
+  const flatTracks = useMemo(() => groupedTracks.flatMap((g) => g.tracks), [groupedTracks]);
+
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [activeGroupId, searchQuery]);
+
+  useEffect(() => {
+    if (highlightedIndex >= flatTracks.length) setHighlightedIndex(Math.max(0, flatTracks.length - 1));
+  }, [flatTracks.length, highlightedIndex]);
+
+  const playFromGlobalPlayer = useCallback((detail: MusicPlayerPlayDetail) => {
+    window.dispatchEvent(new CustomEvent<MusicPlayerPlayDetail>(musicPlayerPlayEventName, {detail}));
+    setCurrentTrackKey(`${detail.groupId}:${detail.trackIndex ?? 0}`);
+  }, []);
+
+  const playTrack = useCallback(
+    (track: PlaylistGroup['tracks'][number]) => {
+      if (searchActive) {
+        const sourceGroup = baseGroups.find((g) => g.tracks.includes(track));
+        if (sourceGroup) {
+          const trackIndex = sourceGroup.tracks.indexOf(track);
+          playFromGlobalPlayer({groupId: sourceGroup.id, trackIndex});
+        }
+        return;
+      }
+      const trackIndex = activeGroup.tracks.indexOf(track);
+      playFromGlobalPlayer({groupId: activeGroup.id, trackIndex: Math.max(0, trackIndex)});
+    },
+    [activeGroup, baseGroups, playFromGlobalPlayer, searchActive],
+  );
+
+  const totalTracks = useMemo(
+    () => baseGroups.reduce((sum, g) => sum + g.tracks.length, 0),
+    [baseGroups],
+  );
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      const isTyping =
+        target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
+
+      if (event.key === 'Escape') {
+        if (singerDrawerOpen) {
+          event.preventDefault();
+          setSingerDrawerOpen(false);
+          return;
+        }
+        if (isTyping) {
+          (target as HTMLInputElement).blur();
+          setSearchQuery('');
+          return;
+        }
+        if (searchQuery) {
+          setSearchQuery('');
+          return;
+        }
+        return;
+      }
+
+      if (isTyping) return;
+
+      if (event.key === '/') {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
+      if (event.key === 'j' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        setHighlightedIndex((i) => Math.min(i + 1, Math.max(0, flatTracks.length - 1)));
+      } else if (event.key === 'k' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        setHighlightedIndex((i) => Math.max(0, i - 1));
+      } else if (event.key === 'Enter' && flatTracks[highlightedIndex]) {
+        event.preventDefault();
+        playTrack(flatTracks[highlightedIndex]);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [flatTracks, highlightedIndex, playTrack, searchQuery, singerDrawerOpen]);
+
+  if (!activeGroup && !searchActive) return null;
+
+  const isAmbient = activeGroupId === 'ambient';
 
   return (
     <section className={styles.library}>
-      <div className={styles.groupTabs} role="tablist" aria-label="音乐歌单分组">
-        {groups.map((group) => (
-          <button
-            key={group.id}
-            type="button"
-            className={clsx(styles.groupTab, group.id === activeGroup.id && styles.groupTabActive)}
-            onClick={() => setActiveGroupId(group.id)}>
-            <span>{group.label}</span>
-            <span className={styles.groupCount}>{group.tracks.length}</span>
-          </button>
-        ))}
+      <div className={clsx(styles.header, isAmbient && styles.headerAmbient)}>
+        <div className={styles.headerIcon} aria-hidden="true">
+          ♪
+        </div>
+        <div className={styles.headerText}>
+          <div className={styles.headerTitle}>我的音乐库</div>
+          <div className={styles.headerSubtitle}>
+            {searchActive
+              ? `搜索"${searchQuery}"匹配 ${tracksToShow.length} 首`
+              : `共 ${totalTracks} 首 · ${derived.artist.length} 位歌手`}
+          </div>
+        </div>
       </div>
 
-      <div className={styles.groupActionBar}>
-        <div>
-          <div className={styles.activeGroupTitle}>{activeGroup.label}</div>
-          <div className={styles.activeGroupMeta}>{activeGroup.tracks.length} 首</div>
-        </div>
-        <button
-          type="button"
-          className={styles.playGroupButton}
-          onClick={() => playFromGlobalPlayer({groupId: activeGroup.id, trackIndex: 0})}>
-          播放这个歌单
-        </button>
+      <div className={styles.searchRow}>
+        <span className={styles.searchIcon} aria-hidden="true">
+          ⌕
+        </span>
+        <input
+          ref={searchInputRef}
+          type="search"
+          className={styles.searchInput}
+          placeholder="搜索曲名或歌手（按 / 聚焦）"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          aria-label="搜索音乐"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            className={styles.searchClearButton}
+            onClick={() => {
+              setSearchQuery('');
+              searchInputRef.current?.focus();
+            }}
+            aria-label="清空搜索">
+            清空
+          </button>
+        )}
       </div>
+
+      <div className={styles.tabSections}>
+        <div className={styles.tabSection}>
+          <div className={styles.tabSectionLabel}>我的歌单</div>
+          <div className={styles.groupTabs}>
+            {derived.fixed.map((group) => (
+              <button
+                key={group.id}
+                type="button"
+                className={clsx(
+                  styles.groupTab,
+                  group.id === activeGroupId && styles.groupTabActive,
+                  group.id === 'ambient' && styles.groupTabAmbient,
+                )}
+                onClick={() => {
+                  setActiveGroupId(group.id);
+                  setSearchQuery('');
+                }}>
+                <span>{group.label}</span>
+                <span className={styles.groupCount}>{group.tracks.length}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.tabSection}>
+          <div className={styles.tabSectionLabel}>维度筛选</div>
+          <div className={styles.groupTabs}>
+            {derived.filter.map((group) => (
+              <button
+                key={group.id}
+                type="button"
+                className={clsx(styles.groupTab, group.id === activeGroupId && styles.groupTabActive)}
+                onClick={() => {
+                  setActiveGroupId(group.id);
+                  setSearchQuery('');
+                }}>
+                <span>{group.label}</span>
+                <span className={styles.groupCount}>{group.tracks.length}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.tabSection}>
+          <div className={styles.tabSectionLabel}>全部歌手</div>
+          <button
+            type="button"
+            className={clsx(
+              styles.singerDrawerTrigger,
+              derived.artist.some((g) => g.id === activeGroupId) && styles.singerDrawerTriggerActive,
+            )}
+            onClick={() => setSingerDrawerOpen(true)}>
+            <span>
+              {derived.artist.find((g) => g.id === activeGroupId)?.label ?? '选择歌手'}
+            </span>
+            <span className={styles.groupCount}>{derived.artist.length} 位</span>
+          </button>
+        </div>
+      </div>
+
+      {!searchActive && (
+        <div className={styles.groupActionBar}>
+          <div>
+            <div className={styles.activeGroupTitle}>{activeGroup.label}</div>
+            <div className={styles.activeGroupMeta}>{activeGroup.tracks.length} 首</div>
+          </div>
+          <button
+            type="button"
+            className={styles.playGroupButton}
+            onClick={() => playFromGlobalPlayer({groupId: activeGroup.id, trackIndex: 0})}>
+            ▶ 播放这个歌单
+          </button>
+        </div>
+      )}
 
       <div className={styles.trackList}>
-        {activeGroup.tracks.map((track, index) => (
-          <button
-            key={`${track.url}-${index}`}
-            type="button"
-            className={styles.trackItem}
-            onClick={() => playFromGlobalPlayer({groupId: activeGroup.id, trackIndex: index})}>
-            <span className={styles.trackIndex}>{String(index + 1).padStart(2, '0')}</span>
-            <span className={styles.trackName}>{track.name}</span>
-            <span className={styles.trackArtist}>{track.artist}</span>
-          </button>
-        ))}
+        {tracksToShow.length === 0 ? (
+          <div className={styles.emptyState}>
+            没有匹配「{searchQuery}」的歌曲
+            <div className={styles.emptyStateHint}>试试切换歌手或维度筛选</div>
+          </div>
+        ) : (
+          groupedTracks.map((group, groupIndex) => (
+            <div key={group.artist ?? 'all'} className={styles.trackGroup}>
+              {group.artist && (
+                <div className={styles.trackGroupHeader}>
+                  <span className={styles.trackGroupName}>{group.artist}</span>
+                  <span className={styles.trackGroupCount}>{group.tracks.length} 首</span>
+                </div>
+              )}
+              {group.tracks.map((track) => {
+                const flatIndex = flatTracks.indexOf(track);
+                const trackKey = `${activeGroupId}:${activeGroup?.tracks.indexOf(track) ?? -1}`;
+                const isCurrent = currentTrackKey === trackKey;
+                const isHighlighted = flatIndex === highlightedIndex;
+                return (
+                  <button
+                    key={`${track.url}-${groupIndex}`}
+                    type="button"
+                    className={clsx(
+                      styles.trackItem,
+                      isHighlighted && styles.trackItemHighlighted,
+                      isCurrent && styles.trackItemCurrent,
+                    )}
+                    onClick={() => playTrack(track)}
+                    onMouseEnter={() => setHighlightedIndex(flatIndex)}>
+                    <span className={styles.trackPlayHint} aria-hidden="true">
+                      {isCurrent ? '♫' : '▶'}
+                    </span>
+                    <span className={styles.trackName}>{track.name}</span>
+                    <span className={styles.trackArtist}>{track.artist}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))
+        )}
+      </div>
+
+      {singerDrawerOpen && (
+        <SingerDrawer
+          artists={derived.artist}
+          activeGroupId={activeGroupId}
+          onClose={() => setSingerDrawerOpen(false)}
+          onSelect={(id) => {
+            setActiveGroupId(id);
+            setSearchQuery('');
+            setSingerDrawerOpen(false);
+          }}
+        />
+      )}
+
+      <div className={styles.keyboardHints} aria-hidden="true">
+        <span><kbd>/</kbd> 搜索</span>
+        <span><kbd>J</kbd> <kbd>K</kbd> 上下</span>
+        <span><kbd>Enter</kbd> 播放</span>
+        <span><kbd>Esc</kbd> 关闭</span>
       </div>
     </section>
+  );
+}
+
+function SingerDrawer({
+  artists,
+  activeGroupId,
+  onClose,
+  onSelect,
+}: {
+  artists: PlaylistGroup[];
+  activeGroupId: string;
+  onClose: () => void;
+  onSelect: (id: string) => void;
+}) {
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  const visible = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return artists;
+    return artists.filter((a) => a.label.toLowerCase().includes(q));
+  }, [artists, filter]);
+
+  return (
+    <div
+      className={styles.drawerOverlay}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="全部歌手">
+      <div className={styles.drawer} onClick={(event) => event.stopPropagation()}>
+        <div className={styles.drawerHeader}>
+          <div className={styles.drawerTitle}>全部歌手</div>
+          <button
+            type="button"
+            className={styles.drawerCloseButton}
+            onClick={onClose}
+            aria-label="关闭">
+            ×
+          </button>
+        </div>
+        <input
+          type="search"
+          className={styles.drawerSearch}
+          placeholder="筛选歌手"
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+          aria-label="筛选歌手"
+        />
+        <div className={styles.drawerList}>
+          {visible.length === 0 ? (
+            <div className={styles.drawerEmpty}>没有匹配的歌手</div>
+          ) : (
+            visible.map((artist) => (
+              <button
+                key={artist.id}
+                type="button"
+                className={clsx(
+                  styles.drawerItem,
+                  activeGroupId === artist.id && styles.drawerItemActive,
+                )}
+                onClick={() => onSelect(artist.id)}>
+                <span className={styles.drawerItemName}>{artist.label}</span>
+                <span className={styles.drawerItemCount}>{artist.tracks.length}</span>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

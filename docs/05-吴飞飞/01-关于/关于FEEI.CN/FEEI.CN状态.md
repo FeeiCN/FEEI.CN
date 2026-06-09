@@ -8,7 +8,7 @@ icon: simple-checked-icon
 
 | 任务 | 运行状态 | 运行时间 | 输出页面 |
 | --- | --- | --- | --- |
-| 健康数据 | 成功 | 2026-06-09 12:31:13 | [健康数据](/health-data) |
+| 健康数据 | 成功 | 2026-06-09 13:31:06 | [健康数据](/health-data) |
 | 港股打新数据 | 成功 | 2026-06-09 06:10:05 | [港股打新数据](/hk-ipo-data) |
 | 财务自由数据 | 成功 | 2026-06-09 06:00:01 | [个股账号资产数据](/stock-data)<br />[指数账号资产数据](/index-data) |
 
@@ -38,7 +38,7 @@ icon: simple-checked-icon
         "title": "健康数据"
       }
     ],
-    "run_time": "2026-06-09 12:31:13",
+    "run_time": "2026-06-09 13:31:06",
     "script": "scripts/sync_health_data.mjs",
     "status": "成功"
   },

@@ -1,6 +1,8 @@
 import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import docMtimePlugin from './plugins/docMtimePlugin';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
@@ -177,6 +179,8 @@ const config: Config = {
         docs: {
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
+          remarkPlugins: [remarkMath],
+          rehypePlugins: [rehypeKatex],
           async sidebarItemsGenerator(args) {
             const items = await args.defaultSidebarItemsGenerator(args);
             return attachDocFrontMatterToSidebar(items, args.docs);

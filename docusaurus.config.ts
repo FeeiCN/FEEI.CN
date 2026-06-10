@@ -263,11 +263,14 @@ const config: Config = {
           ],
         },
         {
-          type: 'docSidebar',
-          sidebarId: 'aboutSidebar',
+          type: 'dropdown',
           position: 'left',
           label: '吴飞飞',
           icon: 'at-sign-icon',
+          items: [
+            {type: 'docSidebar', sidebarId: 'aboutMeSidebar', label: '关于', icon: 'user'},
+            {type: 'docSidebar', sidebarId: 'lifeProgressSidebar', label: '年度总结', icon: 'gauge-icon'},
+          ],
         },
         {
           type: 'custom-music-player',

@@ -174,6 +174,14 @@ function GlobalMusicPlayerClient() {
     }));
   };
 
+  const collapseLyricOverlay = (player: ExtendedAPlayer | null) => {
+    if (!player) return;
+    try {
+      player.lrc?.hide?.();
+    } catch {}
+    player.template?.lrcButton?.classList.add('aplayer-icon-lrc-inactivity');
+  };
+
   const playRequestedTrack = (group: PlaylistGroup | undefined, trackIndex?: number) => {
     const player = playerRef.current as ExtendedAPlayer | null;
     if (!group || !player) return false;
@@ -181,6 +189,10 @@ function GlobalMusicPlayerClient() {
       typeof trackIndex === 'number' && trackIndex >= 0 && trackIndex < group.tracks.length ? trackIndex : 0;
     try {
       player.list?.switch?.(safeTrackIndex);
+      // Playlist-initiated plays from the music page should never open the
+      // fullscreen lyric overlay automatically — keep it collapsed until the
+      // user explicitly toggles the lyric button.
+      collapseLyricOverlay(player);
       player.play?.();
       void player.audio?.play?.().catch(() => {});
       persistGroupPlayback(group, player);

@@ -37,6 +37,59 @@ icon: route
 
 **BERT 和 GPT 的差异，本质上是 Transformer 架构路线的分化。** BERT 代表 **Encoder-only**，更适合理解、分类、抽取；GPT 代表 **Decoder-only**，更适合生成、对话、续写和代码；[T5](https://arxiv.org/abs/1910.10683)、[BART](https://arxiv.org/abs/1910.13461) 代表 **Encoder-Decoder**，更适合翻译、摘要和文本到文本任务。后来的通用 LLM 主流走向 Decoder-only，不是因为它在所有语言任务上天然最优，而是因为自回归生成最适合作为统一任务接口——同一个模型既能生成，也能通过生成方式完成理解和分类。
 
+## Transformer 内部机制
+
+上面讨论的是 Transformer 在大模型竞争中的位置。理解一个 token 是怎么被处理的，需要往下掉一层看内部组件的协作。
+
+### Q/K/V 与 Self-Attention
+
+**Self-Attention 是 Transformer 看到"上下文"的核心机制。** 语言是高度上下文相关的——同一个词在不同语境里意思可能完全不同。Self-Attention 让每个 token 看一遍序列里的所有其他 token，决定哪些 token 对自己最重要。
+
+**具体做法**：每个 token 的输入向量会通过三个不同的线性变换，生成三个向量——**Query (Q)**、**Key (K)**、**Value (V)**。Q 是"我要找什么"，K 是"我提供什么"，V 是"我能贡献什么信息"。然后用 Q 和所有 K 做点积，**点积大小代表相关性**。为了让点积不会随维度增大而爆炸，需要除以 √d（缩放因子），再做 softmax 得到注意力权重。最后用这些权重对所有 V 加权求和，得到这个 token 的 Self-Attention 输出。
+
+**这意味着每个 token 在每一层都重新看一遍全序列——不是只看自己的词，而是把整个上下文都纳入决策。** 这是和 RNN/CNN 最大的架构差异，也是 Transformer 能并行训练、容易 scale 的根本原因。
+
+### Multi-Head Attention
+
+**一个注意力头只能学到一种关系，Multi-Head 让多个头并行关注不同类型的关系。** 一组 Q/K/V 只能捕捉一种相关性模式；多组独立的 Q/K/V 并行运行，每组可能学到了"句法关系""语义关系""长距离指代"等不同模式，最后把多组输出拼接起来再做线性变换。
+
+这相当于在每一层让模型并行检查多种"上下文相关性"——一个头可能学会"动词关注主语"，另一个头可能学会"代词关注指代对象"，还有一个头可能关注"否定词改变整个句意"。**没有 Multi-Head，模型就只有一个视角看世界；有了它，模型可以在同一时间从多个角度理解上下文。**
+
+### Causal Self-Attention
+
+**Decoder-only 架构（如 GPT）需要 Causal Mask——让 token 只能看过去，不能看未来。** 生成任务的特点是：模型在第 t 步生成 token 时，不应该看到第 t+1、t+2...步的真实答案（否则就是"作弊"）。
+
+实现方式是**在注意力矩阵上加一个上三角掩码**——把当前位置之后的注意力权重设为 0（或 -∞ 再 softmax）。这样每个 token 的 Self-Attention 输出只依赖于它自己和它之前的 token，符合生成任务的因果性。**这是 BERT 和 GPT 在架构上最关键的差异**：BERT 可以双向看（适合理解），GPT 只能单向看（适合生成）。
+
+### Feedforward Network（FFN）
+
+**Self-Attention 让 token 之间交换信息，FFN 让每个 token 独立"消化"这些信息。** 每个 Transformer block 里 Self-Attention 之后都有一个 FFN，结构是"升维 → 激活 → 降维"——通常是 4 倍维度的中间层（如 hidden_size=4096 时中间层 16384），用 ReLU/GELU 等激活函数，再降回去。
+
+**FFN 提供了"思考空间"**——Self-Attention 完成了"看上下文"，FFN 让每个 token 在这个上下文里做非线性计算。如果把 Transformer 块比作会议，Self-Attention 是"各代表发言"，FFN 是"每个代表回去整理笔记"。
+
+### Residual Connection + Layer Normalization
+
+**深层网络训练的核心难题是梯度消失——加 Residual Connection 让梯度有"近路"可以回流。** 每个 Transformer block 的输出是 Self-Attention 输入 + Self-Attention 输出 + FFN 输入 + FFN 输出，所有中间结果都直接加到最终输出里。这意味着即使中间某一层学得很差，原始信息也能直接传到下一层。
+
+**Layer Normalization 把每一层的激活值归一化到稳定分布，让训练更稳定。** 没有它，深层网络的激活值会指数级放大或缩小，训练崩溃。每个 Transformer block 通常在 Self-Attention 前和 FFN 前各做一次 LayerNorm（Pre-LN 变体）。
+
+### Next Token 选择
+
+**Self-Attention + FFN 最终输出每个 token 在词表上的概率分布，下一个 token 从中采样。** 假设词表大小是 100k，模型会输出 100k 维的 logits，softmax 后是概率分布。
+
+**采样策略决定生成风格**：
+- **Greedy**：直接选概率最高的 token。结果最确定，但也最容易重复、乏味
+- **Temperature**：缩放 logits 后再 softmax。Temperature > 1 让分布更均匀（更有创意但可能跑偏），< 1 让分布更尖锐（更确定但更保守）
+- **Top-k / Top-p (nucleus) sampling**：只从概率最高的 k 个 token 中采样（top-k），或从累积概率达到 p 的最小集合中采样（top-p）。这些截断让模型避免选到概率极低的奇怪 token
+
+**采样策略的选择比"选哪个模型"更能影响生成质量**。同一模型用 top-p=0.9 vs top-p=0.5 会产生截然不同的输出。
+
+### 训练动力学
+
+整个训练循环可以概括为：**前向 → 损失 → 反向 → 更新**。前向是输入 token 经过层层 Transformer block 得到输出概率分布；损失是预测分布和真实下一个 token 之间的交叉熵；反向是把损失梯度回传到每一层的参数；更新是用梯度（经过 Adam 等优化器）调整参数。**整个过程需要数万亿 token、数千张 GPU 跑数周**。
+
+**Transformer 内部组件是高度耦合的**——Q/K/V 来自同一组输入，Multi-Head 共享输入但独立计算，FFN 复用 Self-Attention 的输出，Residual 让信息跳过任何一层。理解这个耦合关系比理解"每个组件做什么"更重要——它解释了为什么 Transformer 的设计选择（Pre-LN、SwiGLU、RoPE 等）需要**整体替换**而不是局部调整。
+
 ## GPT 路线为什么成为大模型主线
 
 **GPT 路线的强大之处，是把"预测下一个 token"变成了通用任务接口。** GPT 的训练目标很简单：给定前文，预测下一个 token。这个目标看起来简单，却非常强大，因为互联网上大量知识、推理、代码、对话、故事、说明文档，都可以被统一成"根据上下文预测下一个 token"。当模型足够大、数据足够多、训练足够充分时，很多能力会从这个简单目标中涌现出来。语言模型的统一性，正是来自大量任务都可以被转化为上下文续写。

@@ -10,7 +10,7 @@ icon: simple-checked-icon
 | --- | --- | --- | --- |
 | 健康数据 | 成功 | 2026-06-11 05:30:13 | [健康数据](/health-data) |
 | 港股打新数据 | 成功 | 2026-06-10 06:10:05 | [港股打新数据](/hk-ipo-data) |
-| 财务自由数据 | 成功 | 2026-06-10 06:00:02 | [个股账号资产数据](/stock-data)<br />[指数账号资产数据](/index-data) |
+| 财务自由数据 | 成功 | 2026-06-11 06:00:02 | [个股账号资产数据](/stock-data)<br />[指数账号资产数据](/index-data) |
 | 阅读日历 | 成功 | 2026-06-11 05:40:05 | [阅读数据](/read-data) |
 
 <!-- status-page-data
@@ -27,7 +27,7 @@ icon: simple-checked-icon
         "title": "指数账号资产数据"
       }
     ],
-    "run_time": "2026-06-10 06:00:02",
+    "run_time": "2026-06-11 06:00:02",
     "script": "scripts/account_assets.py",
     "status": "成功"
   },

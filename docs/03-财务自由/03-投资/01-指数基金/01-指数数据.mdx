@@ -64,15 +64,16 @@ export const portfolioData = {
     {date: '06-08', totalAssets: 884693.7, securitiesValue: 795267.8, dailyChange: 92.5},
     {date: '06-09', totalAssets: 894287.1, securitiesValue: 804885.1, dailyChange: 9593.4},
     {date: '06-10', totalAssets: 878936.0, securitiesValue: 789613.4, dailyChange: -15351.0},
+    {date: '06-11', totalAssets: 861735.9, securitiesValue: 772385.4, dailyChange: -17200.1},
   ],
   holdings: [
-    {name: '标普500ETF', value: 20979.6, currency: 'USD', pnl: 2517.3, pnlPct: 13.6},
-    {name: '资讯科技ETF', value: 67426.0, currency: 'USD', pnl: 10217.6, pnlPct: 17.9},
-    {name: '特斯拉', value: 4355.8, currency: 'USD', pnl: 168.4, pnlPct: 4.0},
-    {name: '纳指100ETF', value: 13984.9, currency: 'USD', pnl: -5438.1, pnlPct: -28.0},
-    {name: 'ARK ARKQ', value: 5268.5, currency: 'USD', pnl: 258.2, pnlPct: 5.2},
-    {name: '阿里巴巴-W', value: 234.2, currency: 'HKD', pnl: -256.4, pnlPct: -52.3},
-    {name: '奥克斯电气', value: 34850.0, currency: 'HKD', pnl: -24378.0, pnlPct: -41.2},
+    {name: '标普500ETF', value: 20647.1, currency: 'USD', pnl: 2184.8, pnlPct: 11.8},
+    {name: '资讯科技ETF', value: 65885.4, currency: 'USD', pnl: 8677.1, pnlPct: 15.2},
+    {name: '特斯拉', value: 4187.5, currency: 'USD', pnl: 0.1, pnlPct: 0},
+    {name: '纳指100ETF', value: 13704.8, currency: 'USD', pnl: -5718.2, pnlPct: -29.4},
+    {name: 'ARK ARKQ', value: 5084.0, currency: 'USD', pnl: 73.7, pnlPct: 1.5},
+    {name: '阿里巴巴-W', value: 227.0, currency: 'HKD', pnl: -263.6, pnlPct: -53.7},
+    {name: '奥克斯电气', value: 34306.0, currency: 'HKD', pnl: -24922.0, pnlPct: -42.1},
   ],
 };
 
@@ -82,6 +83,7 @@ export const portfolioData = {
 
 | 日期 | 账户 | 币种 | 总资产 | 昨日差额 | 现金 | 证券市值 | 最大购买力 | 可提现金 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-11 | FeeiCN2 | CNH | 861735.9 | <span style={{color: "green"}}>-17200.1</span> | 68709.6 | 772385.4 | 967043.0 | 68642.9 |
 | 2026-06-10 | FeeiCN2 | CNH | 878936.0 | <span style={{color: "green"}}>-15351.0</span> | 68684.0 | 789613.4 | 984603.4 | 68617.3 |
 | 2026-06-09 | FeeiCN2 | CNH | 894287.1 | <span style={{color: "red"}}>+9593.4</span> | 68740.9 | 804885.1 | 999841.9 | 61789.6 |
 | 2026-06-08 | FeeiCN2 | CNH | 884693.7 | <span style={{color: "red"}}>+92.5</span> | 68823.8 | 795267.8 | 986628.0 | 61862.3 |
@@ -140,12 +142,12 @@ export const portfolioData = {
 
 | 账户 | 名称 | 市场 | 盈亏 / 盈亏比例 | 今日盈亏 | 市值 / 持仓数量 | 市价 / 摊薄成本 | 今日买入金额 / 数量 | 今日交易金额 | 今日卖出金额 / 数量 | 未实现盈亏 | 已实现盈亏 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| FeeiCN2 | 标普500ETF-Vanguard | US | <span style={{color: "red"}}>2517.3</span><br /><span style={{color: "red"}}>13.6%</span> | <span style={{color: "green"}}>-90.5 USD</span> | 20979.6<br />31.0 | 676.8<br />595.6 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 2387.2 | 130.1 |
-| FeeiCN2 | 资讯科技ETF-Vanguard | US | <span style={{color: "red"}}>10217.6</span><br /><span style={{color: "red"}}>17.9%</span> | <span style={{color: "green"}}>-1517.0 USD</span> | 67426.0<br />588.0 | 114.7<br />97.3 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 10120.1 | 97.5 |
-| FeeiCN2 | 特斯拉 | US | <span style={{color: "red"}}>168.4</span><br /><span style={{color: "red"}}>4.0%</span> | <span style={{color: "green"}}>-142.7 USD</span> | 4355.8<br />11.0 | 396.0<br />380.7 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 168.4 | 0.0 |
-| FeeiCN2 | 纳指100ETF-Invesco QQQ Trust | US | <span style={{color: "green"}}>-5438.1</span><br /><span style={{color: "green"}}>-28.0%</span> | <span style={{color: "green"}}>-193.2 USD</span> | 13984.9<br />19.8 | 706.3<br />981.0 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 2776.7 | -8214.7 |
-| FeeiCN2 | ARK Autonomous Technology & Robotics ETF | US | <span style={{color: "red"}}>258.2</span><br /><span style={{color: "red"}}>5.2%</span> | <span style={{color: "green"}}>-130.4 USD</span> | 5268.5<br />41.0 | 128.5<br />122.2 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 258.2 | 0.0 |
-| FeeiCN2 | 阿里巴巴-W | HK | <span style={{color: "green"}}>-256.4</span><br /><span style={{color: "green"}}>-52.3%</span> | +0.0 HKD | 234.2<br />2.0 | 117.1<br />245.3 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -256.4 | 0.0 |
-| FeeiCN2 | 奥克斯电气 | HK | <span style={{color: "green"}}>-24378.0</span><br /><span style={{color: "green"}}>-41.2%</span> | +0.0 HKD | 34850.0<br />3400.0 | 10.2<br />17.4 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -24378.0 | 0.0 |
-| **FeeiCN2** | **汇总 (USD)** |  | <span style={{color: "red"}}>7723.5 USD</span><br /><span style={{color: "red"}}>10.2%</span> | <span style={{color: "green"}}>-2073.9 USD</span> | 112014.7 USD<br />690.8 |  | 0.0 USD<br />0.0 | 0.0 USD | 0.0 USD<br />0.0 | 15710.7 USD | -7987.1 USD |
-| **FeeiCN2** | **汇总 (HKD)** |  | <span style={{color: "green"}}>-24634.4 HKD</span><br /><span style={{color: "green"}}>-41.2%</span> | +0.0 HKD | 35084.2 HKD<br />3402.0 |  | 0.0 HKD<br />0.0 | 0.0 HKD | 0.0 HKD<br />0.0 | -24634.4 HKD | 0.0 HKD |
+| FeeiCN2 | 标普500ETF-Vanguard | US | <span style={{color: "red"}}>2184.8</span><br /><span style={{color: "red"}}>11.8%</span> | <span style={{color: "green"}}>-361.6 USD</span> | 20647.1<br />31.0 | 666.0<br />595.6 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 2054.7 | 130.1 |
+| FeeiCN2 | 资讯科技ETF-Vanguard | US | <span style={{color: "red"}}>8677.1</span><br /><span style={{color: "red"}}>15.2%</span> | <span style={{color: "green"}}>-1728.7 USD</span> | 65885.4<br />588.0 | 112.0<br />97.3 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 8579.6 | 97.5 |
+| FeeiCN2 | 特斯拉 | US | <span style={{color: "red"}}>0.1</span><br />0.0% | <span style={{color: "green"}}>-176.0 USD</span> | 4187.5<br />11.0 | 380.7<br />380.7 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 0.1 | 0.0 |
+| FeeiCN2 | 纳指100ETF-Invesco QQQ Trust | US | <span style={{color: "green"}}>-5718.2</span><br /><span style={{color: "green"}}>-29.4%</span> | <span style={{color: "green"}}>-310.3 USD</span> | 13704.8<br />19.8 | 692.2<br />981.0 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 2496.5 | -8214.7 |
+| FeeiCN2 | ARK Autonomous Technology & Robotics ETF | US | <span style={{color: "red"}}>73.7</span><br /><span style={{color: "red"}}>1.5%</span> | <span style={{color: "green"}}>-199.7 USD</span> | 5084.0<br />41.0 | 124.0<br />122.2 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 73.7 | 0.0 |
+| FeeiCN2 | 阿里巴巴-W | HK | <span style={{color: "green"}}>-263.6</span><br /><span style={{color: "green"}}>-53.7%</span> | +0.0 HKD | 227.0<br />2.0 | 113.5<br />245.3 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -263.6 | 0.0 |
+| FeeiCN2 | 奥克斯电气 | HK | <span style={{color: "green"}}>-24922.0</span><br /><span style={{color: "green"}}>-42.1%</span> | +0.0 HKD | 34306.0<br />3400.0 | 10.1<br />17.4 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -24922.0 | 0.0 |
+| **FeeiCN2** | **汇总 (USD)** |  | <span style={{color: "red"}}>5217.5 USD</span><br /><span style={{color: "red"}}>7.7%</span> | <span style={{color: "green"}}>-2776.3 USD</span> | 109508.7 USD<br />690.8 |  | 0.0 USD<br />0.0 | 0.0 USD | 0.0 USD<br />0.0 | 13204.7 USD | -7987.1 USD |
+| **FeeiCN2** | **汇总 (HKD)** |  | <span style={{color: "green"}}>-25185.6 HKD</span><br /><span style={{color: "green"}}>-42.2%</span> | +0.0 HKD | 34533.0 HKD<br />3402.0 |  | 0.0 HKD<br />0.0 | 0.0 HKD | 0.0 HKD<br />0.0 | -25185.6 HKD | 0.0 HKD |

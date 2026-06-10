@@ -7,6 +7,7 @@ import {
   buildMusicFilterGroups,
   buildSceneGroups,
   playlistGroupFromManifest,
+  primaryArtistOf,
   siteMusicGroups,
 } from '@site/src/components/GlobalMusicPlayer/playlist';
 import type {
@@ -22,15 +23,6 @@ type MusicPlayerPlayDetail = {
   groupId: string;
   trackIndex?: number;
 };
-
-const primaryArtist = (artist: string | undefined): string => {
-  if (!artist) return '未知';
-  return artist.split('&')[0].trim() || '未知';
-};
-
-function isArtistGroup(group: PlaylistGroup): boolean {
-  return group.id.startsWith('artist-');
-}
 
 function MusicLibraryClient() {
   const [baseGroups, setBaseGroups] = useState<PlaylistGroup[]>(siteMusicGroups);
@@ -74,14 +66,19 @@ function MusicLibraryClient() {
     [baseGroups],
   );
 
+  const activeArtistGroup = useMemo(
+    () => derived.artist.find((g) => g.id === activeGroupId),
+    [derived.artist, activeGroupId],
+  );
+
   const activeGroup = useMemo(() => {
     return (
       derived.fixed.find((g) => g.id === activeGroupId) ??
       derived.filter.find((g) => g.id === activeGroupId) ??
-      derived.artist.find((g) => g.id === activeGroupId) ??
+      activeArtistGroup ??
       derived.fixed[0]
     );
-  }, [derived, activeGroupId]);
+  }, [derived, activeGroupId, activeArtistGroup]);
 
   const searchActive = searchQuery.trim().length > 0;
   const searchedTracks = useMemo(() => {
@@ -101,7 +98,7 @@ function MusicLibraryClient() {
   const groupedTracks = useMemo(() => {
     const buckets = new Map<string, PlaylistGroup['tracks']>();
     tracksToShow.forEach((track) => {
-      const artist = primaryArtist(track.artist);
+      const artist = primaryArtistOf(track.artist);
       if (!buckets.has(artist)) buckets.set(artist, []);
       buckets.get(artist)!.push(track);
     });
@@ -127,6 +124,19 @@ function MusicLibraryClient() {
     window.dispatchEvent(new CustomEvent<MusicPlayerPlayDetail>(musicPlayerPlayEventName, {detail}));
     setCurrentTrackKey(`${detail.groupId}:${detail.trackIndex ?? 0}`);
   }, []);
+
+  const selectGroup = useCallback((groupId: string) => {
+    setActiveGroupId(groupId);
+    setSearchQuery('');
+  }, []);
+
+  const playGroup = useCallback(
+    (groupId: string) => {
+      selectGroup(groupId);
+      playFromGlobalPlayer({groupId, trackIndex: 0});
+    },
+    [playFromGlobalPlayer, selectGroup],
+  );
 
   const playTrack = useCallback(
     (track: PlaylistGroup['tracks'][number]) => {
@@ -201,125 +211,116 @@ function MusicLibraryClient() {
 
   if (!activeGroup && !searchActive) return null;
 
-  const isAmbient = activeGroupId === 'ambient';
+  const isArtistGrouping = Boolean(activeArtistGroup);
+
+  const renderTab = (group: PlaylistGroup) => {
+    const isActive = group.id === activeGroupId;
+    return (
+      <div
+        key={group.id}
+        className={clsx(styles.groupTab, isActive && styles.groupTabActive)}>
+        <button
+          type="button"
+          className={styles.groupTabSelect}
+          onClick={() => selectGroup(group.id)}>
+          <span className={styles.groupTabLabel}>{group.label}</span>
+          <span className={styles.groupCount}>{group.tracks.length}</span>
+        </button>
+        <button
+          type="button"
+          className={styles.groupTabPlay}
+          aria-label={`播放 ${group.label}`}
+          title={`播放 ${group.label}`}
+          onClick={() => playGroup(group.id)}>
+          ▶
+        </button>
+      </div>
+    );
+  };
 
   return (
     <section className={styles.library}>
-      <div className={clsx(styles.header, isAmbient && styles.headerAmbient)}>
-        <div className={styles.headerIcon} aria-hidden="true">
-          ♪
+      <div className={styles.stats}>
+        {searchActive
+          ? `搜索"${searchQuery}"匹配 ${tracksToShow.length} 首`
+          : `共 ${totalTracks} 首 · ${derived.artist.length} 位歌手`}
+      </div>
+
+      <div className={styles.toolbar}>
+        <div className={styles.searchRow}>
+          <span className={styles.searchIcon} aria-hidden="true">
+            ⌕
+          </span>
+          <input
+            ref={searchInputRef}
+            type="search"
+            className={styles.searchInput}
+            placeholder="搜索曲名或歌手"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            aria-label="搜索音乐"
+          />
+          {searchQuery ? (
+            <button
+              type="button"
+              className={styles.searchClearButton}
+              onClick={() => {
+                setSearchQuery('');
+                searchInputRef.current?.focus();
+              }}
+              aria-label="清空搜索">
+              清空
+            </button>
+          ) : (
+            <kbd className={styles.searchKbd} aria-hidden="true">
+              /
+            </kbd>
+          )}
         </div>
-        <div className={styles.headerText}>
-          <div className={styles.headerTitle}>我的音乐库</div>
-          <div className={styles.headerSubtitle}>
-            {searchActive
-              ? `搜索"${searchQuery}"匹配 ${tracksToShow.length} 首`
-              : `共 ${totalTracks} 首 · ${derived.artist.length} 位歌手`}
+
+        <div className={styles.filtersBar}>
+          <div className={styles.filtersGroup}>
+            <span className={styles.filtersLabel}>歌单</span>
+            {derived.fixed.map(renderTab)}
           </div>
-        </div>
-      </div>
 
-      <div className={styles.searchRow}>
-        <span className={styles.searchIcon} aria-hidden="true">
-          ⌕
-        </span>
-        <input
-          ref={searchInputRef}
-          type="search"
-          className={styles.searchInput}
-          placeholder="搜索曲名或歌手（按 / 聚焦）"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          aria-label="搜索音乐"
-        />
-        {searchQuery && (
-          <button
-            type="button"
-            className={styles.searchClearButton}
-            onClick={() => {
-              setSearchQuery('');
-              searchInputRef.current?.focus();
-            }}
-            aria-label="清空搜索">
-            清空
-          </button>
-        )}
-      </div>
+          {derived.filter.length > 0 && (
+            <div className={styles.filtersGroup}>
+              <span className={styles.filtersLabel}>筛选</span>
+              {derived.filter.map(renderTab)}
+            </div>
+          )}
 
-      <div className={styles.tabSections}>
-        <div className={styles.tabSection}>
-          <div className={styles.tabSectionLabel}>我的歌单</div>
-          <div className={styles.groupTabs}>
-            {derived.fixed.map((group) => (
+          {derived.artist.length > 0 && (
+            <div className={styles.filtersGroup}>
+              <span className={styles.filtersLabel}>歌手</span>
               <button
-                key={group.id}
                 type="button"
                 className={clsx(
                   styles.groupTab,
-                  group.id === activeGroupId && styles.groupTabActive,
-                  group.id === 'ambient' && styles.groupTabAmbient,
+                  styles.singerTrigger,
+                  isArtistGrouping && styles.groupTabActive,
                 )}
-                onClick={() => {
-                  setActiveGroupId(group.id);
-                  setSearchQuery('');
-                }}>
-                <span>{group.label}</span>
-                <span className={styles.groupCount}>{group.tracks.length}</span>
+                onClick={() => setSingerDrawerOpen(true)}
+                aria-haspopup="dialog">
+                <span className={styles.groupTabSelect}>
+                  <span className={styles.groupTabLabel}>
+                    {activeArtistGroup ? activeArtistGroup.label : '全部'}
+                  </span>
+                  <span className={styles.groupCount}>
+                    {isArtistGrouping
+                      ? `${activeArtistGroup!.tracks.length} 首`
+                      : `${derived.artist.length} 位`}
+                  </span>
+                </span>
+                <span className={styles.singerTriggerCaret} aria-hidden="true">
+                  ▾
+                </span>
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.tabSection}>
-          <div className={styles.tabSectionLabel}>维度筛选</div>
-          <div className={styles.groupTabs}>
-            {derived.filter.map((group) => (
-              <button
-                key={group.id}
-                type="button"
-                className={clsx(styles.groupTab, group.id === activeGroupId && styles.groupTabActive)}
-                onClick={() => {
-                  setActiveGroupId(group.id);
-                  setSearchQuery('');
-                }}>
-                <span>{group.label}</span>
-                <span className={styles.groupCount}>{group.tracks.length}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.tabSection}>
-          <div className={styles.tabSectionLabel}>全部歌手</div>
-          <button
-            type="button"
-            className={clsx(
-              styles.singerDrawerTrigger,
-              derived.artist.some((g) => g.id === activeGroupId) && styles.singerDrawerTriggerActive,
-            )}
-            onClick={() => setSingerDrawerOpen(true)}>
-            <span>
-              {derived.artist.find((g) => g.id === activeGroupId)?.label ?? '选择歌手'}
-            </span>
-            <span className={styles.groupCount}>{derived.artist.length} 位</span>
-          </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {!searchActive && (
-        <div className={styles.groupActionBar}>
-          <div>
-            <div className={styles.activeGroupTitle}>{activeGroup.label}</div>
-            <div className={styles.activeGroupMeta}>{activeGroup.tracks.length} 首</div>
-          </div>
-          <button
-            type="button"
-            className={styles.playGroupButton}
-            onClick={() => playFromGlobalPlayer({groupId: activeGroup.id, trackIndex: 0})}>
-            ▶ 播放这个歌单
-          </button>
-        </div>
-      )}
 
       <div className={styles.trackList}>
         {tracksToShow.length === 0 ? (
@@ -341,12 +342,14 @@ function MusicLibraryClient() {
                 const trackKey = `${activeGroupId}:${activeGroup?.tracks.indexOf(track) ?? -1}`;
                 const isCurrent = currentTrackKey === trackKey;
                 const isHighlighted = flatIndex === highlightedIndex;
+                const hideArtist = Boolean(group.artist) || isArtistGrouping;
                 return (
                   <button
                     key={`${track.url}-${groupIndex}`}
                     type="button"
                     className={clsx(
                       styles.trackItem,
+                      hideArtist && styles.trackItemNoArtist,
                       isHighlighted && styles.trackItemHighlighted,
                       isCurrent && styles.trackItemCurrent,
                     )}
@@ -356,7 +359,9 @@ function MusicLibraryClient() {
                       {isCurrent ? '♫' : '▶'}
                     </span>
                     <span className={styles.trackName}>{track.name}</span>
-                    <span className={styles.trackArtist}>{track.artist}</span>
+                    {!hideArtist && (
+                      <span className={styles.trackArtist}>{track.artist}</span>
+                    )}
                   </button>
                 );
               })}
@@ -371,8 +376,11 @@ function MusicLibraryClient() {
           activeGroupId={activeGroupId}
           onClose={() => setSingerDrawerOpen(false)}
           onSelect={(id) => {
-            setActiveGroupId(id);
-            setSearchQuery('');
+            selectGroup(id);
+            setSingerDrawerOpen(false);
+          }}
+          onPlay={(id) => {
+            playGroup(id);
             setSingerDrawerOpen(false);
           }}
         />
@@ -393,11 +401,13 @@ function SingerDrawer({
   activeGroupId,
   onClose,
   onSelect,
+  onPlay,
 }: {
   artists: PlaylistGroup[];
   activeGroupId: string;
   onClose: () => void;
   onSelect: (id: string) => void;
+  onPlay: (id: string) => void;
 }) {
   const [filter, setFilter] = useState('');
 
@@ -446,17 +456,28 @@ function SingerDrawer({
             <div className={styles.drawerEmpty}>没有匹配的歌手</div>
           ) : (
             visible.map((artist) => (
-              <button
+              <div
                 key={artist.id}
-                type="button"
                 className={clsx(
                   styles.drawerItem,
                   activeGroupId === artist.id && styles.drawerItemActive,
-                )}
-                onClick={() => onSelect(artist.id)}>
-                <span className={styles.drawerItemName}>{artist.label}</span>
-                <span className={styles.drawerItemCount}>{artist.tracks.length}</span>
-              </button>
+                )}>
+                <button
+                  type="button"
+                  className={styles.drawerItemSelect}
+                  onClick={() => onSelect(artist.id)}>
+                  <span className={styles.drawerItemName}>{artist.label}</span>
+                  <span className={styles.drawerItemCount}>{artist.tracks.length}</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.drawerItemPlay}
+                  aria-label={`播放 ${artist.label}`}
+                  title={`播放 ${artist.label}`}
+                  onClick={() => onPlay(artist.id)}>
+                  ▶
+                </button>
+              </div>
             ))
           )}
         </div>

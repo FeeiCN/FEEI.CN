@@ -138,7 +138,7 @@ const favoriteTracks: Audio[] = [
   localTrack('孤单心事', '蓝又时', '孤单心事-蓝又时.mp3'),
   localTrack('铁血丹心', '罗文，甄妮', '铁血丹心.mp3'),
   localTrack('红色石头', '李智楠', '红色石头.mp3'),
-  localTrack('我欲乘风', '安全着落', '我欲乘风-安全着陆.mp3'),
+  localTrack('我欲乘风', '安全着陆', '我欲乘风-安全着陆.mp3'),
   localTrack('回到未来', 'Double Zhuo & Tizzy T', '回到未来-DoubleZhuoTizzyT.mp3'),
   localTrack('电台情歌', '莫文蔚', '电台情歌.mp3'),
   localTrack('清明雨上', '许嵩', '清明雨上-许嵩.mp3'),
@@ -337,7 +337,7 @@ const jayTracks: Audio[] = [
 
 const ambientTracks: Audio[] = [
   // 白噪音
-  localTrack('雨声', '未知', '雨声.mp3'),
+  localTrack('雨声', '环境音', '雨声.mp3'),
   localTrack('水流声1', 'BBC', 'bbc_water-gen_07031094.mp3'),
   localTrack('烟花声2', 'BBC', 'bbc_bonfires-_07019119.mp3'),
   localTrack('烟花声1', 'BBC', 'bbc_fireworks-_07019117.mp3'),
@@ -427,11 +427,21 @@ export const buildLanguageGroups = (groups: PlaylistGroup[]): PlaylistGroup[] =>
     .filter((group) => group.tracks.length > 0);
 };
 
+// Collapse collaborator suffixes (`&`, `,`, `，`) to the lead artist so
+// "周杰伦 & 李玟" and "周杰伦" share a single drawer entry.
+export const primaryArtistOf = (artist: string | undefined): string => {
+  if (!artist) return '未知歌手';
+  const lead = artist
+    .split(/[&,，]/)[0]
+    .trim();
+  return lead || '未知歌手';
+};
+
 export const buildArtistGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => {
   const allTracks = groups.flatMap((group) => group.tracks);
   const buckets = new Map<string, Audio[]>();
   allTracks.forEach((track) => {
-    const artist = (track.artist ?? '').trim() || '未知歌手';
+    const artist = primaryArtistOf(track.artist);
     if (!buckets.has(artist)) buckets.set(artist, []);
     buckets.get(artist)!.push(track);
   });

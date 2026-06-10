@@ -1,50 +1,23 @@
 .library {
   display: grid;
-  gap: 1.25rem;
+  gap: 0.85rem;
   margin: 1.5rem 0;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--ifm-background-surface-color), var(--ifm-color-emphasis-100));
-  padding: 1.25rem 1.5rem;
-}
-
-.headerAmbient {
-  background: linear-gradient(135deg, var(--ifm-background-surface-color), var(--ifm-color-emphasis-200));
-}
-
-.headerIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  background: var(--ifm-color-primary);
-  color: var(--ifm-color-primary-contrast-foreground);
-  font-size: 1.4rem;
-  line-height: 1;
-}
-
-.headerText {
-  display: grid;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.headerTitle {
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.headerSubtitle {
+.stats {
   color: var(--ifm-color-emphasis-700);
   font-size: 0.85rem;
+  padding: 0 0.1rem;
+}
+
+.toolbar {
+  position: sticky;
+  top: var(--ifm-navbar-height, 60px);
+  z-index: 5;
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  background: var(--ifm-background-color);
 }
 
 .searchRow {
@@ -73,7 +46,7 @@
   background: transparent;
   color: var(--ifm-font-color-base);
   font-size: 0.95rem;
-  padding: 0.6rem 0;
+  padding: 0.55rem 0;
 }
 
 .searchInput:focus {
@@ -90,7 +63,7 @@
   color: var(--ifm-color-emphasis-700);
   cursor: pointer;
   font-size: 0.85rem;
-  padding: 0.4rem 0.6rem;
+  padding: 0.35rem 0.55rem;
   white-space: nowrap;
 }
 
@@ -98,134 +71,175 @@
   color: var(--ifm-color-primary);
 }
 
-.tabSections {
-  display: grid;
-  gap: 0.85rem;
-}
-
-.tabSection {
-  display: grid;
-  gap: 0.45rem;
-}
-
-.tabSectionLabel {
-  color: var(--ifm-color-emphasis-700);
+.searchKbd {
+  display: inline-block;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+  background: var(--ifm-background-color);
+  color: var(--ifm-color-emphasis-600);
+  font-family: inherit;
   font-size: 0.75rem;
+  padding: 0.05rem 0.4rem;
+  margin-right: 0.15rem;
+}
+
+.filtersBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.filtersGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.filtersLabel {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  flex-shrink: 0;
+  padding: 0 0.1rem 0 0;
+  white-space: nowrap;
 }
 
-.groupTabs {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.25rem;
-  scrollbar-width: thin;
-}
-
-.groupTabs::-webkit-scrollbar {
-  height: 4px;
-}
-
-.groupTabs::-webkit-scrollbar-thumb {
-  background: var(--ifm-color-emphasis-300);
-  border-radius: 2px;
+.filtersDivider {
+  display: none;
 }
 
 .groupTab {
   display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
+  align-items: stretch;
   border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: 6px;
   background: var(--ifm-background-surface-color);
   color: var(--ifm-font-color-base);
-  cursor: pointer;
-  font-size: 0.88rem;
-  line-height: 1;
-  padding: 0.55rem 0.7rem;
+  overflow: hidden;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
 }
 
-.groupTab:hover,
+.groupTab:focus,
+.groupTabSelect:focus,
+.groupTabPlay:focus,
+.searchClearButton:focus,
+.drawerItemSelect:focus,
+.drawerItemPlay:focus,
+.drawerCloseButton:focus {
+  outline: none;
+}
+
+.groupTab:focus-visible,
+.singerTrigger:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+.groupTabSelect:focus-visible,
+.groupTabPlay:focus-visible,
+.drawerItemSelect:focus-visible,
+.drawerItemPlay:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: -2px;
+}
+
+.groupTab:hover {
+  border-color: var(--ifm-color-primary);
+  color: var(--ifm-color-primary);
+}
+
 .groupTabActive {
   border-color: var(--ifm-color-primary);
   color: var(--ifm-color-primary);
 }
 
-.groupTabAmbient {
-  border-style: dashed;
-}
-
-.groupCount {
-  color: var(--ifm-color-emphasis-600);
-  font-size: 0.78rem;
-}
-
-.singerDrawerTrigger {
+.groupTabSelect {
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  width: 100%;
-  max-width: 16rem;
-  border: 1px solid var(--ifm-color-emphasis-300);
-  border-radius: 6px;
-  background: var(--ifm-background-surface-color);
-  color: var(--ifm-font-color-base);
+  gap: 0.35rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
   cursor: pointer;
-  font-size: 0.9rem;
-  padding: 0.55rem 0.7rem;
-  text-align: left;
+  font-size: 0.86rem;
+  line-height: 1;
+  padding: 0.45rem 0.65rem;
 }
 
-.singerDrawerTrigger:hover,
-.singerDrawerTriggerActive {
-  border-color: var(--ifm-color-primary);
-  color: var(--ifm-color-primary);
+.groupTabLabel {
+  font-weight: 500;
 }
 
-.groupActionBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 8px;
-  background: var(--ifm-background-surface-color);
-  padding: 0.9rem 1rem;
-}
-
-.activeGroupTitle {
-  font-size: 1rem;
+.groupTabActive .groupTabLabel {
   font-weight: 600;
 }
 
-.activeGroupMeta {
-  color: var(--ifm-color-emphasis-700);
-  font-size: 0.85rem;
-  margin-top: 0.2rem;
+.groupCount {
+  color: var(--ifm-color-emphasis-500);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
 }
 
-.playGroupButton {
+.groupTabActive .groupCount {
+  color: var(--ifm-color-primary);
+  opacity: 0.65;
+}
+
+.groupTabPlay {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  border: 1px solid var(--ifm-color-primary);
-  border-radius: 6px;
-  background: var(--ifm-color-primary);
-  color: var(--ifm-color-primary-contrast-foreground);
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--ifm-color-emphasis-500);
   cursor: pointer;
-  font-size: 0.9rem;
-  padding: 0.55rem 0.9rem;
-  white-space: nowrap;
+  font-size: 0.65rem;
+  padding: 0 0.55rem;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-width 0.18s ease, opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-.playGroupButton:hover {
-  filter: brightness(0.95);
+.groupTab:hover .groupTabPlay,
+.groupTabActive .groupTabPlay {
+  max-width: 2rem;
+  opacity: 1;
+}
+
+.groupTabPlay:hover {
+  background: var(--ifm-color-primary);
+  color: var(--ifm-background-surface-color);
+}
+
+.groupTabActive .groupTabPlay {
+  background: var(--ifm-color-primary);
+  color: var(--ifm-background-surface-color);
+}
+
+.singerTrigger {
+  cursor: pointer;
+}
+
+.singerTrigger .groupTabLabel {
+  font-weight: 500;
+}
+
+.singerTriggerCaret {
+  color: var(--ifm-color-emphasis-500);
+  font-size: 0.65rem;
+  padding: 0.45rem 0.55rem 0.45rem 0;
+}
+
+.groupTabActive .singerTriggerCaret {
+  color: var(--ifm-color-primary);
 }
 
 .trackList {
@@ -249,10 +263,10 @@
   justify-content: space-between;
   background: var(--ifm-color-emphasis-100);
   color: var(--ifm-color-emphasis-800);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
   letter-spacing: 0.03em;
-  padding: 0.5rem 0.85rem;
+  padding: 0.35rem 0.85rem;
 }
 
 .trackGroupName {
@@ -276,10 +290,14 @@
   background: var(--ifm-background-color);
   color: var(--ifm-font-color-base);
   cursor: pointer;
-  min-height: 2.6rem;
-  padding: 0.5rem 0.85rem;
+  min-height: 2.2rem;
+  padding: 0.4rem 0.85rem;
   text-align: left;
   width: 100%;
+}
+
+.trackItemNoArtist {
+  grid-template-columns: 1.5rem minmax(0, 1fr);
 }
 
 .trackItem:last-child {
@@ -354,7 +372,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 28rem;
+  max-width: 40rem;
   max-height: 80vh;
   border: 1px solid var(--ifm-color-emphasis-200);
   border-radius: 12px;
@@ -405,7 +423,7 @@
 
 .drawerList {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
   gap: 0.4rem;
   padding: 0.85rem;
   overflow-y: auto;
@@ -413,17 +431,12 @@
 
 .drawerItem {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  align-items: stretch;
   border: 1px solid var(--ifm-color-emphasis-200);
   border-radius: 6px;
   background: var(--ifm-background-surface-color);
   color: var(--ifm-font-color-base);
-  cursor: pointer;
-  font-size: 0.88rem;
-  padding: 0.5rem 0.7rem;
-  text-align: left;
+  overflow: hidden;
 }
 
 .drawerItem:hover {
@@ -436,6 +449,22 @@
   color: var(--ifm-color-primary);
 }
 
+.drawerItemSelect {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.88rem;
+  padding: 0.5rem 0.7rem;
+  text-align: left;
+  min-width: 0;
+}
+
 .drawerItemName {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -446,6 +475,41 @@
   color: var(--ifm-color-emphasis-600);
   font-size: 0.78rem;
   flex-shrink: 0;
+}
+
+.drawerItemActive .drawerItemCount {
+  color: var(--ifm-color-primary);
+  opacity: 0.75;
+}
+
+.drawerItemPlay {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-left: 1px solid var(--ifm-color-emphasis-200);
+  background: transparent;
+  color: var(--ifm-color-emphasis-600);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0 0.7rem;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.drawerItem:hover .drawerItemPlay,
+.drawerItemActive .drawerItemPlay {
+  opacity: 1;
+}
+
+.drawerItemPlay:hover {
+  color: var(--ifm-color-primary);
+  background: rgba(32, 93, 59, 0.1);
+}
+
+.drawerItemActive .drawerItemPlay {
+  border-left-color: var(--ifm-color-primary);
+  color: var(--ifm-color-primary);
 }
 
 .drawerEmpty {
@@ -477,24 +541,30 @@
 }
 
 @media (max-width: 640px) {
+  .toolbar {
+    top: 0;
+  }
+
   .trackItem {
+    grid-template-columns: 1.25rem minmax(0, 1fr) minmax(5rem, 0.4fr);
+  }
+
+  .trackItemNoArtist {
     grid-template-columns: 1.25rem minmax(0, 1fr);
   }
 
   .trackArtist {
-    grid-column: 2;
-  }
-
-  .groupActionBar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .header {
-    padding: 1rem;
+    grid-column: 3;
   }
 
   .drawerList {
     grid-template-columns: 1fr;
+  }
+
+  /* On touch, no hover — keep play affordance visible at reduced size */
+  .groupTabPlay,
+  .drawerItemPlay {
+    max-width: 2rem;
+    opacity: 0.6;
   }
 }

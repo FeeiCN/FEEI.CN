@@ -5,7 +5,7 @@ import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
 import {transform, computeDashboard, getDateRange, filterByTimeRange, type HealthData, type DashCard} from './transform';
 import {
-  YEARS, RANGE_DAYS, RANGE_LABELS, EMPTY,
+  YEARS, RANGE_DAYS, RANGE_LABELS, EMPTY, MONTH_MAP,
   YearCtx, type RecentRange, type TimeScope, type YearCtxType,
 } from './index-shared';
 import styles from './styles.module.css';
@@ -1546,62 +1546,103 @@ type OptionFn = (isDark: boolean, D: HealthData, isMobile?: boolean) => object;
 
 // ── year / data context ───────────────────────────────────────────────────────
 
-function mergeData(all: Record<number, HealthData>): HealthData {
-  const years = Object.keys(all).map(Number).sort();
-  if (years.length === 0) return EMPTY;
-  if (years.length === 1) return all[years[0]];
+function mergeData(all: Record<string, HealthData>): HealthData {
+  const keys = Object.keys(all).sort();
+  if (keys.length === 0) return EMPTY;
+  if (keys.length === 1) return all[keys[0]];
   const result = {} as Record<string, unknown[]>;
   for (const key of Object.keys(EMPTY) as Array<keyof HealthData>) {
-    const merged = years.flatMap((y) => all[y][key] as [string, ...number[]][]);
+    if (key === 'lastUpdated') continue;
+    const merged = keys.flatMap((k) => all[k][key] as [string, ...number[]][]);
     result[key] = merged.sort((a, b) => (a[0] as string).localeCompare(b[0] as string));
   }
-  return result as unknown as HealthData;
+  // Pick the latest exportedAt across all loaded months
+  const latestDate = keys.map((k) => all[k].lastUpdated).filter(Boolean).sort().at(-1) ?? null;
+  return {...result, lastUpdated: latestDate} as HealthData;
+}
+
+function mergeDataByYear(all: Record<string, HealthData>, year: number, months: number[]): HealthData {
+  const keys = months.map((m) => `${year}-${String(m).padStart(2, '0')}`).filter((k) => all[k]);
+  if (keys.length === 0) return EMPTY;
+  if (keys.length === 1) return all[keys[0]];
+  const result = {} as Record<string, unknown[]>;
+  for (const key of Object.keys(EMPTY) as Array<keyof HealthData>) {
+    if (key === 'lastUpdated') continue;
+    const merged = keys.flatMap((k) => all[k][key] as [string, ...number[]][]);
+    result[key] = merged.sort((a, b) => (a[0] as string).localeCompare(b[0] as string));
+  }
+  const latestDate = keys.map((k) => all[k].lastUpdated).filter(Boolean).sort().at(-1) ?? null;
+  return {...result, lastUpdated: latestDate} as HealthData;
 }
 
 function HealthProviderInner({children}: {children: React.ReactNode}) {
   const [scope, setScope] = useState<TimeScope>({mode: 'recent', range: '7d'});
-  const [allData, setAllData] = useState<Record<number, HealthData>>({});
+  const [allData, setAllData] = useState<Record<string, HealthData>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     const currentYear = new Date().getFullYear();
-    const targetYears = scope.mode === 'year' ? [scope.year] : scope.mode === 'all' ? YEARS : [currentYear];
-    const missingYears = targetYears.filter((y) => !allData[y]);
+    const currentMonth = new Date().getMonth() + 1;
 
-    if (missingYears.length === 0) {
+    // Determine which month keys (YYYY-MM) to load
+    let targetMonthKeys: string[] = [];
+    if (scope.mode === 'year') {
+      targetMonthKeys = MONTH_MAP[scope.year]?.map((m) => `${scope.year}-${String(m).padStart(2, '0')}`) ?? [];
+    } else if (scope.mode === 'all') {
+      targetMonthKeys = Object.entries(MONTH_MAP)
+        .flatMap(([y, months]) => months.map((m) => `${y}-${String(m).padStart(2, '0')}`))
+        .sort();
+    } else {
+      targetMonthKeys = [`${currentYear}-${String(currentMonth).padStart(2, '0')}`];
+    }
+
+    const missingKeys = targetMonthKeys.filter((k) => !allData[k]);
+    if (missingKeys.length === 0) {
       setLoading(false);
       return () => { cancelled = true; };
     }
 
     setLoading(true);
     let done = 0;
-    missingYears.forEach((y) => {
-      fetch(`/health/health_data_${y}.json`, {
-        cache: y === currentYear ? 'no-store' : 'default',
+    missingKeys.forEach((key) => {
+      const isCurrent = key === `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+      const [y, m] = key.split('-');
+      fetch(`/health/${y}/${m}.json`, {
+        cache: isCurrent ? 'no-store' : 'default',
       })
         .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
         .then((raw) => {
           if (cancelled) return;
           const d = transform(raw);
-          setAllData((prev) => ({...prev, [y]: d}));
+          setAllData((prev) => ({...prev, [key]: d}));
         })
         .catch(() => {})
         .finally(() => {
-          if (!cancelled && ++done === missingYears.length) setLoading(false);
+          if (!cancelled && ++done === missingKeys.length) setLoading(false);
         });
     });
     return () => { cancelled = true; };
   }, [scope]);
 
   const data = useMemo(() => {
-    if (scope.mode === 'year') return allData[scope.year] ?? EMPTY;
-    const merged = mergeData(allData);
-    if (scope.mode === 'all') return merged;
+    if (scope.mode === 'year') {
+      const months = MONTH_MAP[scope.year] ?? [];
+      const merged = mergeDataByYear(allData, scope.year, months);
+      return merged;
+    }
+    if (scope.mode === 'all') {
+      const merged = mergeData(allData);
+      return merged;
+    }
+    // recent: merge current year data and filter
+    const currentYear = new Date().getFullYear();
+    const currentMonths = MONTH_MAP[currentYear] ?? [];
+    const merged = mergeDataByYear(allData, currentYear, currentMonths);
     return filterByTimeRange(merged, RANGE_DAYS[scope.range]);
   }, [scope, allData]);
 
-  return <YearCtx.Provider value={{scope, setScope, data, loading, availableYears: YEARS}}>{children}</YearCtx.Provider>;
+  return <YearCtx.Provider value={{scope, setScope, data, loading, availableMonths: MONTH_MAP}}>{children}</YearCtx.Provider>;
 }
 
 // ── inner components ──────────────────────────────────────────────────────────
@@ -1746,8 +1787,8 @@ function DashCardComp({card}: {card: DashCard}) {
 }
 
 function FloatingBar() {
-  const {scope, setScope, availableYears, loading} = useContext(YearCtx);
-  const years = [...availableYears].sort((a, b) => b - a);
+  const {scope, setScope, availableMonths, loading} = useContext(YearCtx);
+  const years = [...new Set(Object.keys(availableMonths).map(Number))].sort((a, b) => b - a);
 
   return ReactDOM.createPortal(
     <div className={styles.floatingStack}>
@@ -1792,17 +1833,31 @@ function FloatingBar() {
 }
 
 function StatsInner() {
-  const {scope, data, availableYears, loading} = useContext(YearCtx);
+  const {scope, data, availableMonths, loading} = useContext(YearCtx);
   const dashboard = computeDashboard(data);
   const dateRange = getDateRange(data);
-  const noData = !loading && scope.mode === 'year' && !availableYears.includes(scope.year);
+  const noData = !loading && scope.mode === 'year' && !(scope.year in availableMonths);
+
+  const lastUpdated = data.lastUpdated
+    ? (() => {
+        const d = new Date(data.lastUpdated!);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      })()
+    : null;
+
   return (
     <>
       <FloatingBar />
-      {!noData && dateRange && <div className={styles.dateRange}>{dateRange}</div>}
+      {!noData && dateRange && (
+        <div className={styles.dateRange}>
+          {dateRange}
+          {lastUpdated && <span className={styles.lastUpdated}>（{lastUpdated} 更新）</span>}
+        </div>
+      )}
       {!noData && dashboard.length > 0 && (
         <div className={styles.dashGrid}>
-          {dashboard.map((card) => <DashCardComp key={card.label} card={card} />)}
+          {dashboard.map((card) =><DashCardComp key={card.label} card={card} />)}
         </div>
       )}
     </>
@@ -1810,7 +1865,7 @@ function StatsInner() {
 }
 
 function SectionInner({name}: {name: string}) {
-  const {data, loading, scope, availableYears} = useContext(YearCtx);
+  const {data, loading, scope, availableMonths} = useContext(YearCtx);
   const {colorMode} = useColorMode();
   const isDark = colorMode === 'dark';
   const theme = isDark ? 'dark' : undefined;
@@ -1822,7 +1877,7 @@ function SectionInner({name}: {name: string}) {
     return () => window.removeEventListener('resize', handle);
   }, []);
 
-  const noData = !loading && scope.mode === 'year' && !availableYears.includes(scope.year);
+  const noData = !loading && scope.mode === 'year' && !(scope.year in availableMonths);
   if (noData) return <div className={styles.noData}>暂无 {scope.year} 年数据</div>;
   if (loading && data.steps.length === 0) return <div className={styles.loading}>加载中…</div>;
 

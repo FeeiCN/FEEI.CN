@@ -3,6 +3,21 @@ import type {HealthData} from './transform';
 
 export const YEARS = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
 
+// Record<year, months[]>
+export const MONTH_MAP: Record<number, number[]> = {
+  2016: [8],
+  2017: [6, 7, 8, 9, 10, 11, 12],
+  2018: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  2019: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  2020: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  2021: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  2022: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  2023: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  2024: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  2025: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  2026: [1, 2, 3, 4, 5, 6],
+};
+
 export const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
 export const RANGE_LABELS: Record<string, string> = {'7d': '7天', '30d': '30天', '90d': '90天', '1y': '近1年'};
 
@@ -21,6 +36,7 @@ export const EMPTY: HealthData = {
   audio_env:[], audio_hp:[], daylight:[], mindful:[], handwash:[],
   physical_effort:[], cardio_recovery:[], vo2:[], workouts:[],
   nah_daily:[], bns_daily:[], med_monthly:[], state_of_mind:[], hr_notifications:[],
+  lastUpdated: null,
 };
 
 export type YearCtxType = {
@@ -28,9 +44,9 @@ export type YearCtxType = {
   setScope: (scope: TimeScope) => void;
   data: HealthData;
   loading: boolean;
-  availableYears: number[];
+  availableMonths: Record<number, number[]>;
 };
 
 export const YearCtx = createContext<YearCtxType>({
-  scope: {mode: 'recent', range: '7d'}, setScope: () => {}, data: EMPTY, loading: true, availableYears: YEARS,
+  scope: {mode: 'recent', range: '7d'}, setScope: () => {}, data: EMPTY, loading: true, availableMonths: {},
 });

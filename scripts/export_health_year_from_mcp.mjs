@@ -85,18 +85,37 @@ async function main() {
   }
 
   const targetYear = args.year ?? getCurrentYear();
+  const targetMonth = args.month;
   assertYear(targetYear);
 
-  const startDate = `${targetYear}-01-01`;
-  const endDate = args.endDate ?? defaultEndDate(targetYear);
-  assertDate(endDate);
+  const targetRoot = path.resolve(expandHome(args.target ?? defaultTargetRoot));
 
-  if (!endDate.startsWith(`${targetYear}-`)) {
+  let startDate, endDate, targetFile;
+
+  if (targetMonth) {
+    assertMonth(targetMonth);
+    const [y, m] = targetMonth.split('-');
+    startDate = `${y}-${m}-01`;
+    endDate = args.endDate ?? defaultEndDateMonth(y, m);
+    targetFile = path.join(targetRoot, y, `${m}.json`);
+  } else if (args.year) {
+    // Explicit --year: export full year
+    startDate = `${targetYear}-01-01`;
+    endDate = args.endDate ?? defaultEndDate(targetYear);
+    targetFile = path.join(targetRoot, `health_data_${targetYear}.json`);
+  } else {
+    // Default: export current month
+    const currentMonthStr = getCurrentMonth();
+    const [y, m] = currentMonthStr.split('-');
+    startDate = `${y}-${m}-01`;
+    endDate = args.endDate ?? defaultEndDateMonth(y, m);
+    targetFile = path.join(targetRoot, y, `${m}.json`);
+  }
+
+  if (!endDate.startsWith(targetYear)) {
     throw new Error(`End date must be in ${targetYear}: ${endDate}`);
   }
 
-  const targetRoot = path.resolve(expandHome(args.target ?? defaultTargetRoot));
-  const targetFile = path.join(targetRoot, `health_data_${targetYear}.json`);
   const mcpServerPath = path.resolve(expandHome(args.mcpServer ?? process.env.HEALTH_AUTO_EXPORT_MCP_SERVER ?? defaultMcpServerPath));
   const timeoutMs = Number(args.timeout ?? process.env.HEALTH_AUTO_EXPORT_MCP_TIMEOUT ?? 86400000);
 
@@ -109,6 +128,9 @@ async function main() {
   }
 
   fs.mkdirSync(targetRoot, {recursive: true});
+  if (targetMonth || !args.year) {
+    fs.mkdirSync(path.join(targetRoot, targetYear), {recursive: true});
+  }
 
   const start = `${startDate} 00:00:00 ${timeZoneOffset}`;
   const end = `${endDate} 23:59:59 ${timeZoneOffset}`;
@@ -418,7 +440,7 @@ function parseArgs(argv) {
       continue;
     }
 
-    if (arg === '--year' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
+    if (arg === '--year' || arg === '--month' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
       const value = argv[index + 1];
 
       if (!value || value.startsWith('--')) {
@@ -440,8 +462,9 @@ function printHelp() {
   console.log(`Usage: npm run export-health-year -- [options]
 
 Options:
-  --year <year>              Export year. Defaults to current year in Asia/Shanghai.
-  --end-date <YYYY-MM-DD>    End date. Defaults to today for current year, otherwise Dec 31.
+  --year <year>              Export full year (defaults to current month if omitted).
+  --month <YYYY-MM>          Export specific month.
+  --end-date <YYYY-MM-DD>    End date. Defaults to today for current year/month.
   --target <dir>             Output directory. Defaults to static/health.
   --mcp-server <file>        health_auto_export MCP server path.
   --timeout <ms>             Per-tool timeout. Defaults to 86400000.
@@ -464,13 +487,34 @@ function assertDate(value) {
   }
 }
 
+function assertMonth(value) {
+  if (!/^\d{4}-\d{2}$/.test(value)) {
+    throw new Error(`Invalid month: ${value}`);
+  }
+}
+
 function getCurrentYear() {
   return formatLocalDate(new Date()).slice(0, 4);
+}
+
+function getCurrentMonth() {
+  return formatLocalDate(new Date()).slice(0, 7);
 }
 
 function defaultEndDate(year) {
   const today = formatLocalDate(new Date());
   return today.startsWith(`${year}-`) ? today : `${year}-12-31`;
+}
+
+function defaultEndDateMonth(year, month) {
+  const today = formatLocalDate(new Date());
+  const monthPrefix = `${year}-${month}`;
+  if (today.startsWith(monthPrefix)) {
+    return today;
+  }
+  // Last day of month
+  const lastDay = new Date(Number(year), Number(month), 0);
+  return formatLocalDate(lastDay);
 }
 
 function formatLocalDate(date) {

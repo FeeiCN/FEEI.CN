@@ -14,28 +14,43 @@ const commandEnv = {
   ].join(':'),
 };
 const args = parseArgs(process.argv.slice(2));
-const exportArgs = args.date ? ['--', '--year', targetYear(), '--end-date', args.date] : [];
 const commitMessage = args.message ?? `[auto] 更新健康数据 ${formatLocalDateTime(new Date())}`;
 const remote = args.remote ?? 'origin';
 const branch = args.branch ?? currentBranch();
-const healthFile = path.join('static', 'health', `health_data_${targetYear()}.json`);
+const healthDir = path.join('static', 'health');
 const statusFile = path.join('docs', '05-吴飞飞', '01-关于', '关于FEEI.CN', 'FEEI.CN状态.md');
 
 ensureNoStagedChanges();
-
 run('git', ['pull', '--rebase', '--autostash']);
-run('npm', ['run', 'export-health-year', ...exportArgs]);
 
-const healthFilePath = path.join(repoRoot, healthFile);
-if (!fs.existsSync(healthFilePath)) {
-  throw new Error(`Health data file does not exist: ${healthFilePath}`);
+// Determine which month(s) to export
+const monthsToExport = args.date ? [args.date.slice(0, 7)] : [currentMonth()];
+const changedFiles = [];
+
+for (const month of monthsToExport) {
+  const [y, m] = month.split('-');
+  const targetFile = path.join(y, `${m}.json`);
+
+  run('npm', ['run', 'export-health-year', '--', '--month', month]);
+
+  if (!fs.existsSync(path.join(repoRoot, healthDir, targetFile))) {
+    throw new Error(`Health data file does not exist: ${targetFile}`);
+  }
+
+  if (!isPathClean(path.join(healthDir, targetFile))) {
+    changedFiles.push(path.join(healthDir, targetFile));
+  }
 }
 
 updateStatusPage();
 
-const changedFiles = [healthFile, statusFile].filter((file) => !isPathClean(file));
+// Always update status file if changed
+if (!isPathClean(statusFile)) {
+  changedFiles.push(statusFile);
+}
+
 if (changedFiles.length === 0) {
-  console.log(`No changes to commit: ${healthFile}, ${statusFile}`);
+  console.log('No changes to commit.');
   process.exit(0);
 }
 
@@ -120,8 +135,8 @@ function currentBranch() {
   return branchName;
 }
 
-function targetYear() {
-  return (args.date ?? formatLocalDate(new Date())).slice(0, 4);
+function currentMonth() {
+  return formatLocalDate(new Date()).slice(0, 7);
 }
 
 function formatLocalDate(date) {

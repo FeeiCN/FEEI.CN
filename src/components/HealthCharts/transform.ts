@@ -71,6 +71,7 @@ export type HealthData = {
   med_monthly: [string, number, number][];
   state_of_mind: [string, number, string, string, string][];
   hr_notifications: [string, number][];
+  lastUpdated: string | null;
 };
 
 function r(v: number, d = 2) {
@@ -213,6 +214,7 @@ export function transform(raw: any): HealthData {
     hr_notifications: alerts
       .filter((n) => typeof n.start === 'string' && n.start.length >= 10)
       .map((n) => [n.start.slice(0, 10), n.threshold]),
+    lastUpdated: raw.exportedAt ?? null,
   };
 }
 
@@ -380,5 +382,6 @@ export function filterByTimeRange(D: HealthData, days: number): HealthData {
     med_monthly: D.med_monthly.filter(([d]) => d >= cs),
     state_of_mind: D.state_of_mind.filter(([d]) => d >= cs),
     hr_notifications: D.hr_notifications.filter(([d]) => d >= cs),
+    lastUpdated: D.lastUpdated,
   };
 }

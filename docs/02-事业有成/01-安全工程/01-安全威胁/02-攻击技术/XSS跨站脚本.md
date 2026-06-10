@@ -326,3 +326,29 @@ ed2k://|file|'+payload+'|size/
 - **HTTPOnly Cookie**：关键会话 Cookie 设置 `HttpOnly`，即使 XSS 触发也无法通过 `document.cookie` 读取
 - **富文本白名单**：使用 DOMPurify 等库对富文本内容做白名单过滤，拒绝所有事件属性和 `javascript:` 协议
 - **DOM XSS 审计**：代码审计阶段重点检查 `innerHTML`、`document.write`、`eval`、`setTimeout(string)` 等危险 sink 的数据来源
+- **浏览器原生 sanitizer**：使用 DOMPurify 等基于浏览器 DOM 解析器的库做白名单清洗，避免正则表达式与实际渲染环境解析规则不一致导致的绕过
+
+## 蠕虫式 XSS：从点到面的自动传播
+
+普通存储型 XSS 影响是"被攻击者打开恶意页面"或"管理员审核时被打"。更危险的是**蠕虫式 XSS**——一个用户的 XSS 触发后，**自动以受害者身份向所有联系人传播**，形成指数级扩散。
+
+**邮件集成是蠕虫式 XSS 的天然通道。** 当系统自动处理用户提交的邮件 HTML（不是用户主动"打开邮件"），任何用户收到的邮件都会**自动**进入处理流程：
+
+- 邮件正文中的 XSS payload 在收件人**打开邮件那一刻**自动触发
+- payload 可以读取收件人账户的关键数据（云存储、Cookie、API Token）
+- 受害者的账户又会**自动**向所有联系人发送同样的"邮件"，形成闭环传播
+- 一个 XSS 在几天内可传染数百万用户
+
+**邮件集成系统的 XSS 防护必须按"高危 + 自动触发"双重标准设计**：所有用户提交的 HTML 在进入邮件系统前必须经过与公开页面同等级别的清洗——不止标签白名单，还包括属性白名单、URL scheme 白名单、CSS 上下文白名单。
+
+## 解析器不一致导致的 XSS 绕过
+
+HTML 内容通常被多个解析器处理：HTML 解析器、属性解析器、CSS 解析器、链接解析器、邮件渲染器。**每个解析器对同一字符串的理解可能不同。** Sanitizer 只验证一个解析器的理解，而攻击者利用的是另一个解析器的理解。
+
+典型例子：
+
+- **Style Tag 混淆**：HTML sanitizer 拒绝 `<script>` 但允许 `<style>`；浏览器 CSS 解析器在 `<style>` 块内支持某些危险语法，绕过 sanitizer
+- **Hyperlink 混淆**：HTML sanitizer 拒绝 `javascript:` URL；但 URL 解析器对 `data:text/html`、编码、换行符等的处理与 sanitizer 不一致
+- **HTML 实体与 CSS 实体**：HTML 解析器解 `&lt;`、CSS 解析器不解；攻击者用 entity 编码绕过 HTML sanitizer，但 CSS 解析器照样执行
+
+**核心防御原则**：使用浏览器自带的解析器进行 sanitization（DOMPurify 等基于 DOM 解析的库），而不是正则表达式——这能保证 sanitizer 与实际渲染环境使用同一套解析规则，从根本上消除"解析器不一致"这个攻击面。

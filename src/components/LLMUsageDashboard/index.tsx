@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import styles from './styles.module.css';
@@ -29,6 +29,8 @@ type SummaryPayload = {
 
 const VENDORS: {key: string; label: string; path: string}[] = [
   {key: 'minimax', label: 'MiniMax', path: '/llm-usage/minimax/usage_summary.json'},
+  {key: 'anthropic', label: 'Anthropic (Claude)', path: '/llm-usage/anthropic/usage_summary.json'},
+  {key: 'openai', label: 'OpenAI (GPT)', path: '/llm-usage/openai/usage_summary.json'},
 ];
 
 const RANK_COLORS: string[] = [
@@ -39,7 +41,16 @@ const RANK_COLORS: string[] = [
   'var(--llm-l5)',
 ];
 
-const STRIP_LAYERS = 5;
+const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
+const MONTH_LABELS = [
+  '1月', '2月', '3月', '4月', '5月', '6月',
+  '7月', '8月', '9月', '10月', '11月', '12月',
+];
+
+function getDayRow(date: Date): number {
+  const g = date.getDay();
+  return g === 0 ? 6 : g - 1;
+}
 
 function parseTokenString(value: string | undefined | null): number {
   if (!value) return 0;
@@ -135,51 +146,184 @@ function Heatmap({
   fetchedAt: string | null;
   emptyHint: string;
 }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [hover, setHover] = useState<{
+    x: number;
+    y: number;
+    date: string;
+    tokens: number;
+    pct: number;
+  } | null>(null);
+
   const endDate = useMemo(() => {
     if (!fetchedAt) return new Date();
     const d = new Date(fetchedAt.replace(/-/g, '/'));
     return Number.isNaN(d.getTime()) ? new Date() : d;
   }, [fetchedAt]);
 
-  const {cells, total, max} = useMemo(() => {
+  const {grid, monthLabels, total, max, numWeeks} = useMemo(() => {
     let totalAcc = 0;
     let maxVal = 0;
     const nonZero = daily.filter((v) => v && v > 0) as number[];
     if (nonZero.length) {
       maxVal = Math.max(...nonZero);
     }
-    const list: {date: string; tokens: number; level: 0 | 1 | 2 | 3 | 4 | 5}[] = [];
-    daily.forEach((tokens, idx) => {
-      const daysAgo = daily.length - 1 - idx;
-      const date = formatDate(dateMinusDays(endDate, daysAgo));
-      const v = Number(tokens || 0);
-      totalAcc += v;
-      list.push({date, tokens: v, level: stripLevelForTokens(v, maxVal)});
+    if (daily.length === 0) {
+      return {grid: [] as ({date: string; tokens: number; level: 0 | 1 | 2 | 3 | 4 | 5} | null)[][], monthLabels: [] as {col: number; label: string}[], total: 0, max: 0, numWeeks: 0};
+    }
+    const startDate = dateMinusDays(endDate, daily.length - 1);
+    const startRow = getDayRow(startDate);
+    const totalCells = startRow + daily.length;
+    const weeks = Math.ceil(totalCells / 7);
+
+    const columns: ({date: string; tokens: number; level: 0 | 1 | 2 | 3 | 4 | 5} | null)[][] = [];
+    for (let c = 0; c < weeks; c++) {
+      const col: ({date: string; tokens: number; level: 0 | 1 | 2 | 3 | 4 | 5} | null)[] = [];
+      for (let r = 0; r < 7; r++) {
+        const dayIndex = c * 7 + r - startRow;
+        if (dayIndex < 0 || dayIndex >= daily.length) {
+          col.push(null);
+          continue;
+        }
+        const tokens = Number(daily[dayIndex] || 0);
+        totalAcc += tokens;
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + dayIndex);
+        col.push({date: formatDate(d), tokens, level: stripLevelForTokens(tokens, maxVal)});
+      }
+      columns.push(col);
+    }
+
+    const labels: {col: number; label: string}[] = [];
+    let prevMonth = -1;
+    columns.forEach((col, colIdx) => {
+      const first = col.find((c) => c !== null);
+      if (!first) return;
+      const m = Number(first.date.slice(5, 7));
+      if (m !== prevMonth) {
+        labels.push({col: colIdx, label: MONTH_LABELS[m - 1]});
+        prevMonth = m;
+      }
     });
-    return {cells: list, total: totalAcc, max: maxVal};
+
+    return {grid: columns, monthLabels: labels, total: totalAcc, max: maxVal, numWeeks: weeks};
   }, [daily, endDate]);
 
-  if (cells.length === 0) {
+  const handleEnter = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>, cell: {date: string; tokens: number}) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const pct = max > 0 ? (cell.tokens / max) * 100 : 0;
+      setHover({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+        date: cell.date,
+        tokens: cell.tokens,
+        pct,
+      });
+    },
+    [max],
+  );
+
+  const handleMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setHover((prev) =>
+      prev
+        ? {...prev, x: event.clientX - rect.left, y: event.clientY - rect.top}
+        : prev,
+    );
+  }, []);
+
+  const handleLeave = useCallback(() => setHover(null), []);
+
+  if (grid.length === 0) {
     return <div className={styles.error}>{emptyHint}</div>;
   }
 
   return (
-    <div className={styles.heatmap}>
-      <div className={styles.heatmapGrid}>
-        {cells.map((c) => (
-          <div
-            key={c.date}
-            role="img"
-            aria-label={`${c.date} ${formatTokenCount(c.tokens)} token`}
-            className={styles.cell}
-            style={{backgroundColor: vendorColor(c.level)}}
-            title={`${c.date} · ${formatTokenCount(c.tokens)} token`}
-          />
-        ))}
+    <div
+      ref={containerRef}
+      className={styles.heatmap}
+      onMouseLeave={handleLeave}
+    >
+      <div className={styles.calendarHead}>
+        <div className={styles.calendarCorner} />
+        <div
+          className={styles.monthRow}
+          style={{'--col-count': numWeeks} as React.CSSProperties}
+        >
+          {monthLabels.map((m) => (
+            <span
+              key={`${m.col}-${m.label}`}
+              className={styles.monthLabel}
+              style={{'--col': m.col + 1} as React.CSSProperties}
+            >
+              {m.label}
+            </span>
+          ))}
+        </div>
       </div>
+      <div className={styles.calendarBody}>
+        <div className={styles.weekdayColumn}>
+          {WEEKDAY_LABELS.map((w, i) => (
+            <span
+              key={w}
+              className={styles.weekdayLabel}
+              data-show={i % 2 === 0 ? 'true' : 'false'}
+            >
+              {i % 2 === 0 ? `周${w}` : ''}
+            </span>
+          ))}
+        </div>
+        <div
+          className={styles.calendarGrid}
+          style={{'--col-count': numWeeks} as React.CSSProperties}
+        >
+          {grid.flatMap((col, colIdx) =>
+            col.map((c, rowIdx) =>
+              c ? (
+                <div
+                  key={`${colIdx}-${rowIdx}`}
+                  role="img"
+                  aria-label={`${c.date} ${formatTokenCount(c.tokens)} token`}
+                  className={styles.cell}
+                  style={{backgroundColor: vendorColor(c.level)}}
+                  onMouseEnter={(e) => handleEnter(e, c)}
+                  onMouseMove={handleMove}
+                />
+              ) : (
+                <div
+                  key={`${colIdx}-${rowIdx}`}
+                  className={styles.cellPlaceholder}
+                />
+              ),
+            ),
+          )}
+        </div>
+      </div>
+      {hover && (
+        <div
+          className={styles.tooltip}
+          style={{
+            transform: `translate(calc(${hover.x}px - 50%), calc(${hover.y}px - 100% - 8px))`,
+          }}
+          role="tooltip"
+        >
+          <div className={styles.tooltipDate}>{hover.date}</div>
+          <div className={styles.tooltipValue}>
+            {hover.tokens > 0
+              ? `${formatTokenCount(hover.tokens)} token`
+              : '无 token 用量'}
+          </div>
+          {hover.tokens > 0 && max > 0 && (
+            <div className={styles.tooltipPct}>峰值占比 {hover.pct.toFixed(1)}%</div>
+          )}
+        </div>
+      )}
       <div className={styles.footer}>
         <span>
-          近 {cells.length} 天 · 累计 {formatTokenCount(total)} token
+          近 {daily.length} 天 · 累计 {formatTokenCount(total)} token
           {max > 0 && ` · 单日峰值 ${formatTokenCount(max)}`}
         </span>
         <Legend max={max} />
@@ -202,7 +346,7 @@ function VendorSection({vendor, payload}: {vendor: string; payload: SummaryPaylo
         <StatCard value={activeDays} label="活跃天数" />
         <StatCard value={consecutiveDays} label="连续活跃" />
         <StatCard
-          value={ranking > 0 ? `前 ${(100 - ranking).toFixed(1)}%` : '—'}
+          value={ranking > 0 ? `前 ${ranking.toFixed(1)}%` : '—'}
           label="使用排名"
         />
       </div>

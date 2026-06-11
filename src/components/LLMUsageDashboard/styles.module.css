@@ -8,6 +8,11 @@
   --llm-label: #64748b;
   --llm-card-bg: var(--ifm-background-color, #ffffff);
   --llm-card-border: rgba(148, 163, 184, 0.18);
+  --llm-tooltip-bg: var(--ifm-background-color, #ffffff);
+  --llm-tooltip-border: rgba(15, 23, 42, 0.12);
+  --llm-tooltip-shadow: 0 6px 20px -8px rgba(15, 23, 42, 0.32);
+  --llm-tooltip-text: #1e293b;
+  --llm-tooltip-muted: #64748b;
   margin: 1.5rem 0 2rem;
   color: var(--ifm-font-color-base, #1e293b);
 }
@@ -21,6 +26,11 @@
   --llm-l5: #e0e7ff;
   --llm-card-bg: rgba(15, 23, 42, 0.4);
   --llm-card-border: rgba(148, 163, 184, 0.18);
+  --llm-tooltip-bg: #0f172a;
+  --llm-tooltip-border: rgba(148, 163, 184, 0.24);
+  --llm-tooltip-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.6);
+  --llm-tooltip-text: #e2e8f0;
+  --llm-tooltip-muted: #94a3b8;
 }
 
 .loading,
@@ -111,20 +121,81 @@
 .heatmap {
   --cell-size: 14px;
   --cell-gap: 2px;
+  --label-col: 32px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
 }
 
-.heatmapGrid {
+.calendarHead {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.calendarCorner {
+  width: var(--label-col);
+  flex-shrink: 0;
+}
+
+.monthRow {
+  position: relative;
+  height: 14px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.monthLabel {
+  position: absolute;
+  top: 0;
+  left: calc((var(--col) - 1) * (var(--cell-size) + var(--cell-gap)));
+  font-size: 11px;
+  color: var(--llm-label);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.calendarBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.weekdayColumn {
+  display: grid;
+  grid-template-rows: repeat(7, var(--cell-size));
+  gap: var(--cell-gap);
+  width: var(--label-col);
+  flex-shrink: 0;
+}
+
+.weekdayLabel {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 10px;
+  color: var(--llm-label);
+  height: var(--cell-size);
+  padding-right: 4px;
+  visibility: hidden;
+}
+
+.weekdayLabel[data-show='true'] {
+  visibility: visible;
+}
+
+.calendarGrid {
   display: grid;
   grid-template-rows: repeat(7, var(--cell-size));
   grid-auto-flow: column;
   grid-auto-columns: var(--cell-size);
   gap: var(--cell-gap);
-  overflow-x: auto;
-  padding: 4px 0;
-  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-width: 0;
 }
 
 .cell {
@@ -135,10 +206,52 @@
   transition: transform 0.1s, filter 0.1s;
 }
 
+.cellPlaceholder {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  border-radius: 2px;
+  background: transparent;
+}
+
 .cell:hover {
   transform: scale(1.25);
   z-index: 1;
   filter: brightness(1.15);
+}
+
+.tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10;
+  min-width: 120px;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--llm-tooltip-bg);
+  border: 1px solid var(--llm-tooltip-border);
+  box-shadow: var(--llm-tooltip-shadow);
+  color: var(--llm-tooltip-text);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.tooltipDate {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 2px;
+}
+
+.tooltipValue {
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltipPct {
+  margin-top: 2px;
+  color: var(--llm-tooltip-muted);
+  font-size: 11px;
 }
 
 .footer {

@@ -25,15 +25,18 @@ jobs:
 
       - name: Check credentials
         run: |
-          if [ -z "${MINIMAX_COOKIE:-}" ] || [ -z "${MINIMAX_GROUP_ID:-}" ]; then
-            echo "MINIMAX_COOKIE / MINIMAX_GROUP_ID 未配置，跳过本次抓取"
+          if [ -z "${MINIMAX_COOKIE:-}" ] \
+              && [ -z "${ANTHROPIC_ADMIN_KEY:-}" ] \
+              && [ -z "${OPENAI_ADMIN_KEY:-}" ]; then
+            echo "所有 vendor 凭证都未配置，跳过本次抓取"
             echo "skip=no_credentials" >> "$GITHUB_OUTPUT"
           else
             echo "skip=no" >> "$GITHUB_OUTPUT"
           fi
         env:
           MINIMAX_COOKIE: ${{ secrets.MINIMAX_COOKIE }}
-          MINIMAX_GROUP_ID: ${{ secrets.MINIMAX_GROUP_ID }}
+          ANTHROPIC_ADMIN_KEY: ${{ secrets.ANTHROPIC_ADMIN_KEY }}
+          OPENAI_ADMIN_KEY: ${{ secrets.OPENAI_ADMIN_KEY }}
         id: creds
 
       - name: Run sync script
@@ -41,11 +44,15 @@ jobs:
         env:
           MINIMAX_COOKIE: ${{ secrets.MINIMAX_COOKIE }}
           MINIMAX_GROUP_ID: ${{ secrets.MINIMAX_GROUP_ID }}
+          ANTHROPIC_ADMIN_KEY: ${{ secrets.ANTHROPIC_ADMIN_KEY }}
+          OPENAI_ADMIN_KEY: ${{ secrets.OPENAI_ADMIN_KEY }}
         run: |
           python3 scripts/sync_llm_usage.py
 
       - name: Commit and push
         if: steps.creds.outputs.skip == 'no'
+        env:
+          WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -58,4 +65,4 @@ jobs:
           git add -- 'static/llm-usage/' 'docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN状态.md'
           timestamp="$(date -u '+%Y-%m-%d %H:%M')"
           git commit -m "更新 LLM token 消耗摘要 (${timestamp})"
-          git push
+          git push "https://x-access-token:${WORKFLOW_TRIGGER_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main

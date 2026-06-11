@@ -12,9 +12,11 @@ daily array on a calendar.
 Run with no args to refresh every registered vendor whose auth is set.
 Skip a vendor by unsetting its env var or by passing --vendor <name>.
 
-Required env vars (per vendor):
-  - <VENDOR>_COOKIE     full Cookie header string
-  - <VENDOR>_GROUP_ID   (optional) x-group-id value, if the vendor needs one
+Per-vendor auth: each entry in VENDOR_CONFIG declares `auth_env` (env var
+name) and `auth_header` (a `"<Header-Name>: {}"` template; `{}` is replaced
+by the env-var value). `extra_headers` is merged in verbatim. For vendors
+that need a secondary token (e.g. group id), use `<VENDOR>_EXTRA_*` env vars
+and reference them inside `extra_headers` via a custom fetcher.
 """
 
 from __future__ import annotations
@@ -40,6 +42,8 @@ USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/148.0.0.0 Safari/537.36"
 )
+BROWSER_ACCEPT = "application/json, text/plain, */*"
+JSON_ACCEPT = "application/json"
 REQUEST_TIMEOUT = 30
 RETRIES = 3
 
@@ -47,11 +51,27 @@ VENDOR_CONFIG: dict[str, dict[str, Any]] = {
     "minimax": {
         "url": "https://www.minimaxi.com/backend/account/token_plan/usage_summary",
         "auth_env": "MINIMAX_COOKIE",
-        "group_id_env": "MINIMAX_GROUP_ID",
+        "auth_header": "Cookie: {}",
+        "accept": BROWSER_ACCEPT,
         "extra_headers": {
             "Origin": "https://platform.minimaxi.com",
             "Referer": "https://platform.minimaxi.com/",
         },
+    },
+    "anthropic": {
+        "url": "https://api.anthropic.com/v1/organizations/usage",
+        "auth_env": "ANTHROPIC_ADMIN_KEY",
+        "auth_header": "x-api-key: {}",
+        "accept": JSON_ACCEPT,
+        "extra_headers": {
+            "anthropic-version": "2023-06-01",
+        },
+    },
+    "openai": {
+        "url": "https://api.openai.com/v1/usage",
+        "auth_env": "OPENAI_ADMIN_KEY",
+        "auth_header": "Authorization: Bearer {}",
+        "accept": JSON_ACCEPT,
     },
 }
 
@@ -68,14 +88,13 @@ def fetch_summary(vendor: str) -> dict[str, Any]:
             f"[{vendor}] 未设置 {cfg['auth_env']}，请先 export {cfg['auth_env']}=<凭证>"
         )
 
+    auth_template = cfg.get("auth_header") or "Cookie: {}"
+    header_name, _, _ = auth_template.partition(":")
     headers: dict[str, str] = {
-        "Cookie": auth,
+        header_name.strip(): auth_template.replace("{}", auth, 1),
         "User-Agent": USER_AGENT,
-        "Accept": "application/json, text/plain, */*",
+        "Accept": cfg.get("accept", JSON_ACCEPT),
     }
-    group_id = os.environ.get(cfg.get("group_id_env", ""), "").strip()
-    if group_id:
-        headers["x-group-id"] = group_id
     for k, v in (cfg.get("extra_headers") or {}).items():
         headers[k] = v
 

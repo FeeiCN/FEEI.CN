@@ -26,7 +26,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -118,6 +118,139 @@ def write_summary(vendor: str, payload: dict[str, Any]) -> Path:
     target = OUT_DIR / vendor / "usage_summary.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     enriched = {"vendor": vendor, "fetchedAt": now_str(), **payload}
+    target.write_text(json.dumps(enriched, ensure_ascii=False, indent=2), encoding="utf-8")
+    return target
+
+
+def _parse_date(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _format_date(value: datetime) -> str:
+    return value.strftime("%Y-%m-%d")
+
+
+def _array_to_date_map(
+    daily: list[Any], anchor_str: str
+) -> dict[str, int]:
+    """将 API 返回的 daily_token_usage 数组转成 date→tokens map。
+
+    数组最后一个元素对应 anchor_str 这天，倒推前面每一天的日期。
+    """
+    anchor = _parse_date(anchor_str)
+    if anchor is None or not daily:
+        return {}
+    out: dict[str, int] = {}
+    for idx, raw in enumerate(daily):
+        days_ago = len(daily) - 1 - idx
+        d = anchor - timedelta(days=days_ago)
+        out[_format_date(d)] = int(raw or 0)
+    return out
+
+
+def _format_token_count(value: float) -> str:
+    if value <= 0:
+        return "0"
+    if value >= 1_000_000_000:
+        return f"{value / 1_000_000_000:.2f}B"
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.2f}M"
+    if value >= 1_000:
+        return f"{value / 1_000:.1f}K"
+    return str(int(value))
+
+
+def merge_with_history(
+    existing: dict[str, Any] | None,
+    new: dict[str, Any],
+    new_fetched_at: str,
+) -> dict[str, Any]:
+    """把新 daily_token_usage 与本地历史数据按日期合并，覆盖写回。
+
+    远端只返回最近窗口（~30 天），但本地要保留全量历史。重复日期取较大值。
+    同步重算 total_token_consumed / active_days / total_days /
+    current_consecutive_days / most_active_day；usage_ranking_percent 保留最新 API 值。
+    """
+    new_daily = new.get("daily_token_usage") or []
+    existing_daily = (existing or {}).get("daily_token_usage") or []
+    existing_anchor = (existing or {}).get("fetchedAt") or new_fetched_at
+
+    if not existing_daily:
+        return new
+
+    merged_map: dict[str, int] = {}
+    for date_str, tokens in _array_to_date_map(existing_daily, existing_anchor).items():
+        if tokens > 0:
+            merged_map[date_str] = tokens
+    for date_str, tokens in _array_to_date_map(new_daily, new_fetched_at).items():
+        prev = merged_map.get(date_str, 0)
+        if tokens > prev:
+            merged_map[date_str] = tokens
+
+    if not merged_map:
+        return new
+
+    sorted_dates = sorted(merged_map.keys())
+    earliest = datetime.strptime(sorted_dates[0], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    latest = datetime.strptime(sorted_dates[-1], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    span = (latest - earliest).days + 1
+    merged_array: list[int] = []
+    for i in range(span):
+        d = earliest + timedelta(days=i)
+        merged_array.append(merged_map.get(_format_date(d), 0))
+
+    total_tokens = sum(merged_array)
+    active_days = sum(1 for v in merged_array if v > 0)
+
+    consecutive = 0
+    for v in reversed(merged_array):
+        if v > 0:
+            consecutive += 1
+        else:
+            break
+
+    max_tokens = max(merged_array)
+    max_idx = merged_array.index(max_tokens)
+    max_date = _format_date(earliest + timedelta(days=max_idx))
+
+    most_active = (new.get("most_active_day") or {}).copy() if isinstance(new.get("most_active_day"), dict) else {}
+    most_active.update({
+        "date": max_date,
+        "token_count": _format_token_count(max_tokens),
+    })
+
+    return {
+        **new,
+        "total_token_consumed": _format_token_count(total_tokens),
+        "total_days": active_days,
+        "active_days": active_days,
+        "current_consecutive_days": consecutive,
+        "most_active_day": most_active,
+        "daily_token_usage": merged_array,
+    }
+
+
+def load_existing_summary(vendor: str) -> dict[str, Any] | None:
+    path = OUT_DIR / vendor / "usage_summary.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def write_summary(vendor: str, payload: dict[str, Any]) -> Path:
+    target = OUT_DIR / vendor / "usage_summary.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fetched_at = now_str()
+    merged = merge_with_history(load_existing_summary(vendor), payload, fetched_at)
+    enriched = {"vendor": vendor, "fetchedAt": fetched_at, **merged}
     target.write_text(json.dumps(enriched, ensure_ascii=False, indent=2), encoding="utf-8")
     return target
 

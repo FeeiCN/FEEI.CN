@@ -27,11 +27,7 @@ type SummaryPayload = {
   base_resp?: {status_code?: number; status_msg?: string};
 };
 
-const VENDORS: {key: string; label: string; path: string}[] = [
-  {key: 'minimax', label: 'MiniMax', path: '/llm-usage/minimax/usage_summary.json'},
-  {key: 'anthropic', label: 'Anthropic (Claude)', path: '/llm-usage/anthropic/usage_summary.json'},
-  {key: 'openai', label: 'OpenAI (GPT)', path: '/llm-usage/openai/usage_summary.json'},
-];
+const DATA_PATH = '/llm-usage/minimax/usage_summary.json';
 
 const RANK_COLORS: string[] = [
   'var(--llm-l1)',
@@ -168,28 +164,45 @@ function Heatmap({
     if (nonZero.length) {
       maxVal = Math.max(...nonZero);
     }
-    if (daily.length === 0) {
-      return {grid: [] as ({date: string; tokens: number; level: 0 | 1 | 2 | 3 | 4 | 5} | null)[][], monthLabels: [] as {col: number; label: string}[], total: 0, max: 0, numWeeks: 0};
-    }
-    const startDate = dateMinusDays(endDate, daily.length - 1);
-    const startRow = getDayRow(startDate);
-    const totalCells = startRow + daily.length;
-    const weeks = Math.ceil(totalCells / 7);
 
-    const columns: ({date: string; tokens: number; level: 0 | 1 | 2 | 3 | 4 | 5} | null)[][] = [];
+    const year = endDate.getFullYear();
+    const yearStart = new Date(year, 0, 1);
+    const yearEnd = new Date(year, 11, 31);
+    const startRow = getDayRow(yearStart);
+    const totalDays = Math.floor(
+      (yearEnd.getTime() - yearStart.getTime()) / 86400000,
+    ) + 1;
+    const weeks = Math.ceil((startRow + totalDays) / 7);
+
+    const dataStart = dateMinusDays(endDate, daily.length - 1);
+    const dateMap = new Map<string, number>();
+    for (let i = 0; i < daily.length; i++) {
+      const d = new Date(dataStart);
+      d.setDate(d.getDate() + i);
+      dateMap.set(formatDate(d), Number(daily[i] || 0));
+    }
+
+    const endDateStr = formatDate(endDate);
+    const columns: ({date: string; tokens: number; level: 0 | 1 | 2 | 3 | 4 | 5; future: boolean} | null)[][] = [];
     for (let c = 0; c < weeks; c++) {
-      const col: ({date: string; tokens: number; level: 0 | 1 | 2 | 3 | 4 | 5} | null)[] = [];
+      const col: ({date: string; tokens: number; level: 0 | 1 | 2 | 3 | 4 | 5; future: boolean} | null)[] = [];
       for (let r = 0; r < 7; r++) {
         const dayIndex = c * 7 + r - startRow;
-        if (dayIndex < 0 || dayIndex >= daily.length) {
+        if (dayIndex < 0 || dayIndex >= totalDays) {
           col.push(null);
           continue;
         }
-        const tokens = Number(daily[dayIndex] || 0);
-        totalAcc += tokens;
-        const d = new Date(startDate);
+        const d = new Date(yearStart);
         d.setDate(d.getDate() + dayIndex);
-        col.push({date: formatDate(d), tokens, level: stripLevelForTokens(tokens, maxVal)});
+        const key = formatDate(d);
+        const tokens = dateMap.get(key) || 0;
+        totalAcc += tokens;
+        col.push({
+          date: key,
+          tokens,
+          level: stripLevelForTokens(tokens, maxVal),
+          future: key > endDateStr,
+        });
       }
       columns.push(col);
     }
@@ -197,12 +210,15 @@ function Heatmap({
     const labels: {col: number; label: string}[] = [];
     let prevMonth = -1;
     columns.forEach((col, colIdx) => {
-      const first = col.find((c) => c !== null);
-      if (!first) return;
-      const m = Number(first.date.slice(5, 7));
-      if (m !== prevMonth) {
-        labels.push({col: colIdx, label: MONTH_LABELS[m - 1]});
-        prevMonth = m;
+      for (let r = 0; r < 7; r++) {
+        const c = col[r];
+        if (!c) continue;
+        const m = Number(c.date.slice(5, 7));
+        if (m !== prevMonth) {
+          labels.push({col: colIdx, label: MONTH_LABELS[m - 1]});
+          prevMonth = m;
+          break;
+        }
       }
     });
 
@@ -257,7 +273,7 @@ function Heatmap({
             <span
               key={`${m.col}-${m.label}`}
               className={styles.monthLabel}
-              style={{'--col': m.col + 1} as React.CSSProperties}
+              style={{'--col': m.col} as React.CSSProperties}
             >
               {m.label}
             </span>
@@ -266,13 +282,9 @@ function Heatmap({
       </div>
       <div className={styles.calendarBody}>
         <div className={styles.weekdayColumn}>
-          {WEEKDAY_LABELS.map((w, i) => (
-            <span
-              key={w}
-              className={styles.weekdayLabel}
-              data-show={i % 2 === 0 ? 'true' : 'false'}
-            >
-              {i % 2 === 0 ? `周${w}` : ''}
+          {WEEKDAY_LABELS.map((w) => (
+            <span key={w} className={styles.weekdayLabel}>
+              周{w}
             </span>
           ))}
         </div>
@@ -281,24 +293,37 @@ function Heatmap({
           style={{'--col-count': numWeeks} as React.CSSProperties}
         >
           {grid.flatMap((col, colIdx) =>
-            col.map((c, rowIdx) =>
-              c ? (
+            col.map((c, rowIdx) => {
+              if (!c) {
+                return (
+                  <div
+                    key={`${colIdx}-${rowIdx}`}
+                    className={styles.cellPlaceholder}
+                  />
+                );
+              }
+              if (c.future) {
+                return (
+                  <div
+                    key={`${colIdx}-${rowIdx}`}
+                    className={styles.cellFuture}
+                    aria-label={`${c.date} 未来`}
+                    title={`${c.date} · 未来`}
+                  />
+                );
+              }
+              return (
                 <div
                   key={`${colIdx}-${rowIdx}`}
                   role="img"
                   aria-label={`${c.date} ${formatTokenCount(c.tokens)} token`}
-                  className={styles.cell}
-                  style={{backgroundColor: vendorColor(c.level)}}
+                  className={c.tokens > 0 ? styles.cell : styles.cellEmpty}
+                  style={c.tokens > 0 ? {backgroundColor: vendorColor(c.level)} : undefined}
                   onMouseEnter={(e) => handleEnter(e, c)}
                   onMouseMove={handleMove}
                 />
-              ) : (
-                <div
-                  key={`${colIdx}-${rowIdx}`}
-                  className={styles.cellPlaceholder}
-                />
-              ),
-            ),
+              );
+            }),
           )}
         </div>
       </div>
@@ -316,9 +341,6 @@ function Heatmap({
               ? `${formatTokenCount(hover.tokens)} token`
               : '无 token 用量'}
           </div>
-          {hover.tokens > 0 && max > 0 && (
-            <div className={styles.tooltipPct}>峰值占比 {hover.pct.toFixed(1)}%</div>
-          )}
         </div>
       )}
       <div className={styles.footer}>
@@ -332,7 +354,7 @@ function Heatmap({
   );
 }
 
-function VendorSection({vendor, payload}: {vendor: string; payload: SummaryPayload}) {
+function ActiveVendorSection({payload}: {payload: SummaryPayload}) {
   const daily = (payload.daily_token_usage || []).map((v) => Number(v || 0));
   const totalTokens = parseTokenString(payload.total_token_consumed);
   const activeDays = Number(payload.active_days || 0);
@@ -350,12 +372,7 @@ function VendorSection({vendor, payload}: {vendor: string; payload: SummaryPaylo
           label="使用排名"
         />
       </div>
-      <div className={styles.section}>
-        <p className={styles.sectionTitle}>
-          <span className={styles.vendorBadge}>{vendor}</span>
-        </p>
-        <Heatmap daily={daily} fetchedAt={payload.fetchedAt ?? null} emptyHint="暂无 token 用量数据" />
-      </div>
+      <Heatmap daily={daily} fetchedAt={payload.fetchedAt ?? null} emptyHint="暂无 token 用量数据" />
     </section>
   );
 }
@@ -375,7 +392,7 @@ function Skeleton() {
 
 function DashboardInner() {
   const {colorMode} = useColorMode();
-  const [data, setData] = useState<Record<string, SummaryPayload> | null>(null);
+  const [data, setData] = useState<SummaryPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -383,30 +400,25 @@ function DashboardInner() {
     let cancelled = false;
     (async () => {
       try {
-        const results = await Promise.all(
-          VENDORS.map(async (v) => {
-            try {
-              const res = await fetch(v.path, {cache: 'no-store'});
-              if (!res.ok) return [v.key, null] as const;
-              const contentType = res.headers.get('content-type') || '';
-              if (!contentType.includes('json')) return [v.key, null] as const;
-              const json = (await res.json()) as SummaryPayload;
-              return [v.key, json] as const;
-            } catch {
-              return [v.key, null] as const;
-            }
-          }),
-        );
+        const res = await fetch(DATA_PATH, {cache: 'no-store'});
+        if (!res.ok) {
+          if (!cancelled) {
+            setError('暂无可用的模型使用数据');
+            setLoading(false);
+          }
+          return;
+        }
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('json')) {
+          if (!cancelled) {
+            setError('暂无可用的模型使用数据');
+            setLoading(false);
+          }
+          return;
+        }
+        const json = (await res.json()) as SummaryPayload;
         if (cancelled) return;
-        const map: Record<string, SummaryPayload> = {};
-        for (const [k, v] of results) {
-          if (v) map[k] = v;
-        }
-        if (Object.keys(map).length === 0) {
-          setError('暂无可用的模型使用数据');
-        } else {
-          setData(map);
-        }
+        setData(json);
         setLoading(false);
       } catch (e) {
         if (cancelled) return;
@@ -421,24 +433,14 @@ function DashboardInner() {
 
   if (loading) return <Skeleton />;
   if (error) return <div className={styles.error}>{error}</div>;
-
-  const lastFetched = data
-    ? Object.values(data)
-        .map((p) => p.fetchedAt || '')
-        .filter(Boolean)
-        .sort()
-        .pop()
-    : '';
+  if (!data) return <div className={styles.error}>暂无数据</div>;
 
   return (
     <div className={styles.dashboard} data-theme-mode={colorMode === 'dark' ? 'dark' : 'light'}>
-      {data &&
-        Object.entries(data).map(([vendor, payload]) => (
-          <VendorSection key={vendor} vendor={vendor} payload={payload} />
-        ))}
-      {lastFetched && (
+      <ActiveVendorSection payload={data} />
+      {data.fetchedAt && (
         <div className={styles.footer}>
-          <span>数据更新于 {lastFetched}</span>
+          <span>数据更新于 {data.fetchedAt}</span>
         </div>
       )}
     </div>

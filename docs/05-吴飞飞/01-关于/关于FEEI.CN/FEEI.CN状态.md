@@ -8,11 +8,11 @@ icon: simple-checked-icon
 
 | 任务 | 运行状态 | 运行时间 | 输出页面 |
 | --- | --- | --- | --- |
+| AI 使用数据 | 成功 | 2026-06-11 14:50:12 | [AI 使用数据](/ai-usage-data) |
 | 健康数据 | 成功 | 2026-06-11 07:30:14 | [健康数据](/health-data) |
 | 港股打新数据 | 成功 | 2026-06-11 06:10:05 | [港股打新数据](/hk-ipo-data) |
 | 财务自由数据 | 成功 | 2026-06-11 06:00:02 | [个股账号资产数据](/stock-data)<br />[指数账号资产数据](/index-data) |
 | 阅读日历 | 成功 | 2026-06-11 19:40:06 | [阅读数据](/read-data) |
-| AI 使用数据 | 待运行 | — | [AI 使用数据](/ai-usage-data) |
 
 <!-- status-page-data
 {
@@ -56,6 +56,18 @@ icon: simple-checked-icon
     "script": "scripts/hk_ipo.py",
     "status": "成功"
   },
+  "llm-usage": {
+    "name": "AI 使用数据",
+    "outputs": [
+      {
+        "slug": "/ai-usage-data",
+        "title": "AI 使用数据"
+      }
+    ],
+    "run_time": "2026-06-11 14:50:12",
+    "script": "scripts/sync_llm_usage.py",
+    "status": "成功"
+  },
   "reading-heatmap": {
     "name": "阅读日历",
     "outputs": [
@@ -67,18 +79,6 @@ icon: simple-checked-icon
     "run_time": "2026-06-11 19:40:06",
     "script": "scripts/export_weread_daily_activity.py",
     "status": "成功"
-  },
-  "llm-usage": {
-    "name": "AI 使用数据",
-    "outputs": [
-      {
-        "slug": "/ai-usage-data",
-        "title": "AI 使用数据"
-      }
-    ],
-    "run_time": "",
-    "script": "scripts/sync_llm_usage.py",
-    "status": "待运行"
   }
 }
 -->

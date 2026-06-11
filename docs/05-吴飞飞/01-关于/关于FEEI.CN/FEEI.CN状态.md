@@ -8,7 +8,7 @@ icon: simple-checked-icon
 
 | 任务 | 运行状态 | 运行时间 | 输出页面 |
 | --- | --- | --- | --- |
-| AI 使用数据 | 成功 | 2026-06-11 14:50:12 | [AI 使用数据](/ai-usage-data) |
+| AI 使用数据 | 成功 | 2026-06-11 15:55:11 | [AI 使用数据](/ai-usage-data) |
 | 健康数据 | 成功 | 2026-06-11 07:30:14 | [健康数据](/health-data) |
 | 港股打新数据 | 成功 | 2026-06-11 06:10:05 | [港股打新数据](/hk-ipo-data) |
 | 财务自由数据 | 成功 | 2026-06-11 06:00:02 | [个股账号资产数据](/stock-data)<br />[指数账号资产数据](/index-data) |
@@ -64,7 +64,7 @@ icon: simple-checked-icon
         "title": "AI 使用数据"
       }
     ],
-    "run_time": "2026-06-11 14:50:12",
+    "run_time": "2026-06-11 15:55:11",
     "script": "scripts/sync_llm_usage.py",
     "status": "成功"
   },

@@ -30,6 +30,15 @@ type YearFile = {
   yearTotals?: {activeDays?: number; totalReadSeconds?: number};
 };
 
+type ReadingHeatmapProps = {
+  daily?: Record<string, DailyBucket>;
+  years?: number[];
+  dateRange?: {start: string; end: string};
+  totals?: {activeDays?: number; totalReadSeconds?: number};
+  exportedAt?: string;
+  emptyHint?: string;
+};
+
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds} 秒`;
   const m = Math.floor(seconds / 60);
@@ -70,6 +79,14 @@ const FALLBACK_DARK: Palette = {
 const DAY_NAMES = ['日', '一', '二', '三', '四', '五', '六'];
 const MONTH_NAMES = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
+const CHART_WIDTH = 820;
+const CHART_LEFT = 38;
+const CHART_RIGHT = 12;
+const CHART_TOP = 18;
+const CHART_BOTTOM = 14;
+const CELL_SIZE = 13;
+const YEAR_ROW_HEIGHT = 120;
+
 function readPalette(el: HTMLElement | null, isDark: boolean): Palette {
   const base = isDark ? FALLBACK_DARK : FALLBACK_LIGHT;
   if (!el || typeof window === 'undefined') return base;
@@ -92,24 +109,66 @@ function readPalette(el: HTMLElement | null, isDark: boolean): Palette {
   };
 }
 
-function pickYears(payload: DailyPayload | null): number[] {
-  if (!payload?.daily || Object.keys(payload.daily).length === 0) return [];
+function pickYearsFromDaily(daily: Record<string, DailyBucket> | undefined): number[] {
+  if (!daily) return [];
   const set = new Set<number>();
-  for (const date of Object.keys(payload.daily)) {
+  for (const date of Object.keys(daily)) {
     const y = Number(date.slice(0, 4));
     if (Number.isFinite(y)) set.add(y);
   }
-  return Array.from(set).sort((a, b) => a - b);
+  return Array.from(set).sort((a, b) => b - a);
 }
 
-function makeOption(year: number, payload: DailyPayload, palette: Palette) {
+function makeOption(years: number[], payload: DailyPayload, palette: Palette) {
   const daily = payload.daily ?? {};
-  const data: [string, number][] = [];
-  for (const [date, bucket] of Object.entries(daily)) {
-    if (!date.startsWith(`${year}-`)) continue;
-    const seconds = Number(bucket?.seconds ?? 0);
-    if (seconds > 0) data.push([date, seconds]);
-  }
+  const calendars: Record<string, unknown>[] = [];
+  const series: Record<string, unknown>[] = [];
+
+  years.forEach((year, idx) => {
+    const data: [string, number][] = [];
+    for (const [date, bucket] of Object.entries(daily)) {
+      if (!date.startsWith(`${year}-`)) continue;
+      const seconds = Number(bucket?.seconds ?? 0);
+      if (seconds > 0) data.push([date, seconds]);
+    }
+
+    calendars.push({
+      top: CHART_TOP + idx * YEAR_ROW_HEIGHT,
+      left: CHART_LEFT,
+      right: CHART_RIGHT,
+      cellSize: CELL_SIZE,
+      range: [`${year}-01-01`, `${year}-12-31`],
+      splitLine: {show: false},
+      itemStyle: {
+        color: palette.empty,
+        borderWidth: 2,
+        borderColor: 'transparent',
+        borderRadius: 2,
+      },
+      yearLabel: {show: false},
+      monthLabel: {
+        color: palette.label,
+        fontSize: 10,
+        nameMap: MONTH_NAMES,
+        margin: 6,
+      },
+      dayLabel: {
+        color: palette.label,
+        fontSize: 10,
+        firstDay: 1,
+        nameMap: DAY_NAMES,
+        margin: 6,
+      },
+    });
+
+    series.push({
+      type: 'heatmap',
+      coordinateSystem: 'calendar',
+      calendarIndex: idx,
+      data,
+      itemStyle: {borderRadius: 2},
+    });
+  });
 
   return {
     backgroundColor: 'transparent',
@@ -143,56 +202,104 @@ function makeOption(year: number, payload: DailyPayload, palette: Palette) {
         {min: 3601, color: palette.l5, label: '> 1小时'},
       ],
     },
-    calendar: {
-      top: 18,
-      left: 38,
-      right: 12,
-      cellSize: 13,
-      range: [`${year}-01-01`, `${year}-12-31`],
-      splitLine: {show: false},
-      itemStyle: {
-        color: palette.empty,
-        borderWidth: 2,
-        borderColor: 'transparent',
-        borderRadius: 2,
-      },
-      yearLabel: {show: false},
-      monthLabel: {
-        color: palette.label,
-        fontSize: 10,
-        nameMap: MONTH_NAMES,
-        margin: 6,
-      },
-      dayLabel: {
-        color: palette.label,
-        fontSize: 10,
-        firstDay: 1,
-        nameMap: DAY_NAMES,
-        margin: 6,
-      },
-    },
-    series: [{
-      type: 'heatmap',
-      coordinateSystem: 'calendar',
-      data,
-      itemStyle: {borderRadius: 2},
-    }],
+    aria: {enabled: true, description: '阅读日历热力图'},
+    calendar: calendars,
+    series,
   };
 }
 
-function YearRow({year, payload, palette}: {year: number; payload: DailyPayload; palette: Palette}) {
-  const option = useMemo(() => makeOption(year, payload, palette), [year, payload, palette]);
+function YearHeatmap({
+  years,
+  payload,
+  palette,
+}: {
+  years: number[];
+  payload: DailyPayload;
+  palette: Palette;
+}) {
+  const option = useMemo(() => makeOption(years, payload, palette), [years, payload, palette]);
+  const totalHeight = CHART_TOP + years.length * YEAR_ROW_HEIGHT + CHART_BOTTOM;
+  const showYearLabels = years.length > 1;
   return (
-    <div className={styles.yearRow}>
-      <div className={styles.yearLabel}>{year}</div>
+    <div className={styles.chartInner} style={{height: totalHeight, width: CHART_WIDTH}}>
+      {showYearLabels &&
+        years.map((year, idx) => (
+          <div
+            key={year}
+            className={styles.yearLabel}
+            style={{top: CHART_TOP + idx * YEAR_ROW_HEIGHT, height: YEAR_ROW_HEIGHT}}
+          >
+            {year}
+          </div>
+        ))}
       <ReactECharts
         option={option}
-        style={{height: 132, width: 820}}
+        style={{height: totalHeight, width: CHART_WIDTH}}
         opts={{renderer: 'svg'}}
         notMerge
         lazyUpdate
       />
     </div>
+  );
+}
+
+function stripLevel(seconds: number): 0 | 1 | 2 | 3 | 4 | 5 {
+  if (seconds <= 0) return 0;
+  if (seconds <= 300) return 1;
+  if (seconds <= 900) return 2;
+  if (seconds <= 1800) return 3;
+  if (seconds <= 3600) return 4;
+  return 5;
+}
+
+function HeatmapStrip({
+  daily,
+  palette,
+  yearLabel,
+  exportedAt,
+}: {
+  daily: Record<string, {seconds?: number; count?: number; books?: string[]}>;
+  palette: Palette;
+  yearLabel: string;
+  exportedAt?: string;
+}) {
+  const entries = useMemo<[string, number][]>(() => {
+    return Object.entries(daily)
+      .map(([date, b]) => [date, Number(b?.seconds ?? 0)] as [string, number])
+      .filter(([, s]) => s > 0)
+      .sort(([a], [b]) => a.localeCompare(b));
+  }, [daily]);
+
+  return (
+    <>
+      <div className={styles.strip}>
+        {entries.map(([date, sec]) => (
+          <div
+            key={date}
+            role="img"
+            aria-label={`${date} 阅读 ${formatDuration(sec)}`}
+            className={styles.stripCell}
+            data-level={stripLevel(sec)}
+            style={{
+              backgroundColor:
+                stripLevel(sec) === 0
+                  ? palette.empty
+                  : [
+                      palette.l1,
+                      palette.l2,
+                      palette.l3,
+                      palette.l4,
+                      palette.l5,
+                    ][stripLevel(sec) - 1],
+            }}
+            title={`${date} · ${formatDuration(sec)}`}
+          />
+        ))}
+      </div>
+      <div className={styles.footer}>
+        <Legend palette={palette} />
+      </div>
+    </>
   );
 }
 
@@ -213,6 +320,27 @@ function Legend({palette}: {palette: Palette}) {
           <span className={styles.legendText}>{c.label}</span>
         </span>
       ))}
+    </div>
+  );
+}
+
+const SKELETON_COLS = 52;
+const SKELETON_ROWS = 7;
+const SKELETON_CELLS = SKELETON_COLS * SKELETON_ROWS;
+
+function HeatmapSkeleton() {
+  return (
+    <div className={styles.skeleton}>
+      <div className={styles.skeletonGrid}>
+        {Array.from({length: SKELETON_CELLS}).map((_, i) => (
+          <span
+            key={i}
+            className={styles.skeletonCell}
+            style={{animationDelay: `${((i * 37) % 100) / 100}s`}}
+          />
+        ))}
+      </div>
+      <div className={styles.skeletonMessage}>加载阅读日历…</div>
     </div>
   );
 }
@@ -254,19 +382,21 @@ async function fetchSplitPayload(): Promise<DailyPayload> {
 }
 
 
-function HeatmapInner() {
+function HeatmapInner(props: ReadingHeatmapProps) {
   const {colorMode} = useColorMode();
   const isDark = colorMode === 'dark';
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const [payload, setPayload] = useState<DailyPayload | null>(null);
+  const [fetched, setFetched] = useState<DailyPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [palette, setPalette] = useState<Palette>(isDark ? FALLBACK_DARK : FALLBACK_LIGHT);
+  const {daily: providedDaily, years: yearsProp, dateRange, totals, exportedAt, emptyHint} = props;
 
   useEffect(() => {
+    if (providedDaily) return;
     let cancelled = false;
     fetchSplitPayload()
       .then((data) => {
-        if (!cancelled) setPayload(data);
+        if (!cancelled) setFetched(data);
       })
       .catch(() => {
         if (!cancelled) setError('数据加载失败');
@@ -274,36 +404,56 @@ function HeatmapInner() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [providedDaily]);
 
   useEffect(() => {
     setPalette(readPalette(rootRef.current, isDark));
-  }, [isDark, payload]);
+  }, [isDark, providedDaily, fetched]);
 
-  const years = useMemo(() => pickYears(payload), [payload]);
+  const payload: DailyPayload | null = useMemo(() => {
+    if (providedDaily) {
+      return {daily: providedDaily, dateRange, totals, exportedAt};
+    }
+    return fetched;
+  }, [providedDaily, dateRange, totals, exportedAt, fetched]);
+
+  const years = useMemo<number[]>(() => {
+    if (yearsProp && yearsProp.length) return yearsProp;
+    return pickYearsFromDaily(payload?.daily);
+  }, [yearsProp, payload]);
+
   const hasData = years.length > 0;
+  const dailySize = Object.keys(payload?.daily ?? {}).length;
+  const useStrip = years.length === 1 && dailySize > 0 && dailySize <= 90;
+  const headerLabel = useMemo(() => {
+    if (!years.length) return '';
+    if (years.length === 1) return String(years[0]);
+    return `${years[years.length - 1]}–${years[0]}`;
+  }, [years]);
 
   return (
     <div ref={rootRef} className={styles.heatmap} data-theme-mode={isDark ? 'dark' : 'light'}>
-      {!payload && !error && <div className={styles.skeleton}>加载阅读日历…</div>}
-      {error && <div className={styles.skeleton}>{error}</div>}
+      {!payload && !error && <HeatmapSkeleton />}
+      {error && <div className={styles.message}>{error}</div>}
       {payload && !hasData && (
-        <div className={styles.skeleton}>暂无阅读划线数据，运行 scripts/export_weread_daily_activity.py 后刷新。</div>
+        <div className={styles.message}>
+          {emptyHint ?? '当前范围暂无阅读数据'}
+        </div>
       )}
-      {payload && hasData && (
+      {payload && hasData && useStrip && (
+        <HeatmapStrip
+          daily={payload.daily ?? {}}
+          palette={palette}
+          yearLabel={headerLabel}
+          exportedAt={payload.exportedAt}
+        />
+      )}
+      {payload && hasData && !useStrip && (
         <>
           <div className={styles.scrollWrap}>
-            <div className={styles.stack}>
-              {years.map((y) => (
-                <YearRow key={y} year={y} payload={payload} palette={palette} />
-              ))}
-            </div>
+            <YearHeatmap years={years} payload={payload} palette={palette} />
           </div>
           <div className={styles.footer}>
-            <span className={styles.meta}>
-              {payload.totals?.activeDays ?? 0} 个阅读日 · 累计 {formatDuration(payload.totals?.totalReadSeconds ?? 0)}
-              {payload.exportedAt ? ` · 更新于 ${payload.exportedAt.slice(0, 10)}` : ''}
-            </span>
             <Legend palette={palette} />
           </div>
         </>
@@ -312,10 +462,10 @@ function HeatmapInner() {
   );
 }
 
-export default function ReadingHeatmap() {
+export default function ReadingHeatmap(props: ReadingHeatmapProps) {
   return (
     <BrowserOnly fallback={<div style={{minHeight: 160}} />}>
-      {() => <HeatmapInner />}
+      {() => <HeatmapInner {...props} />}
     </BrowserOnly>
   );
 }

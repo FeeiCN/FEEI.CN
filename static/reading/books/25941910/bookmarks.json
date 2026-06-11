@@ -1,0 +1,503 @@
+{
+  "fetchedAt": "2026-06-11 14:27:48",
+  "synckey": 1673359776,
+  "updated": [
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_244_386-482",
+      "createTime": 1648787688,
+      "range": "386-482",
+      "markText": "为了快速有序地应对疑似Linux系统被入侵的事件，笔者整理了如下的排查过程，期望能够对读者制定遇到入侵事件时的响应机制提供一些帮助。\n1.准备工作",
+      "type": 1,
+      "chapterUid": 244
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_127_593-667",
+      "createTime": 1648787484,
+      "range": "593-667",
+      "markText": "和rm不同，srm在删除文件之前会覆写文件的内容，以达到无法恢复原始文件的目的。\n使用如下命令安装",
+      "type": 1,
+      "chapterUid": 127
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_125_955-1369",
+      "createTime": 1648787430,
+      "range": "955-1369",
+      "markText": "对于一些关键的操作日志，例如用户xufeng家目录下的.bash_history文件，我们有时也不希望用户能够自己清空，那么我们可以使用如下的命令来设置该文件为只能追加写入（Append-only）：\n\n# chattr +a /home/xufeng/.bash_history\n\n我们再次使用lsattr来检验一下：\n\n# lsattr /home/xufeng/.bash_history ￼ -----a---------- /home/xufeng/.bash_history\n\n以上输出中的“a”表示该文件已经是只能追加写入状态了。",
+      "type": 1,
+      "chapterUid": 125
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_125_587-929",
+      "createTime": 1648787413,
+      "range": "587-929",
+      "markText": "例如，我们希望任何人不能修改本地DNS服务器设置，那么我们可以使用如下的命令锁定/etc/resolv.conf的编辑权限：\n\n# chattr +i /etc/resolv.conf\n\n我们使用lsattr来检验一下：\n\n# lsattr /etc/resolv.conf￼ ----i----------- /etc/resolv.conf\n\n以上输出中的“i”表示该文件已经是无法编辑的状态了。",
+      "type": 1,
+      "chapterUid": 125
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_124_1037-1112",
+      "createTime": 1648787384,
+      "range": "1037-1110",
+      "markText": "使用如下命令做一次手动检查：\n\n/usr/local/bin/sxid -k\n\n",
+      "type": 1,
+      "chapterUid": 124
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_121_999-1501",
+      "createTime": 1648787197,
+      "range": "999-1463",
+      "markText": "可以用stat命令查看某个文件的Inode信息，如下所示：\n\n# stat /etc/resolv.conf ￼   File: ?etc/resolv.conf?￼   Size: 51              Blocks: 8          IO Block: 4096   regular file￼ Device: fd01h/64769d    Inode: 674582      Links: 1￼ Access: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)￼ Access: 2018-12-25 11:20:01.768000000 +0800￼ Modify: 2018-12-06 11:12:43.164000000 +0800￼ Change: 2018-12-06 11:12:43.165000000 +0800￼  Birth: -\n\n",
+      "type": 1,
+      "chapterUid": 121
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_117_636-899",
+      "createTime": 1648787068,
+      "range": "636-899",
+      "markText": "在CentOS 7中，我们可以使用如下命令检查随机启动的服务：\n\n# systemctl list-unit-files --type=service |grep 'enabled'￼ auditd.service                              enabled ￼ 其他输出省略\n\n另外，我们还需要检查/etc/rc.local中是否被添加了开机启动脚本。",
+      "type": 1,
+      "chapterUid": 117
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_101_761-825",
+      "createTime": 1648786885,
+      "range": "761-787",
+      "markText": "HISTTIMEFORMAT=\"%Y%m%d %T\"\n\n",
+      "type": 1,
+      "chapterUid": 101
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_100_606-726",
+      "createTime": 1648786866,
+      "range": "606-726",
+      "markText": "readonly HISTFILE￼ readonly HISTFILESIZE￼ readonly HISTSIZE￼ readonly HISTCMD￼ readonly HISTCONTROL￼ readonly HISTIGNORE",
+      "type": 1,
+      "chapterUid": 100
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_99_381-850",
+      "createTime": 1648786832,
+      "range": "381-850",
+      "markText": "相对于使用su-root输入root密码的方式拥有root权限，使用sudo更加方便。例如，我们可以设置wheel组的用户直接sudo成root而不需要密码，那么可以在/etc/sudoers中加入以下设置：\n\n%wheel    ALL=(ALL)     NOPASSWD: ALL\n\n在一些情况下，我们希望仅仅给某个组的用户sudo执行某些命令的权限，例如重启某些应用，那么可以在/etc/sudoers中加入类似如下的一行设置：\n\n%developers ALL=/usr/local/bin/tomcat.sh\n\n通过以上的设置，developers组的用户就可以以root权限来运行/usr/local/bin/tomcat.sh这个脚本了。",
+      "type": 1,
+      "chapterUid": 99
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_98_386-737",
+      "createTime": 1648786789,
+      "range": "386-737",
+      "markText": "情况下，任何普通用户只要知道超级用户root的密码，都可以通过su-root变成root权限。那么这就存在一些安全隐患。\n我们可以设置仅有属于某个组的用户可以通过su变成root。例如，我们限制只有wheel组的用户可以su成root，那么需要编辑/etc/pam.d/su文件，在第1行的位置添加如下内容：\n\nauth       required   pam_wheel.so group=wheel\n\n这样一来，就只有wheel组的用户可以使用su变成root了。而其他组的用户，即使知道root密码，也",
+      "type": 1,
+      "chapterUid": 98
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_98_384-386",
+      "createTime": 1648786784,
+      "range": "384-386",
+      "markText": "默认",
+      "type": 1,
+      "chapterUid": 98
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_93_1793-2362",
+      "createTime": 1648786599,
+      "range": "1793-2362",
+      "markText": "/etc/shadow的默认权限是0000，属主是root。如下命令中输出的Access字段（代表权限）和Uid字段（代表属主）所示：\n\n# stat /etc/shadow￼   File: `/etc/shadow'￼   Size: 773             Blocks: 8          IO Block: 4096   regular file￼ Device: 802h/2050d      Inode: 117         Links: 1￼ Access: (0000/----------)  Uid: (    0/    root)   Gid: (    0/    root)￼ Access: 2019-02-13 10:29:06.981536108 -0500￼ Modify: 2019-02-13 10:29:06.981536108 -0500￼ Change: 2019-02-13 10:29:06.985536108 -0500\n\n如果该文件的权限和属主发生了变化，则可能表示发生了异常事件（例如误操作或者入侵事件），需要引起注意。",
+      "type": 1,
+      "chapterUid": 93
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_93_1230-1434",
+      "createTime": 1648786561,
+      "range": "1230-1395",
+      "markText": "3个字段17875代表了自1970年1月1日以后的第17875天，这个账号的密码被修改了。使用如下命令可以将其转换为真实日期：\n\n# date -d 'Jan 1 1970 + 17875 days'￼ Mon Dec 10 00:00:00 CST 2018\n\n",
+      "type": 1,
+      "chapterUid": 93
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_83_703-837",
+      "createTime": 1648701766,
+      "range": "703-837",
+      "markText": "网卡混杂模式：使劫持程序服务器能够接收目的MAC地址非自己地址的数据帧的问题。\n·raw socket（原始套接字）技术：使劫持程序服务器能够发送伪造的数据帧（这些数据帧的IP头部源地址是被伪造的真实服务器的IP）。",
+      "type": 1,
+      "chapterUid": 83
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_82_519-674",
+      "createTime": 1648701702,
+      "range": "519-674",
+      "markText": "DNS请求，默认情况下使用UDP进行通信，并且在客户端和本地DNS之间没有任何安全校验机制。DNS的这种特点导致了它容易被运营商恶意利用。某种极端情况下，用户在访问www.google.com等知名网站时甚至被引导到运营商的合作伙伴网站。",
+      "type": 1,
+      "chapterUid": 82
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_82_345-357",
+      "createTime": 1648701671,
+      "range": "345-357",
+      "markText": "基于伪造DNS响应的劫持",
+      "type": 1,
+      "chapterUid": 82
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_81_345-362",
+      "createTime": 1648701591,
+      "range": "345-362",
+      "markText": "基于页面的iframe广告嵌入劫持",
+      "type": 1,
+      "chapterUid": 81
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_80_345-356",
+      "createTime": 1648701582,
+      "range": "345-356",
+      "markText": "基于下载文件的缓存劫持",
+      "type": 1,
+      "chapterUid": 80
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_80_1246-1349",
+      "createTime": 1648701444,
+      "range": "1246-1349",
+      "markText": "HTTP的模型中，请求和应答是成对出现的，即对应一个HTTP请求，只能有一个HTTP响应体。如能排除网络丢包（如拥塞控制、防火墙等）问题导致的重传，则出现一个HTTP请求引起两个HTTP响应的情况就是劫持。",
+      "type": 1,
+      "chapterUid": 80
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_67_410-661",
+      "createTime": 1648701072,
+      "range": "410-661",
+      "markText": "如果一种输入的网络通信（INPUT）被iptables给禁止了，那么tcpdump还可以抓取到吗？\n答案是肯定的。根据图4-1所示，tcpdump直接从网络驱动层面抓取输入的数据，不经过任何Linux网络协议栈。iptables依赖的netfilter模块工作在Linux网络协议栈中，因此，iptables的入栈策略不会影响tcpdump抓取。但iptables的出栈策略会影响数据包发送到网络驱动层面，因此，它的出栈策略会影响tcpdump的抓取。",
+      "type": 1,
+      "chapterUid": 67
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_56_578-582",
+      "createTime": 1648700905,
+      "range": "578-582",
+      "markText": "HMAC",
+      "type": 1,
+      "chapterUid": 56
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_49_388-429",
+      "createTime": 1648700837,
+      "range": "388-429",
+      "markText": "ARP（Address Resolution Protocol，地址解析协议）欺骗",
+      "type": 1,
+      "chapterUid": 49
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_37_1215-1687",
+      "createTime": 1648636397,
+      "range": "1215-1687",
+      "markText": "配置/etc/hosts.allow来限制sshd的访问。\n\nsshd:104.224.147.43:allow￼ sshd:ALL:deny #明确禁止不在白名单内的IP访问\n\n/etc/hosts.allow的配置语法如下：\n\n服务名:来源IP/网段（多个IP/网段以英文逗号,分隔）:动作（允许 => allow，禁止 => deny）\n\n使用TCP Wrappers时，不需要重新启动程序，修改/etc/hosts.allow和/etc/hosts.deny并保存后，对于所有新建立的TCP连接立即生效；对于已建立的连接则没有作用，此时需要手动把网络连接断掉，例如使用iptables或者使用kill命令终止对应的进程来强制远程重新建立连接",
+      "type": 1,
+      "chapterUid": 37
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_37_680-882",
+      "createTime": 1648636373,
+      "range": "680-844",
+      "markText": "代码清单2-2　验证程序是否调用libwrap\n\n$ sudo ldd /usr/sbin/sshd |grep libwrap￼     libwrap.so.0 => /lib64/libwrap.so.0 (0x00007fb77b2e4000)\n\n",
+      "type": 1,
+      "chapterUid": 37
+    },
+    {
+      "bookId": "25941910",
+      "bookmarkId": "25941910_37_1008-1120",
+      "createTime": 1648636363,
+      "range": "1008-1120",
+      "markText": "远程IP请求连接的时候，TCP Wrappers检查策略是先看/etc/hosts.allow中是否允许，如果允许就直接放行；如果没有，则再看/etc/hosts.deny中是否禁止，如果禁止，那么就禁止连接；否则允许连接。",
+      "type": 1,
+      "chapterUid": 37
+    }
+  ],
+  "removed": [],
+  "chapters": [
+    {
+      "title": "7.2.2 使用sXid监控SUID和SGID文件变化",
+      "chapterUid": 124,
+      "chapterIdx": 124
+    },
+    {
+      "title": "7.1.1 Inode",
+      "chapterUid": 121,
+      "chapterIdx": 121
+    },
+    {
+      "title": "5.6.2 记录日志执行时间戳",
+      "chapterUid": 101,
+      "chapterIdx": 101
+    },
+    {
+      "title": "附录B Linux系统被入侵后的排查过程",
+      "chapterUid": 244,
+      "chapterIdx": 244
+    },
+    {
+      "title": "4.6.2 基于下载文件的缓存劫持",
+      "chapterUid": 80,
+      "chapterIdx": 80
+    },
+    {
+      "title": "5.5.1 限定可以使用su的用户",
+      "chapterUid": 98,
+      "chapterIdx": 98
+    },
+    {
+      "title": "2.4 利用TCP Wrappers构建应用访问控制列表",
+      "chapterUid": 37,
+      "chapterIdx": 37
+    },
+    {
+      "title": "5.5.2 安全地配置sudo",
+      "chapterUid": 99,
+      "chapterIdx": 99
+    },
+    {
+      "title": "7.3.3 使用srm和dd安全擦除敏感文件的方法",
+      "chapterUid": 127,
+      "chapterIdx": 127
+    },
+    {
+      "title": "2.9 局域网中ARP欺骗的防御",
+      "chapterUid": 49,
+      "chapterIdx": 49
+    },
+    {
+      "title": "4.1.2 tcpdump与iptables的关系",
+      "chapterUid": 67,
+      "chapterIdx": 67
+    },
+    {
+      "title": "4.6.4 基于伪造DNS响应的劫持",
+      "chapterUid": 82,
+      "chapterIdx": 82
+    },
+    {
+      "title": "3.2 深入理解OpenVPN的特性",
+      "chapterUid": 56,
+      "chapterIdx": 56
+    },
+    {
+      "title": "4.6.5 网卡混杂模式与raw socket技术",
+      "chapterUid": 83,
+      "chapterIdx": 83
+    },
+    {
+      "title": "5.3.2 shadow文件说明",
+      "chapterUid": 93,
+      "chapterIdx": 93
+    },
+    {
+      "title": "5.6 关键环境变量和日志管理",
+      "chapterUid": 100,
+      "chapterIdx": 100
+    },
+    {
+      "title": "6.5 自启动服务管理",
+      "chapterUid": 117,
+      "chapterIdx": 117
+    },
+    {
+      "title": "7.3 Linux文件系统管理的常用工具",
+      "chapterUid": 125,
+      "chapterIdx": 125
+    },
+    {
+      "title": "4.6.3 基于页面的iframe广告嵌入劫持",
+      "chapterUid": 81,
+      "chapterIdx": 81
+    }
+  ],
+  "book": {
+    "bookId": "25941910",
+    "version": 1377371385,
+    "format": "epub",
+    "soldout": 0,
+    "bookStatus": 1,
+    "cover": "https://wfqqreader-1252317822.image.myqcloud.com/cover/910/25941910/s_25941910.jpg",
+    "title": "Linux系统安全：纵深防御、安全扫描与入侵检测",
+    "author": "胥峰",
+    "coverBoxInfo": {
+      "blurhash": "K7Sh,Qoe^X_1a#D*~KR-EA",
+      "colors": [
+        {
+          "key": "1/4",
+          "hex": "#251c00"
+        },
+        {
+          "key": "1/6",
+          "hex": "#281c00"
+        },
+        {
+          "key": "1/8",
+          "hex": "#2c1b00"
+        },
+        {
+          "key": "2/4",
+          "hex": "#383103"
+        },
+        {
+          "key": "2/6",
+          "hex": "#3b3100"
+        },
+        {
+          "key": "2/8",
+          "hex": "#3d3100"
+        },
+        {
+          "key": "3/4",
+          "hex": "#50481d"
+        },
+        {
+          "key": "3/6",
+          "hex": "#524800"
+        },
+        {
+          "key": "3/8",
+          "hex": "#544800"
+        },
+        {
+          "key": "3/12",
+          "hex": "#564900"
+        },
+        {
+          "key": "4/6",
+          "hex": "#6c6112"
+        },
+        {
+          "key": "4/10",
+          "hex": "#6f6100"
+        },
+        {
+          "key": "4/4",
+          "hex": "#69612f"
+        },
+        {
+          "key": "5/10",
+          "hex": "#8a7b00"
+        },
+        {
+          "key": "5/4",
+          "hex": "#837a47"
+        },
+        {
+          "key": "5/8",
+          "hex": "#897b00"
+        },
+        {
+          "key": "6/4",
+          "hex": "#9d9560"
+        },
+        {
+          "key": "6/6",
+          "hex": "#a19543"
+        },
+        {
+          "key": "6/8",
+          "hex": "#a4951f"
+        },
+        {
+          "key": "6/12",
+          "hex": "#a79500"
+        },
+        {
+          "key": "7/8",
+          "hex": "#beaf3e"
+        },
+        {
+          "key": "7/10",
+          "hex": "#c1af04"
+        },
+        {
+          "key": "7/12",
+          "hex": "#c2af00"
+        },
+        {
+          "key": "8/4",
+          "hex": "#d2ca90"
+        },
+        {
+          "key": "8/6",
+          "hex": "#d6ca74"
+        },
+        {
+          "key": "8/12",
+          "hex": "#deca00"
+        },
+        {
+          "key": "9/2",
+          "hex": "#e9e4c2"
+        },
+        {
+          "key": "9/12",
+          "hex": "#fae614"
+        },
+        {
+          "key": "1/100",
+          "hex": "#a4951f"
+        },
+        {
+          "key": "2/100",
+          "hex": "#beaf3e"
+        },
+        {
+          "key": "3/100",
+          "hex": "#ffffff"
+        },
+        {
+          "key": "4/100",
+          "hex": "#F3F1E5"
+        },
+        {
+          "key": "5/100",
+          "hex": "#F3F1E5"
+        },
+        {
+          "key": "6/100",
+          "hex": "#271E00"
+        }
+      ],
+      "dominate_color": {
+        "hex": "#feea0a",
+        "hsv": [
+          55.11448386418931,
+          96.120614191478,
+          99.53946781957568
+        ]
+      },
+      "custom_cover": "https://weread-1258476243.file.myqcloud.com/bookalphacover/910/25941910/s_25941910.jpg",
+      "custom_rec_cover": "https://weread-1258476243.file.myqcloud.com/bookreccover/910/25941910/s_25941910.jpg",
+      "colorsPure": [
+        "#a79500",
+        "#c2af00"
+      ]
+    }
+  }
+}

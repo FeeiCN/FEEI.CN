@@ -65,6 +65,6 @@ jobs:
           fi
 
           git add -- 'static/llm-usage/' 'docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN状态.md'
-          timestamp="$(date -u '+%Y-%m-%d %H:%M')"
+          timestamp="$(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M')"
           git commit -m "更新 LLM token 消耗摘要 (${timestamp})"
           git push "https://x-access-token:${WORKFLOW_TRIGGER_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main

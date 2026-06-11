@@ -18,7 +18,7 @@
 
 运行环境要求 Node.js `>=20`，以 `package.json` 为准。
 
-修改代码后（md文档除外），默认执行 `npm run typecheck` 和 `npm run build`，确认无报错后再提交。
+不要主动跑 `npm run typecheck` 和 `npm run build`。如果改动后需要验证，先向用户确认，得到明确同意后再执行。
 
 每次执行 `git push` 前，必须先运行 `npm run build 2>&1 | grep -E "WARNING|SUCCESS|ERROR"` 确认输出为 `[SUCCESS]` 且无 `[WARNING]`，才可以推送。
 
@@ -98,4 +98,14 @@ PR 建议至少包含：
 
 ## 内容与配置注意事项
 
-`sidebars.ts` 使用基于目录结构的自动侧边栏，因此移动文档会直接影响导航。全站级配置应放在 `docusaurus.config.ts`。新增图标或图片资源时，优先放到 `static/` 本地目录，避免依赖外部热链。
+`sidebars.ts` 使用基于目录结构的自动侧边栏，因此移动文档会直接影响导航。全站级配置应放在 `docusaurus.config.ts`。
+
+## 静态资源与外部依赖原则
+
+站点**禁止**引用任何外部资源（图片、字体、脚本、样式表）。所有可下载资源必须落到 `static/` 本地目录，组件用相对路径引用。
+
+- 新增图片/图标/字体 → 直接放到 `static/` 下，组件用 `/img/...`、`/reading/...` 等相对路径引用
+- 已有外部 URL（CDN/hotlink）→ 必须下载到 `static/` 后改成本地路径
+- 第三方 npm 包内置资源 → 通过 Docusaurus 标准 import 链入，不直接写绝对 URL
+- 微信读书等抓取类资源（封面、JSON 元数据）→ 下载后用本地 `static/reading/books/<bookId>/...` 路径
+- 例外仅限 OG 图、Twitter Card 等社交平台抓取所需的绝对 URL（受限于平台协议）

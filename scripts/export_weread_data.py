@@ -12,7 +12,7 @@ Output structure (everything is the API's raw response, untouched):
     recommend.json            # /book/recommend
     search.json               # /store/search (default keyword)
 
-Reuses api_call/fetch_notebooks/format_timestamp from import_weread_latest_highlight.py.
+Reuses api_call/fetch_notebooks/format_timestamp from weread_api.py.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
-from import_weread_latest_highlight import api_call, fetch_notebooks, format_timestamp  # noqa: E402
+from weread_api import api_call, fetch_notebooks, format_timestamp  # noqa: E402
 
 WEREAD_DEFAULT_SEARCH_KEYWORD = "投资"
 BOOK_REFRESH_DAYS = 7

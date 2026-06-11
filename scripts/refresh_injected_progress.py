@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from import_weread_latest_highlight import api_call, format_timestamp  # noqa: E402
+from weread_api import api_call, format_timestamp  # noqa: E402
 
 OUT = ROOT / "static" / "reading"
 NOTEBOOKS = OUT / "notebooks.json"
@@ -45,3 +45,7 @@ for idx, bid in enumerate(injected_ids, start=1):
         print(f"[info] {idx}/{len(injected_ids)} ok={ok}", file=sys.stderr)
     time.sleep(0.3)
 print(f"[done] {ok}/{len(injected_ids)}")
+
+
+if __name__ == "__main__":
+    pass  # 上面代码在 import 时也会跑（保持向后兼容），CLI 入口等同直接执行

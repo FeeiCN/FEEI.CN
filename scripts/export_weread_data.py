@@ -85,12 +85,97 @@ def write_json(path: Path, data: Any) -> bool:
 
 
 def load_state() -> dict[str, Any]:
-    if not STATE_PATH.exists():
-        return {"monthly_ym": [], "books": {}}
-    try:
-        return json.loads(STATE_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return {"monthly_ym": [], "books": {}}
+    if STATE_PATH.exists():
+        try:
+            state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            state = {"monthly_ym": [], "books": {}}
+    else:
+        state = {"monthly_ym": [], "books": {}}
+    # 始终用磁盘上已有的文件补全 state，避免 state.json 缺失/损坏时把已经拉过的月度/单书全部重抓
+    _backfill_state_from_disk(state)
+    return state
+
+
+def _backfill_state_from_disk(state: dict[str, Any]) -> None:
+    """从 static/reading/ 已有文件反推 state，只补缺失项，不覆盖已有记录。
+
+    - monthly_ym：扫 YYYY/MM.json 文件名，全部并入（无损）
+    - books：每个 books/<bid>/info.json 的 mtime 当 lastFetched；counts 留 0
+      让 should_refresh_book 在 notebooks/shelf 真的有变化时仍能触发刷新，
+      但对那些 notebooks 里 noteCount/bookmarkCount/reviewCount 都 == 0 的书
+      不会盲目重抓
+    """
+    if not OUT_DIR.exists():
+        return
+
+    existing_yms = set(state.get("monthly_ym") or [])
+    added_months = 0
+    for y_dir in OUT_DIR.glob("[0-9][0-9][0-9][0-9]"):
+        if not y_dir.is_dir():
+            continue
+        try:
+            y = int(y_dir.name)
+        except ValueError:
+            continue
+        for m_file in y_dir.glob("[0-9][0-9].json"):
+            try:
+                m = int(m_file.stem)
+            except ValueError:
+                continue
+            tag = f"{y}-{m:02d}"
+            if tag not in existing_yms:
+                existing_yms.add(tag)
+                added_months += 1
+    state["monthly_ym"] = sorted(existing_yms)
+
+    books = state.setdefault("books", {})
+    added_books = 0
+    books_dir = OUT_DIR / "books"
+    if books_dir.is_dir():
+        # 用磁盘上次的 notebooks.json/shelf.json 反推 counts 和 readUpdateTime，
+        # 这样下次 should_refresh_book 的 delta 检测能真正跳过"没动过"的书；
+        # 否则全部用 0 backfill，那 178/179 本一旦 notebooks 当前 noteCount>0 都会被认为变了，
+        # 又退化成接近全量重抓。
+        nb_payload = _load_json(OUT_DIR / "notebooks.json") or {}
+        shelf_payload_disk = _load_json(OUT_DIR / "shelf.json") or {}
+        nb_by_id: dict[str, dict[str, Any]] = {}
+        for entry in nb_payload.get("books") or []:
+            bid = str(entry.get("bookId") or (entry.get("book") or {}).get("bookId") or "")
+            if bid:
+                nb_by_id[bid] = entry
+        shelf_by_id: dict[str, dict[str, Any]] = {}
+        for sb in shelf_payload_disk.get("books") or []:
+            bid = str(sb.get("bookId") or "")
+            if bid:
+                shelf_by_id[bid] = sb
+
+        for bdir in books_dir.iterdir():
+            if not bdir.is_dir():
+                continue
+            bid = bdir.name
+            if bid in books:
+                continue
+            info_path = bdir / "info.json"
+            if not info_path.exists():
+                continue
+            mtime = datetime.fromtimestamp(info_path.stat().st_mtime, tz=timezone.utc)
+            nb_entry = nb_by_id.get(bid) or {}
+            sh_entry = shelf_by_id.get(bid) or {}
+            books[bid] = {
+                "lastFetched": mtime.astimezone().strftime("%Y-%m-%d %H:%M:%S"),
+                "readUpdateTime": int(sh_entry.get("readUpdateTime") or 0),
+                "noteCount": int(nb_entry.get("noteCount") or 0),
+                "bookmarkCount": int(nb_entry.get("bookmarkCount") or 0),
+                "reviewCount": int(nb_entry.get("reviewCount") or 0),
+            }
+            added_books += 1
+
+    if added_months or added_books:
+        print(
+            f"[info] state backfill: 补全 {added_months} 个月度 + {added_books} 本书（基于磁盘已有文件）",
+            file=sys.stderr,
+        )
 
 
 def save_state(state: dict[str, Any]) -> None:

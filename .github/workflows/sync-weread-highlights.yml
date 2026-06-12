@@ -1,0 +1,108 @@
+name: Sync WeRead highlights to issues
+
+# 每 3 小时把"最近 48h 内的微信读书划线"创建为 GitHub issue。
+# state 走 scripts/cache/(gitignore 排除),不去 commit。idempotent 依赖：
+#   1. 本地 bookmark_ids 集
+#   2. gh issue list --search "<bookmarkId>" 反查兜底
+# token 失效(API 返回 errcode 非 0)会让脚本 raise RuntimeError → workflow 失败 → 通知可见。
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'  # UTC 00/03/06/09/12/15/18/21
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '只打印将要创建的 issue 内容，不实际创建'
+        required: false
+        default: 'false'
+      lookback_hours:
+        description: '首次运行回看窗口（小时）'
+        required: false
+        default: '48'
+      overlap_hours:
+        description: '每次运行的重叠回看窗口（小时）'
+        required: false
+        default: '24'
+
+concurrency:
+  group: sync-weread-highlights
+  cancel-in-progress: true
+
+permissions:
+  contents: read       # checkout
+  issues: write        # gh issue create / list / view
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check credentials
+        id: creds
+        env:
+          WEREAD_API_KEY: ${{ secrets.WEREAD_API_KEY }}
+        run: |
+          if [ -z "${WEREAD_API_KEY:-}" ]; then
+            echo "WEREAD_API_KEY 未配置，跳过本次抓取"
+            echo "skip=no_credentials" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update status page
+        if: steps.creds.outputs.skip == 'no'
+        run: |
+          python3 scripts/status_page.py \
+            --key weread-highlights \
+            --name "微信读书划线入 issue" \
+            --script "scripts/import_weread_latest_highlight.py" \
+            --status "成功" || true
+
+      - name: Run import script
+        if: steps.creds.outputs.skip == 'no'
+        env:
+          WEREAD_API_KEY: ${{ secrets.WEREAD_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+          LOOKBACK_HOURS: ${{ github.event.inputs.lookback_hours }}
+          OVERLAP_HOURS: ${{ github.event.inputs.overlap_hours }}
+        run: |
+          args=()
+          if [ "${DRY_RUN:-false}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          if [ -n "${LOOKBACK_HOURS:-}" ]; then
+            args+=(--lookback-hours "${LOOKBACK_HOURS}")
+          fi
+          if [ -n "${OVERLAP_HOURS:-}" ]; then
+            args+=(--overlap-hours "${OVERLAP_HOURS}")
+          fi
+          python3 scripts/import_weread_latest_highlight.py "${args[@]}"
+
+      - name: Commit and push status page
+        if: steps.creds.outputs.skip == 'no'
+        env:
+          WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+        run: |
+          git config user.name "FeeiCN[bot]"
+          git config user.email "feei@feei.cn"
+
+          if [ -z "$(git status --porcelain -- 'docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN状态.md')" ]; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git add -- 'docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN状态.md'
+          timestamp="$(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M')"
+          git commit -m "[auto] 同步微信读书划线到 issues (${timestamp})"
+          git push "https://x-access-token:${WORKFLOW_TRIGGER_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main

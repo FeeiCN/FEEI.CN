@@ -200,6 +200,16 @@ const config: Config = {
 
   plugins: [docMtimePlugin],
 
+  themes: [
+    [
+      require.resolve('@easyops-cn/docusaurus-search-local'),
+      {
+        docsRouteBasePath: '/',
+        indexBlog: false,
+      },
+    ],
+  ],
+
   clientModules: ['./src/clientModules/slidingIndicator.ts'],
 
   themeConfig: {
@@ -271,6 +281,10 @@ const config: Config = {
             {type: 'docSidebar', sidebarId: 'aboutMeSidebar', label: '关于', icon: 'user'},
             {type: 'docSidebar', sidebarId: 'lifeProgressSidebar', label: '年度总结', icon: 'gauge-icon'},
           ],
+        },
+        {
+          type: 'search',
+          position: 'right',
         },
         {
           type: 'custom-music-player',

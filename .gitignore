@@ -10,7 +10,10 @@
 # Generated files
 .docusaurus
 .cache-loader
-scripts/cache/
+scripts/cache/*
+!scripts/cache/weread_data/
+scripts/cache/weread_data/*
+!scripts/cache/weread_data/state.json
 scripts/snapshots/
 __pycache__/
 *.py[cod]

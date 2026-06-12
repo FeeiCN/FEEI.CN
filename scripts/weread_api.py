@@ -28,6 +28,26 @@ USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1.15 Safar
 NOTEBOOK_PAGE_SIZE = 100
 API_RETRIES = 3
 
+# 微信读书鉴权失败的常见 errcode；用于把 token 失效从普通 RuntimeError 中区分出来
+WEREAD_AUTH_ERRCODES = {-2010, -2012, -2013, -2014}
+
+
+class WeReadAuthError(RuntimeError):
+    """WEREAD_API_KEY 鉴权失败，区别于网络/接口抖动。CI 入口据此返回退出码 2。"""
+
+
+def _is_auth_error(data: dict[str, Any]) -> bool:
+    code = data.get("errcode")
+    if isinstance(code, int) and code in WEREAD_AUTH_ERRCODES:
+        return True
+    msg = str(data.get("errmsg") or data.get("errMsg") or "")
+    if not msg:
+        return False
+    lowered = msg.lower()
+    if "auth" in lowered or "token" in lowered or "unauthorized" in lowered:
+        return True
+    return any(keyword in msg for keyword in ("登录", "鉴权", "授权", "凭证"))
+
 
 def api_call(api_name: str, **params: Any) -> dict[str, Any]:
     api_key = os.environ.get("WEREAD_API_KEY")
@@ -51,7 +71,15 @@ def api_call(api_name: str, **params: Any) -> dict[str, Any]:
         try:
             with urlopen(request, timeout=30) as response:
                 data = json.loads(response.read().decode("utf-8"))
-        except (HTTPError, URLError, json.JSONDecodeError) as error:
+        except HTTPError as error:
+            if error.code in (401, 403):
+                raise WeReadAuthError(f"微信读书接口 HTTP {error.code}") from error
+            last_error = error
+            if attempt < API_RETRIES:
+                time.sleep(2 ** (attempt - 1))
+                continue
+            break
+        except (URLError, json.JSONDecodeError) as error:
             last_error = error
             if attempt < API_RETRIES:
                 time.sleep(2 ** (attempt - 1))
@@ -59,6 +87,8 @@ def api_call(api_name: str, **params: Any) -> dict[str, Any]:
             break
 
         if isinstance(data, dict) and data.get("errcode", 0):
+            if _is_auth_error(data):
+                raise WeReadAuthError(f"微信读书接口鉴权失败: {data}")
             raise RuntimeError(f"微信读书接口返回错误: {data}")
         return data
 

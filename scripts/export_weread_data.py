@@ -22,15 +22,21 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
-from weread_api import api_call, fetch_notebooks, format_timestamp  # noqa: E402
+from weread_api import (  # noqa: E402
+    WeReadAuthError,
+    api_call,
+    fetch_notebooks,
+    format_timestamp,
+)
 
 WEREAD_DEFAULT_SEARCH_KEYWORD = "投资"
-BOOK_REFRESH_DAYS = 7
+# 即使 shelf/notebooks 计数都没变，超过这么多天也强制刷一次：兜底社区数据（bestbookmarks 等）的冷更新
+BOOK_STALE_REFRESH_DAYS = 30
 API_SLEEP_SECONDS = 0.3
 READDATA_START_YEAR = 2016
 NOTEPAD_PAGE_SIZE = 100
@@ -47,9 +53,35 @@ def now_str() -> str:
     return format_timestamp(int(datetime.now(tz=timezone.utc).timestamp()))
 
 
-def write_json(path: Path, data: Any) -> None:
+# 写盘时被忽略的"易变"字段：仅时间戳不同不算实质变化，避免每跑一次就刷新所有 json 的 mtime
+# 导致每天的 git diff 都是几千个文件的纯时间戳 churn。
+_VOLATILE_KEYS = ("fetchedAt", "exportedAt")
+
+
+def _strip_volatile(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {k: _strip_volatile(v) for k, v in obj.items() if k not in _VOLATILE_KEYS}
+    if isinstance(obj, list):
+        return [_strip_volatile(v) for v in obj]
+    return obj
+
+
+def _canonical_json(data: Any) -> str:
+    return json.dumps(_strip_volatile(data), ensure_ascii=False, sort_keys=True)
+
+
+def write_json(path: Path, data: Any) -> bool:
+    """写盘。已有同内容（剥除 fetchedAt/exportedAt）则跳过，返回 False。"""
+    if path.exists():
+        try:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            existing = None
+        if existing is not None and _canonical_json(existing) == _canonical_json(data):
+            return False
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return True
 
 
 def load_state() -> dict[str, Any]:
@@ -291,6 +323,14 @@ def parse_args() -> argparse.Namespace:
         "--skip-aggregate",
         action="store_true",
         help="跳过 index.json / <year>.json / stats.json 聚合阶段",
+    )
+    parser.add_argument(
+        "--include-snapshots",
+        action="store_true",
+        help=(
+            "刷新 recommend / search 这两个与用户行为无关的关键词快照。"
+            "每日定时跑不需要，每周或手动触发时偶尔刷一次即可。"
+        ),
     )
     parser.add_argument(
         "--aggregate-only",
@@ -647,18 +687,41 @@ def build_stats_payload(
 
 
 def should_refresh_book(
-    book_id: str, state: dict[str, Any], full: bool
+    book_id: str,
+    shelf_book: dict[str, Any] | None,
+    notebook_entry: dict[str, Any] | None,
+    state: dict[str, Any],
+    full: bool,
 ) -> bool:
+    """单书增量判断：尽量靠 shelf/notebooks 已有的计数推断有无变化，避免每天对 600+ 本书全量重抓。
+
+    刷新触发条件（任一满足即刷）：
+      - --full
+      - state 里没有这本书的记录（首次见到）
+      - shelf.readUpdateTime 推进（最近读过）
+      - noteCount / bookmarkCount / reviewCount 任一变化（有新输入）
+      - lastFetched 超过 BOOK_STALE_REFRESH_DAYS（社区数据兜底）
+    """
     if full:
         return True
-    last = state.get("books", {}).get(book_id, {}).get("lastFetched", "")
+    last = state.get("books", {}).get(book_id) or {}
     if not last:
         return True
-    parsed = parse_iso_utc(last)
+
+    cur_rut = int((shelf_book or {}).get("readUpdateTime") or 0)
+    if cur_rut > int(last.get("readUpdateTime") or 0):
+        return True
+
+    nb = notebook_entry or {}
+    for k in ("noteCount", "bookmarkCount", "reviewCount"):
+        if int(nb.get(k) or 0) != int(last.get(k) or 0):
+            return True
+
+    parsed = parse_iso_utc(last.get("lastFetched", ""))
     if not parsed:
         return True
     age = datetime.now(tz=timezone.utc) - parsed
-    return age.days >= BOOK_REFRESH_DAYS
+    return age.days >= BOOK_STALE_REFRESH_DAYS
 
 
 def main() -> int:
@@ -710,15 +773,21 @@ def main() -> int:
             print(f"[warn] shelf 失败: {exc}", file=sys.stderr)
             shelf_payload = _load_json(OUT_DIR / "shelf.json") or {"books": []}
         time.sleep(API_SLEEP_SECONDS)
-        try:
-            write_json(OUT_DIR / "recommend.json", fetch_recommend())
-        except Exception as exc:
-            print(f"[warn] recommend 失败: {exc}", file=sys.stderr)
-        time.sleep(API_SLEEP_SECONDS)
-        try:
-            write_json(OUT_DIR / "search.json", fetch_search_default())
-        except Exception as exc:
-            print(f"[warn] search 失败: {exc}", file=sys.stderr)
+        if args.include_snapshots:
+            try:
+                write_json(OUT_DIR / "recommend.json", fetch_recommend())
+            except Exception as exc:
+                print(f"[warn] recommend 失败: {exc}", file=sys.stderr)
+            time.sleep(API_SLEEP_SECONDS)
+            try:
+                write_json(OUT_DIR / "search.json", fetch_search_default())
+            except Exception as exc:
+                print(f"[warn] search 失败: {exc}", file=sys.stderr)
+        else:
+            print(
+                "[info] 跳过 recommend/search 快照（带 --include-snapshots 启用）",
+                file=sys.stderr,
+            )
     else:
         shelf_payload = _load_json(OUT_DIR / "shelf.json") or {"books": []}
 
@@ -729,6 +798,12 @@ def main() -> int:
 
     if not args.skip_readdata:
         processed = set() if args.full else set(state.get("monthly_ym") or [])
+        # 当月和上月永远视作"未处理"：当月 readTimes 每天都在长，上月在月初几天也可能有补登。
+        # 跨月当天会同时重抓 2 个月，边界天然安全。
+        today_ym = f"{end_year}-{end_month:02d}"
+        prev_dt = datetime(end_year, end_month, 15, tzinfo=timezone.utc) - timedelta(days=30)
+        processed.discard(today_ym)
+        processed.discard(f"{prev_dt.year}-{prev_dt.month:02d}")
         months = [
             (y, m)
             for y, m in iter_months_to_fetch(args.start_year, end_year, processed)
@@ -742,21 +817,44 @@ def main() -> int:
             try:
                 payload = fetch_monthly(y, m)
                 write_json(OUT_DIR / f"{y}" / f"{m:02d}.json", payload)
-                state.setdefault("monthly_ym", []).append(f"{y}-{m:02d}")
+                ym_tag = f"{y}-{m:02d}"
+                ym_list = state.setdefault("monthly_ym", [])
+                if ym_tag not in ym_list:
+                    ym_list.append(ym_tag)
                 print(f"[info] wrote {y}/{m:02d}.json", file=sys.stderr)
             except Exception as exc:
                 print(f"[warn] {y}-{m:02d} 失败: {exc}", file=sys.stderr)
             time.sleep(API_SLEEP_SECONDS)
 
     if not args.skip_books:
+        # 按 bookId 索引 shelf / notebooks，让 should_refresh_book 能用 readUpdateTime + 计数判增量
+        shelf_index: dict[str, dict[str, Any]] = {}
+        for sb in shelf_payload.get("books") or []:
+            sid = str(sb.get("bookId") or "")
+            if sid:
+                shelf_index[sid] = sb
+        notebooks_index: dict[str, dict[str, Any]] = {}
+        for nb in notebooks_payload.get("books") or []:
+            nid = str(nb.get("bookId") or (nb.get("book") or {}).get("bookId") or "")
+            if nid:
+                notebooks_index[nid] = nb
+
         book_ids = collect_book_ids(notebooks_payload)
-        to_refresh = [bid for bid in book_ids if should_refresh_book(bid, state, args.full)]
+        to_refresh = [
+            bid
+            for bid in book_ids
+            if should_refresh_book(
+                bid, shelf_index.get(bid), notebooks_index.get(bid), state, args.full
+            )
+        ]
         print(
             f"[info] books: {len(book_ids)} 本, 待刷 {len(to_refresh)} 本",
             file=sys.stderr,
         )
         for idx, book_id in enumerate(to_refresh, start=1):
             book_dir = OUT_DIR / "books" / book_id
+            entry = notebooks_index.get(book_id) or {}
+            shelf_book = shelf_index.get(book_id) or {}
             try:
                 write_json(book_dir / "info.json", fetch_book_info(book_id))
                 time.sleep(API_SLEEP_SECONDS)
@@ -772,23 +870,34 @@ def main() -> int:
                 write_json(book_dir / "bestbookmarks.json", fetch_book_bestbookmarks(book_id))
                 time.sleep(API_SLEEP_SECONDS)
 
-                for ch in chapters_payload.get("chapters") or []:
-                    uid = ch.get("chapterUid")
-                    if uid is None:
-                        continue
-                    try:
-                        write_json(
-                            book_dir / "underlines" / f"{uid}.json",
-                            fetch_chapter_underlines(book_id, int(uid)),
-                        )
-                    except Exception as exc:
-                        print(
-                            f"[warn] underlines {book_id} {uid} 失败: {exc}",
-                            file=sys.stderr,
-                        )
-                    time.sleep(API_SLEEP_SECONDS)
+                # underlines 是单书内最贵的子调用（每章 1 个请求）。仅当 bookmarkCount 真变化时刷，
+                # 平时 0 调用；--full 强制全部刷。
+                prev_bc = int((state.get("books", {}).get(book_id) or {}).get("bookmarkCount") or 0)
+                cur_bc = int(entry.get("bookmarkCount") or 0)
+                if args.full or cur_bc != prev_bc:
+                    for ch in chapters_payload.get("chapters") or []:
+                        uid = ch.get("chapterUid")
+                        if uid is None:
+                            continue
+                        try:
+                            write_json(
+                                book_dir / "underlines" / f"{uid}.json",
+                                fetch_chapter_underlines(book_id, int(uid)),
+                            )
+                        except Exception as exc:
+                            print(
+                                f"[warn] underlines {book_id} {uid} 失败: {exc}",
+                                file=sys.stderr,
+                            )
+                        time.sleep(API_SLEEP_SECONDS)
 
-                state.setdefault("books", {})[book_id] = {"lastFetched": now_str()}
+                state.setdefault("books", {})[book_id] = {
+                    "lastFetched": now_str(),
+                    "readUpdateTime": int(shelf_book.get("readUpdateTime") or 0),
+                    "noteCount": int(entry.get("noteCount") or 0),
+                    "bookmarkCount": cur_bc,
+                    "reviewCount": int(entry.get("reviewCount") or 0),
+                }
                 if idx % 20 == 0 or idx == len(to_refresh):
                     save_state(state)
                     print(
@@ -817,4 +926,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except WeReadAuthError as exc:
+        print(f"[error] WEREAD_API_KEY 失效或鉴权失败: {exc}", file=sys.stderr)
+        sys.exit(2)

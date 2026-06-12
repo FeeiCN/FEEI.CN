@@ -1,0 +1,79 @@
+name: Sync WeRead data
+
+# 每天北京时间 02:00（UTC 18:00）拉取微信读书数据并提交。
+# 凭证缺失静默跳过；token 失效（exit 2）显式失败便于看到通知。
+
+on:
+  schedule:
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+    inputs:
+      include_snapshots:
+        description: '一并刷新 recommend / search 关键词快照'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: sync-weread-data
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check credentials
+        id: creds
+        env:
+          WEREAD_API_KEY: ${{ secrets.WEREAD_API_KEY }}
+        run: |
+          if [ -z "${WEREAD_API_KEY:-}" ]; then
+            echo "WEREAD_API_KEY 未配置，跳过本次抓取"
+            echo "skip=no_credentials" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run export script
+        if: steps.creds.outputs.skip == 'no'
+        env:
+          WEREAD_API_KEY: ${{ secrets.WEREAD_API_KEY }}
+          INCLUDE_SNAPSHOTS: ${{ github.event.inputs.include_snapshots }}
+        run: |
+          args=()
+          if [ "${INCLUDE_SNAPSHOTS:-false}" = "true" ]; then
+            args+=(--include-snapshots)
+          fi
+          python3 scripts/export_weread_data.py "${args[@]}"
+
+      - name: Commit and push
+        if: steps.creds.outputs.skip == 'no'
+        env:
+          WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+        run: |
+          git config user.name "FeeiCN[bot]"
+          git config user.email "feei@feei.cn"
+
+          if [ -z "$(git status --porcelain -- 'static/reading/' 'scripts/cache/weread_data/state.json')" ]; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git add -- 'static/reading/' 'scripts/cache/weread_data/state.json'
+          timestamp="$(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M')"
+          git commit -m "[auto] 同步微信读书数据 (${timestamp})"
+          git push "https://x-access-token:${WORKFLOW_TRIGGER_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main

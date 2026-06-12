@@ -3,7 +3,7 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import styles from './styles.module.css';
 
-type DailyTokenBucket = number | null;
+type DailyTokenBucket = Record<string, number>;
 
 type MostActiveDay = {
   date?: string;
@@ -139,7 +139,7 @@ function Heatmap({
   fetchedAt,
   emptyHint,
 }: {
-  daily: number[];
+  daily: Record<string, number>;
   fetchedAt: string | null;
   emptyHint: string;
 }) {
@@ -153,18 +153,32 @@ function Heatmap({
   } | null>(null);
 
   const endDate = useMemo(() => {
-    if (!fetchedAt) return new Date();
-    const d = new Date(fetchedAt.replace(/-/g, '/'));
-    return Number.isNaN(d.getTime()) ? new Date() : d;
-  }, [fetchedAt]);
+    const dates = Object.keys(daily || {});
+    if (dates.length) {
+      const maxKey = dates.reduce((a, b) => (a > b ? a : b));
+      const d = new Date(maxKey.replace(/-/g, '/'));
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+    if (fetchedAt) {
+      const d = new Date(fetchedAt.replace(/-/g, '/'));
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+    return new Date();
+  }, [daily, fetchedAt]);
 
-  const {grid, monthLabels, total, max, numWeeks} = useMemo(() => {
+  const {grid, monthLabels, total, max, numWeeks, dateSpan} = useMemo(() => {
     let totalAcc = 0;
     let maxVal = 0;
-    const nonZero = daily.filter((v) => v && v > 0) as number[];
-    if (nonZero.length) {
-      maxVal = Math.max(...nonZero);
+    const dateMap = new Map<string, number>();
+    for (const [k, v] of Object.entries(daily || {})) {
+      const tokens = Number(v || 0);
+      if (tokens > 0) {
+        dateMap.set(k, tokens);
+        if (tokens > maxVal) maxVal = tokens;
+      }
     }
+    totalAcc = Array.from(dateMap.values()).reduce((a, b) => a + b, 0);
+    const sortedDates = Array.from(dateMap.keys()).sort();
 
     const year = endDate.getFullYear();
     const yearStart = new Date(year, 0, 1);
@@ -174,14 +188,6 @@ function Heatmap({
       (yearEnd.getTime() - yearStart.getTime()) / 86400000,
     ) + 1;
     const weeks = Math.ceil((startRow + totalDays) / 7);
-
-    const dataStart = dateMinusDays(endDate, daily.length - 1);
-    const dateMap = new Map<string, number>();
-    for (let i = 0; i < daily.length; i++) {
-      const d = new Date(dataStart);
-      d.setDate(d.getDate() + i);
-      dateMap.set(formatDate(d), Number(daily[i] || 0));
-    }
 
     const endDateStr = formatDate(endDate);
     const columns: ({date: string; tokens: number; level: 0 | 1 | 2 | 3 | 4 | 5; future: boolean} | null)[][] = [];
@@ -197,7 +203,6 @@ function Heatmap({
         d.setDate(d.getDate() + dayIndex);
         const key = formatDate(d);
         const tokens = dateMap.get(key) || 0;
-        totalAcc += tokens;
         col.push({
           date: key,
           tokens,
@@ -223,7 +228,14 @@ function Heatmap({
       }
     });
 
-    return {grid: columns, monthLabels: labels, total: totalAcc, max: maxVal, numWeeks: weeks};
+    const dateSpan = sortedDates.length > 1
+      ? Math.round(
+          (new Date(sortedDates[sortedDates.length - 1]).getTime() -
+            new Date(sortedDates[0]).getTime()) / 86400000,
+        ) + 1
+      : sortedDates.length;
+
+    return {grid: columns, monthLabels: labels, total: totalAcc, max: maxVal, numWeeks: weeks, dateSpan};
   }, [daily, endDate]);
 
   const handleEnter = useCallback(
@@ -340,8 +352,9 @@ function Heatmap({
       )}
       <div className={styles.footer}>
         <span>
-          近 {daily.length} 天 · 累计 {formatTokenCount(total)} token
+          累计 {formatTokenCount(total)} token
           {max > 0 && ` · 单日峰值 ${formatTokenCount(max)}`}
+          {dateSpan > 1 && ` · 跨 ${dateSpan} 天`}
         </span>
         <Legend max={max} />
       </div>
@@ -350,7 +363,7 @@ function Heatmap({
 }
 
 function ActiveVendorSection({payload}: {payload: SummaryPayload}) {
-  const daily = (payload.daily_token_usage || []).map((v) => Number(v || 0));
+  const daily = payload.daily_token_usage || {};
   const totalTokens = parseTokenString(payload.total_token_consumed);
   const dailyAvgTokens = parseTokenString(payload.daily_avg_token_consumed);
   const activeDays = Number(payload.active_days || 0);

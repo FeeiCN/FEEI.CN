@@ -143,14 +143,15 @@ def _array_to_date_map(
 ) -> dict[str, int]:
     """将 API 返回的 daily_token_usage 数组转成 date→tokens map。
 
-    数组最后一个元素对应 anchor_str 这天，倒推前面每一天的日期。
+    API 通常只返回到昨日的数据，所以数组最后一个元素对应 anchor 的前一天，
+    倒推前面每一天的日期。
     """
     anchor = _parse_date(anchor_str)
     if anchor is None or not daily:
         return {}
     out: dict[str, int] = {}
     for idx, raw in enumerate(daily):
-        days_ago = len(daily) - 1 - idx
+        days_ago = len(daily) - idx
         d = anchor - timedelta(days=days_ago)
         out[_format_date(d)] = int(raw or 0)
     return out
@@ -178,54 +179,67 @@ def merge_with_history(
     远端只返回最近窗口（~30 天），但本地要保留全量历史。重复日期取较大值。
     同步重算 total_token_consumed / active_days / total_days /
     current_consecutive_days / most_active_day；usage_ranking_percent 保留最新 API 值。
-    """
-    new_daily = new.get("daily_token_usage") or []
-    existing_daily = (existing or {}).get("daily_token_usage") or []
-    existing_anchor = (existing or {}).get("fetchedAt") or new_fetched_at
 
-    new_active_days = sum(1 for v in new_daily if v and v > 0)
-    new_total_tokens = sum(int(v or 0) for v in new_daily)
+    daily_token_usage 始终以 date→tokens 字典形式落盘（无数据的日期不入字典）。
+    """
+    new_daily = _normalize_daily(new.get("daily_token_usage"), new_fetched_at)
+    existing_raw = (existing or {}).get("daily_token_usage") or {}
+    existing_anchor = (existing or {}).get("fetchedAt") or new_fetched_at
+    if isinstance(existing_raw, dict):
+        existing_daily = {k: int(v or 0) for k, v in existing_raw.items() if int(v or 0) > 0}
+    else:
+        existing_daily = {
+            k: v
+            for k, v in _array_to_date_map(existing_raw, existing_anchor).items()
+            if v > 0
+        }
+
+    new_active_days = sum(1 for v in new_daily.values() if v > 0)
+    new_total_tokens = sum(new_daily.values())
     new_daily_avg = _format_token_count(
         new_total_tokens / new_active_days if new_active_days > 0 else 0
     )
 
     if not existing_daily:
-        return {**new, "daily_avg_token_consumed": new_daily_avg}
+        return {
+            **new,
+            "daily_token_usage": new_daily,
+            "daily_avg_token_consumed": new_daily_avg,
+        }
 
-    merged_map: dict[str, int] = {}
-    for date_str, tokens in _array_to_date_map(existing_daily, existing_anchor).items():
-        if tokens > 0:
-            merged_map[date_str] = tokens
-    for date_str, tokens in _array_to_date_map(new_daily, new_fetched_at).items():
+    merged_map: dict[str, int] = dict(existing_daily)
+    for date_str, tokens in new_daily.items():
         prev = merged_map.get(date_str, 0)
         if tokens > prev:
             merged_map[date_str] = tokens
 
     if not merged_map:
-        return {**new, "daily_avg_token_consumed": new_daily_avg}
+        return {
+            **new,
+            "daily_token_usage": new_daily,
+            "daily_avg_token_consumed": new_daily_avg,
+        }
 
     sorted_dates = sorted(merged_map.keys())
-    earliest = datetime.strptime(sorted_dates[0], "%Y-%m-%d").replace(tzinfo=timezone.utc)
     latest = datetime.strptime(sorted_dates[-1], "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    span = (latest - earliest).days + 1
-    merged_array: list[int] = []
-    for i in range(span):
-        d = earliest + timedelta(days=i)
-        merged_array.append(merged_map.get(_format_date(d), 0))
+    today = _parse_date(new_fetched_at)
+    streak_start = today - timedelta(days=1) if today else latest
 
-    total_tokens = sum(merged_array)
-    active_days = sum(1 for v in merged_array if v > 0)
+    total_tokens = sum(merged_map.values())
+    active_days = sum(1 for v in merged_map.values() if v > 0)
 
     consecutive = 0
-    for v in reversed(merged_array):
-        if v > 0:
+    cur = streak_start
+    while _format_date(cur) >= sorted_dates[0]:
+        date_str = _format_date(cur)
+        if merged_map.get(date_str, 0) > 0:
             consecutive += 1
+            cur = cur - timedelta(days=1)
         else:
             break
 
-    max_tokens = max(merged_array)
-    max_idx = merged_array.index(max_tokens)
-    max_date = _format_date(earliest + timedelta(days=max_idx))
+    max_date = max(merged_map, key=lambda d: merged_map[d])
+    max_tokens = merged_map[max_date]
 
     most_active = (new.get("most_active_day") or {}).copy() if isinstance(new.get("most_active_day"), dict) else {}
     most_active.update({
@@ -240,11 +254,20 @@ def merge_with_history(
         "active_days": active_days,
         "current_consecutive_days": consecutive,
         "most_active_day": most_active,
-        "daily_token_usage": merged_array,
+        "daily_token_usage": merged_map,
         "daily_avg_token_consumed": _format_token_count(
             total_tokens / active_days if active_days > 0 else 0
         ),
     }
+
+
+def _normalize_daily(value: Any, anchor_str: str) -> dict[str, int]:
+    """把 API 返回的 daily_token_usage 统一成 date→tokens 字典。"""
+    if isinstance(value, dict):
+        return {k: int(v or 0) for k, v in value.items() if int(v or 0) > 0}
+    if not value:
+        return {}
+    return {k: v for k, v in _array_to_date_map(value, anchor_str).items() if v > 0}
 
 
 def load_existing_summary(vendor: str) -> dict[str, Any] | None:

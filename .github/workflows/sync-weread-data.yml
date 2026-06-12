@@ -8,8 +8,12 @@ on:
     - cron: '0 18 * * *'
   workflow_dispatch:
     inputs:
+      full:
+        description: '完整模式：全量 notebooks/shelf + 所有未拉的历史月度 + 348 本逐个 delta 检测'
+        required: false
+        default: 'false'
       include_snapshots:
-        description: '一并刷新 recommend / search 关键词快照'
+        description: '一并刷新 recommend / search 关键词快照（仅在 full=true 时有效）'
         required: false
         default: 'false'
 
@@ -52,11 +56,15 @@ jobs:
         if: steps.creds.outputs.skip == 'no'
         env:
           WEREAD_API_KEY: ${{ secrets.WEREAD_API_KEY }}
+          FULL: ${{ github.event.inputs.full }}
           INCLUDE_SNAPSHOTS: ${{ github.event.inputs.include_snapshots }}
         run: |
           args=()
-          if [ "${INCLUDE_SNAPSHOTS:-false}" = "true" ]; then
-            args+=(--include-snapshots)
+          if [ "${FULL:-false}" = "true" ]; then
+            args+=(--full)
+            if [ "${INCLUDE_SNAPSHOTS:-false}" = "true" ]; then
+              args+=(--include-snapshots)
+            fi
           fi
           python3 scripts/export_weread_data.py "${args[@]}"
 

@@ -382,9 +382,17 @@ def parse_args() -> argparse.Namespace:
         description=(
             "原样落盘微信读书 skill 各接口的原始回包。"
             "时间维度数据按 YYYY/MM.json 分文件，单书接口按 bookId 分目录。"
+            "默认轻量模式：只拉当月 monthly + 本月读过的书；--full 触发完整全量。"
         )
     )
-    parser.add_argument("--full", action="store_true", help="忽略 state，全量重拉")
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help=(
+            "完整模式：全量 notebooks/shelf + 所有未拉的历史月度 + 348 本逐个 delta 检测。"
+            "默认（不带）走轻量模式：只刷当月 + 本月读过的书。"
+        ),
+    )
     parser.add_argument(
         "--skip-readdata", action="store_true", help="跳过 /readdata/detail 月度数据"
     )
@@ -809,25 +817,160 @@ def should_refresh_book(
     return age.days >= BOOK_STALE_REFRESH_DAYS
 
 
-def main() -> int:
-    args = parse_args()
-    state = load_state()
+def _refresh_single_book(
+    book_id: str,
+    shelf_book: dict[str, Any],
+    notebook_entry: dict[str, Any],
+    state: dict[str, Any],
+    force_underlines: bool,
+) -> None:
+    """拉一本书的 6 个基础 endpoint + state 更新。
+
+    underlines 是单书内最贵的子调用（每章 1 个 API）。仅当 bookmarkCount 真变化
+    或 force_underlines（--full）时刷，平时跳过整个 underlines 循环。
+    """
+    book_dir = OUT_DIR / "books" / book_id
+
+    write_json(book_dir / "info.json", fetch_book_info(book_id))
+    time.sleep(API_SLEEP_SECONDS)
+    chapters_payload = fetch_book_chapters(book_id)
+    write_json(book_dir / "chapters.json", chapters_payload)
+    time.sleep(API_SLEEP_SECONDS)
+    write_json(book_dir / "progress.json", fetch_book_progress(book_id))
+    time.sleep(API_SLEEP_SECONDS)
+    write_json(book_dir / "bookmarks.json", fetch_book_bookmarks(book_id))
+    time.sleep(API_SLEEP_SECONDS)
+    write_json(book_dir / "reviews.json", fetch_book_reviews_all(book_id))
+    time.sleep(API_SLEEP_SECONDS)
+    write_json(book_dir / "bestbookmarks.json", fetch_book_bestbookmarks(book_id))
+    time.sleep(API_SLEEP_SECONDS)
+
+    prev_bc = int((state.get("books", {}).get(book_id) or {}).get("bookmarkCount") or 0)
+    cur_bc = int(notebook_entry.get("bookmarkCount") or 0)
+    if force_underlines or cur_bc != prev_bc:
+        for ch in chapters_payload.get("chapters") or []:
+            uid = ch.get("chapterUid")
+            if uid is None:
+                continue
+            try:
+                write_json(
+                    book_dir / "underlines" / f"{uid}.json",
+                    fetch_chapter_underlines(book_id, int(uid)),
+                )
+            except Exception as exc:
+                print(f"[warn] underlines {book_id} {uid} 失败: {exc}", file=sys.stderr)
+            time.sleep(API_SLEEP_SECONDS)
+
+    state.setdefault("books", {})[book_id] = {
+        "lastFetched": now_str(),
+        "readUpdateTime": int(shelf_book.get("readUpdateTime") or 0),
+        "noteCount": int(notebook_entry.get("noteCount") or 0),
+        "bookmarkCount": cur_bc,
+        "reviewCount": int(notebook_entry.get("reviewCount") or 0),
+    }
+
+
+def run_daily(args: argparse.Namespace, state: dict[str, Any]) -> int:
+    """每日轻量模式（默认）：
+
+    1. 拉当月 monthly raw json
+    2. 从 readLongest 提取这个月读过的所有 bookId
+    3. 拉一次 shelf 拿最新 readUpdateTime
+    4. 对这些书做 readUpdateTime delta 检测 → 推进了或没拉过就刷
+    5. build_aggregates
+
+    notebooks/recommend/search/历史月度都不动；适合每日定时跑。
+    若需要全量回填（迁移到新机器、长期断更后恢复），用 --full。
+    """
     today = datetime.now(tz=timezone.utc).astimezone()
-    end_year = args.end_year or today.year
-    end_month = today.month if end_year == today.year else 12
+    year, month = today.year, today.month
 
-    # 所有模式都先：读已有 notebooks.json + shelf.json，把 shelf 里 readingTime>0 的书
-    # 合并进 notebooks，防止后续 export 覆盖后丢失
-    if not args.aggregate_only:
-        existing_nb = _load_json(OUT_DIR / "notebooks.json") or {"books": []}
-        existing_shelf = _load_json(OUT_DIR / "shelf.json") or {"books": []}
-        merge_shelf_read_books(existing_nb, existing_shelf)
-        write_json(OUT_DIR / "notebooks.json", existing_nb)
+    try:
+        monthly_payload = fetch_monthly(year, month)
+        write_json(OUT_DIR / f"{year}" / f"{month:02d}.json", monthly_payload)
+        ym_tag = f"{year}-{month:02d}"
+        ym_list = state.setdefault("monthly_ym", [])
+        if ym_tag not in ym_list:
+            ym_list.append(ym_tag)
+        print(f"[info] 当月 {year}/{month:02d}.json 已刷", file=sys.stderr)
+    except Exception as exc:
+        print(f"[warn] 当月 monthly 抓取失败: {exc}", file=sys.stderr)
+        monthly_payload = _load_json(OUT_DIR / f"{year}" / f"{month:02d}.json") or {}
 
-    if args.aggregate_only:
-        print("[info] --aggregate-only: 跳过所有 fetch，仅重跑聚合", file=sys.stderr)
+    read_book_ids: list[str] = []
+    seen: set[str] = set()
+    for entry in monthly_payload.get("readLongest") or []:
+        bid = str((entry.get("book") or {}).get("bookId") or "")
+        if bid and bid not in seen:
+            seen.add(bid)
+            read_book_ids.append(bid)
+
+    if not read_book_ids:
+        print("[info] 当月暂无阅读记录，跳过单书刷新", file=sys.stderr)
+        save_state(state)
+    else:
+        time.sleep(API_SLEEP_SECONDS)
         try:
-            summary = build_aggregates(OUT_DIR, args.start_year, end_year)
+            shelf_payload = fetch_shelf()
+            write_json(OUT_DIR / "shelf.json", shelf_payload)
+        except Exception as exc:
+            print(f"[warn] shelf 失败: {exc}，复用磁盘 shelf.json", file=sys.stderr)
+            shelf_payload = _load_json(OUT_DIR / "shelf.json") or {"books": []}
+
+        # 把 shelf 里 readingTime>0 的书也合进 notebooks.json，
+        # 防止新读但还没标注的书漏出 library/dashboard
+        existing_nb = _load_json(OUT_DIR / "notebooks.json") or {"books": []}
+        if merge_shelf_read_books(existing_nb, shelf_payload):
+            write_json(OUT_DIR / "notebooks.json", existing_nb)
+
+        shelf_index: dict[str, dict[str, Any]] = {}
+        for sb in shelf_payload.get("books") or []:
+            sid = str(sb.get("bookId") or "")
+            if sid:
+                shelf_index[sid] = sb
+        notebooks_index: dict[str, dict[str, Any]] = {}
+        for nb in existing_nb.get("books") or []:
+            nid = str(nb.get("bookId") or (nb.get("book") or {}).get("bookId") or "")
+            if nid:
+                notebooks_index[nid] = nb
+
+        to_refresh: list[str] = []
+        for bid in read_book_ids:
+            last = state.get("books", {}).get(bid) or {}
+            if not last:
+                to_refresh.append(bid)
+                continue
+            cur_rut = int((shelf_index.get(bid) or {}).get("readUpdateTime") or 0)
+            if cur_rut > int(last.get("readUpdateTime") or 0):
+                to_refresh.append(bid)
+
+        print(
+            f"[info] 当月读过 {len(read_book_ids)} 本，有差异待刷 {len(to_refresh)} 本",
+            file=sys.stderr,
+        )
+
+        for idx, book_id in enumerate(to_refresh, start=1):
+            try:
+                _refresh_single_book(
+                    book_id,
+                    shelf_index.get(book_id) or {},
+                    notebooks_index.get(book_id) or {},
+                    state,
+                    force_underlines=False,
+                )
+                if idx % 20 == 0 or idx == len(to_refresh):
+                    save_state(state)
+                    print(f"[info] books 进度 {idx}/{len(to_refresh)}", file=sys.stderr)
+            except Exception as exc:
+                print(f"[warn] book {book_id} 失败: {exc}", file=sys.stderr)
+
+        save_state(state)
+
+    print("[info] done (daily)", file=sys.stderr)
+
+    if not args.skip_aggregate:
+        try:
+            summary = build_aggregates(OUT_DIR, args.start_year, year)
             print(
                 f"[info] aggregate: {len(summary['activeYears'])} 年, "
                 f"{summary['libraryCount']} 本, "
@@ -836,11 +979,32 @@ def main() -> int:
             )
         except Exception as exc:
             print(f"[warn] 聚合失败: {exc}", file=sys.stderr)
-        return 0
+
+    return 0
+
+
+def run_full(args: argparse.Namespace, state: dict[str, Any]) -> int:
+    """完整模式（需 --full 触发）：
+
+    - 全量拉 notebooks / shelf
+    - 可选 recommend / search 快照（--include-snapshots）
+    - 月度数据：state 未处理的所有月份 + 当月 + 上月
+    - 单书：348 本逐个做 readUpdateTime/counts delta 检测，刷推进了的
+    - build_aggregates
+
+    适合首次部署、长期断更后回填、迁移到新机器等场景。
+    """
+    today = datetime.now(tz=timezone.utc).astimezone()
+    end_year = args.end_year or today.year
+    end_month = today.month if end_year == today.year else 12
+
+    existing_nb = _load_json(OUT_DIR / "notebooks.json") or {"books": []}
+    existing_shelf = _load_json(OUT_DIR / "shelf.json") or {"books": []}
+    merge_shelf_read_books(existing_nb, existing_shelf)
+    write_json(OUT_DIR / "notebooks.json", existing_nb)
 
     if args.skip_globals:
-        existing = _load_json(OUT_DIR / "notebooks.json")
-        notebooks_payload = existing or {"books": []}
+        notebooks_payload = _load_json(OUT_DIR / "notebooks.json") or {"books": []}
     else:
         notebooks_payload = fetch_notebooks_all()
     print(
@@ -876,15 +1040,13 @@ def main() -> int:
     else:
         shelf_payload = _load_json(OUT_DIR / "shelf.json") or {"books": []}
 
-    # 把 shelf 里 readingTime>0 的书合成进 notebooks，让它们能进 library
     merge_shelf_read_books(notebooks_payload, shelf_payload)
     if not args.skip_globals:
         write_json(OUT_DIR / "notebooks.json", notebooks_payload)
 
     if not args.skip_readdata:
         processed = set() if args.full else set(state.get("monthly_ym") or [])
-        # 当月和上月永远视作"未处理"：当月 readTimes 每天都在长，上月在月初几天也可能有补登。
-        # 跨月当天会同时重抓 2 个月，边界天然安全。
+        # 当月和上月永远视作"未处理"：当月 readTimes 每天都在长，上月在月初几天也可能有补登
         today_ym = f"{end_year}-{end_month:02d}"
         prev_dt = datetime(end_year, end_month, 15, tzinfo=timezone.utc) - timedelta(days=30)
         processed.discard(today_ym)
@@ -912,7 +1074,6 @@ def main() -> int:
             time.sleep(API_SLEEP_SECONDS)
 
     if not args.skip_books:
-        # 按 bookId 索引 shelf / notebooks，让 should_refresh_book 能用 readUpdateTime + 计数判增量
         shelf_index: dict[str, dict[str, Any]] = {}
         for sb in shelf_payload.get("books") or []:
             sid = str(sb.get("bookId") or "")
@@ -937,63 +1098,22 @@ def main() -> int:
             file=sys.stderr,
         )
         for idx, book_id in enumerate(to_refresh, start=1):
-            book_dir = OUT_DIR / "books" / book_id
-            entry = notebooks_index.get(book_id) or {}
-            shelf_book = shelf_index.get(book_id) or {}
             try:
-                write_json(book_dir / "info.json", fetch_book_info(book_id))
-                time.sleep(API_SLEEP_SECONDS)
-                chapters_payload = fetch_book_chapters(book_id)
-                write_json(book_dir / "chapters.json", chapters_payload)
-                time.sleep(API_SLEEP_SECONDS)
-                write_json(book_dir / "progress.json", fetch_book_progress(book_id))
-                time.sleep(API_SLEEP_SECONDS)
-                write_json(book_dir / "bookmarks.json", fetch_book_bookmarks(book_id))
-                time.sleep(API_SLEEP_SECONDS)
-                write_json(book_dir / "reviews.json", fetch_book_reviews_all(book_id))
-                time.sleep(API_SLEEP_SECONDS)
-                write_json(book_dir / "bestbookmarks.json", fetch_book_bestbookmarks(book_id))
-                time.sleep(API_SLEEP_SECONDS)
-
-                # underlines 是单书内最贵的子调用（每章 1 个请求）。仅当 bookmarkCount 真变化时刷，
-                # 平时 0 调用；--full 强制全部刷。
-                prev_bc = int((state.get("books", {}).get(book_id) or {}).get("bookmarkCount") or 0)
-                cur_bc = int(entry.get("bookmarkCount") or 0)
-                if args.full or cur_bc != prev_bc:
-                    for ch in chapters_payload.get("chapters") or []:
-                        uid = ch.get("chapterUid")
-                        if uid is None:
-                            continue
-                        try:
-                            write_json(
-                                book_dir / "underlines" / f"{uid}.json",
-                                fetch_chapter_underlines(book_id, int(uid)),
-                            )
-                        except Exception as exc:
-                            print(
-                                f"[warn] underlines {book_id} {uid} 失败: {exc}",
-                                file=sys.stderr,
-                            )
-                        time.sleep(API_SLEEP_SECONDS)
-
-                state.setdefault("books", {})[book_id] = {
-                    "lastFetched": now_str(),
-                    "readUpdateTime": int(shelf_book.get("readUpdateTime") or 0),
-                    "noteCount": int(entry.get("noteCount") or 0),
-                    "bookmarkCount": cur_bc,
-                    "reviewCount": int(entry.get("reviewCount") or 0),
-                }
+                _refresh_single_book(
+                    book_id,
+                    shelf_index.get(book_id) or {},
+                    notebooks_index.get(book_id) or {},
+                    state,
+                    force_underlines=args.full,
+                )
                 if idx % 20 == 0 or idx == len(to_refresh):
                     save_state(state)
-                    print(
-                        f"[info] books 进度 {idx}/{len(to_refresh)}",
-                        file=sys.stderr,
-                    )
+                    print(f"[info] books 进度 {idx}/{len(to_refresh)}", file=sys.stderr)
             except Exception as exc:
                 print(f"[warn] book {book_id} 失败: {exc}", file=sys.stderr)
 
     save_state(state)
-    print("[info] done", file=sys.stderr)
+    print("[info] done (full)", file=sys.stderr)
 
     if not args.skip_aggregate:
         try:
@@ -1008,6 +1128,31 @@ def main() -> int:
             print(f"[warn] 聚合失败: {exc}", file=sys.stderr)
 
     return 0
+
+
+def main() -> int:
+    args = parse_args()
+    state = load_state()
+
+    if args.aggregate_only:
+        today = datetime.now(tz=timezone.utc).astimezone()
+        end_year = args.end_year or today.year
+        print("[info] --aggregate-only: 跳过所有 fetch，仅重跑聚合", file=sys.stderr)
+        try:
+            summary = build_aggregates(OUT_DIR, args.start_year, end_year)
+            print(
+                f"[info] aggregate: {len(summary['activeYears'])} 年, "
+                f"{summary['libraryCount']} 本, "
+                f"activeDays={summary['totals']['activeDays']}",
+                file=sys.stderr,
+            )
+        except Exception as exc:
+            print(f"[warn] 聚合失败: {exc}", file=sys.stderr)
+        return 0
+
+    if args.full:
+        return run_full(args, state)
+    return run_daily(args, state)
 
 
 if __name__ == "__main__":

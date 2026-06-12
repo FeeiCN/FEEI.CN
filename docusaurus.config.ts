@@ -206,6 +206,7 @@ const config: Config = {
       {
         docsRouteBasePath: '/',
         indexBlog: false,
+        language: ['en', 'zh'],
       },
     ],
   ],

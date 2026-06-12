@@ -172,7 +172,12 @@ def extract_book_author(book: dict[str, Any]) -> str:
     )
 
 
-def fetch_notebooks() -> list[dict[str, Any]]:
+def fetch_notebooks(stop_when_sort_below: int = 0) -> list[dict[str, Any]]:
+    """分页拉 /user/notebooks。
+
+    stop_when_sort_below > 0 时: 翻到某一页最末书的 sort 字段已 < 阈值就提前停止。
+    配合 fetch_recent_highlights 把"最近 48h 之前的书"整页跳过，省掉 /book/bookmarklist 调用。
+    """
     books: list[dict[str, Any]] = []
     last_sort: int | None = None
 
@@ -190,6 +195,8 @@ def fetch_notebooks() -> list[dict[str, Any]]:
 
         last_sort = int(page_books[-1].get("sort") or 0)
         if not last_sort:
+            break
+        if stop_when_sort_below and last_sort < stop_when_sort_below:
             break
 
     return books
@@ -243,7 +250,7 @@ def fetch_book_highlight(book_entry: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def fetch_recent_highlights(cutoff_time: int) -> list[dict[str, Any]]:
-    notebooks = fetch_notebooks()
+    notebooks = fetch_notebooks(stop_when_sort_below=cutoff_time)
     if not notebooks:
         return []
 
@@ -251,6 +258,10 @@ def fetch_recent_highlights(cutoff_time: int) -> list[dict[str, Any]]:
     for book_entry in notebooks:
         note_count = int(book_entry.get("noteCount") or 0)
         if note_count <= 0:
+            continue
+        # 二次保险:即便 notebooks 早停漏了边角，逐本再过一遍 sort
+        book_sort = int(book_entry.get("sort") or 0)
+        if book_sort < cutoff_time:
             continue
         book_id = str(book_entry.get("bookId") or book_entry.get("book", {}).get("bookId") or "")
         if not book_id:

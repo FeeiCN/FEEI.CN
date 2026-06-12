@@ -76,8 +76,11 @@ VENDOR_CONFIG: dict[str, dict[str, Any]] = {
 }
 
 
+BEIJING_TZ = timezone(timedelta(hours=8))
+
+
 def now_str() -> str:
-    return datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(tz=BEIJING_TZ).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def fetch_summary(vendor: str) -> dict[str, Any]:
@@ -180,8 +183,14 @@ def merge_with_history(
     existing_daily = (existing or {}).get("daily_token_usage") or []
     existing_anchor = (existing or {}).get("fetchedAt") or new_fetched_at
 
+    new_active_days = sum(1 for v in new_daily if v and v > 0)
+    new_total_tokens = sum(int(v or 0) for v in new_daily)
+    new_daily_avg = _format_token_count(
+        new_total_tokens / new_active_days if new_active_days > 0 else 0
+    )
+
     if not existing_daily:
-        return new
+        return {**new, "daily_avg_token_consumed": new_daily_avg}
 
     merged_map: dict[str, int] = {}
     for date_str, tokens in _array_to_date_map(existing_daily, existing_anchor).items():
@@ -193,7 +202,7 @@ def merge_with_history(
             merged_map[date_str] = tokens
 
     if not merged_map:
-        return new
+        return {**new, "daily_avg_token_consumed": new_daily_avg}
 
     sorted_dates = sorted(merged_map.keys())
     earliest = datetime.strptime(sorted_dates[0], "%Y-%m-%d").replace(tzinfo=timezone.utc)
@@ -232,6 +241,9 @@ def merge_with_history(
         "current_consecutive_days": consecutive,
         "most_active_day": most_active,
         "daily_token_usage": merged_array,
+        "daily_avg_token_consumed": _format_token_count(
+            total_tokens / active_days if active_days > 0 else 0
+        ),
     }
 
 

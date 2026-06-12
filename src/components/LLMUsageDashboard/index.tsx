@@ -19,6 +19,7 @@ type SummaryPayload = {
   fetchedAt?: string;
   total_days?: number;
   total_token_consumed?: string;
+  daily_avg_token_consumed?: string;
   usage_ranking_percent?: number;
   most_active_day?: MostActiveDay;
   active_days?: number;
@@ -263,23 +264,6 @@ function Heatmap({
       className={styles.heatmap}
       onMouseLeave={handleLeave}
     >
-      <div className={styles.calendarHead}>
-        <div className={styles.calendarCorner} />
-        <div
-          className={styles.monthRow}
-          style={{'--col-count': numWeeks} as React.CSSProperties}
-        >
-          {monthLabels.map((m) => (
-            <span
-              key={`${m.col}-${m.label}`}
-              className={styles.monthLabel}
-              style={{'--col': m.col} as React.CSSProperties}
-            >
-              {m.label}
-            </span>
-          ))}
-        </div>
-      </div>
       <div className={styles.calendarBody}>
         <div className={styles.weekdayColumn}>
           {WEEKDAY_LABELS.map((w) => (
@@ -288,43 +272,54 @@ function Heatmap({
             </span>
           ))}
         </div>
-        <div
-          className={styles.calendarGrid}
-          style={{'--col-count': numWeeks} as React.CSSProperties}
-        >
-          {grid.flatMap((col, colIdx) =>
-            col.map((c, rowIdx) => {
-              if (!c) {
+        <div className={styles.scrollArea}>
+          <div
+            className={styles.calendarGrid}
+            style={{'--col-count': numWeeks} as React.CSSProperties}
+          >
+            {monthLabels.map((m) => (
+              <span
+                key={`m-${m.col}-${m.label}`}
+                className={styles.monthLabel}
+                style={{'--col': m.col} as React.CSSProperties}
+              >
+                {m.label}
+              </span>
+            ))}
+            {grid.flatMap((col, colIdx) =>
+              col.map((c, rowIdx) => {
+                if (!c) {
+                  return (
+                    <div
+                      key={`${colIdx}-${rowIdx}`}
+                      className={styles.cellPlaceholder}
+                    />
+                  );
+                }
+                if (c.future) {
+                  return (
+                    <div
+                      key={`${colIdx}-${rowIdx}`}
+                      className={styles.cellFuture}
+                      aria-label={`${c.date} 未来`}
+                      title={`${c.date} · 未来`}
+                    />
+                  );
+                }
                 return (
                   <div
                     key={`${colIdx}-${rowIdx}`}
-                    className={styles.cellPlaceholder}
+                    role="img"
+                    aria-label={`${c.date} ${formatTokenCount(c.tokens)} token`}
+                    className={c.tokens > 0 ? styles.cell : styles.cellEmpty}
+                    style={c.tokens > 0 ? {backgroundColor: vendorColor(c.level)} : undefined}
+                    onMouseEnter={(e) => handleEnter(e, c)}
+                    onMouseMove={handleMove}
                   />
                 );
-              }
-              if (c.future) {
-                return (
-                  <div
-                    key={`${colIdx}-${rowIdx}`}
-                    className={styles.cellFuture}
-                    aria-label={`${c.date} 未来`}
-                    title={`${c.date} · 未来`}
-                  />
-                );
-              }
-              return (
-                <div
-                  key={`${colIdx}-${rowIdx}`}
-                  role="img"
-                  aria-label={`${c.date} ${formatTokenCount(c.tokens)} token`}
-                  className={c.tokens > 0 ? styles.cell : styles.cellEmpty}
-                  style={c.tokens > 0 ? {backgroundColor: vendorColor(c.level)} : undefined}
-                  onMouseEnter={(e) => handleEnter(e, c)}
-                  onMouseMove={handleMove}
-                />
-              );
-            }),
-          )}
+              }),
+            )}
+          </div>
         </div>
       </div>
       {hover && (
@@ -357,6 +352,7 @@ function Heatmap({
 function ActiveVendorSection({payload}: {payload: SummaryPayload}) {
   const daily = (payload.daily_token_usage || []).map((v) => Number(v || 0));
   const totalTokens = parseTokenString(payload.total_token_consumed);
+  const dailyAvgTokens = parseTokenString(payload.daily_avg_token_consumed);
   const activeDays = Number(payload.active_days || 0);
   const consecutiveDays = Number(payload.current_consecutive_days || 0);
   const ranking = Number(payload.usage_ranking_percent || 0);
@@ -365,6 +361,7 @@ function ActiveVendorSection({payload}: {payload: SummaryPayload}) {
     <section className={styles.section}>
       <div className={styles.statsSummary}>
         <StatCard value={formatTokenCount(totalTokens)} label="累计消耗 (token)" />
+        <StatCard value={formatTokenCount(dailyAvgTokens)} label="日均消耗 (token)" />
         <StatCard value={activeDays} label="活跃天数" />
         <StatCard value={consecutiveDays} label="连续活跃" />
         <StatCard

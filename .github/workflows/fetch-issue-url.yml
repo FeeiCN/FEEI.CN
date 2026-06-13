@@ -64,7 +64,7 @@ jobs:
           URL: ${{ steps.validate.outputs.url }}
         run: |
           python3 scripts/fetch_url_content.py "$URL" > /tmp/result.json || true
-          echo "status=$(python3 -c 'import json;print(json.load(open(\"/tmp/result.json\"))[\"status\"])')"
+          python3 -c "import json; r=json.load(open('/tmp/result.json')); print('status=', r.get('status'), '/ title=', (r.get('title') or '')[:80])"
 
       - name: Post comment and update title
         if: steps.validate.outputs.valid == 'yes'

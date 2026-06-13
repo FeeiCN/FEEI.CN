@@ -1,0 +1,133 @@
+name: Fetch URL content into issue comment
+
+# 新 issue 标题是单个 URL 时,抓取该 URL 内容并:
+# 1. 把抓到的页面标题更新到 issue 标题
+# 2. 把 Markdown 内容(含来源/抓取时间元信息)作为评论追加
+#
+# 为防止外部贡献者刷 runner 资源,仅处理仓库 owner 创建的 issue。
+# fetch_url_content.py 只用 Python 标准库,无需额外依赖。
+
+on:
+  issues:
+    types: [opened]
+
+concurrency:
+  group: fetch-issue-url-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: >-
+      github.event.issue.user.login == github.repository_owner &&
+      (startsWith(github.event.issue.title, 'http://') ||
+       startsWith(github.event.issue.title, 'https://'))
+
+    steps:
+      - name: Validate URL title
+        id: validate
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          title="$(printf '%s' "$ISSUE_TITLE" | awk '{$1=$1;print}')"
+          if [[ "$title" =~ ^https?://[^[:space:]]+$ ]]; then
+            {
+              echo "url<<EOF"
+              echo "$title"
+              echo "EOF"
+              echo "valid=yes"
+            } >> "$GITHUB_OUTPUT"
+            echo "命中 URL: $title"
+          else
+            echo "标题不是单个 URL,跳过: $ISSUE_TITLE"
+            echo "valid=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.validate.outputs.valid == 'yes'
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        if: steps.validate.outputs.valid == 'yes'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch URL content
+        if: steps.validate.outputs.valid == 'yes'
+        env:
+          URL: ${{ steps.validate.outputs.url }}
+        run: |
+          python3 scripts/fetch_url_content.py "$URL" > /tmp/result.json || true
+          echo "status=$(python3 -c 'import json;print(json.load(open(\"/tmp/result.json\"))[\"status\"])')"
+
+      - name: Post comment and update title
+        if: steps.validate.outputs.valid == 'yes'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          URL: ${{ steps.validate.outputs.url }}
+        run: |
+          python3 <<'PY'
+          import datetime
+          import json
+          import os
+          import subprocess
+
+          COMMENT_LIMIT = 64000  # 给元信息留余量,GitHub 评论上限 65536
+
+          with open("/tmp/result.json", "r", encoding="utf-8") as fp:
+              data = json.load(fp)
+
+          url = os.environ["URL"]
+          issue_number = os.environ["ISSUE_NUMBER"]
+          repo = os.environ["REPO"]
+
+          status = data.get("status")
+          source_url = data.get("source_url") or url
+          fetched_at = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat(timespec="seconds")
+
+          lines = ["## 来源", "", f"- 原文: {url}"]
+          if source_url and source_url != url:
+              lines.append(f"- 内容来源: {source_url}")
+          lines.append(f"- 抓取时间: {fetched_at}")
+          lines.extend(["", "## 内容", ""])
+
+          if status == "error":
+              lines.append(f"抓取失败: {data.get('error', '')}")
+          else:
+              markdown = (data.get("markdown") or "").strip()
+              if not markdown:
+                  markdown = "内容未获取(页面可能需要 JS 渲染或登录后才能查看)"
+              elif source_url.startswith("https://web.archive.org/"):
+                  markdown += f"\n\n> 注:原文对自动化访问有限制,内容取自 Wayback Machine 快照 ({source_url})。"
+              if len(markdown) > COMMENT_LIMIT:
+                  markdown = markdown[:COMMENT_LIMIT].rstrip() + "\n\n<!-- 内容过长,已截断 -->"
+              lines.append(markdown)
+
+          body = "\n".join(lines).strip() + "\n"
+          with open("/tmp/comment.md", "w", encoding="utf-8") as fp:
+              fp.write(body)
+
+          subprocess.run(
+              ["gh", "issue", "comment", issue_number, "--repo", repo, "--body-file", "/tmp/comment.md"],
+              check=True,
+          )
+
+          if status == "success":
+              new_title = (data.get("title") or "").strip()
+              if new_title and new_title != url:
+                  if len(new_title) > 256:
+                      new_title = new_title[:255].rstrip() + "…"
+                  subprocess.run(
+                      ["gh", "issue", "edit", issue_number, "--repo", repo, "--title", new_title],
+                      check=True,
+                  )
+                  print(f"已更新标题: {new_title}")
+          PY

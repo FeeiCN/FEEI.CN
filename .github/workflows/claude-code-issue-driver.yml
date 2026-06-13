@@ -94,7 +94,11 @@ jobs:
               key=lambda c: c["createdAt"], default=None)
 
           def has(body, tok):
-              return any(line.strip() == tok for line in body.splitlines())
+              # 认两种格式:`/plan`(独立一行) 或 `/plan 描述...`(行首 + 空格 + 描述)
+              return any(
+                  line.strip() == tok or line.strip().startswith(tok + ' ')
+                  for line in body.splitlines()
+              )
 
           # 命令驱动:仅当 owner 最新评论含 /plan / /replan / /approve / /reject
           # 独立一行时 driver 才响应,其他情况(普通评论、标题编辑、issue 重开)一律 skip。

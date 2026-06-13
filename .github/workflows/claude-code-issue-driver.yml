@@ -326,7 +326,7 @@ jobs:
               --max-turns 10
               --max-budget-usd 10
               --allowedTools "Read,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),WebFetch"
-              --disallowedTools "Write,Edit,MultiEdit,NotebookEdit,Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*),Bash(gh:*)"
+              --disallowedTools "Write,Edit,NotebookEdit,Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*),Bash(gh:*)"
             )
           else
             EXTRA=(

@@ -70,7 +70,7 @@ jobs:
 
           j = subprocess.check_output(
               ["gh","issue","view",n,"--repo",REPO,
-               "--json","body,comments,labels,author,state"],
+               "--json","body,comments,labels,author,state,title"],
               text=True)
           d = json.loads(j)
 
@@ -100,27 +100,31 @@ jobs:
                   for line in body.splitlines()
               )
 
-          # 命令驱动:仅当 owner 最新评论含 /plan / /replan / /approve / /reject
-          # 独立一行时 driver 才响应,其他情况(普通评论、标题编辑、issue 重开)一律 skip。
+          # 命令驱动:仅当 owner 最新评论或 issue 标题含 /plan / /replan / /approve / /reject
+          # 独立一行时 driver 才响应,其他情况(普通评论、issue 重开)一律 skip。
           mode = "skip"
-          if not last_owner:
+          if not last_owner \
+             and not has(d["title"], "/plan") \
+             and not has(d["title"], "/approve") \
+             and not has(d["title"], "/replan") \
+             and not has(d["title"], "/reject"):
               pass
           elif "claude:plan-ready" in labels:
-              if not last_claude or last_owner["createdAt"] > last_claude["createdAt"]:
-                  body = last_owner["body"]
-                  if has(body, "/reject"):
+              if not last_claude or (last_owner and last_owner["createdAt"] > last_claude["createdAt"]):
+                  combined = ((last_owner["body"] if last_owner else "") + "\n" + d["title"])
+                  if has(combined, "/reject"):
                       mode = "paused"
-                  elif has(body, "/replan"):
+                  elif has(combined, "/replan"):
                       mode = "plan"
-                  elif has(body, "/approve"):
+                  elif has(combined, "/approve"):
                       mode = "execute"
                   # /plan 在 plan-ready 状态下被忽略(已经 plan 过了,要先 /replan)
           else:
-              if not last_claude or last_owner["createdAt"] > last_claude["createdAt"]:
-                  body = last_owner["body"]
-                  if has(body, "/reject"):
+              if not last_claude or (last_owner and last_owner["createdAt"] > last_claude["createdAt"]):
+                  combined = ((last_owner["body"] if last_owner else "") + "\n" + d["title"])
+                  if has(combined, "/reject"):
                       mode = "paused"
-                  elif has(body, "/plan"):
+                  elif has(combined, "/plan"):
                       mode = "plan"
                   # /approve / /replan 在非 plan-ready 状态被忽略(尚未 plan)
 
@@ -130,7 +134,9 @@ jobs:
           print(f"[decide] issue=#{n} mode={mode} labels={sorted(labels)} "
                 f"last_owner={last_owner['createdAt'] if last_owner else None} "
                 f"last_claude={last_claude['createdAt'] if last_claude else None} "
-                f"body_empty={not d['body'].strip()} comments={len(comments)}",
+                f"body_empty={not d['body'].strip()} comments={len(comments)} "
+                f"title_has_plan={has(d['title'], '/plan')} title_has_approve={has(d['title'], '/approve')} "
+                f"title_has_replan={has(d['title'], '/replan')} title_has_reject={has(d['title'], '/reject')}",
                 file=sys.stderr)
           PY
 

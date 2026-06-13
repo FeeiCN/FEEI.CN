@@ -112,11 +112,18 @@ jobs:
                       mode = "paused"
                   else:
                       mode = "plan"
-              elif not comments and d["body"].strip():
+              elif not comments:
+                  # 新 issue 没评论:owner 一定提供了 title,跑 plan;Claude 自己从 title+body 推断
                   mode = "plan"
 
           print(f"mode={mode}")
           print(f"number={n}")
+          # 调试信息打到 stderr(stdout 被重定向到 $GITHUB_OUTPUT)
+          print(f"[decide] issue=#{n} mode={mode} labels={sorted(labels)} "
+                f"last_owner={last_owner['createdAt'] if last_owner else None} "
+                f"last_claude={last_claude['createdAt'] if last_claude else None} "
+                f"body_empty={not d['body'].strip()} comments={len(comments)}",
+                file=sys.stderr)
           PY
 
       - name: Apply paused label

@@ -128,10 +128,12 @@ def write_summary(vendor: str, payload: dict[str, Any]) -> Path:
 def _parse_date(value: str | None) -> datetime | None:
     if not value:
         return None
-    try:
-        return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    except ValueError:
-        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
 
 
 def _format_date(value: datetime) -> str:

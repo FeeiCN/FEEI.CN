@@ -10,7 +10,7 @@ icon: simple-checked-icon
 | --- | --- | --- | --- |
 | AI 使用数据 | 成功 | 2026-06-13 21:24:27 | [AI 使用数据](/ai-usage-data) |
 | 健康数据 | 成功 | 2026-06-11 07:30:14 | [健康数据](/health-data) |
-| 微信读书划线入 issue | 成功 | 2026-06-13 13:24:59 |  |
+| 微信读书划线入 issue | 成功 | 2026-06-13 16:08:07 |  |
 | 微信读书数据同步 | 成功 | 2026-06-12 20:19:18 |  |
 | 港股打新数据 | 成功 | 2026-06-13 06:10:05 | [港股打新数据](/hk-ipo-data) |
 | 财务自由数据 | 成功 | 2026-06-13 06:00:02 | [个股账号资产数据](/stock-data)<br />[指数账号资产数据](/index-data) |
@@ -79,7 +79,7 @@ icon: simple-checked-icon
   "weread-highlights": {
     "name": "微信读书划线入 issue",
     "outputs": [],
-    "run_time": "2026-06-13 13:24:59",
+    "run_time": "2026-06-13 16:08:07",
     "script": "scripts/import_weread_latest_highlight.py",
     "status": "成功"
   }

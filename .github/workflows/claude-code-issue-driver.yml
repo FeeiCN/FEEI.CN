@@ -65,23 +65,36 @@ jobs:
 
           REPO, OWNER = os.environ["REPO"], os.environ["OWNER"]
           n = os.environ.get("EVENT_ISSUE") or os.environ.get("MANUAL_ISSUE")
+          reason = ""
           if not n:
-              print("mode=skip"); print("number="); sys.exit(0)
+              reason = "no issue number in event"
+              print("mode=skip"); print("number="); print(f"reason={reason}"); sys.exit(0)
 
           j = subprocess.check_output(
               ["gh","issue","view",n,"--repo",REPO,
                "--json","body,comments,labels,author,state,title"],
               text=True)
           d = json.loads(j)
+          author_login = d["author"]["login"]
 
-          if d["author"]["login"] != OWNER or d["state"] != "OPEN":
-              print(f"mode=skip"); print(f"number={n}"); sys.exit(0)
+          if author_login != OWNER or d["state"] != "OPEN":
+              if author_login != OWNER:
+                  reason = f"issue author is not owner (author={author_login}, owner={OWNER}); /plan 等命令已被忽略"
+              else:
+                  reason = f"issue state is {d['state']}, not OPEN; /plan 等命令已被忽略"
+              print("mode=skip"); print(f"number={n}"); print(f"reason={reason}")
+              print(f"author={author_login}"); print(f"state={d['state']}")
+              sys.exit(0)
 
           labels = {l["name"] for l in d["labels"]}
           # planning / executing / paused 锁住 driver(防并发覆盖);done / failed 不挡,
           # owner 可在已完成的 issue 上评论 /plan 重新激活(走"非 plan-ready"分支)。
-          if labels & {"claude:paused","claude:executing","claude:planning"}:
-              print(f"mode=skip"); print(f"number={n}"); sys.exit(0)
+          locked = labels & {"claude:paused","claude:executing","claude:planning"}
+          if locked:
+              reason = f"driver locked by label(s): {', '.join(sorted(locked))}; 请等待上次 /approve 流程结束"
+              print("mode=skip"); print(f"number={n}"); print(f"reason={reason}")
+              print(f"author={author_login}"); print(f"state={d['state']}")
+              sys.exit(0)
 
           comments = d["comments"]
           last_claude = max(
@@ -108,7 +121,7 @@ jobs:
              and not has(d["title"], "/approve") \
              and not has(d["title"], "/replan") \
              and not has(d["title"], "/reject"):
-              pass
+              reason = "no owner comment with /plan|/approve|/replan|/reject and title has no command"
           elif "claude:plan-ready" in labels:
               if not last_claude or (last_owner and last_owner["createdAt"] > last_claude["createdAt"]):
                   combined = ((last_owner["body"] if last_owner else "") + "\n" + d["title"])
@@ -130,8 +143,13 @@ jobs:
 
           print(f"mode={mode}")
           print(f"number={n}")
+          print(f"author={author_login}")
+          print(f"state={d['state']}")
+          if reason:
+              print(f"reason={reason}")
           # 调试信息打到 stderr(stdout 被重定向到 $GITHUB_OUTPUT)
-          print(f"[decide] issue=#{n} mode={mode} labels={sorted(labels)} "
+          print(f"[decide] issue=#{n} mode={mode} author={author_login} state={d['state']} "
+                f"labels={sorted(labels)} reason={reason or '-'} "
                 f"last_owner={last_owner['createdAt'] if last_owner else None} "
                 f"last_claude={last_claude['createdAt'] if last_claude else None} "
                 f"body_empty={not d['body'].strip()} comments={len(comments)} "
@@ -139,6 +157,56 @@ jobs:
                 f"title_has_replan={has(d['title'], '/replan')} title_has_reject={has(d['title'], '/reject')}",
                 file=sys.stderr)
           PY
+
+      - name: Post skip diagnostic
+        if: steps.decide.outputs.mode == 'skip' && steps.decide.outputs.reason != '' && steps.decide.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          N: ${{ steps.decide.outputs.number }}
+          AUTHOR: ${{ steps.decide.outputs.author }}
+          STATE: ${{ steps.decide.outputs.state }}
+          REASON: ${{ steps.decide.outputs.reason }}
+        run: |
+          # 1) step summary:mode=skip 且 reason 非空时,让 owner 一眼看到 decide 结果
+          {
+            echo "### Decide mode"
+            echo
+            echo '| field | value |'
+            echo '| --- | --- |'
+            echo "| issue | #${N} |"
+            echo "| mode | \`skip\` |"
+            echo "| author | \`${AUTHOR}\` |"
+            echo "| state | \`${STATE}\` |"
+            echo "| reason | ${REASON} |"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          # 2) 仅在「明显是 owner 主动 /plan 但被外部因素拦截」时落评论,避免噪音
+          # 触发条件:non-owner author / 非 OPEN 状态 / 锁定 label 残留
+          case "${REASON}" in
+            *"author is not owner"*|*"state is"*|*"driver locked by"*)
+              {
+                echo "<!-- claude-driver:diagnostic:skip -->"
+                echo
+                echo "## Claude Code driver 跳过了此次 \`/plan\`"
+                echo
+                echo "- issue: #${N}"
+                echo "- author: \`${AUTHOR}\`"
+                echo "- state: \`${STATE}\`"
+                echo
+                echo "**原因**: ${REASON}"
+                echo
+                echo "如需重新触发:"
+                echo
+                echo "- 若 issue 非 owner 创建,改在 owner 自建的 issue 上发 \`/plan\`"
+                echo "- 若 issue 已关闭,重新打开后重发"
+                echo "- 若 driver 被锁(\`claude:executing\` 等),等待上一次 \`/approve\` 流程结束后再发"
+                echo
+                echo "<!-- 本条评论由 driver 自动生成,无 Claude 调用 -->"
+              } > /tmp/diag.md
+              gh issue comment "$N" --repo "$REPO" --body-file /tmp/diag.md 2>/dev/null || true
+              ;;
+          esac
 
       - name: Ensure labels
         env:

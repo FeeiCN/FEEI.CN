@@ -74,6 +74,8 @@ jobs:
               ["gh","issue","view",n,"--repo",REPO,
                "--json","body,comments,labels,author,state,title"],
               text=True)
+          with open("/tmp/issue.json", "w", encoding="utf-8") as f:
+              f.write(j)
           d = json.loads(j)
           author_login = d["author"]["login"]
 
@@ -147,6 +149,7 @@ jobs:
           print(f"state={d['state']}")
           if reason:
               print(f"reason={reason}")
+          print("issue-json-path=/tmp/issue.json")
           # 调试信息打到 stderr(stdout 被重定向到 $GITHUB_OUTPUT)
           print(f"[decide] issue=#{n} mode={mode} author={author_login} state={d['state']} "
                 f"labels={sorted(labels)} reason={reason or '-'} "
@@ -286,6 +289,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Cache global npm modules
+        if: steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            $(npm root -g)
+          key: claude-cli-${{ hashFiles('package-lock.json') }}-${{ hashFiles('.github/workflows/claude-code-issue-driver.yml') }}
+          restore-keys: |
+            claude-cli-${{ hashFiles('package-lock.json') }}-
+            claude-cli-
 
       - name: Install dependencies
         if: steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
@@ -305,6 +322,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           N: ${{ steps.decide.outputs.number }}
           MODE: ${{ steps.decide.outputs.mode }}
+          ISSUE_JSON: ${{ steps.decide.outputs.issue-json-path }}
           ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
           ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
           ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
@@ -329,9 +347,7 @@ jobs:
           import json, os, subprocess, pathlib, re
 
           N, REPO, MODE = os.environ["N"], os.environ["REPO"], os.environ["MODE"]
-          d = json.loads(subprocess.check_output(
-              ["gh","issue","view",N,"--repo",REPO,
-               "--json","title,body,comments"], text=True))
+          d = json.loads(pathlib.Path(os.environ["ISSUE_JSON"]).read_text(encoding="utf-8"))
 
           claude_md = pathlib.Path("CLAUDE.md").read_text(encoding="utf-8")[:4000]
           recent = d["comments"][-20:]

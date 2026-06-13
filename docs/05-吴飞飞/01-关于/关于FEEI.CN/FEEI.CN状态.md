@@ -14,7 +14,6 @@ icon: simple-checked-icon
 | 微信读书数据同步 | 成功 | 2026-06-12 20:19:18 |  |
 | 港股打新数据 | 成功 | 2026-06-13 06:10:05 | [港股打新数据](/hk-ipo-data) |
 | 财务自由数据 | 成功 | 2026-06-13 06:00:02 | [个股账号资产数据](/stock-data)<br />[指数账号资产数据](/index-data) |
-| 阅读日历 | 成功 | 2026-06-11 19:40:06 | [阅读数据](/read-data) |
 
 <!-- status-page-data
 {
@@ -68,18 +67,6 @@ icon: simple-checked-icon
     ],
     "run_time": "2026-06-13 21:24:27",
     "script": "scripts/sync_llm_usage.py",
-    "status": "成功"
-  },
-  "reading-heatmap": {
-    "name": "阅读日历",
-    "outputs": [
-      {
-        "slug": "/read-data",
-        "title": "阅读数据"
-      }
-    ],
-    "run_time": "2026-06-11 19:40:06",
-    "script": "scripts/export_weread_daily_activity.py",
     "status": "成功"
   },
   "weread-daily": {

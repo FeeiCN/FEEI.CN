@@ -67,21 +67,22 @@ export const portfolioData = {
     {date: '06-11', totalAssets: 653773.4, securitiesValue: 633524.4, dailyChange: -18201.0},
     {date: '06-12', totalAssets: 666200.3, securitiesValue: 645996.2, dailyChange: 12426.9},
     {date: '06-13', totalAssets: 669489.7, securitiesValue: 649377.2, dailyChange: 3289.4},
+    {date: '06-14', totalAssets: 669050.3, securitiesValue: 648937.7, dailyChange: -439.4},
   ],
   holdings: [
-    {name: '特斯拉', value: 21515.3, currency: 'USD', pnl: -965.3, pnlPct: -4.3},
-    {name: 'Tempus AI', value: 623.2, currency: 'USD', pnl: 478.2, pnlPct: 329.7},
-    {name: 'Palantir', value: 4101.9, currency: 'USD', pnl: -187.5, pnlPct: -4.4},
-    {name: '拼多多', value: 1632.4, currency: 'USD', pnl: -412.0, pnlPct: -20.1},
-    {name: '英伟达', value: 10676.7, currency: 'USD', pnl: 1667.6, pnlPct: 18.5},
-    {name: 'Meta Platforms', value: 13620.7, currency: 'USD', pnl: -1838.6, pnlPct: -11.9},
-    {name: '英特尔', value: 6236.0, currency: 'USD', pnl: 5181.5, pnlPct: 491.4},
-    {name: 'Illumina', value: 3759.6, currency: 'USD', pnl: 1701.8, pnlPct: 82.7},
+    {name: '特斯拉', value: 21540.8, currency: 'USD', pnl: -939.9, pnlPct: -4.2},
+    {name: 'Tempus AI', value: 621.7, currency: 'USD', pnl: 476.6, pnlPct: 328.6},
+    {name: 'Palantir', value: 4095.7, currency: 'USD', pnl: -193.7, pnlPct: -4.5},
+    {name: '拼多多', value: 1631.2, currency: 'USD', pnl: -413.2, pnlPct: -20.2},
+    {name: '英伟达', value: 10669.9, currency: 'USD', pnl: 1660.8, pnlPct: 18.4},
+    {name: 'Meta Platforms', value: 13607.5, currency: 'USD', pnl: -1851.8, pnlPct: -12.0},
+    {name: '英特尔', value: 6228.5, currency: 'USD', pnl: 5174.0, pnlPct: 490.7},
+    {name: 'Illumina', value: 3702.3, currency: 'USD', pnl: 1644.5, pnlPct: 79.9},
     {name: 'Gitlab', value: 6169.4, currency: 'USD', pnl: -3128.1, pnlPct: -33.6},
-    {name: 'Coinbase', value: 799.8, currency: 'USD', pnl: -273.0, pnlPct: -25.4},
-    {name: 'Applovin', value: 7939.2, currency: 'USD', pnl: -1088.7, pnlPct: -12.1},
-    {name: '亚马逊', value: 5727.4, currency: 'USD', pnl: 741.5, pnlPct: 14.9},
-    {name: '苹果', value: 6640.5, currency: 'USD', pnl: 1194.0, pnlPct: 21.9},
+    {name: 'Coinbase', value: 798.9, currency: 'USD', pnl: -273.9, pnlPct: -25.5},
+    {name: 'Applovin', value: 7948.3, currency: 'USD', pnl: -1079.6, pnlPct: -12.0},
+    {name: '亚马逊', value: 5725.2, currency: 'USD', pnl: 739.3, pnlPct: 14.8},
+    {name: '苹果', value: 6637.8, currency: 'USD', pnl: 1191.2, pnlPct: 21.9},
     {name: '奥克斯电气', value: 35734.0, currency: 'HKD', pnl: -23494.0, pnlPct: -39.7},
     {name: '小米集团-W', value: 15720.0, currency: 'HKD', pnl: -13306.0, pnlPct: -45.8},
   ],
@@ -93,6 +94,7 @@ export const portfolioData = {
 
 | 日期 | 账户 | 币种 | 总资产 | 昨日差额 | 现金 | 证券市值 | 最大购买力 | 可提现金 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-14 | FeeiCN | CNH | 669050.3 | <span style={{color: "green"}}>-439.4</span> | -300028.8 | 648937.7 | 68130.9 | 941.9 |
 | 2026-06-13 | FeeiCN | CNH | 669489.7 | <span style={{color: "red"}}>+3289.4</span> | -300028.8 | 649377.2 | 67171.6 | 941.9 |
 | 2026-06-12 | FeeiCN | CNH | 666200.3 | <span style={{color: "red"}}>+12426.9</span> | 20204.1 | 645996.2 | 39510.9 | 942.2 |
 | 2026-06-11 | FeeiCN | CNH | 653773.4 | <span style={{color: "green"}}>-18201.0</span> | 20249.0 | 633524.4 | 693915.1 | 20190.0 |
@@ -154,20 +156,20 @@ export const portfolioData = {
 
 | 账户 | 名称 | 市场 | 盈亏 / 盈亏比例 | 今日盈亏 | 市值 / 持仓数量 | 市价 / 摊薄成本 | 今日买入金额 / 数量 | 今日交易金额 | 今日卖出金额 / 数量 | 未实现盈亏 | 已实现盈亏 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| FeeiCN | 特斯拉 | US | <span style={{color: "green"}}>-965.3</span><br /><span style={{color: "green"}}>-4.3%</span> | <span style={{color: "red"}}>+360.4 USD</span> | 21515.3<br />53.0 | 405.9<br />424.2 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -965.3 | 0.0 |
-| FeeiCN | Tempus AI | US | <span style={{color: "red"}}>478.2</span><br /><span style={{color: "red"}}>329.7%</span> | <span style={{color: "green"}}>-21.4 USD</span> | 623.2<br />13.0 | 47.9<br />11.2 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -410.0 | 888.2 |
-| FeeiCN | Palantir | US | <span style={{color: "green"}}>-187.5</span><br /><span style={{color: "green"}}>-4.4%</span> | <span style={{color: "green"}}>-92.6 USD</span> | 4101.9<br />32.0 | 128.2<br />134.0 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -786.6 | 599.2 |
-| FeeiCN | 拼多多 | US | <span style={{color: "green"}}>-412.0</span><br /><span style={{color: "green"}}>-20.1%</span> | <span style={{color: "red"}}>+6.4 USD</span> | 1632.4<br />20.0 | 81.6<br />102.2 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -412.0 | 0.0 |
-| FeeiCN | 英伟达 | US | <span style={{color: "red"}}>1667.6</span><br /><span style={{color: "red"}}>18.5%</span> | <span style={{color: "red"}}>+23.4 USD</span> | 10676.7<br />52.0 | 205.3<br />173.3 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 1666.6 | 1.0 |
-| FeeiCN | Meta Platforms | US | <span style={{color: "green"}}>-1838.6</span><br /><span style={{color: "green"}}>-11.9%</span> | <span style={{color: "green"}}>-21.6 USD</span> | 13620.7<br />24.0 | 567.5<br />644.1 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -1863.8 | 25.2 |
-| FeeiCN | 英特尔 | US | <span style={{color: "red"}}>5181.5</span><br /><span style={{color: "red"}}>491.4%</span> | <span style={{color: "red"}}>+388.0 USD</span> | 6236.0<br />50.0 | 124.7<br />21.1 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 5181.5 | 0.0 |
-| FeeiCN | Illumina | US | <span style={{color: "red"}}>1701.8</span><br /><span style={{color: "red"}}>82.7%</span> | <span style={{color: "green"}}>-63.2 USD</span> | 3759.6<br />23.0 | 163.5<br />89.5 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 1701.8 | 0.0 |
-| FeeiCN | Gitlab | US | <span style={{color: "green"}}>-3128.1</span><br /><span style={{color: "green"}}>-33.6%</span> | <span style={{color: "green"}}>-135.4 USD</span> | 6169.4<br />222.0 | 27.8<br />41.9 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -3128.1 | 0.0 |
-| FeeiCN | Coinbase | US | <span style={{color: "green"}}>-273.0</span><br /><span style={{color: "green"}}>-25.4%</span> | <span style={{color: "green"}}>-2.4 USD</span> | 799.8<br />5.0 | 160.0<br />214.6 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -273.0 | 0.0 |
-| FeeiCN | Applovin | US | <span style={{color: "green"}}>-1088.7</span><br /><span style={{color: "green"}}>-12.1%</span> | <span style={{color: "red"}}>+282.1 USD</span> | 7939.2<br />16.0 | 496.2<br />564.2 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -1678.6 | 589.9 |
-| FeeiCN | 亚马逊 | US | <span style={{color: "red"}}>741.5</span><br /><span style={{color: "red"}}>14.9%</span> | <span style={{color: "green"}}>-68.9 USD</span> | 5727.4<br />24.0 | 238.6<br />207.7 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 741.5 | 0.0 |
-| FeeiCN | 苹果 | US | <span style={{color: "red"}}>1194.0</span><br /><span style={{color: "red"}}>21.9%</span> | <span style={{color: "green"}}>-99.9 USD</span> | 6640.5<br />22.8 | 291.2<br />238.9 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 1177.4 | 16.5 |
+| FeeiCN | 特斯拉 | US | <span style={{color: "green"}}>-939.9</span><br /><span style={{color: "green"}}>-4.2%</span> | +0.0 USD | 21540.8<br />53.0 | 406.4<br />424.2 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -939.9 | 0.0 |
+| FeeiCN | Tempus AI | US | <span style={{color: "red"}}>476.6</span><br /><span style={{color: "red"}}>328.6%</span> | +0.0 USD | 621.7<br />13.0 | 47.8<br />11.2 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -411.6 | 888.2 |
+| FeeiCN | Palantir | US | <span style={{color: "green"}}>-193.7</span><br /><span style={{color: "green"}}>-4.5%</span> | +0.0 USD | 4095.7<br />32.0 | 128.0<br />134.0 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -792.9 | 599.2 |
+| FeeiCN | 拼多多 | US | <span style={{color: "green"}}>-413.2</span><br /><span style={{color: "green"}}>-20.2%</span> | +0.0 USD | 1631.2<br />20.0 | 81.6<br />102.2 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -413.2 | 0.0 |
+| FeeiCN | 英伟达 | US | <span style={{color: "red"}}>1660.8</span><br /><span style={{color: "red"}}>18.4%</span> | +0.0 USD | 10669.9<br />52.0 | 205.2<br />173.3 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 1659.8 | 1.0 |
+| FeeiCN | Meta Platforms | US | <span style={{color: "green"}}>-1851.8</span><br /><span style={{color: "green"}}>-12.0%</span> | +0.0 USD | 13607.5<br />24.0 | 567.0<br />644.1 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -1877.0 | 25.2 |
+| FeeiCN | 英特尔 | US | <span style={{color: "red"}}>5174.0</span><br /><span style={{color: "red"}}>490.7%</span> | +0.0 USD | 6228.5<br />50.0 | 124.6<br />21.1 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 5174.0 | 0.0 |
+| FeeiCN | Illumina | US | <span style={{color: "red"}}>1644.5</span><br /><span style={{color: "red"}}>79.9%</span> | +0.0 USD | 3702.3<br />23.0 | 161.0<br />89.5 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 1644.5 | 0.0 |
+| FeeiCN | Gitlab | US | <span style={{color: "green"}}>-3128.1</span><br /><span style={{color: "green"}}>-33.6%</span> | +0.0 USD | 6169.4<br />222.0 | 27.8<br />41.9 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -3128.1 | 0.0 |
+| FeeiCN | Coinbase | US | <span style={{color: "green"}}>-273.9</span><br /><span style={{color: "green"}}>-25.5%</span> | +0.0 USD | 798.9<br />5.0 | 159.8<br />214.6 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -273.9 | 0.0 |
+| FeeiCN | Applovin | US | <span style={{color: "green"}}>-1079.6</span><br /><span style={{color: "green"}}>-12.0%</span> | +0.0 USD | 7948.3<br />16.0 | 496.8<br />564.2 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -1669.5 | 589.9 |
+| FeeiCN | 亚马逊 | US | <span style={{color: "red"}}>739.3</span><br /><span style={{color: "red"}}>14.8%</span> | +0.0 USD | 5725.2<br />24.0 | 238.6<br />207.7 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 739.3 | 0.0 |
+| FeeiCN | 苹果 | US | <span style={{color: "red"}}>1191.2</span><br /><span style={{color: "red"}}>21.9%</span> | +0.0 USD | 6637.8<br />22.8 | 291.1<br />238.9 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | 1174.7 | 16.5 |
 | FeeiCN | 奥克斯电气 | HK | <span style={{color: "green"}}>-23494.0</span><br /><span style={{color: "green"}}>-39.7%</span> | +0.0 HKD | 35734.0<br />3400.0 | 10.5<br />17.4 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -23494.0 | 0.0 |
 | FeeiCN | 小米集团-W | HK | <span style={{color: "green"}}>-13306.0</span><br /><span style={{color: "green"}}>-45.8%</span> | +0.0 HKD | 15720.0<br />600.0 | 26.2<br />48.4 | 0.0<br />0.0 | 0.0 | 0.0<br />0.0 | -13306.0 | 0.0 |
-| **FeeiCN** | **汇总 (USD)** |  | <span style={{color: "red"}}>3071.3 USD</span><br /><span style={{color: "red"}}>37.8%</span> | <span style={{color: "red"}}>+554.8 USD</span> | 89442.1 USD<br />556.8 |  | 0.0 USD<br />0.0 | 0.0 USD | 0.0 USD<br />0.0 | 951.4 USD | 2120.0 USD |
+| **FeeiCN** | **汇总 (USD)** |  | <span style={{color: "red"}}>3006.4 USD</span><br /><span style={{color: "red"}}>37.5%</span> | +0.0 USD | 89377.1 USD<br />556.8 |  | 0.0 USD<br />0.0 | 0.0 USD | 0.0 USD<br />0.0 | 886.4 USD | 2120.0 USD |
 | **FeeiCN** | **汇总 (HKD)** |  | <span style={{color: "green"}}>-36800.0 HKD</span><br /><span style={{color: "green"}}>-41.6%</span> | +0.0 HKD | 51454.0 HKD<br />4000.0 |  | 0.0 HKD<br />0.0 | 0.0 HKD | 0.0 HKD<br />0.0 | -36800.0 HKD | 0.0 HKD |

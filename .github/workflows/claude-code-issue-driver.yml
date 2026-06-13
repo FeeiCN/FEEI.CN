@@ -1,0 +1,400 @@
+name: Claude Code issue driver
+
+# 把 owner 的 GitHub issue 当作 Claude Code 的异步任务入口。
+# 触发:issue/issue_comment 任一变化(由 owner 发起);或 workflow_dispatch 手动。
+# 两段式:plan → 等 owner /approve → execute → 开 PR。
+# 状态用 label(claude:awaiting-plan/plan-ready/executing/done/failed/paused)。
+# Marker 仅作评论定位 + 元信息,不参与状态判定。
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  issue_comment:
+    types: [created, edited]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: '指定 issue 编号'
+        required: true
+      dry_run:
+        description: '只 decide,不调 claude'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: claude-driver-issue-${{ github.event.issue.number || github.event.inputs.issue_number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  drive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # 三道安全门:
+    # 1. manual 路径直通
+    # 2. event 路径必须 sender == owner(挡 bot + 外部协作者)
+    # 3. issue_comment 不能是 PR 评论(GH 把 PR 当 issue,容易误触)
+    # 4. issue_comment 不能是带 marker 的评论(防 driver 自递归)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.sender.login == github.repository_owner
+        && (github.event_name != 'issue_comment' || !github.event.issue.pull_request)
+        && (github.event_name != 'issue_comment' || !startsWith(github.event.comment.body, '<!-- claude-driver:'))
+      )
+
+    steps:
+      # ─────────────────────────────────────
+      # 1. 解析 issue 编号 + 决策 mode
+      # ─────────────────────────────────────
+      - name: Decide mode
+        id: decide
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          EVENT_ISSUE: ${{ github.event.issue.number }}
+          MANUAL_ISSUE: ${{ github.event.inputs.issue_number }}
+        run: |
+          python3 <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, subprocess, sys
+
+          REPO, OWNER = os.environ["REPO"], os.environ["OWNER"]
+          n = os.environ.get("EVENT_ISSUE") or os.environ.get("MANUAL_ISSUE")
+          if not n:
+              print("mode=skip"); print("number="); sys.exit(0)
+
+          j = subprocess.check_output(
+              ["gh","issue","view",n,"--repo",REPO,
+               "--json","body,comments,labels,author,state"],
+              text=True)
+          d = json.loads(j)
+
+          if d["author"]["login"] != OWNER or d["state"] != "OPEN":
+              print(f"mode=skip"); print(f"number={n}"); sys.exit(0)
+
+          labels = {l["name"] for l in d["labels"]}
+          if labels & {"claude:paused","claude:failed","claude:done","claude:executing"}:
+              print(f"mode=skip"); print(f"number={n}"); sys.exit(0)
+
+          comments = d["comments"]
+          last_claude = max(
+              (c for c in comments if c["body"].startswith("<!-- claude-driver:")),
+              key=lambda c: c["createdAt"], default=None)
+          last_owner = max(
+              (c for c in comments
+               if c["author"]["login"] == OWNER
+               and not c["body"].startswith("<!-- claude-driver:")),
+              key=lambda c: c["createdAt"], default=None)
+
+          def has(body, tok):
+              return any(line.strip() == tok for line in body.splitlines())
+
+          mode = "skip"
+          if "claude:plan-ready" in labels:
+              if last_owner and (not last_claude or last_owner["createdAt"] > last_claude["createdAt"]):
+                  body = last_owner["body"]
+                  if has(body, "/reject"):
+                      mode = "paused"
+                  elif has(body, "/replan"):
+                      mode = "plan"
+                  elif has(body, "/approve"):
+                      mode = "execute"
+                  else:
+                      mode = "plan"
+          else:
+              if last_owner and (not last_claude or last_owner["createdAt"] > last_claude["createdAt"]):
+                  if has(last_owner["body"], "/reject"):
+                      mode = "paused"
+                  else:
+                      mode = "plan"
+              elif not comments and d["body"].strip():
+                  mode = "plan"
+
+          print(f"mode={mode}")
+          print(f"number={n}")
+          PY
+
+      - name: Apply paused label
+        if: steps.decide.outputs.mode == 'paused'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          N: ${{ steps.decide.outputs.number }}
+        run: |
+          for s in awaiting-plan plan-ready executing done failed; do
+            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+          done
+          gh issue edit "$N" --repo "$REPO" --add-label claude:paused
+
+      # ─────────────────────────────────────
+      # 2. 凭证 + setup(仅 plan/execute)
+      # ─────────────────────────────────────
+      - name: Check credentials
+        id: creds
+        if: steps.decide.outputs.mode == 'plan' || steps.decide.outputs.mode == 'execute'
+        env:
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+        run: |
+          if [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
+            echo "skip=no_credentials" >> "$GITHUB_OUTPUT"
+            echo "ANTHROPIC_AUTH_TOKEN 未配置,跳过 claude 执行"
+          else
+            echo "skip=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+          fetch-depth: 0
+
+      - name: Setup Node
+        if: steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        if: steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          npm ci
+
+      # ─────────────────────────────────────
+      # 3. 构造 prompt + 跑 Claude
+      # ─────────────────────────────────────
+      - name: Build prompt and run Claude
+        id: claude
+        if: (steps.decide.outputs.mode == 'plan' || steps.decide.outputs.mode == 'execute') && steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          N: ${{ steps.decide.outputs.number }}
+          MODE: ${{ steps.decide.outputs.mode }}
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+        run: |
+          BASE_SHA="$(git rev-parse origin/main)"
+          echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
+
+          # execute: 切分支 + 上 executing label 锁
+          if [ "$MODE" = "execute" ]; then
+            git fetch origin main
+            git checkout -B "agent/issue-${N}" "origin/main"
+            git config user.name  "FeeiCN[bot]"
+            git config user.email "feei@feei.cn"
+            for s in awaiting-plan plan-ready done failed; do
+              gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+            done
+            gh issue edit "$N" --repo "$REPO" --add-label claude:executing
+          fi
+
+          # 构造 prompt
+          python3 <<'PY' > /tmp/prompt.md
+          import json, os, subprocess, pathlib, re
+
+          N, REPO, MODE = os.environ["N"], os.environ["REPO"], os.environ["MODE"]
+          d = json.loads(subprocess.check_output(
+              ["gh","issue","view",N,"--repo",REPO,
+               "--json","title,body,comments"], text=True))
+
+          claude_md = pathlib.Path("CLAUDE.md").read_text(encoding="utf-8")[:4000]
+          recent = d["comments"][-20:]
+
+          if MODE == "plan":
+              role = (
+                  f"你正在分析 GitHub issue #{N}。"
+                  "**禁止修改任何文件**,仅产出实施计划。\n\n"
+                  "计划应包括:\n"
+                  "1. 需求理解\n"
+                  "2. 影响的文件路径(明确列 `docs/.../*.md` 形式)\n"
+                  "3. 实施步骤\n"
+                  "4. 风险等级 (Low / Medium / High)\n"
+                  "5. 验证方式\n\n"
+                  "最终回复就是计划本身的 Markdown,不要寒暄。"
+              )
+          else:
+              plan = next(
+                  (c for c in reversed(d["comments"])
+                   if c["body"].startswith("<!-- claude-driver:plan:")),
+                  {"body":"(未找到 plan 评论)"})
+              m = re.search(r"commit=([a-f0-9]+)", plan["body"])
+              plan_commit = m.group(1) if m else "(unknown)"
+              current = subprocess.check_output(
+                  ["git","rev-parse","origin/main"], text=True).strip()
+              role = (
+                  f"你正在执行 GitHub issue #{N} 的已批准计划。\n\n"
+                  f"## 重要事实\n"
+                  f"- plan 评论生成时 main = `{plan_commit}`\n"
+                  f"- 当前 main = `{current}`\n"
+                  f"如果这两个 SHA 不同,**先检查 plan 中提到的文件是否仍存在或语义未变**。"
+                  f"任何关键文件已被改写,**立即 abort 并在回复里说明 plan 已过期,请用户 /replan**。\n\n"
+                  f"## 执行约束\n"
+                  f"- 只允许 Read / Write / Edit,以及只读 Bash(git status/diff/log,ls,find,cat,grep)\n"
+                  f"- **禁止** git push / git commit / git checkout / gh 任意命令 — workflow 统一负责\n"
+                  f"- 完成后回复一段 Markdown 总结:变更摘要 / 涉及文件 / 验证情况\n\n"
+                  f"## 已批准的计划\n\n{plan['body']}"
+              )
+
+          if recent:
+              comments_block = "\n\n".join(
+                  f"### {c['author']['login']} @ {c['createdAt']}\n{c['body']}"
+                  for c in recent
+              )
+          else:
+              comments_block = "(无)"
+
+          print(
+              f"# 仓库背景(CLAUDE.md 摘要)\n\n"
+              f"{claude_md}\n\n"
+              f"# Issue 信息\n\n"
+              f"标题: {d['title']}\n\n"
+              f"## Issue 正文\n\n"
+              f"{d['body']}\n\n"
+              f"## 最近 {len(recent)} 条评论\n\n"
+              f"{comments_block}\n\n"
+              f"# 你的任务\n\n"
+              f"{role}\n"
+          )
+          PY
+
+          # 跑 Claude
+          COMMON=( -p --output-format json )
+          if [ "$MODE" = "plan" ]; then
+            EXTRA=( --permission-mode plan --max-turns 10 --max-budget-usd 0.30 )
+          else
+            EXTRA=(
+              --max-turns 20
+              --max-budget-usd 1.50
+              --allowedTools "Read,Write,Edit,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),WebFetch"
+              --disallowedTools "Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*),Bash(gh:*)"
+            )
+          fi
+          claude "${COMMON[@]}" "${EXTRA[@]}" < /tmp/prompt.md > /tmp/claude.json || true
+
+          jq -r '.result // .message // ""' /tmp/claude.json > /tmp/result.txt
+          echo "cost=$(jq -r '.total_cost_usd // 0' /tmp/claude.json)" >> "$GITHUB_OUTPUT"
+          echo "turns=$(jq -r '.num_turns // 0' /tmp/claude.json)" >> "$GITHUB_OUTPUT"
+          if [ ! -s /tmp/result.txt ]; then
+            echo "Claude 无输出(可能 budget/turns 超限或 API 异常)"
+            head -c 1000 /tmp/claude.json
+            exit 1
+          fi
+
+      # ─────────────────────────────────────
+      # 4. plan 分支:post + label
+      # ─────────────────────────────────────
+      - name: Post plan comment
+        if: steps.decide.outputs.mode == 'plan' && steps.claude.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          N: ${{ steps.decide.outputs.number }}
+          BASE: ${{ steps.claude.outputs.base_sha }}
+          COST: ${{ steps.claude.outputs.cost }}
+          TURNS: ${{ steps.claude.outputs.turns }}
+        run: |
+          {
+            echo "<!-- claude-driver:plan:commit=${BASE}:cost=${COST}:turns=${TURNS} -->"
+            echo
+            echo "## Claude Code 执行计划"
+            echo
+            cat /tmp/result.txt
+            echo
+            echo "---"
+            echo
+            echo "确认请回复 \`/approve\` 独立一行;重出计划 \`/replan\`;终止 \`/reject\`。"
+          } | head -c 64000 > /tmp/comment.md
+          if [ "$(wc -c < /tmp/comment.md)" -ge 64000 ]; then
+            printf '\n\n<!-- 内容过长已截断 -->\n' >> /tmp/comment.md
+          fi
+          gh issue comment "$N" --repo "$REPO" --body-file /tmp/comment.md
+
+          for s in awaiting-plan executing done failed; do
+            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+          done
+          gh issue edit "$N" --repo "$REPO" --add-label claude:plan-ready
+
+      # ─────────────────────────────────────
+      # 5. execute 分支:build → push → PR
+      # ─────────────────────────────────────
+      - name: Build and push
+        id: build
+        if: steps.decide.outputs.mode == 'execute' && steps.claude.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+          REPO: ${{ github.repository }}
+          N: ${{ steps.decide.outputs.number }}
+        run: |
+          # build 卡门:SUCCESS 且无 WARNING
+          npm run build 2>&1 | tee /tmp/build.log | grep -E "WARNING|SUCCESS|ERROR" || true
+          if grep -q '\[WARNING\]' /tmp/build.log || ! grep -q '\[SUCCESS\]' /tmp/build.log; then
+            echo "state=failed" >> "$GITHUB_OUTPUT"
+            echo "reason=build 失败或有 WARNING,未 push" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # diff 检查:Claude 应该改了东西
+          if git diff --quiet origin/main; then
+            echo "state=failed" >> "$GITHUB_OUTPUT"
+            echo "reason=Claude 跑完后无 diff,可能 plan 已过期或被 abort" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git add -A
+          git commit -m "agent: 实施 issue #${N}"
+          git push -u origin "agent/issue-${N}" 2>/dev/null \
+            || git push --force-with-lease origin "agent/issue-${N}"
+          # PR: 已存在则 reuse,不存在则 create
+          EXISTING="$(gh pr list --repo "$REPO" --head "agent/issue-${N}" --state open --json url -q '.[0].url' 2>/dev/null || true)"
+          if [ -n "$EXISTING" ]; then
+            PR_URL="$EXISTING"
+          else
+            PR_URL="$(gh pr create --repo "$REPO" \
+              --base main --head "agent/issue-${N}" \
+              --title "agent: 实施 #${N}" --body "Close #${N}" | tail -1)"
+          fi
+          echo "state=done" >> "$GITHUB_OUTPUT"
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Post execute result
+        if: steps.decide.outputs.mode == 'execute' && steps.claude.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          N: ${{ steps.decide.outputs.number }}
+          BASE: ${{ steps.claude.outputs.base_sha }}
+          COST: ${{ steps.claude.outputs.cost }}
+          TURNS: ${{ steps.claude.outputs.turns }}
+          STATE: ${{ steps.build.outputs.state }}
+          PR_URL: ${{ steps.build.outputs.pr_url }}
+          REASON: ${{ steps.build.outputs.reason }}
+        run: |
+          {
+            echo "<!-- claude-driver:result:commit=${BASE}:pr=${PR_URL:-none}:cost=${COST}:turns=${TURNS} -->"
+            echo
+            echo "## Claude Code 执行结果"
+            echo
+            echo "- 分支: \`agent/issue-${N}\`"
+            echo "- PR: ${PR_URL:-(未创建)}"
+            echo "- 状态: ${STATE}"
+            [ -n "${REASON:-}" ] && echo "- 原因: ${REASON}"
+            echo "- 成本: \$${COST} / ${TURNS} 轮"
+            echo
+            cat /tmp/result.txt
+          } | head -c 64000 > /tmp/result.md
+          if [ "$(wc -c < /tmp/result.md)" -ge 64000 ]; then
+            printf '\n\n<!-- 内容过长已截断 -->\n' >> /tmp/result.md
+          fi
+          gh issue comment "$N" --repo "$REPO" --body-file /tmp/result.md
+
+          for s in awaiting-plan plan-ready executing done failed; do
+            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+          done
+          gh issue edit "$N" --repo "$REPO" --add-label "claude:${STATE}"

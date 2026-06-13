@@ -437,9 +437,7 @@ jobs:
           fi
           # Claude 的改动在 agent/issue-N 分支上;commit + 切回 main + ff 合并 + push
           git add -A
-          git commit -m "Agent: #${N}
-
-Closes #${N}"
+          printf 'Agent: #%s\n\nCloses #%s\n' "${N}" "${N}" | git commit -F -
           git fetch origin main
           if ! git checkout -B main origin/main; then
             echo "state=failed" >> "$GITHUB_OUTPUT"

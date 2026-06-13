@@ -267,7 +267,7 @@ jobs:
                   f"## 执行约束\n"
                   f"- 只允许 Read / Write / Edit,以及只读 Bash(git status/diff/log,ls,find,cat,grep)\n"
                   f"- **禁止** git push / git commit / git checkout / gh 任意命令 — workflow 统一负责\n"
-                  f"- 完成后回复一段 Markdown 总结:变更摘要 / 涉及文件 / 验证情况\n\n"
+                  f"- 完成后回复一段 Markdown 总结:变更摘要 / 涉及文件 / 验证情况(只读类检查:grep/cat/git diff)\n\n"
                   f"## 已批准的计划\n\n{plan['body']}"
               )
 
@@ -406,7 +406,13 @@ jobs:
           gh issue edit "$N" --repo "$REPO" --add-label claude:plan-ready
 
       # ─────────────────────────────────────
-      # 5. execute 分支:build → push → PR
+      # 5. execute 分支:build → commit → ff-merge main → push main
+      # 文本型仓库(owner 唯一、Markdown 单一)不再走 PR 模式:
+      #   - 不需要外部 review
+      #   - 不需要 CI 矩阵
+      #   - PAT 不需要 createPullRequest scope
+      # 改为:Claude 在 agent/issue-N 改文件 → build 卡门 → 切回 main ff 合并 → push main
+      # ff-only 失败 = 别的 commit 同期进了 main,driver 不强推,标 failed 等用户处理
       # ─────────────────────────────────────
       - name: Build and push
         id: build
@@ -429,21 +435,33 @@ jobs:
             echo "reason=Claude 跑完后无 diff,可能 plan 已过期或被 abort" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # Claude 的改动在 agent/issue-N 分支上;commit + 切回 main + ff 合并 + push
           git add -A
-          git commit -m "agent: 实施 issue #${N}"
-          git push -u origin "agent/issue-${N}" 2>/dev/null \
-            || git push --force-with-lease origin "agent/issue-${N}"
-          # PR: 已存在则 reuse,不存在则 create
-          EXISTING="$(gh pr list --repo "$REPO" --head "agent/issue-${N}" --state open --json url -q '.[0].url' 2>/dev/null || true)"
-          if [ -n "$EXISTING" ]; then
-            PR_URL="$EXISTING"
-          else
-            PR_URL="$(gh pr create --repo "$REPO" \
-              --base main --head "agent/issue-${N}" \
-              --title "agent: 实施 #${N}" --body "Close #${N}" | tail -1)"
+          git commit -m "Agent: #${N}
+
+Closes #${N}"
+          git fetch origin main
+          if ! git checkout -B main origin/main; then
+            echo "state=failed" >> "$GITHUB_OUTPUT"
+            echo "reason=无法 checkout main(可能有未提交变更)" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          if ! git merge --ff-only "agent/issue-${N}"; then
+            echo "state=failed" >> "$GITHUB_OUTPUT"
+            echo "reason=main 上有新的 commit,ff 合并失败,需用户处理" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # push main(失败时不留失败状态在中间分支)
+          if ! git push origin main; then
+            echo "state=failed" >> "$GITHUB_OUTPUT"
+            echo "reason=push main 失败" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # 清理 agent/issue-N 分支(可选,远端先删,本地再删)
+          git push origin --delete "agent/issue-${N}" 2>/dev/null || true
+          git branch -D "agent/issue-${N}" 2>/dev/null || true
           echo "state=done" >> "$GITHUB_OUTPUT"
-          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "merge_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Post execute result
         if: steps.decide.outputs.mode == 'execute' && steps.claude.outcome == 'success'
@@ -455,16 +473,15 @@ jobs:
           COST: ${{ steps.claude.outputs.cost }}
           TURNS: ${{ steps.claude.outputs.turns }}
           STATE: ${{ steps.build.outputs.state }}
-          PR_URL: ${{ steps.build.outputs.pr_url }}
+          MERGE_COMMIT: ${{ steps.build.outputs.merge_commit }}
           REASON: ${{ steps.build.outputs.reason }}
         run: |
           {
-            echo "<!-- claude-driver:result:commit=${BASE}:pr=${PR_URL:-none}:cost=${COST}:turns=${TURNS} -->"
+            echo "<!-- claude-driver:result:commit=${BASE}:merge=${MERGE_COMMIT:-none}:cost=${COST}:turns=${TURNS} -->"
             echo
             echo "## Claude Code 执行结果"
             echo
-            echo "- 分支: \`agent/issue-${N}\`"
-            echo "- PR: ${PR_URL:-(未创建)}"
+            echo "- 合并到 main: \`${MERGE_COMMIT:-none}\`"
             echo "- 状态: ${STATE}"
             [ -n "${REASON:-}" ] && echo "- 原因: ${REASON}"
             echo "- 成本: \$${COST} / ${TURNS} 轮"

@@ -18,7 +18,7 @@
 
 运行环境要求 Node.js `>=20`，以 `package.json` 为准。
 
-不要主动跑 `npm run typecheck` 和 `npm run build`。如果改动后需要验证，先向用户确认，得到明确同意后再执行。
+不要主动跑 `npm run typecheck` 和 `npm run build`。
 
 每次执行 `git push` 前，必须先运行 `npm run build 2>&1 | grep -E "WARNING|SUCCESS|ERROR"` 确认输出为 `[SUCCESS]` 且无 `[WARNING]`，才可以推送。
 
@@ -80,10 +80,7 @@ GitHub Issue 可作为新的想法和观点收集入口。处理这类 issue 时
    - 全局人生框架：`docs/overview.mdx`
 3. 对原始观点进行探讨和完善，补足逻辑链条，去掉口号化、重复或过于临时的表达。
 4. 将内容融入对应文档的合适位置，优先调整上下文和段落结构，而不是孤立追加。
-5. 修改后执行 `npm run typecheck` 和 `npm run build`。
-6. 提交时在 commit 信息末尾附上 issue 编号，例如：`优化财富框架 (#42)`。
-7. 处理完成后，向用户确认是否需要关闭对应 issue。
-8. 若用户确认关闭，关闭前在 issue 中评论处理结果，说明观点已融入哪些文件和位置。
+5. 提交时在 commit 信息末尾附上 issue 编号，例如：`优化财富框架 (#42)`。
 
 ## 提交与合并请求规范
 

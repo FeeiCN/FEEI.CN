@@ -305,14 +305,31 @@ jobs:
               --disallowedTools "Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*),Bash(gh:*)"
             )
           fi
-          claude "${COMMON[@]}" "${EXTRA[@]}" < /tmp/prompt.md > /tmp/claude.json || true
+          claude "${COMMON[@]}" "${EXTRA[@]}" < /tmp/prompt.md \
+            > /tmp/claude.json 2> /tmp/claude.err || true
+          # 诊断:把 stderr + 解析前的 JSON 头都落到 step summary,方便事后排查
+          {
+            echo "### claude stderr (前 2000 字符)"
+            echo '```'
+            head -c 2000 /tmp/claude.err
+            echo
+            echo '```'
+            echo "### claude.json 顶层字段"
+            echo '```'
+            jq -r 'keys_unsorted | join(", ")' /tmp/claude.json 2>/dev/null || echo "(jq failed)"
+            echo
+            echo "### claude.json 摘要(前 1500 字符)"
+            head -c 1500 /tmp/claude.json
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
           jq -r '.result // .message // ""' /tmp/claude.json > /tmp/result.txt
           echo "cost=$(jq -r '.total_cost_usd // 0' /tmp/claude.json)" >> "$GITHUB_OUTPUT"
           echo "turns=$(jq -r '.num_turns // 0' /tmp/claude.json)" >> "$GITHUB_OUTPUT"
+          echo "result_len=$(wc -c < /tmp/result.txt)" >> "$GITHUB_OUTPUT"
           if [ ! -s /tmp/result.txt ]; then
             echo "Claude 无输出(可能 budget/turns 超限或 API 异常)"
-            head -c 1000 /tmp/claude.json
             exit 1
           fi
 

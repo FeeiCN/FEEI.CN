@@ -415,15 +415,15 @@ jobs:
             EXTRA=(
               --max-turns 10
               --max-budget-usd 10
-              --allowedTools "Read,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),WebFetch"
-              --disallowedTools "Write,Edit,NotebookEdit,Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*),Bash(gh:*)"
+              --allowedTools "Read,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh workflow list:*),Bash(gh workflow view:*),Bash(gh release list:*),Bash(gh search:*),WebFetch"
+              --disallowedTools "Write,Edit,NotebookEdit,Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*),Bash(gh pr create:*),Bash(gh pr merge:*),Bash(gh pr close:*),Bash(gh pr edit:*),Bash(gh pr ready:*),Bash(gh issue edit:*),Bash(gh issue close:*),Bash(gh issue reopen:*),Bash(gh issue comment:*),Bash(gh issue delete:*),Bash(gh label:*),Bash(gh release create:*),Bash(gh release delete:*),Bash(gh release edit:*),Bash(gh run cancel:*),Bash(gh run rerun:*),Bash(gh run delete:*),Bash(gh run download:*),Bash(gh run watch:*),Bash(gh workflow disable:*),Bash(gh workflow enable:*),Bash(gh api:*),Bash(gh repo:*),Bash(gh auth:*),Bash(gh extension:*),Bash(gh gist:*),Bash(gh secret:*),Bash(gh variable:*),Bash(gh ssh-key:*),Bash(gh gpg-key:*),Bash(gh codespace:*)"
             )
           else
             EXTRA=(
               --max-turns 20
               --max-budget-usd 1.50
-              --allowedTools "Read,Write,Edit,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),WebFetch"
-              --disallowedTools "Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*),Bash(gh:*)"
+              --allowedTools "Read,Write,Edit,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh workflow list:*),Bash(gh workflow view:*),Bash(gh release list:*),Bash(gh search:*),WebFetch"
+              --disallowedTools "Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*),Bash(gh pr create:*),Bash(gh pr merge:*),Bash(gh pr close:*),Bash(gh pr edit:*),Bash(gh pr ready:*),Bash(gh issue edit:*),Bash(gh issue close:*),Bash(gh issue reopen:*),Bash(gh issue comment:*),Bash(gh issue delete:*),Bash(gh label:*),Bash(gh release create:*),Bash(gh release delete:*),Bash(gh release edit:*),Bash(gh run cancel:*),Bash(gh run rerun:*),Bash(gh run delete:*),Bash(gh run download:*),Bash(gh run watch:*),Bash(gh workflow disable:*),Bash(gh workflow enable:*),Bash(gh api:*),Bash(gh repo:*),Bash(gh auth:*),Bash(gh extension:*),Bash(gh gist:*),Bash(gh secret:*),Bash(gh variable:*),Bash(gh ssh-key:*),Bash(gh gpg-key:*),Bash(gh codespace:*)"
             )
           fi
 

@@ -18,11 +18,7 @@
 
 运行环境要求 Node.js `>=20`，以 `package.json` 为准。
 
-不要主动跑 `npm run typecheck` 和 `npm run build`。
-
 每次执行 `git push` 前，必须先运行 `npm run build 2>&1 | grep -E "WARNING|SUCCESS|ERROR"` 确认输出为 `[SUCCESS]` 且无 `[WARNING]`，才可以推送。
-
-`git push` 前必须向用户确认，得到明确同意后才能执行。
 
 ## 编码风格与命名约定
 

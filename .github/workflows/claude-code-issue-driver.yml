@@ -78,7 +78,9 @@ jobs:
               print(f"mode=skip"); print(f"number={n}"); sys.exit(0)
 
           labels = {l["name"] for l in d["labels"]}
-          if labels & {"claude:paused","claude:failed","claude:done","claude:executing"}:
+          # executing / paused 锁住 driver(防并发覆盖);done / failed 不挡,
+          # owner 可在已完成的 issue 上评论 /plan 重新激活(走"非 plan-ready"分支)。
+          if labels & {"claude:paused","claude:executing"}:
               print(f"mode=skip"); print(f"number={n}"); sys.exit(0)
 
           comments = d["comments"]
@@ -94,9 +96,13 @@ jobs:
           def has(body, tok):
               return any(line.strip() == tok for line in body.splitlines())
 
+          # 命令驱动:仅当 owner 最新评论含 /plan / /replan / /approve / /reject
+          # 独立一行时 driver 才响应,其他情况(普通评论、标题编辑、issue 重开)一律 skip。
           mode = "skip"
-          if "claude:plan-ready" in labels:
-              if last_owner and (not last_claude or last_owner["createdAt"] > last_claude["createdAt"]):
+          if not last_owner:
+              pass
+          elif "claude:plan-ready" in labels:
+              if not last_claude or last_owner["createdAt"] > last_claude["createdAt"]:
                   body = last_owner["body"]
                   if has(body, "/reject"):
                       mode = "paused"
@@ -104,17 +110,15 @@ jobs:
                       mode = "plan"
                   elif has(body, "/approve"):
                       mode = "execute"
-                  else:
-                      mode = "plan"
+                  # /plan 在 plan-ready 状态下被忽略(已经 plan 过了,要先 /replan)
           else:
-              if last_owner and (not last_claude or last_owner["createdAt"] > last_claude["createdAt"]):
-                  if has(last_owner["body"], "/reject"):
+              if not last_claude or last_owner["createdAt"] > last_claude["createdAt"]:
+                  body = last_owner["body"]
+                  if has(body, "/reject"):
                       mode = "paused"
-                  else:
+                  elif has(body, "/plan"):
                       mode = "plan"
-              elif not comments:
-                  # 新 issue 没评论:owner 一定提供了 title,跑 plan;Claude 自己从 title+body 推断
-                  mode = "plan"
+                  # /approve / /replan 在非 plan-ready 状态被忽略(尚未 plan)
 
           print(f"mode={mode}")
           print(f"number={n}")
@@ -437,7 +441,7 @@ jobs:
           fi
           # Claude 的改动在 agent/issue-N 分支上;commit + 切回 main + ff 合并 + push
           git add -A
-          printf 'Agent: #%s\n\nCloses #%s\n' "${N}" "${N}" | git commit -F -
+          printf 'Agent: #%s\n' "${N}" | git commit -F -
           git fetch origin main
           if ! git checkout -B main origin/main; then
             echo "state=failed" >> "$GITHUB_OUTPUT"
@@ -495,3 +499,7 @@ jobs:
             gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
           done
           gh issue edit "$N" --repo "$REPO" --add-label "claude:${STATE}"
+
+          if [ "$STATE" = "done" ]; then
+            gh issue close "$N" --repo "$REPO" --reason completed || true
+          fi

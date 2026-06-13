@@ -126,6 +126,26 @@ jobs:
                 file=sys.stderr)
           PY
 
+      - name: Ensure labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # driver 用到 6 个 claude:* label,仓库里可能一个都没有;
+          # 已存在会报 "already exists",吞掉即可,保证后续 add 不会因 label 不存在失败。
+          declare -A L=(
+            [claude:awaiting-plan]="fbc108"
+            [claude:plan-ready]="0e8a16"
+            [claude:executing]="fbca04"
+            [claude:done]="0e8a16"
+            [claude:failed]="d93f0b"
+            [claude:paused]="cccccc"
+          )
+          for name in "${!L[@]}"; do
+            gh label create "$name" --repo "$REPO" --color "${L[$name]}" \
+              --description "Claude Code driver state" 2>/dev/null || true
+          done
+
       - name: Apply paused label
         if: steps.decide.outputs.mode == 'paused'
         env:

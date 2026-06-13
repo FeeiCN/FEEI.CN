@@ -3,7 +3,7 @@ name: Claude Code issue driver
 # 把 owner 的 GitHub issue 当作 Claude Code 的异步任务入口。
 # 触发:issue/issue_comment 任一变化(由 owner 发起);或 workflow_dispatch 手动。
 # 两段式:plan → 等 owner /approve → execute → 开 PR。
-# 状态用 label(claude:awaiting-plan/plan-ready/executing/done/failed/paused)。
+# 状态用 label(claude:planning/plan-ready/executing/done/failed/paused)。
 # Marker 仅作评论定位 + 元信息,不参与状态判定。
 
 on:
@@ -78,9 +78,9 @@ jobs:
               print(f"mode=skip"); print(f"number={n}"); sys.exit(0)
 
           labels = {l["name"] for l in d["labels"]}
-          # executing / paused 锁住 driver(防并发覆盖);done / failed 不挡,
+          # planning / executing / paused 锁住 driver(防并发覆盖);done / failed 不挡,
           # owner 可在已完成的 issue 上评论 /plan 重新激活(走"非 plan-ready"分支)。
-          if labels & {"claude:paused","claude:executing"}:
+          if labels & {"claude:paused","claude:executing","claude:planning"}:
               print(f"mode=skip"); print(f"number={n}"); sys.exit(0)
 
           comments = d["comments"]
@@ -142,7 +142,7 @@ jobs:
           # driver 用到 6 个 claude:* label,仓库里可能一个都没有;
           # 已存在会报 "already exists",吞掉即可,保证后续 add 不会因 label 不存在失败。
           declare -A L=(
-            [claude:awaiting-plan]="fbc108"
+            [claude:planning]="fbc108"
             [claude:plan-ready]="0e8a16"
             [claude:executing]="fbca04"
             [claude:done]="0e8a16"
@@ -161,10 +161,28 @@ jobs:
           REPO: ${{ github.repository }}
           N: ${{ steps.decide.outputs.number }}
         run: |
-          for s in awaiting-plan plan-ready executing done failed; do
+          for s in planning plan-ready executing done failed; do
             gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
           done
           gh issue edit "$N" --repo "$REPO" --add-label claude:paused
+
+      - name: Apply state label
+        if: steps.decide.outputs.mode == 'plan' || steps.decide.outputs.mode == 'execute'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          N: ${{ steps.decide.outputs.number }}
+          MODE: ${{ steps.decide.outputs.mode }}
+        run: |
+          # 视觉信号:Claude 进入 plan 阶段立刻上 planning label(失败也方便定位);
+          # execute 阶段实际上由 claude step 内部 add claude:executing(因为要等切分支),
+          # 这里只对 plan 模式加 planning,execute 模式不做事。
+          for s in planning plan-ready executing done failed; do
+            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+          done
+          if [ "$MODE" = "plan" ]; then
+            gh issue edit "$N" --repo "$REPO" --add-label claude:planning 2>/dev/null || true
+          fi
 
       # ─────────────────────────────────────
       # 2. 凭证 + setup(仅 plan/execute)
@@ -226,7 +244,7 @@ jobs:
             git checkout -B "agent/issue-${N}" "origin/main"
             git config user.name  "FeeiCN[bot]"
             git config user.email "feei@feei.cn"
-            for s in awaiting-plan plan-ready done failed; do
+            for s in planning plan-ready done failed; do
               gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
             done
             gh issue edit "$N" --repo "$REPO" --add-label claude:executing
@@ -408,7 +426,7 @@ jobs:
           fi
           gh issue comment "$N" --repo "$REPO" --body-file /tmp/comment.md
 
-          for s in awaiting-plan executing done failed; do
+          for s in planning executing done failed; do
             gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
           done
           gh issue edit "$N" --repo "$REPO" --add-label claude:plan-ready
@@ -499,7 +517,7 @@ jobs:
           fi
           gh issue comment "$N" --repo "$REPO" --body-file /tmp/result.md
 
-          for s in awaiting-plan plan-ready executing done failed; do
+          for s in planning plan-ready executing done failed; do
             gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
           done
           gh issue edit "$N" --repo "$REPO" --add-label "claude:${STATE}"

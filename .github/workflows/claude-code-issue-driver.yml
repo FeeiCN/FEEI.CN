@@ -23,7 +23,9 @@ on:
 
 concurrency:
   group: claude-driver-issue-${{ github.event.issue.number || github.event.inputs.issue_number }}
-  cancel-in-progress: true
+  # 不再 cancel-in-progress:旧 run 自然结束。否则 owner 在 /plan 跑出后再发 /replan,
+  # 旧 run 被中途杀,claude step 走 cancelled → 残留 claude:planning 锁,issue 卡死。
+  # 现在 cleanup step 已覆盖 failure + cancelled,保留旧 run 让其贴出 plan 后再退出即可。
 
 permissions:
   contents: write
@@ -33,7 +35,7 @@ permissions:
 jobs:
   drive:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
     # 三道安全门:
     # 1. manual 路径直通
     # 2. event 路径必须 sender == owner(挡 bot + 外部协作者)
@@ -429,15 +431,15 @@ jobs:
           COMMON=( -p --output-format json )
           if [ "$MODE" = "plan" ]; then
             EXTRA=(
-              --max-turns 10
-              --max-budget-usd 10
+              --max-turns 15
+              --max-budget-usd 15
               --allowedTools "Read,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh workflow list:*),Bash(gh workflow view:*),Bash(gh release list:*),Bash(gh search:*),Bash(python3:*),Bash(node:*),Bash(npm:*),Bash(npx:*),WebFetch"
               --disallowedTools "Write,Edit,NotebookEdit,Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*),Bash(gh pr create:*),Bash(gh pr merge:*),Bash(gh pr close:*),Bash(gh pr edit:*),Bash(gh pr ready:*),Bash(gh issue edit:*),Bash(gh issue close:*),Bash(gh issue reopen:*),Bash(gh issue comment:*),Bash(gh issue delete:*),Bash(gh label:*),Bash(gh release create:*),Bash(gh release delete:*),Bash(gh release edit:*),Bash(gh run cancel:*),Bash(gh run rerun:*),Bash(gh run delete:*),Bash(gh run download:*),Bash(gh run watch:*),Bash(gh workflow disable:*),Bash(gh workflow enable:*),Bash(gh api:*),Bash(gh repo:*),Bash(gh auth:*),Bash(gh extension:*),Bash(gh gist:*),Bash(gh secret:*),Bash(gh variable:*),Bash(gh ssh-key:*),Bash(gh gpg-key:*),Bash(gh codespace:*)"
             )
           else
             EXTRA=(
-              --max-turns 60
-              --max-budget-usd 10
+              --max-turns 200
+              --max-budget-usd 20
               --allowedTools "Read,Write,Edit,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),Bash(python3:*),Bash(node:*),Bash(npm:*),Bash(npx:*)"
               --disallowedTools "WebFetch,Bash(gh:*),Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*)"
             )
@@ -514,6 +516,23 @@ jobs:
             echo "Claude 无有效输出"
             exit 1
           fi
+
+      # ─────────────────────────────────────
+      # 4. 失败时清锁:plan 阶段 claude 失败(execute 阶段由 Post execute result 负责)
+      # 不清就会把 issue 永久锁在 claude:planning / claude:executing,后续指令全部被
+      # Decide mode 的 `locked` 拦截。覆盖 plan-only 失败 + plan/execute 都失败两种情况。
+      # ─────────────────────────────────────
+      - name: Cleanup stuck lock on plan failure
+        if: steps.claude.outcome == 'failure' && steps.decide.outputs.mode == 'plan'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          N: ${{ steps.decide.outputs.number }}
+        run: |
+          for s in planning plan-ready executing done paused; do
+            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+          done
+          gh issue edit "$N" --repo "$REPO" --add-label claude:failed 2>/dev/null || true
 
       # ─────────────────────────────────────
       # 4. plan 分支:post + label

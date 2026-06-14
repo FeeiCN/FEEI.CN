@@ -60,15 +60,6 @@ jobs:
             echo "skip=no" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Update status page
-        if: steps.creds.outputs.skip == 'no'
-        run: |
-          python3 scripts/status_page.py \
-            --key weread-highlights \
-            --name "微信读书划线入 issue" \
-            --script "scripts/import_weread_latest_highlight.py" \
-            --status "成功" || true
-
       - name: Run import script
         if: steps.creds.outputs.skip == 'no'
         env:
@@ -90,21 +81,3 @@ jobs:
             args+=(--overlap-hours "${OVERLAP_HOURS}")
           fi
           python3 scripts/import_weread_latest_highlight.py "${args[@]}"
-
-      - name: Commit and push status page
-        if: steps.creds.outputs.skip == 'no'
-        env:
-          WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
-        run: |
-          git config user.name "FeeiCN[bot]"
-          git config user.email "feei@feei.cn"
-
-          if [ -z "$(git status --porcelain -- 'docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN状态.md')" ]; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
-          git add -- 'docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN状态.md'
-          timestamp="$(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M')"
-          git commit -m "[auto] 同步微信读书划线到 issues (${timestamp})"
-          git push "https://x-access-token:${WORKFLOW_TRIGGER_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main

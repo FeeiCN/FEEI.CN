@@ -50,21 +50,3 @@ jobs:
           OPENAI_ADMIN_KEY: ${{ secrets.OPENAI_ADMIN_KEY }}
         run: |
           python3 scripts/sync_llm_usage.py
-
-      - name: Commit and push
-        if: steps.creds.outputs.skip == 'no'
-        env:
-          WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
-        run: |
-          git config user.name "FeeiCN[bot]"
-          git config user.email "feei@feei.cn"
-
-          if [ -z "$(git status --porcelain -- 'static/llm-usage/' 'docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN状态.md')" ]; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
-          git add -- 'static/llm-usage/' 'docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN状态.md'
-          timestamp="$(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M')"
-          git commit -m "更新 LLM token 消耗摘要 (${timestamp})"
-          git push "https://x-access-token:${WORKFLOW_TRIGGER_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main

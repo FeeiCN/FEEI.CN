@@ -67,30 +67,3 @@ jobs:
             fi
           fi
           python3 scripts/export_weread_data.py "${args[@]}"
-
-      - name: Update status page
-        if: steps.creds.outputs.skip == 'no'
-        run: |
-          python3 scripts/status_page.py \
-            --key weread-daily \
-            --name "微信读书数据同步" \
-            --script "scripts/export_weread_data.py" \
-            --status "成功" || true
-
-      - name: Commit and push
-        if: steps.creds.outputs.skip == 'no'
-        env:
-          WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
-        run: |
-          git config user.name "FeeiCN[bot]"
-          git config user.email "feei@feei.cn"
-
-          if [ -z "$(git status --porcelain -- 'static/reading/' 'scripts/cache/weread_data/state.json' 'docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN状态.md')" ]; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
-          git add -- 'static/reading/' 'scripts/cache/weread_data/state.json' 'docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN状态.md'
-          timestamp="$(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M')"
-          git commit -m "[auto] 同步微信读书数据 (${timestamp})"
-          git push "https://x-access-token:${WORKFLOW_TRIGGER_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main

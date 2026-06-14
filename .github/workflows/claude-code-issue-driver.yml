@@ -359,8 +359,7 @@ jobs:
           if MODE == "plan":
               role = (
                   f"你正在分析 GitHub issue #{N}。\n\n"
-                  f"你不是代码实现 Agent。\n\n"
-                  f"你的任务只是根据:\n"
+                  f"你的任务是根据:\n"
                   f"- Issue 正文与最近评论\n"
                   f"- CLAUDE.md\n"
                   f"- 必要时查看少量文件或检索互联网资料\n\n"

@@ -449,19 +449,22 @@ jobs:
           PY
 
           # 跑 Claude
-          # 用 --permission-mode bypassPermissions 取代白黑名单:
-          # - 白黑名单维护成本高(漏一个子命令就绕过)
-          # - Claude Code 的 bypassPermissions 是设计上的"完全信任"模式
-          # - 安全约束靠 prompt 硬约束 + driver step 边界(git push / gh issue edit
-          #   等写动作在 build/post step 才执行,claude 阶段不直接做)
-          COMMON=( -p --output-format json --permission-mode bypassPermissions )
+          # --permission-mode 拆 mode:
+          #   - plan:Claude Code 内置只读模式(禁止 Write/Edit/Bash 写类),plan
+          #     阶段用这个,工具级别硬阻断改文件
+          #   - bypassPermissions:完全信任模式(允许一切),execute 阶段用,
+          #     靠 prompt 硬约束('不要 git commit') + driver step 边界
+          #     (commit/push 在 build step 统一做)
+          COMMON=( -p --output-format json )
           if [ "$MODE" = "plan" ]; then
             EXTRA=(
+              --permission-mode plan
               --max-turns 15
               --max-budget-usd 15
             )
           else
             EXTRA=(
+              --permission-mode bypassPermissions
               --max-turns 200
               --max-budget-usd 20
             )

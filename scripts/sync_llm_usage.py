@@ -32,8 +32,6 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from status_page import update_status_page
-
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 OUT_DIR = REPO_ROOT / "static" / "llm-usage"
@@ -340,14 +338,6 @@ def main() -> int:
         print("[warn] 没有 vendor 被刷新", file=sys.stderr)
         return 1
 
-    update_status_page(
-        key="llm-usage",
-        name="AI 使用数据",
-        script="scripts/sync_llm_usage.py",
-        status="成功",
-        run_time=datetime.now(),
-        outputs=collect_outputs(),
-    )
     print(f"[info] refreshed vendors: {', '.join(refreshed)}", file=sys.stderr)
     return 0
 

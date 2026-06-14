@@ -25,8 +25,6 @@ import sys
 from futu import *
 from futu.common.ft_logger import logger as futu_logger
 
-from status_page import update_status_page
-
 
 TRD_ENV_MAP = {
     "REAL": TrdEnv.REAL,
@@ -161,7 +159,7 @@ def git_commit_and_push_target_repo(paths):
     log("git push 完成")
 
 
-def write_feeicn_outputs(port_results, run_finished_at):
+def write_feeicn_outputs(port_results):
     git_pull_target_repo()
     updated_paths = []
     for result in port_results:
@@ -174,20 +172,6 @@ def write_feeicn_outputs(port_results, run_finished_at):
         if updated_path:
             log(f"写入 {label} -> {updated_path.name}")
             updated_paths.append(updated_path)
-    status_path = update_status_page(
-        key="financial-assets",
-        name="财务自由数据",
-        script="scripts/account_assets.py",
-        status="成功",
-        run_time=run_finished_at,
-        outputs=[
-            {"title": config["title"], "slug": config["slug"]}
-            for result in port_results
-            if (config := ACCOUNT_MDX_CONFIG.get(result["account_label"]))
-        ],
-    )
-    log(f"写入状态页 -> {status_path.name}")
-    updated_paths.append(status_path)
     git_commit_and_push_target_repo(updated_paths)
 
 
@@ -618,6 +602,7 @@ def render_account_mdx(result, config):
         f"slug: {config['slug']}",
         f"icon: {config.get('icon', 'chart-line-icon')}",
         f"title: {config['title']}",
+        f"fetchedAt: {datetime.now().isoformat(timespec='seconds')}",
         *badge_lines,
         "---",
         "",
@@ -920,7 +905,7 @@ def main():
     print(markdown_text)
     if not args.no_write_feeicn:
         log("写入 FEEI.CN ...")
-        write_feeicn_outputs(port_results, datetime.now())
+        write_feeicn_outputs(port_results)
     log("全部完成")
 
 

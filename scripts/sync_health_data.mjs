@@ -18,7 +18,6 @@ const commitMessage = args.message ?? `[auto] 更新健康数据 ${formatLocalDa
 const remote = args.remote ?? 'origin';
 const branch = args.branch ?? currentBranch();
 const healthDir = path.join('static', 'health');
-const statusFile = path.join('docs', '05-吴飞飞', '01-关于', '关于FEEI.CN', 'FEEI.CN状态.md');
 
 ensureNoStagedChanges();
 run('git', ['pull', '--rebase', '--autostash']);
@@ -40,13 +39,6 @@ for (const month of monthsToExport) {
   if (!isPathClean(path.join(healthDir, targetFile))) {
     changedFiles.push(path.join(healthDir, targetFile));
   }
-}
-
-updateStatusPage();
-
-// Always update status file if changed
-if (!isPathClean(statusFile)) {
-  changedFiles.push(statusFile);
 }
 
 if (changedFiles.length === 0) {
@@ -106,22 +98,6 @@ function isPathClean(file) {
   }
 
   return result.stdout.trim() === '';
-}
-
-function updateStatusPage() {
-  run('python3', [
-    'scripts/status_page.py',
-    '--key',
-    'health-data',
-    '--name',
-    '健康数据',
-    '--script',
-    'scripts/sync_health_data.mjs',
-    '--status',
-    '成功',
-    '--output',
-    '健康数据=/health-data',
-  ]);
 }
 
 function currentBranch() {

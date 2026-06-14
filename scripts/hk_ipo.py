@@ -30,8 +30,6 @@ from pathlib import Path
 from futu import *
 from futu.common.ft_logger import logger as futu_logger
 
-from status_page import update_status_page
-
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 CACHE_DIR = SCRIPT_DIR / "cache"
@@ -293,19 +291,8 @@ def write_to_feeicn(account_results):
     OUTPUT_PATH.write_text(content, encoding="utf-8")
     log(f"写入 {OUTPUT_PATH.name}")
 
-    status_path = update_status_page(
-        key="hk-ipo",
-        name="港股打新数据",
-        script="scripts/hk_ipo.py",
-        status="成功",
-        run_time=datetime.now(),
-        outputs=[{"title": "港股打新数据", "slug": "/hk-ipo-data"}],
-    )
-    log(f"写入状态页 -> {status_path.name}")
-
     relative_paths = [
         str(OUTPUT_PATH.relative_to(FEEICN_REPO_ROOT)),
-        str(status_path.relative_to(FEEICN_REPO_ROOT)),
     ]
     run_git_command(["add", "--", *relative_paths], FEEICN_REPO_ROOT)
     diff = subprocess.run(
@@ -369,6 +356,7 @@ def render_markdown(account_results):
         "---",
         "slug: /hk-ipo-data",
         "icon: chart-histogram-icon",
+        f"fetchedAt: {datetime.now().isoformat(timespec='seconds')}",
         "sidebar_badge:",
         "  text: 数据",
         "  color: info",

@@ -22,6 +22,12 @@ SKILL_VERSION = "1.0.3"
 DEFAULT_REPO = "FeeiCN/FEEI.CN"
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1.15 Safari/605.1.15"
 STATE_FILE = Path(__file__).parent / "cache" / "weread_latest_highlight_state.json"
+HIGHLIGHTS_META_FILE = (
+    Path(__file__).resolve().parent.parent
+    / "static"
+    / "reading"
+    / "highlights-meta.json"
+)
 NOTEBOOK_PAGE_SIZE = 100
 API_RETRIES = 3
 GH_RETRIES = 3
@@ -127,6 +133,20 @@ def load_state() -> dict[str, Any]:
 def save_state(state: dict[str, Any]) -> None:
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def write_highlights_meta(state: dict[str, Any], issue_map: dict[str, dict[str, Any]]) -> None:
+    HIGHLIGHTS_META_FILE.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "fetchedAt": format_timestamp(int(datetime.now(tz=timezone.utc).timestamp())),
+        "last_processed_create_time": state.get("last_processed_create_time"),
+        "bookmark_count": len(state.get("bookmark_ids") or []),
+        "issue_count": len(issue_map),
+    }
+    HIGHLIGHTS_META_FILE.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
 
 
 def state_ids(state: dict[str, Any]) -> set[str]:
@@ -483,6 +503,9 @@ def main() -> None:
         issue_map=issue_map,
     )
     save_state(new_state)
+
+    if processed_ids or not HIGHLIGHTS_META_FILE.exists():
+        write_highlights_meta(new_state, issue_map)
 
     if args.dry_run:
         print(f"dry-run 完成，共扫描 {len(highlights)} 条，命中 {len(processed_ids)} 条。", file=sys.stderr)

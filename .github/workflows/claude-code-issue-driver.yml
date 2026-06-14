@@ -458,8 +458,8 @@ jobs:
           if [ "$MODE" = "plan" ]; then
             EXTRA=(
               --permission-mode plan
-              --max-turns 15
-              --max-budget-usd 15
+              --max-turns 200
+              --max-budget-usd 20
             )
           else
             EXTRA=(

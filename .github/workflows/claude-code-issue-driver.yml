@@ -430,10 +430,10 @@ jobs:
             )
           else
             EXTRA=(
-              --max-turns 20
-              --max-budget-usd 1.50
-              --allowedTools "Read,Write,Edit,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh workflow list:*),Bash(gh workflow view:*),Bash(gh release list:*),Bash(gh search:*),Bash(python3:*),Bash(node:*),Bash(npm:*),Bash(npx:*),WebFetch"
-              --disallowedTools "Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*),Bash(gh pr create:*),Bash(gh pr merge:*),Bash(gh pr close:*),Bash(gh pr edit:*),Bash(gh pr ready:*),Bash(gh issue edit:*),Bash(gh issue close:*),Bash(gh issue reopen:*),Bash(gh issue comment:*),Bash(gh issue delete:*),Bash(gh label:*),Bash(gh release create:*),Bash(gh release delete:*),Bash(gh release edit:*),Bash(gh run cancel:*),Bash(gh run rerun:*),Bash(gh run delete:*),Bash(gh run download:*),Bash(gh run watch:*),Bash(gh workflow disable:*),Bash(gh workflow enable:*),Bash(gh api:*),Bash(gh repo:*),Bash(gh auth:*),Bash(gh extension:*),Bash(gh gist:*),Bash(gh secret:*),Bash(gh variable:*),Bash(gh ssh-key:*),Bash(gh gpg-key:*),Bash(gh codespace:*)"
+              --max-turns 40
+              --max-budget-usd 10
+              --allowedTools "Read,Write,Edit,Bash(git status),Bash(git diff:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),Bash(python3:*),Bash(node:*),Bash(npm:*),Bash(npx:*)"
+              --disallowedTools "WebFetch,Bash(gh:*),Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(git log:*),Bash(rm:*)"
             )
           fi
 
@@ -493,6 +493,18 @@ jobs:
             head -c 4000 /tmp/claude.json || true
             echo
             echo "::endgroup::"
+            {
+              echo "## Claude 执行失败"
+              echo
+              echo "- status: $CLAUDE_STATUS"
+              echo "- subtype: $(jq -r '.subtype // "unknown"' /tmp/claude.json)"
+              echo "- terminal_reason: $(jq -r '.terminal_reason // "unknown"' /tmp/claude.json)"
+              echo "- stop_reason: $(jq -r '.stop_reason // "unknown"' /tmp/claude.json)"
+              echo "- turns: $(jq -r '.num_turns // 0' /tmp/claude.json)"
+              echo "- cost: \$$(jq -r '.total_cost_usd // 0' /tmp/claude.json)"
+              echo
+              echo "请提高 max-turns,或收窄 issue 范围后重新执行。"
+            } > /tmp/result.txt
             echo "Claude 无有效输出"
             exit 1
           fi
@@ -593,7 +605,7 @@ jobs:
           echo "merge_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Post execute result
-        if: steps.decide.outputs.mode == 'execute' && steps.claude.outcome == 'success'
+        if: steps.decide.outputs.mode == 'execute' && (steps.claude.outcome == 'success' || steps.claude.outcome == 'failure')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -625,4 +637,5 @@ jobs:
           for s in planning plan-ready executing done failed; do
             gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
           done
-          gh issue edit "$N" --repo "$REPO" --add-label "claude:${STATE}"
+          LABEL="${STATE:-failed}"
+          gh issue edit "$N" --repo "$REPO" --add-label "claude:${LABEL}"

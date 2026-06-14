@@ -334,10 +334,10 @@ jobs:
           BASE_SHA="$(git rev-parse origin/main)"
           echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
 
-          # execute: 切分支 + 上 executing label 锁
+          # execute: 同步 main + 上 executing label 锁(不再切 agent/issue-N 分支)
           if [ "$MODE" = "execute" ]; then
             git fetch origin main
-            git checkout -B "agent/issue-${N}" "origin/main"
+            git reset --hard origin/main
             git config user.name  "FeeiCN[bot]"
             git config user.email "feei@feei.cn"
             for s in planning plan-ready done failed; do
@@ -650,8 +650,9 @@ jobs:
       #   - 不需要外部 review
       #   - 不需要 CI 矩阵
       #   - PAT 不需要 createPullRequest scope
-      # 改为:Claude 在 agent/issue-N 改文件 → build 卡门 → 切回 main ff 合并 → push main
-      # ff-only 失败 = 别的 commit 同期进了 main,driver 不强推,标 failed 等用户处理
+      #   - 避免 agent/issue-N 分支残留 / runner ephemeral 磁盘丢改动
+      # 改为:Claude 直接在 main 上改文件 → build 卡门 → commit → rebase → push main
+      # rebase 冲突 = 远端 main 上有冲突更新,driver 不强推,标 failed 等用户处理
       # ─────────────────────────────────────
       - name: Build and push
         id: build
@@ -669,39 +670,31 @@ jobs:
             echo "reason=build 失败或有 WARNING,未 push" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # diff 检查:Claude 应该改了东西
+          # diff 检查:Claude 应该改了东西(对比起点是 claude step 切到的 origin/main)
           if git diff --quiet origin/main; then
             echo "state=failed" >> "$GITHUB_OUTPUT"
             echo "reason=Claude 跑完后无 diff,可能 plan 已过期或被 abort" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Claude 的改动在 agent/issue-N 分支上;commit + 切回 main + ff 合并 + push
+          # commit(在 main 上直接做,无需切分支 / ff-merge)
           git add -A
           # 截断到 80 字,避免超长 issue 标题撑爆 log 第一行;超长用 … 结尾
           TITLE="$(printf '%s' "${ISSUE_TITLE}" | tr '\n' ' ' | tr -s ' ' | sed -E 's/^ +| +$//g' | cut -c1-80)"
           [ "${#ISSUE_TITLE}" -gt 80 ] && TITLE="${TITLE}…"
           [ -z "${TITLE}" ] && TITLE="(无标题)"
           printf 'Agent: #%s — %s\n' "${N}" "${TITLE}" | git commit -F -
+          # rebase:拉远端 main 上来,处理 Claude 改文件期间其他 commit 进 main 的情况
           git fetch origin main
-          if ! git checkout -B main origin/main; then
+          if ! git pull --rebase origin main; then
             echo "state=failed" >> "$GITHUB_OUTPUT"
-            echo "reason=无法 checkout main(可能有未提交变更)" >> "$GITHUB_OUTPUT"
+            echo "reason=rebase 冲突(Claude 改的文件在远端 main 上有冲突更新),需用户处理" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if ! git merge --ff-only "agent/issue-${N}"; then
-            echo "state=failed" >> "$GITHUB_OUTPUT"
-            echo "reason=main 上有新的 commit,ff 合并失败,需用户处理" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # push main(失败时不留失败状态在中间分支)
           if ! git push origin main; then
             echo "state=failed" >> "$GITHUB_OUTPUT"
             echo "reason=push main 失败" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # 清理 agent/issue-N 分支(可选,远端先删,本地再删)
-          git push origin --delete "agent/issue-${N}" 2>/dev/null || true
-          git branch -D "agent/issue-${N}" 2>/dev/null || true
           echo "state=done" >> "$GITHUB_OUTPUT"
           echo "merge_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 

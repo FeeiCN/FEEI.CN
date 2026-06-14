@@ -445,20 +445,21 @@ jobs:
           PY
 
           # 跑 Claude
-          COMMON=( -p --output-format json )
+          # 用 --permission-mode bypassPermissions 取代白黑名单:
+          # - 白黑名单维护成本高(漏一个子命令就绕过)
+          # - Claude Code 的 bypassPermissions 是设计上的"完全信任"模式
+          # - 安全约束靠 prompt 硬约束 + driver step 边界(git push / gh issue edit
+          #   等写动作在 build/post step 才执行,claude 阶段不直接做)
+          COMMON=( -p --output-format json --permission-mode bypassPermissions )
           if [ "$MODE" = "plan" ]; then
             EXTRA=(
               --max-turns 15
               --max-budget-usd 15
-              --allowedTools "Read,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh workflow list:*),Bash(gh workflow view:*),Bash(gh release list:*),Bash(gh search:*),Bash(python3:*),Bash(node:*),Bash(npm:*),Bash(npx:*),WebFetch"
-              --disallowedTools "Write,Edit,NotebookEdit,Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*),Bash(gh pr create:*),Bash(gh pr merge:*),Bash(gh pr close:*),Bash(gh pr edit:*),Bash(gh pr ready:*),Bash(gh issue edit:*),Bash(gh issue close:*),Bash(gh issue reopen:*),Bash(gh issue comment:*),Bash(gh issue delete:*),Bash(gh label:*),Bash(gh release create:*),Bash(gh release delete:*),Bash(gh release edit:*),Bash(gh run cancel:*),Bash(gh run rerun:*),Bash(gh run delete:*),Bash(gh run download:*),Bash(gh run watch:*),Bash(gh workflow disable:*),Bash(gh workflow enable:*),Bash(gh api:*),Bash(gh repo:*),Bash(gh auth:*),Bash(gh extension:*),Bash(gh gist:*),Bash(gh secret:*),Bash(gh variable:*),Bash(gh ssh-key:*),Bash(gh gpg-key:*),Bash(gh codespace:*)"
             )
           else
             EXTRA=(
               --max-turns 200
               --max-budget-usd 20
-              --allowedTools "Read,Write,Edit,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),Bash(python3:*),Bash(node:*),Bash(npm:*),Bash(npx:*)"
-              --disallowedTools "WebFetch,Bash(gh:*),Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*)"
             )
           fi
 

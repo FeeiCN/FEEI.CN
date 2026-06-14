@@ -28,6 +28,7 @@ HIGHLIGHTS_META_FILE = (
     / "reading"
     / "highlights-meta.json"
 )
+FEEICN_REPO_ROOT = Path(__file__).resolve().parent.parent
 NOTEBOOK_PAGE_SIZE = 100
 API_RETRIES = 3
 GH_RETRIES = 3
@@ -119,6 +120,66 @@ def format_timestamp(value: int | str | None) -> str:
         return ""
     ts = int(value)
     return datetime.fromtimestamp(ts, tz=timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def log(message: str) -> None:
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {message}", file=sys.stderr)
+
+
+def fail(message: str) -> None:
+    print(f"error: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def run_git_command(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if completed.returncode != 0:
+        details = (completed.stderr or completed.stdout).strip()
+        fail(f"git {' '.join(args)} failed: {details}")
+    return completed
+
+
+def git_pull_target_repo() -> None:
+    log("git pull FEEI.CN ...")
+    run_git_command(["pull", "--ff-only"], FEEICN_REPO_ROOT)
+    log("git pull 完成")
+
+
+def git_commit_and_push_target_repo(paths: list[Path], *, commit_template: str) -> None:
+    relative_paths = [str(path.relative_to(FEEICN_REPO_ROOT)) for path in paths if path]
+    if not relative_paths:
+        return
+
+    run_git_command(["add", "--", *relative_paths], FEEICN_REPO_ROOT)
+    diff_check = subprocess.run(
+        ["git", "diff", "--cached", "--quiet", "--", *relative_paths],
+        cwd=FEEICN_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if diff_check.returncode == 0:
+        return
+    if diff_check.returncode != 1:
+        details = (diff_check.stderr or diff_check.stdout).strip()
+        fail(f"git diff --cached failed: {details}")
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    log("git commit ...")
+    run_git_command(
+        ["commit", "--only", "-m", commit_template.format(timestamp=timestamp), "--", *relative_paths],
+        FEEICN_REPO_ROOT,
+    )
+    log("git push ...")
+    run_git_command(["push"], FEEICN_REPO_ROOT)
+    log("git push 完成")
 
 
 def load_state() -> dict[str, Any]:
@@ -431,6 +492,8 @@ def main() -> None:
     args = parser.parse_args()
 
     state = load_state()
+    if not args.dry_run:
+        git_pull_target_repo()
     now_ts = int(datetime.now(tz=timezone.utc).timestamp())
     last_processed = int(state.get("last_processed_create_time") or 0)
     if last_processed > 0:
@@ -441,7 +504,6 @@ def main() -> None:
     highlights = fetch_recent_highlights(cutoff_time=cutoff_time)
     if not highlights:
         print("没有找到最近窗口内的新划线。")
-        return
 
     processed_ids: set[str] = set()
     latest_seen = last_processed
@@ -504,8 +566,14 @@ def main() -> None:
     )
     save_state(new_state)
 
-    if processed_ids or not HIGHLIGHTS_META_FILE.exists():
+    if processed_ids or not highlights:
         write_highlights_meta(new_state, issue_map)
+
+    if not args.dry_run:
+        git_commit_and_push_target_repo(
+            [HIGHLIGHTS_META_FILE],
+            commit_template="[auto] 更新微信读书划线 {timestamp}",
+        )
 
     if args.dry_run:
         print(f"dry-run 完成，共扫描 {len(highlights)} 条，命中 {len(processed_ids)} 条。", file=sys.stderr)

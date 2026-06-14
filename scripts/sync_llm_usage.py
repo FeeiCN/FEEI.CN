@@ -20,6 +20,7 @@ and reference them inside `extra_headers` via a custom fetcher.
 """
 
 from __future__ import annotations
+import subprocess
 
 import argparse
 import json
@@ -80,6 +81,58 @@ BEIJING_TZ = timezone(timedelta(hours=8))
 def now_str() -> str:
     return datetime.now(tz=BEIJING_TZ).strftime("%Y-%m-%d %H:%M:%S")
 
+
+
+def fail(message: str) -> None:
+    print(f"error: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def run_git_command(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if completed.returncode != 0:
+        details = (completed.stderr or completed.stdout).strip()
+        fail(f"git {' '.join(args)} failed: {details}")
+    return completed
+
+
+def git_pull_target_repo() -> None:
+    print("[info] git pull FEEI.CN ...", file=sys.stderr)
+    run_git_command(["pull", "--ff-only"], REPO_ROOT)
+    print("[info] git pull 完成", file=sys.stderr)
+
+
+def git_commit_and_push_target_repo(relative_paths: list[str], *, commit_template: str) -> None:
+    if not relative_paths:
+        return
+    run_git_command(["add", "--", *relative_paths], REPO_ROOT)
+    diff_check = subprocess.run(
+        ["git", "diff", "--cached", "--quiet", "--", *relative_paths],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if diff_check.returncode == 0:
+        return
+    if diff_check.returncode != 1:
+        details = (diff_check.stderr or diff_check.stdout).strip()
+        fail(f"git diff --cached failed: {details}")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    print("[info] git commit ...", file=sys.stderr)
+    run_git_command(
+        ["commit", "--only", "-m", commit_template.format(timestamp=timestamp), "--", *relative_paths],
+        REPO_ROOT,
+    )
+    print("[info] git push ...", file=sys.stderr)
+    run_git_command(["push"], REPO_ROOT)
+    print("[info] git push 完成", file=sys.stderr)
 
 def fetch_summary(vendor: str) -> dict[str, Any]:
     cfg = VENDOR_CONFIG[vendor]
@@ -322,8 +375,10 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    git_pull_target_repo()
     requested = set(args.vendor) if args.vendor else None
     refreshed: list[str] = []
+    written_paths: list[Path] = []
     for vendor in VENDOR_CONFIG:
         if requested and vendor not in requested:
             continue
@@ -331,7 +386,7 @@ def main() -> int:
         if not os.environ.get(cfg["auth_env"]):
             print(f"[skip] {vendor} 未设置 {cfg['auth_env']}", file=sys.stderr)
             continue
-        refresh_vendor(vendor)
+        written_paths.append(refresh_vendor(vendor))
         refreshed.append(vendor)
 
     if not refreshed:
@@ -339,6 +394,11 @@ def main() -> int:
         return 1
 
     print(f"[info] refreshed vendors: {', '.join(refreshed)}", file=sys.stderr)
+    relative_paths = [str(p.relative_to(REPO_ROOT)) for p in written_paths]
+    git_commit_and_push_target_repo(
+        relative_paths,
+        commit_template="[auto] 更新 LLM 使用数据 {timestamp}",
+    )
     return 0
 
 

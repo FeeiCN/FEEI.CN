@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -44,6 +45,7 @@ REVIEWS_PAGE_SIZE = 100
 BESTBOOKMARKS_DEFAULT_CHAPTER = 0
 
 OUT_DIR = Path(__file__).resolve().parent.parent / "static" / "reading"
+FEEICN_REPO_ROOT = Path(__file__).resolve().parent.parent
 CACHE_DIR = Path(__file__).resolve().parent / "cache" / "weread_data"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 STATE_PATH = CACHE_DIR / "state.json"
@@ -51,6 +53,58 @@ STATE_PATH = CACHE_DIR / "state.json"
 
 def now_str() -> str:
     return format_timestamp(int(datetime.now(tz=timezone.utc).timestamp()))
+
+
+def fail(message: str) -> None:
+    print(f"error: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def run_git_command(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if completed.returncode != 0:
+        details = (completed.stderr or completed.stdout).strip()
+        fail(f"git {' '.join(args)} failed: {details}")
+    return completed
+
+
+def git_pull_target_repo() -> None:
+    print("[info] git pull FEEI.CN ...", file=sys.stderr)
+    run_git_command(["pull", "--ff-only"], FEEICN_REPO_ROOT)
+    print("[info] git pull 完成", file=sys.stderr)
+
+
+def git_commit_and_push_target_repo(relative_paths: list[str], *, commit_template: str) -> None:
+    if not relative_paths:
+        return
+    run_git_command(["add", "--", *relative_paths], FEEICN_REPO_ROOT)
+    diff_check = subprocess.run(
+        ["git", "diff", "--cached", "--quiet", "--", *relative_paths],
+        cwd=FEEICN_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if diff_check.returncode == 0:
+        return
+    if diff_check.returncode != 1:
+        details = (diff_check.stderr or diff_check.stdout).strip()
+        fail(f"git diff --cached failed: {details}")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    print("[info] git commit ...", file=sys.stderr)
+    run_git_command(
+        ["commit", "--only", "-m", commit_template.format(timestamp=timestamp), "--", *relative_paths],
+        FEEICN_REPO_ROOT,
+    )
+    print("[info] git push ...", file=sys.stderr)
+    run_git_command(["push"], FEEICN_REPO_ROOT)
+    print("[info] git push 完成", file=sys.stderr)
 
 
 # 写盘时被忽略的"易变"字段：仅时间戳不同不算实质变化，避免每跑一次就刷新所有 json 的 mtime
@@ -1133,6 +1187,7 @@ def run_full(args: argparse.Namespace, state: dict[str, Any]) -> int:
 def main() -> int:
     args = parse_args()
     state = load_state()
+    git_pull_target_repo()
 
     if args.aggregate_only:
         today = datetime.now(tz=timezone.utc).astimezone()
@@ -1148,11 +1203,21 @@ def main() -> int:
             )
         except Exception as exc:
             print(f"[warn] 聚合失败: {exc}", file=sys.stderr)
+        git_commit_and_push_target_repo(
+            ["static/reading"],
+            commit_template="[auto] 更新微信读书数据 {timestamp}",
+        )
         return 0
 
     if args.full:
-        return run_full(args, state)
-    return run_daily(args, state)
+        rc = run_full(args, state)
+    else:
+        rc = run_daily(args, state)
+    git_commit_and_push_target_repo(
+        ["static/reading"],
+        commit_template="[auto] 更新微信读书数据 {timestamp}",
+    )
+    return rc
 
 
 if __name__ == "__main__":

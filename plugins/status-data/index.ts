@@ -122,13 +122,15 @@ export default function statusDataPlugin(context: LoadContext): Plugin {
     name: 'status-data-plugin',
 
     async loadContent() {
-      const entries: ResolvedEntry[] = STATUS_MANIFEST.map((entry) => ({
-        ...entry,
-        runTime: resolveRunTime(siteDir, entry.sources[0] ?? '', entry.timeField)
-          ?? entry.sources
-            .map((source) => resolveRunTime(siteDir, source, entry.timeField))
-            .find((value): value is string => Boolean(value)),
-      }));
+      const entries: ResolvedEntry[] = STATUS_MANIFEST.map((entry) => {
+        const candidates = entry.sources
+          .map((source) => resolveRunTime(siteDir, source, entry.timeField))
+          .filter((value): value is string => Boolean(value));
+        return {
+          ...entry,
+          runTime: pickLatest(candidates),
+        };
+      });
 
       return {entries, generatedAt: Date.now()};
     },

@@ -38,9 +38,15 @@ export const STATUS_MANIFEST: StatusEntry[] = [
     sources: [
       'static/reading/notebooks.json',
       'static/reading/index.json',
-      'static/reading/2024.json',
-      'static/reading/2025.json',
-      'static/reading/2026.json',
+      'static/reading/2018/*.json',
+      'static/reading/2019/*.json',
+      'static/reading/2020/*.json',
+      'static/reading/2021/*.json',
+      'static/reading/2022/*.json',
+      'static/reading/2023/*.json',
+      'static/reading/2024/*.json',
+      'static/reading/2025/*.json',
+      'static/reading/2026/*.json',
     ],
   },
   {

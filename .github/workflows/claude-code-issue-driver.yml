@@ -538,6 +538,7 @@ jobs:
           REPO: ${{ github.repository }}
           N: ${{ steps.decide.outputs.number }}
         run: |
+          ISSUE_TITLE="$(jq -r '.title' /tmp/issue.json)"
           # build 卡门:SUCCESS 且无 WARNING
           npm run build 2>&1 | tee /tmp/build.log | grep -E "WARNING|SUCCESS|ERROR" || true
           if grep -q '\[WARNING\]' /tmp/build.log || ! grep -q '\[SUCCESS\]' /tmp/build.log; then
@@ -553,7 +554,11 @@ jobs:
           fi
           # Claude 的改动在 agent/issue-N 分支上;commit + 切回 main + ff 合并 + push
           git add -A
-          printf 'Agent: #%s\n' "${N}" | git commit -F -
+          # 截断到 80 字,避免超长 issue 标题撑爆 log 第一行;超长用 … 结尾
+          TITLE="$(printf '%s' "${ISSUE_TITLE}" | tr '\n' ' ' | tr -s ' ' | sed -E 's/^ +| +$//g' | cut -c1-80)"
+          [ "${#ISSUE_TITLE}" -gt 80 ] && TITLE="${TITLE}…"
+          [ -z "${TITLE}" ] && TITLE="(无标题)"
+          printf 'Agent: #%s — %s\n' "${N}" "${TITLE}" | git commit -F -
           git fetch origin main
           if ! git checkout -B main origin/main; then
             echo "state=failed" >> "$GITHUB_OUTPUT"

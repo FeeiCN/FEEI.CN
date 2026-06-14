@@ -15,10 +15,15 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+sys.path.insert(0, str(Path(__file__).parent))
+from tz import BEIJING_TZ  # noqa: E402
 from typing import Any
 
 
@@ -128,4 +133,4 @@ def format_timestamp(value: int | str | None) -> str:
     if not value:
         return ""
     ts = int(value)
-    return datetime.fromtimestamp(ts, tz=timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.fromtimestamp(ts, tz=BEIJING_TZ).strftime("%Y-%m-%d %H:%M:%S")

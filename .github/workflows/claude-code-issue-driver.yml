@@ -353,7 +353,10 @@ jobs:
           N, REPO, MODE = os.environ["N"], os.environ["REPO"], os.environ["MODE"]
           d = json.loads(pathlib.Path(os.environ["ISSUE_JSON"]).read_text(encoding="utf-8"))
 
-          claude_md = pathlib.Path("CLAUDE.md").read_text(encoding="utf-8")[:4000]
+          # 完整读 CLAUDE.md:之前的 [:4000] 截断会让 plan 阶段看不到
+          # "内容写作规范""PR 规范""GitHub Issue 处理流程"等后半段规则,
+          # 导致 plan 阶段 Claude 拿到的工程规范残缺。当前 7KB,完整进 prompt 完全够。
+          claude_md = pathlib.Path("CLAUDE.md").read_text(encoding="utf-8")
           recent = d["comments"][-20:]
 
           if MODE == "plan":

@@ -565,6 +565,7 @@ jobs:
       # 4. plan 分支:post + label
       # ─────────────────────────────────────
       - name: Post plan comment
+        id: post_plan
         if: steps.decide.outputs.mode == 'plan' && steps.claude.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -759,3 +760,86 @@ jobs:
           done
           LABEL="${STATE:-failed}"
           gh issue edit "$N" --repo "$REPO" --add-label "claude:${LABEL}"
+
+      # ─────────────────────────────────────
+      # 6. 终态保险:无论前面哪步失败 / cancel,这里都跑一次,
+      # 把 issue label 拉回一致状态。覆盖以下漏网场景:
+      #   - setup 步骤失败 (Checkout / Setup Node / Cache / Install)
+      #   - 无凭证 (creds check → skip=no_credentials)
+      #   - claude 步骤 cancelled (timeout 60min / 手动 cancel)
+      #   - Post plan comment 中段失败 (gh issue comment exit 后跳过 label 切换)
+      #   - 整个 workflow 被 cancel
+      # 设计原则:按 mode + 各 step outcome 算出「期望终态」,
+      # 已经是期望值时 no-op,避免覆盖正常路径的 label 切换。
+      # ─────────────────────────────────────
+      - name: Reconcile final label
+        if: always() && steps.decide.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          N: ${{ steps.decide.outputs.number }}
+          MODE: ${{ steps.decide.outputs.mode }}
+          CLAUDE_OUTCOME: ${{ steps.claude.outcome }}
+          POST_PLAN_OUTCOME: ${{ steps.post_plan.outcome }}
+          BUILD_STATE: ${{ steps.build.outputs.state }}
+        run: |
+          # skip 模式不碰 label(reason 可能是「非 owner / 已关闭」,留原状)
+          [ "$MODE" = "skip" ] && { echo "mode=skip, 跳过 reconciliation"; exit 0; }
+
+          # 决定期望终态
+          DESIRED=""
+          case "$MODE" in
+            paused)
+              DESIRED="paused"
+              ;;
+            plan)
+              if [ "$CLAUDE_OUTCOME" = "success" ] && [ "$POST_PLAN_OUTCOME" = "success" ]; then
+                DESIRED="plan-ready"
+              else
+                DESIRED="failed"
+              fi
+              ;;
+            execute)
+              if [ "$BUILD_STATE" = "done" ]; then
+                DESIRED="done"
+              else
+                DESIRED="failed"
+              fi
+              ;;
+            *)
+              echo "未知 mode: '$MODE', 跳过"
+              exit 0
+              ;;
+          esac
+
+          # 查现状
+          CURRENT_LABELS="$(gh issue view "$N" --repo "$REPO" --json labels --jq -r '.labels[].name' | grep '^claude:' || true)"
+          CURRENT_COUNT="$(printf '%s\n' "$CURRENT_LABELS" | grep -c . || true)"
+          echo "current claude:* labels: ${CURRENT_LABELS:-<none>}"
+          echo "desired: claude:$DESIRED"
+
+          # 已经是期望状态(且只有一个 claude:* label),不动
+          if [ "$CURRENT_COUNT" = "1" ] && printf '%s\n' "$CURRENT_LABELS" | grep -qx "claude:$DESIRED"; then
+            echo "label 已是 claude:$DESIRED, 无需调整"
+            exit 0
+          fi
+
+          # 一次性清掉所有 claude:*
+          for s in planning plan-ready executing done failed paused; do
+            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+          done
+
+          # 加上期望值
+          gh issue edit "$N" --repo "$REPO" --add-label "claude:$DESIRED" 2>/dev/null || true
+
+          # step summary 留 trace,方便排查
+          {
+            echo "### 🧹 Final label reconciliation"
+            echo
+            echo "- issue: #${N}"
+            echo "- mode: \`${MODE}\`"
+            echo "- claude outcome: \`${CLAUDE_OUTCOME:-<n/a>}\`"
+            echo "- post_plan outcome: \`${POST_PLAN_OUTCOME:-<n/a>}\`"
+            echo "- build state: \`${BUILD_STATE:-<n/a>}\`"
+            echo "- previous: \`${CURRENT_LABELS:-<none>}\` → \`claude:${DESIRED}\`"
+          } | tee -a "$GITHUB_STEP_SUMMARY"

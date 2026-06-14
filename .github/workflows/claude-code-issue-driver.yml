@@ -412,6 +412,10 @@ jobs:
                   f"## 执行约束\n"
                   f"- 只允许 Read / Write / Edit,以及只读 Bash(git status/diff/log,ls,find,cat,grep,python3,node,npm,npx)\n"
                   f"- **禁止** git push / git commit / git checkout / gh 任意命令 — workflow 统一负责\n"
+                  f"  - **不要 git commit**:commit 由 build step 统一做(commit message 风格由\n"
+                  f"    driver 控制,例如 \"Agent: #N — <title>\")。你只管改文件,保持 dirty 状态\n"
+                  f"    即可。build step 会校验 `git log origin/main..HEAD` 只能有 1 个 commit,\n"
+                  f"    多个会触发 warn。**不要 git add**,build step 会做 `git add -A`。\n"
                   f"- 完成后回复一段 Markdown 总结:变更摘要 / 涉及文件 / 验证情况(只读类检查:grep/cat/git diff)\n"
                   f"\n"
                   f"执行时最多读取必要文件。不要做开放式探索。\n"
@@ -683,6 +687,23 @@ jobs:
           [ "${#ISSUE_TITLE}" -gt 80 ] && TITLE="${TITLE}…"
           [ -z "${TITLE}" ] && TITLE="(无标题)"
           printf 'Agent: #%s — %s\n' "${N}" "${TITLE}" | git commit -F -
+          # 校验:Claude 不应自作 commit。HEAD 距离 origin/main 应只有 1 个 commit
+          # (就是 build step 这一笔)。如果 > 1,说明 Claude 跑了 git commit,
+          # 把 warn 写进 step summary,留 trace 但不阻塞(已 prompt 约束)。
+          COMMIT_COUNT="$(git rev-list --count origin/main..HEAD)"
+          if [ "${COMMIT_COUNT}" -gt 1 ]; then
+            echo "::warning::Claude 自作 ${COMMIT_COUNT} 个 commit(prompt 要求 Claude 不 commit)"
+            {
+              echo "### ⚠️ Claude 自作 commit"
+              echo
+              echo "检测到 \`git log origin/main..HEAD\` 有 ${COMMIT_COUNT} 个 commit(预期 1 个)。"
+              echo "可能是 Claude 绕过了 prompt 约束跑了 \`git commit\`。"
+              echo
+              echo '```'
+              git log --oneline origin/main..HEAD
+              echo '```'
+            } | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
           # rebase:拉远端 main 上来,处理 Claude 改文件期间其他 commit 进 main 的情况
           git fetch origin main
           if ! git pull --rebase origin main; then

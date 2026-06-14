@@ -354,15 +354,25 @@ jobs:
 
           if MODE == "plan":
               role = (
-                  f"你正在分析 GitHub issue #{N}。"
-                  "**禁止修改任何文件**,仅产出实施计划。\n\n"
-                  "计划应包括:\n"
-                  "1. 需求理解\n"
-                  "2. 影响的文件路径(明确列 `docs/.../*.md` 形式)\n"
-                  "3. 实施步骤\n"
-                  "4. 风险等级 (Low / Medium / High)\n"
-                  "5. 验证方式\n\n"
-                  "最终回复就是计划本身的 Markdown,不要寒暄。"
+                  f"你正在分析 GitHub issue #{N}。\n\n"
+                  f"你不是代码实现 Agent。\n\n"
+                  f"你的任务只是根据:\n"
+                  f"- Issue 正文与最近评论\n"
+                  f"- CLAUDE.md\n"
+                  f"- 必要时查看少量文件或检索互联网资料\n\n"
+                  f"生成实施计划。\n\n"
+                  f"完成后立即输出计划,禁止继续探索。\n\n"
+                  f"计划应包括:\n"
+                  f"1. 需求理解\n"
+                  f"2. 影响的文件路径(明确列 `docs/.../*.md` 形式)\n"
+                  f"3. 实施步骤\n"
+                  f"4. 风险等级 (Low / Medium / High)\n"
+                  f"5. 验证方式\n\n"
+                  f"硬约束:\n"
+                  f"- 工具调用总次数不超过 11 次(Read / Grep / Glob / WebFetch / WebSearch / 限定 Bash 合计)。\n"
+                  f"- 优先复用 CLAUDE.md 中已有的目录结构与命名约定,不要再发起额外的探索性调用。\n"
+                  f"- 一旦计划在内心完整,立即输出,不要再追加「进一步分析」类调用。\n\n"
+                  f"最终回复就是计划本身的 Markdown,不要寒暄。"
               )
           else:
               plan = next(

@@ -393,7 +393,13 @@ jobs:
                   f"## 执行约束\n"
                   f"- 只允许 Read / Write / Edit,以及只读 Bash(git status/diff/log,ls,find,cat,grep,python3,node,npm,npx)\n"
                   f"- **禁止** git push / git commit / git checkout / gh 任意命令 — workflow 统一负责\n"
-                  f"- 完成后回复一段 Markdown 总结:变更摘要 / 涉及文件 / 验证情况(只读类检查:grep/cat/git diff)\n\n"
+                  f"- 完成后回复一段 Markdown 总结:变更摘要 / 涉及文件 / 验证情况(只读类检查:grep/cat/git diff)\n"
+                  f"\n"
+                  f"执行时最多读取必要文件。不要做开放式探索。\n"
+                  f"如果计划足够明确,直接修改文件。\n"
+                  f"修改完成后立刻输出总结,不要继续检查无关文件。\n"
+                  f"最多使用 60 次工具调用;接近限制时必须停止并输出当前结果。\n"
+                  f"\n"
                   f"## 已批准的计划\n\n{plan['body']}"
               )
 
@@ -430,10 +436,10 @@ jobs:
             )
           else
             EXTRA=(
-              --max-turns 40
+              --max-turns 60
               --max-budget-usd 10
-              --allowedTools "Read,Write,Edit,Bash(git status),Bash(git diff:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),Bash(python3:*),Bash(node:*),Bash(npm:*),Bash(npx:*)"
-              --disallowedTools "WebFetch,Bash(gh:*),Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(git log:*),Bash(rm:*)"
+              --allowedTools "Read,Write,Edit,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(find:*),Bash(cat:*),Bash(grep:*),Bash(python3:*),Bash(node:*),Bash(npm:*),Bash(npx:*)"
+              --disallowedTools "WebFetch,Bash(gh:*),Bash(git push:*),Bash(git commit:*),Bash(git checkout:*),Bash(git reset:*),Bash(git rebase:*),Bash(rm:*)"
             )
           fi
 

@@ -341,9 +341,8 @@ def main() -> int:
         return 1
 
     print(f"[info] refreshed vendors: {', '.join(refreshed)}", file=sys.stderr)
-    relative_paths = [str(p.relative_to(REPO_ROOT)) for p in written_paths]
     git_commit_and_push_target_repo(
-        relative_paths,
+        written_paths,
         repo_root=REPO_ROOT,
         description="更新 LLM 使用数据",
     )

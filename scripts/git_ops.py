@@ -57,18 +57,26 @@ def git_commit_and_push_target_repo(
     repo_root: Path,
     description: str,
 ) -> None:
-    """Stage `paths` (relative to `repo_root`), commit, push.
+    """Stage `paths` (under `repo_root`), commit, push.
 
-    The commit message is built as ``[auto] {description} {timestamp}``
-    so the `[auto]` prefix and timestamp stay consistent across all
-    cron-driven data commits. No-op if nothing is staged.
+    Each `paths` entry may be either an absolute path or a path
+    relative to `repo_root`; both forms are resolved to repo-relative
+    strings for `git add`. The commit message is built as
+    ``[auto] {description} {timestamp}`` so the `[auto]` prefix and
+    timestamp stay consistent across all cron-driven data commits.
+    No-op if nothing is staged.
     """
     relative_paths: list[str] = []
     for p in paths:
         if not p:
             continue
         path_obj = Path(p) if not isinstance(p, Path) else p
-        relative_paths.append(str(path_obj.relative_to(repo_root)))
+        if not path_obj.is_absolute():
+            path_obj = repo_root / path_obj
+        try:
+            relative_paths.append(str(path_obj.relative_to(repo_root)))
+        except ValueError as exc:
+            fail(f"git_ops: {path_obj} is not under repo_root {repo_root}: {exc}")
     if not relative_paths:
         return
 

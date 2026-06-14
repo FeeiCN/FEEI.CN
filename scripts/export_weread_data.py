@@ -1154,7 +1154,7 @@ def main() -> int:
         except Exception as exc:
             print(f"[warn] 聚合失败: {exc}", file=sys.stderr)
         git_commit_and_push_target_repo(
-            ["static/reading"],
+            [OUT_DIR],
             repo_root=FEEICN_REPO_ROOT,
             description="更新微信读书数据",
         )
@@ -1165,7 +1165,7 @@ def main() -> int:
     else:
         rc = run_daily(args, state)
     git_commit_and_push_target_repo(
-        ["static/reading"],
+        [OUT_DIR],
         repo_root=FEEICN_REPO_ROOT,
         description="更新微信读书数据",
     )

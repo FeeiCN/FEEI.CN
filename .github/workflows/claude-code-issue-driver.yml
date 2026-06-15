@@ -378,8 +378,8 @@ jobs:
                   f"- 工具调用总次数不超过 11 次(Read / Grep / Glob / WebFetch / WebSearch / 限定 Bash 合计)。\n"
                   f"- 优先复用 CLAUDE.md 中已有的目录结构与命名约定,不要再发起额外的探索性调用。\n"
                   f"- 一旦计划在内心完整,立即输出,不要再追加「进一步分析」类调用。\n\n"
-                  f"## Plan metadata(必填,driver 会校验,缺则拒绝贴评论)\n"
-                  f"计划末尾必须包含下面这一段,字段齐全,绝对路径,不要省略:\n"
+                  f"## Plan metadata(实施型建议填)\n"
+                  f"如果本计划需要新增/修改/删除文件,建议在末尾包含下面这一段,字段齐全,绝对路径:\n"
                   f"\n"
                   f"```\n"
                   f"## Plan metadata\n"
@@ -392,6 +392,8 @@ jobs:
                   f"- affected_files:实施本计划预计要新增/修改/删除的文件列表(只列路径,不要解释)。\n"
                   f"- risk:依据 CLAUDE.md 的「构建检查」「破坏面」「新依赖」综合判断。\n"
                   f"- verification:owner 验收时应该跑的命令,例如 `npm run build` / `npm run typecheck` / `git diff --stat` / 具体的 grep/cat 验证。\n"
+                  f"\n"
+                  f"**特例:纯分析 / 调研任务**(例如「为什么这个 label 被改了又改」、「driver 这一步为什么这么设计」,不涉及文件改动):在计划末尾显式声明一句『这是一个纯分析 / 调研任务,不涉及文件修改。』即可,driver 会跳过 metadata 校验、贴评论、标 plan-ready。driver 通过以下关键词判定:『这是...纯分析/调研/研究』/『本计划/任务/issue 是...分析/调研』/『不需要/无需 修改文件/代码』/『不涉及文件修改』。\n"
                   f"\n"
                   f"最终回复就是计划本身的 Markdown,不要寒暄。"
               )
@@ -692,10 +694,14 @@ jobs:
             echo "reason=build 失败或有 WARNING,未 push" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # diff 检查:Claude 应该改了东西(对比起点是 claude step 切到的 origin/main)
-          if git diff --quiet origin/main; then
+          # diff 检查:Claude 应该改了东西(对比起点是 claude step 切到的 origin/main)。
+          # 必须同时检测 tracked 变更和 untracked 文件:`git diff` 不显示 untracked,
+          # 只看 tracked 会漏掉「只新增文件」的合法 plan(issue #233 实测:Claude 用
+          # Write 创建了 AI洗脑.md,git diff 仍为空,build step 误判失败,文件随
+          # runner 销毁,主仓永远拿不到)。`git status --porcelain` 同时覆盖两类。
+          if git diff --quiet origin/main && [ -z "$(git status --porcelain)" ]; then
             echo "state=failed" >> "$GITHUB_OUTPUT"
-            echo "reason=Claude 跑完后无 diff,可能 plan 已过期或被 abort" >> "$GITHUB_OUTPUT"
+            echo "reason=Claude 跑完后无任何变更(tracked + untracked 都空),可能 plan 已过期或被 abort" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           # commit(在 main 上直接做,无需切分支 / ff-merge)

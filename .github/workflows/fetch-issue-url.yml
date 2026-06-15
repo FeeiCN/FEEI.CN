@@ -101,6 +101,7 @@ jobs:
           claude --version
 
       - name: Fetch URL content
+        id: fetch
         if: steps.validate.outputs.valid == 'yes'
         env:
           URL: ${{ steps.validate.outputs.url }}
@@ -109,7 +110,22 @@ jobs:
           ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
         run: |
           python3 scripts/fetch_url_content.py "$URL" ${{ steps.creds.outputs.translate_flag }} > /tmp/result.json || true
-          python3 -c "import json; r=json.load(open('/tmp/result.json')); print('status=', r.get('status'), '/ title=', (r.get('title') or '')[:80], '/ translated=', r.get('translated'), '/ provider=', r.get('translate_provider'))"
+          python3 - <<'PY'
+          import json, os, sys
+          with open("/tmp/result.json", "r", encoding="utf-8") as fp:
+              r = json.load(fp)
+          print(f"status={r.get('status')} / title={(r.get('title') or '')[:80]}", flush=True)
+          print(f"translated={r.get('translated')} / provider={r.get('translate_provider')}", flush=True)
+          err = r.get("translate_error")
+          if err:
+              print(f"translate_error={err}", flush=True)
+              sys.stdout.flush()
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fp:
+              fp.write("### fetch_url_content result\n\n")
+              fp.write("```json\n")
+              fp.write(json.dumps({k: v for k, v in r.items() if k != "markdown" and k != "pairs"}, ensure_ascii=False, indent=2))
+              fp.write("\n```\n")
+          PY
 
       - name: Post comment and update title
         if: steps.validate.outputs.valid == 'yes'
@@ -148,6 +164,10 @@ jobs:
               lines.append(f"抓取失败: {data.get('error', '')}")
           else:
               markdown = (data.get("markdown") or "").strip()
+              translate_error = data.get("translate_error")
+              if translate_error:
+                  lines.append(f"> ⚠️ 翻译失败,以下是原文: `{translate_error}`")
+                  lines.append("")
               if not markdown:
                   markdown = "内容未获取(页面可能需要 JS 渲染或登录后才能查看)"
               elif source_url.startswith("https://web.archive.org/"):

@@ -278,6 +278,7 @@ function Heatmap({
     >
       <div className={styles.calendarBody}>
         <div className={styles.weekdayColumn}>
+          <span className={styles.weekdaySpacer} aria-hidden="true" />
           {WEEKDAY_LABELS.map((w) => (
             <span key={w} className={styles.weekdayLabel}>
               周{w}
@@ -286,51 +287,55 @@ function Heatmap({
         </div>
         <div className={styles.scrollArea}>
           <div
-            className={styles.calendarGrid}
+            className={styles.calendarStack}
             style={{'--col-count': numWeeks} as React.CSSProperties}
           >
-            {monthLabels.map((m) => (
-              <span
-                key={`m-${m.col}-${m.label}`}
-                className={styles.monthLabel}
-                style={{'--col': m.col} as React.CSSProperties}
-              >
-                {m.label}
-              </span>
-            ))}
-            {grid.flatMap((col, colIdx) =>
-              col.map((c, rowIdx) => {
-                if (!c) {
+            <div className={styles.monthHeader}>
+              {monthLabels.map((m) => (
+                <span
+                  key={`m-${m.col}-${m.label}`}
+                  className={styles.monthLabel}
+                  style={{'--col': m.col} as React.CSSProperties}
+                >
+                  {m.label}
+                </span>
+              ))}
+            </div>
+            <div className={styles.calendarGrid}>
+              {grid.flatMap((col, colIdx) =>
+                col.map((c, rowIdx) => {
+                  if (!c) {
+                    return (
+                      <div
+                        key={`${colIdx}-${rowIdx}`}
+                        className={styles.cellPlaceholder}
+                      />
+                    );
+                  }
+                  if (c.future) {
+                    return (
+                      <div
+                        key={`${colIdx}-${rowIdx}`}
+                        className={styles.cellFuture}
+                        aria-label={`${c.date} 未来`}
+                        title={`${c.date} · 未来`}
+                      />
+                    );
+                  }
                   return (
                     <div
                       key={`${colIdx}-${rowIdx}`}
-                      className={styles.cellPlaceholder}
+                      role="img"
+                      aria-label={`${c.date} ${formatTokenCount(c.tokens)} token`}
+                      className={c.tokens > 0 ? styles.cell : styles.cellEmpty}
+                      style={c.tokens > 0 ? {backgroundColor: vendorColor(c.level)} : undefined}
+                      onMouseEnter={(e) => handleEnter(e, c)}
+                      onMouseMove={handleMove}
                     />
                   );
-                }
-                if (c.future) {
-                  return (
-                    <div
-                      key={`${colIdx}-${rowIdx}`}
-                      className={styles.cellFuture}
-                      aria-label={`${c.date} 未来`}
-                      title={`${c.date} · 未来`}
-                    />
-                  );
-                }
-                return (
-                  <div
-                    key={`${colIdx}-${rowIdx}`}
-                    role="img"
-                    aria-label={`${c.date} ${formatTokenCount(c.tokens)} token`}
-                    className={c.tokens > 0 ? styles.cell : styles.cellEmpty}
-                    style={c.tokens > 0 ? {backgroundColor: vendorColor(c.level)} : undefined}
-                    onMouseEnter={(e) => handleEnter(e, c)}
-                    onMouseMove={handleMove}
-                  />
-                );
-              }),
-            )}
+                }),
+              )}
+            </div>
           </div>
         </div>
       </div>

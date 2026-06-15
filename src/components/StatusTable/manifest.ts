@@ -3,9 +3,20 @@ export type StatusOutput = {
   slug: string;
 };
 
+export type Frequency = '3h' | 'daily';
+
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+
+export const FREQUENCIES = {
+  '3h': {label: '每 3 小时 1 次', thresholds: {freshMs: 3 * HOUR, staleMs: 24 * HOUR}},
+  daily: {label: '每日 1 次', thresholds: {freshMs: 24 * HOUR, staleMs: 72 * HOUR}},
+} as const;
+
 export type StatusEntry = {
   key: string;
   name: string;
+  frequency: Frequency;
   timeField: 'fetchedAt' | 'exportedAt';
   outputs: StatusOutput[];
   sources: string[];
@@ -15,6 +26,7 @@ export const STATUS_MANIFEST: StatusEntry[] = [
   {
     key: 'llm-usage',
     name: 'AI 使用数据',
+    frequency: 'daily',
     timeField: 'fetchedAt',
     outputs: [{title: 'AI 使用数据', slug: '/ai-usage-data'}],
     sources: [
@@ -26,6 +38,7 @@ export const STATUS_MANIFEST: StatusEntry[] = [
   {
     key: 'health-data',
     name: '健康数据',
+    frequency: 'daily',
     timeField: 'exportedAt',
     outputs: [{title: '健康数据', slug: '/health-data'}],
     sources: ['static/health/2024/*.json', 'static/health/2025/*.json', 'static/health/2026/*.json'],
@@ -33,6 +46,7 @@ export const STATUS_MANIFEST: StatusEntry[] = [
   {
     key: 'weread-daily',
     name: '微信读书数据同步',
+    frequency: 'daily',
     timeField: 'fetchedAt',
     outputs: [],
     sources: [
@@ -52,6 +66,7 @@ export const STATUS_MANIFEST: StatusEntry[] = [
   {
     key: 'weread-highlights',
     name: '微信读书划线入 issue',
+    frequency: '3h',
     timeField: 'fetchedAt',
     outputs: [],
     sources: ['static/reading/highlights-meta.json'],
@@ -59,6 +74,7 @@ export const STATUS_MANIFEST: StatusEntry[] = [
   {
     key: 'hk-ipo',
     name: '港股打新数据',
+    frequency: 'daily',
     timeField: 'fetchedAt',
     outputs: [{title: '港股打新数据', slug: '/hk-ipo-data'}],
     sources: [
@@ -68,6 +84,7 @@ export const STATUS_MANIFEST: StatusEntry[] = [
   {
     key: 'financial-assets',
     name: '财务自由数据',
+    frequency: 'daily',
     timeField: 'fetchedAt',
     outputs: [
       {title: '个股账号资产数据', slug: '/stock-data'},

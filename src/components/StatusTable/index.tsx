@@ -1,18 +1,14 @@
 import React, {type ReactNode} from 'react';
 import {usePluginData} from '@docusaurus/useGlobalData';
-import type {StatusEntry} from './manifest';
+import {FREQUENCIES, type Frequency, type StatusEntry} from './manifest';
 
 type ResolvedStatus = {
   key: string;
   name: string;
+  frequency: Frequency;
   status: '成功' | '成功（延迟）' | '异常';
   runTime: string;
   outputs: StatusEntry['outputs'];
-};
-
-const STATUS_THRESHOLDS = {
-  freshMs: 24 * 60 * 60 * 1000,
-  staleMs: 7 * 24 * 60 * 60 * 1000,
 };
 
 function formatRunTime(value: string | undefined): string {
@@ -20,14 +16,19 @@ function formatRunTime(value: string | undefined): string {
   return value.replace('T', ' ').replace(/\.\d+/, '').replace(/([+-]\d{2}:\d{2}|Z)$/, '');
 }
 
-function deriveStatus(timestamp: string | undefined, now: number): ResolvedStatus['status'] {
+function deriveStatus(
+  timestamp: string | undefined,
+  now: number,
+  frequency: Frequency,
+): ResolvedStatus['status'] {
   if (!timestamp) return '异常';
   const parsed = Date.parse(timestamp);
   if (Number.isNaN(parsed)) return '异常';
   const delta = now - parsed;
+  const {freshMs, staleMs} = FREQUENCIES[frequency].thresholds;
   if (delta < 0) return '成功';
-  if (delta < STATUS_THRESHOLDS.freshMs) return '成功';
-  if (delta < STATUS_THRESHOLDS.staleMs) return '成功（延迟）';
+  if (delta < freshMs) return '成功';
+  if (delta < staleMs) return '成功（延迟）';
   return '异常';
 }
 
@@ -44,7 +45,8 @@ export default function StatusTable(): ReactNode {
       return {
         key: entry.key,
         name: entry.name,
-        status: deriveStatus(timeValue, now),
+        frequency: entry.frequency,
+        status: deriveStatus(timeValue, now, entry.frequency),
         runTime: formatRunTime(timeValue),
         outputs: entry.outputs,
       };
@@ -56,25 +58,26 @@ export default function StatusTable(): ReactNode {
       <thead>
         <tr>
           <th>任务</th>
+          <th>运行频率</th>
           <th>运行状态</th>
           <th>运行时间</th>
-          <th>输出页面</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row) => (
           <tr key={row.key}>
-            <td>{row.name}</td>
-            <td>{row.status}</td>
-            <td>{row.runTime}</td>
             <td>
-              {row.outputs.map((output, index) => (
+              <strong>{row.name}</strong>
+              {row.outputs.map((output) => (
                 <React.Fragment key={output.slug}>
-                  {index > 0 && <br />}
+                  <br />
                   <a href={output.slug}>{output.title}</a>
                 </React.Fragment>
               ))}
             </td>
+            <td>{FREQUENCIES[row.frequency].label}</td>
+            <td>{row.status}</td>
+            <td>{row.runTime}</td>
           </tr>
         ))}
       </tbody>

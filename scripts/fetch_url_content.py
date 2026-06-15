@@ -8,12 +8,12 @@
 - 通用 → 自实现 HTML 解析,失败回退 Wayback Machine
 
 抓取后默认会调用 translate_text 翻译成中文（仅在内容判定为英文时）。
---bilingual 时输出英中段间对照，每批段落只发一次翻译请求。
+翻译通过 Claude Code 走,超时默认 300s,与 HTTP 抓取超时(--timeout 20s)独立。
 
 CLI: python fetch_url_content.py <url> [--timeout SECONDS] [--no-translate] [--bilingual]
 输出: JSON 到 stdout, 字段:
     成功: status, title, markdown, source_url, content_type,
-          translated, detected_source, translate_provider, pairs?
+          translated, detected_source, translate_provider, pairs?, translate_error?
     失败: status="error", error
 """
 
@@ -652,14 +652,21 @@ def block_media_url(block: dict[str, Any], entity_map: dict[str, dict[str, Any]]
     return None
 
 
+DEFAULT_TRANSLATE_TIMEOUT = 300.0
+
+
 def maybe_translate_markdown(
     markdown: str,
     *,
     target_language: str,
-    timeout: float,
+    translate_timeout: float = DEFAULT_TRANSLATE_TIMEOUT,
     bilingual: bool = False,
 ) -> dict[str, Any]:
-    """判断 markdown 是否英文,是则翻译;返回附加字段 dict。"""
+    """判断 markdown 是否英文,是则翻译;返回附加字段 dict。
+
+    `translate_timeout` 是 Claude Code 调用超时(秒),与 HTTP fetch 超时独立。
+    翻译长文 + 标注 + 讲解常常需要 30-180s,默认 300s。
+    """
     fields: dict[str, Any] = {
         "translated": False,
         "detected_source": "",
@@ -673,7 +680,7 @@ def maybe_translate_markdown(
             markdown,
             source_language="en",
             target_language=target_language,
-            timeout=timeout,
+            timeout=translate_timeout,
             bilingual=bilingual,
         )
     except TranslationError as error:
@@ -693,7 +700,7 @@ def _apply_translation(
     result: dict[str, Any],
     *,
     target_language: str,
-    timeout: float,
+    translate_timeout: float = DEFAULT_TRANSLATE_TIMEOUT,
     bilingual: bool = False,
 ) -> None:
     """对成功结果应用翻译（原地修改）。"""
@@ -703,7 +710,7 @@ def _apply_translation(
     overrides = maybe_translate_markdown(
         markdown,
         target_language=target_language,
-        timeout=timeout,
+        translate_timeout=translate_timeout,
         bilingual=bilingual,
     )
     if "markdown" in overrides:
@@ -717,9 +724,20 @@ def fetch_url_content(
     *,
     translate: bool = True,
     target_language: str = "zh-CN",
+    translate_timeout: float = DEFAULT_TRANSLATE_TIMEOUT,
     bilingual: bool = False,
 ) -> dict[str, Any]:
-    """主调度：根据 URL 类型走不同抓取路径,返回统一结构的 dict。"""
+    """主调度：根据 URL 类型走不同抓取路径,返回统一结构的 dict。
+
+    Args:
+        url: 待抓取 URL。
+        timeout: HTTP 抓取超时(秒),默认 20。
+        translate: 是否对英文内容做翻译。
+        target_language: 翻译目标语言。
+        translate_timeout: Claude Code 调用超时(秒),默认 300。
+            翻译长文 + 标注 + 讲解需要 30-180s,不要复用 HTTP 抓取超时。
+        bilingual: 已弃用,本实现忽略(Claude 输出本身就是结构化对照)。
+    """
     try:
         result = _fetch_raw(url, timeout=timeout)
         if result.get("status") == "success":
@@ -730,7 +748,7 @@ def fetch_url_content(
                 _apply_translation(
                     result,
                     target_language=target_language,
-                    timeout=timeout,
+                    translate_timeout=translate_timeout,
                     bilingual=bilingual,
                 )
         return result

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""用 Claude Code 翻译文本,产出 逐行翻译 + 复杂词汇标注 + 通俗讲解 三段式 Markdown。
+"""用 Claude Code 翻译文本,产出 逐行翻译 + 通俗讲解 两段式 Markdown(逐行翻译每段先英文后中文,复杂词内联标注)。
 
 替代原 MyMemory / Google GTX / LibreTranslate 链路的脚本实现。
 调用 `claude -p --output-format json`(参照 .github/workflows/claude-code-issue-driver.yml),
@@ -28,27 +28,49 @@ from typing import Any
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1.15 Safari/605.1.15"
 DEFAULT_TIMEOUT = 300.0
 CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
-CACHE_VERSION = "v2"
+CACHE_VERSION = "v3"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CACHE_PATH = SCRIPT_DIR / "cache" / "translation_cache.json"
 
-SYSTEM_PROMPT = """你是英中翻译,擅长把英文文章(尤其技术 / 商业 / 长文推文)翻译成通俗易懂的中文。
+SYSTEM_PROMPT = """你是英中翻译助手,专精把英文文章(尤其技术 / 商业 / 长文推文)翻译成通俗易懂的中英双语对照。
 
-## 任务
+## 输出格式(严格遵守)
 
-对用户提供的英文文本,严格按以下 2 个 section 输出(必须用 Markdown,顺序固定):
+输出包含 2 个 section,顺序固定,每个 section 用 Markdown 标题分隔。
 
 ### 1. 逐行翻译
-保持原文的 Markdown 结构(标题、列表、代码块、链接、引用、加粗、斜体等),保留原有每句/每段英文，并在其下增加对应中文:
+
+**双语对照格式**:每一段必须先输出完整英文原文(保留 Markdown 结构:标题、列表、引用、加粗、链接、代码块等),然后紧跟一行中文翻译,中间用空行分隔。例如:
+
+```
+Nobody actually **teaches**（教 — 这里指系统性的训练）you how to do research.
+没人真正教过你怎么做研究。
+
+You are assigned a desk, a problem someone else picked, and a vague directive to make something new.
+你被分到一张桌子、一个别人挑好的问题,再加一句含糊的指令:做出点新东西。
+```
+
+要求:
+- 每段先英文后中文,中文紧跟在英文下方,**不能省略英文**
+- 段与段之间用空行分隔
+- 标题、列表、引用、加粗、链接等 Markdown 结构在英文中保留,中文翻译保持相同结构
 - 保留 URL、代码块、专有名词、人名、产品名、品牌名等英文原文,不要硬翻
 - 中文表达要自然流畅,避免生硬的逐词翻译
-- 如果原文是列表项 / 标题 / 引用,翻译后保持相同结构
-- 行间用空行分隔,便于阅读
 - 标题翻译后用对应数量的 `#` 保留层级
-- 复杂词汇标注：英文中出现的 **复杂 / 专业 / 容易误解** 的词汇或短语应当用下面的 Markdown 格式备注在英文原文中:**<英文原文>**（<中文翻译> — <一句话解释,说清在这个语境里的含义>）
+
+**复杂词汇内联标注**:英文中出现的复杂 / 专业 / 容易误解的词汇或短语,直接在英文原文行内用以下格式标注:
+
+**<英文词>**（<中文翻译> — <一句话解释,说清在这个语境里的含义>）
+
+例如:
+
+`Richard **Hamming**（理查德·哈明 — 贝尔实验室数学家,以 Hamming 距离/编码闻名）had a habit at Bell Labs...`
+
+标注必须紧跟在英文词后面,**不要移到段尾或单独成节**。每个需要解释的词只标一次,不要重复。
 
 ### 2. 通俗讲解
+
 用 3-5 段中文,讲清楚整篇文章的核心论点、关键推理和结论。要求:
 - 读者是 **没读过原文** 的人
 - 读完后能复述文章的中心论点
@@ -59,7 +81,9 @@ SYSTEM_PROMPT = """你是英中翻译,擅长把英文文章(尤其技术 / 商�
 
 ## 硬约束
 
-- 严格按 2 个 section 输出,顺序、标题、Markdown 格式都按上面要求
+- 严格按 2 个 section 输出(逐行翻译 + 通俗讲解),顺序、标题、Markdown 格式都按上面要求
+- **每段都必须先输出完整英文原文,再输出中文翻译(不可省略英文)**
+- 复杂词汇必须内联在英文行中,**不要单独列出词汇表**
 - 不在输出中提到 "我 / 我的 / 作为 AI" 等元话语
 - 不要加前言、总结、寒暄,直接进 2 个 section
 - 单次输出足够长,不要因为省 token 而偷工减料
@@ -277,8 +301,8 @@ def translate_text(
         model: 覆盖 Claude 模型,默认读 `ANTHROPIC_MODEL` 环境变量或 claude 默认。
 
     Returns:
-        TranslateResult,`text` 字段是 Claude 输出的三段式 Markdown
-        (逐行翻译 + 词汇标注 + 通俗讲解);`pairs` 始终为 None。
+        TranslateResult,`text` 字段是 Claude 输出的两段式 Markdown
+        (逐行翻译 + 通俗讲解,逐行翻译每段先英文后中文,复杂词内联标注);`pairs` 始终为 None。
     """
     if not text or not text.strip():
         raise TranslationError("Empty text")

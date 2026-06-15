@@ -499,6 +499,24 @@ jobs:
 
           jq -r '.result // .message // ""' /tmp/claude.json > /tmp/result.txt
 
+          # plan mode 下 Claude 不把详细计划写到 stdout,而是写到
+          # ~/.claude/plans/<id>.md,stdout 只剩一句「计划已写入 ...」。
+          # 用最新的 plan 文件覆盖 result.txt,这样 Post plan comment
+          # 拿到的是真实计划内容而不是文件名。execute 模式不写 plan 文件,
+          # glob 找不到,fall back 到 stdout 原值。
+          PLAN_FILE="$(ls -t ~/.claude/plans/*.md 2>/dev/null | head -1 || true)"
+          if [ -n "$PLAN_FILE" ] && [ -s "$PLAN_FILE" ]; then
+            cat "$PLAN_FILE" > /tmp/result.txt
+            {
+              echo "### plan source"
+              echo
+              echo "检测到 plan mode 写到本地文件,已用其覆盖 stdout 结果:"
+              echo
+              echo "- file: \`$PLAN_FILE\`"
+              echo "- size: $(wc -c < "$PLAN_FILE") bytes"
+            } | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
           RESULT_NONEMPTY="$(python3 - <<'PY'
           from pathlib import Path
           text = Path("/tmp/result.txt").read_text(encoding="utf-8", errors="replace")

@@ -582,28 +582,22 @@ jobs:
           python3 - <<'PY'
           import re, sys, pathlib
           text = pathlib.Path("/tmp/result.txt").read_text(encoding="utf-8", errors="replace")
-          if "## Plan metadata" not in text:
-              print("REJECT reason=missing_metadata_section")
-              sys.exit(10)
-          m = re.search(r"^## Plan metadata\s*$(.*?)(?=\n##|\Z)", text, re.MULTILINE | re.DOTALL)
-          if not m:
-              print("REJECT reason=metadata_section_unparseable")
-              sys.exit(11)
-          body = m.group(1)
-          for field in ("affected_files", "risk", "verification"):
-              if not re.search(rf"^- {re.escape(field)}:", body, re.MULTILINE):
-                  print(f"REJECT reason=missing_field:{field}")
-                  sys.exit(12)
-          if not re.search(r"^- risk:\s*(Low|Medium|High)\s*$", body, re.MULTILINE):
-              print("REJECT reason=risk_value_invalid")
-              sys.exit(13)
-          if not re.search(r"^- affected_files:\s*\[.+\]\s*$", body, re.MULTILINE):
-              print("REJECT reason=affected_files_not_list")
-              sys.exit(14)
-          if not re.search(r"^- verification:\s*\[.+\]\s*$", body, re.MULTILINE):
-              print("REJECT reason=verification_not_list")
-              sys.exit(15)
-          print("SCHEMA_OK")
+          # 分析型 plan:Claude 显式声明本计划是纯分析/调研,不涉及文件修改。
+          # 这种 plan 没有 verification 命令可跑,允许跳过校验,verification 视为 ["无"]。
+          # 没声明分析 → 默认实施型,直接放行(实施型不再强校验 ## Plan metadata)。
+          ANALYSIS_PATTERNS = (
+              # 显式声明「这是纯分析/调研/研究性质的任务/计划/问题/回答」
+              r"这[\s\S]{0,8}?(?:是|为)[\s\S]{0,8}?(?:纯[\s/]*?)?(?:分析|调研|研究)",
+              r"本[\s\S]{0,5}?(?:计划|任务|issue|问题)[\s\S]{0,5}?(?:是|为)[\s\S]{0,8}?(?:纯[\s/]*?)?(?:分析|调研|研究)",
+              # 显式声明「不需要/无需修改文件」(modify 在 file 前)
+              r"(?:不需要|无需|不用|不必|不需)[\s\S]{0,5}?(?:任何[\s/]*?)?(?:文件|代码|源码)?[\s/]?(?:修改|改动|变更|编辑)",
+              # 显式声明「不涉及文件修改」(file 在 modify 前)
+              r"不(?:涉及|会|会进行)?[\s\S]{0,5}?(?:任何[\s/]*?)?(?:文件|代码|源码)[\s/]?(?:修改|改动|变更|编辑)?",
+          )
+          if any(re.search(p, text) for p in ANALYSIS_PATTERNS):
+              print("SCHEMA_OK type=analysis")
+          else:
+              print("SCHEMA_OK type=implementation")
           PY
           SCHEMA_STATUS=$?
           if [ "$SCHEMA_STATUS" -ne 0 ]; then

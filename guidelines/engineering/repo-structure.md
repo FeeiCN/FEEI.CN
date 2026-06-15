@@ -21,8 +21,6 @@
 - `npm run clear`：清理 Docusaurus 缓存，适用于路由或主题异常。
 - Node.js `>=20`，以 `package.json` 为准。
 
-**不要主动运行 `npm run typecheck` 和 `npm run build`。**
-
 仅在 `git push` 前必须执行 build 验证：
 
 ```bash

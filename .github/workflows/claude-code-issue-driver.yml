@@ -419,7 +419,7 @@ jobs:
                   f"  - **不要 git commit**:commit 由 build step 统一做(commit message 风格由\n"
                   f"    driver 控制,例如 \"Agent: #N — <title>\")。你只管改文件,保持 dirty 状态\n"
                   f"    即可。build step 会校验 `git log origin/main..HEAD` 只能有 1 个 commit,\n"
-                  f"    多个会触发 warn。**不要 git add**,build step 会做 `git add -A`。\n"
+                  f"    多个会触发 warn。\n"
                   f"- 完成后回复一段 Markdown 总结:变更摘要 / 涉及文件 / 验证情况(只读类检查:grep/cat/git diff)\n"
                   f"\n"
                   f"执行时最多读取必要文件。不要做开放式探索。\n"

@@ -1,0 +1,50 @@
+# Engineering: Coding Style
+
+TypeScript 风格、命名约定、文档 front matter 的具体规范。
+
+## TypeScript
+
+严格模式。延续现有配置和主题文件风格：
+
+- 2 空格缩进，保留分号。
+- 尽量保持小函数、单一职责。
+- React 主题覆盖应尽量小而明确，放在 `src/theme/<组件名>/` 下。
+
+## 文档 front matter
+
+每个 Markdown 文档必须保留 front matter，例如：
+
+```md
+---
+slug: /health
+icon: apple-whole
+---
+```
+
+### `slug`
+
+文件名使用中文，`slug` 使用 `/` 开头的简短英文路径，例如 `slug: /cybersecurity-law`。**slug 必须稳定**——一旦发布不应随意变更。
+
+### `icon`
+
+根据主体内容设置合理的 `icon`。图标系统使用 `src/components/ItsHoverIcon/icons/` 下的 ItsHover 图标，或 `src/components/ItsHoverIcon/index.tsx` 中 `ICON_ALIASES` 已注册的别名。
+
+**新增或修改 `icon` 前需先确认对应图标真实存在**，避免使用未注册的 Lucide 名称导致侧边栏图标缺失。
+
+### `description`（必须）
+
+所有新文档必须在 front matter 中携带 `description`。用途：站点 SEO、社交分享卡片的 OG/Twitter 摘要。要求：
+
+- 长度 ≤ 160 字（中文按字符计，英文按词计）。
+- 高度概括本文的核心结论或核心问题，不复述标题。
+- 避免「本文介绍」「本文探讨」「通过 X 阐述 Y」这类废话开头。
+- 直接陈述价值主张，使用与正文相同的判断语气。
+- 多个并列要点时用顿号或分号分隔，不要写成段落。
+
+### `image`（可选）
+
+文档有配图时填写 `image`，取正文中第一张图的相对路径（相对于 `static/`）。无图文档不写 `image`，让社交分享回退到站点默认 OG 图。
+
+### `sidebar_badge: { text: '演讲' }`
+
+带 `演讲` 徽标的文章属于**历史快照，不修改正文**。需更新观点时应复制为新文件后再编辑，原文件保留不动。

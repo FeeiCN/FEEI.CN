@@ -7,9 +7,13 @@
 - youtube.com / youtu.be → oembed
 - 通用 → 自实现 HTML 解析,失败回退 Wayback Machine
 
-CLI: python fetch_url_content.py <url> [--timeout SECONDS]
+抓取后默认会调用 translate_text 翻译成中文（仅在内容判定为英文时）。
+--bilingual 时输出英中段间对照，每批段落只发一次翻译请求。
+
+CLI: python fetch_url_content.py <url> [--timeout SECONDS] [--no-translate] [--bilingual]
 输出: JSON 到 stdout, 字段:
-    成功: status, title, markdown, source_url, content_type
+    成功: status, title, markdown, source_url, content_type,
+          translated, detected_source, translate_provider, pairs?
     失败: status="error", error
 """
 
@@ -25,6 +29,8 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+
+from translate_text import TranslationError, is_english_text, translate_text
 
 
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1.15 Safari/605.1.15"
@@ -646,48 +652,88 @@ def block_media_url(block: dict[str, Any], entity_map: dict[str, dict[str, Any]]
     return None
 
 
-def fetch_url_content(url: str, timeout: float) -> dict[str, Any]:
+def maybe_translate_markdown(
+    markdown: str,
+    *,
+    target_language: str,
+    timeout: float,
+    bilingual: bool = False,
+) -> dict[str, Any]:
+    """判断 markdown 是否英文,是则翻译;返回附加字段 dict。"""
+    fields: dict[str, Any] = {
+        "translated": False,
+        "detected_source": "",
+        "translate_provider": "",
+    }
+    if not is_english_text(markdown):
+        return fields
+
+    try:
+        result = translate_text(
+            markdown,
+            source_language="en",
+            target_language=target_language,
+            timeout=timeout,
+            bilingual=bilingual,
+        )
+    except TranslationError as error:
+        fields["translate_error"] = str(error)
+        return fields
+
+    fields["markdown"] = result.text
+    fields["translated"] = True
+    fields["detected_source"] = result.detected_source or "en"
+    fields["translate_provider"] = result.provider_id
+    if result.pairs is not None:
+        fields["pairs"] = result.pairs
+    return fields
+
+
+def _apply_translation(
+    result: dict[str, Any],
+    *,
+    target_language: str,
+    timeout: float,
+    bilingual: bool = False,
+) -> None:
+    """对成功结果应用翻译（原地修改）。"""
+    markdown = result.get("markdown")
+    if not markdown:
+        return
+    overrides = maybe_translate_markdown(
+        markdown,
+        target_language=target_language,
+        timeout=timeout,
+        bilingual=bilingual,
+    )
+    if "markdown" in overrides:
+        result["markdown"] = overrides.pop("markdown")
+    result.update(overrides)
+
+
+def fetch_url_content(
+    url: str,
+    timeout: float,
+    *,
+    translate: bool = True,
+    target_language: str = "zh-CN",
+    bilingual: bool = False,
+) -> dict[str, Any]:
     """主调度：根据 URL 类型走不同抓取路径,返回统一结构的 dict。"""
     try:
-        readme_url = github_readme_url(url)
-        if readme_url:
-            try:
-                markdown, content_type = fetch(readme_url, timeout=timeout)
-                return {
-                    "status": "success",
-                    "content_type": content_type,
-                    "title": markdown_title(markdown) or url,
-                    "markdown": markdown.strip(),
-                    "source_url": readme_url,
-                }
-            except RuntimeError:
-                pass
-
-        tweet_id = parse_tweet_id(url)
-        if tweet_id:
-            return fetch_x_content(url, tweet_id, timeout=timeout)
-
-        youtube_id = parse_youtube_id(url)
-        if youtube_id:
-            return fetch_youtube_content(url, youtube_id, timeout=timeout)
-
-        try:
-            html, content_type = fetch(url, timeout=timeout)
-            source_url = url
-        except RuntimeError:
-            wayback = try_wayback_fallback(url, timeout=timeout)
-            if wayback is None:
-                raise
-            html, content_type, source_url = wayback
-
-        page_title, markdown = html_to_markdown(html)
-        return {
-            "status": "success",
-            "content_type": content_type,
-            "title": page_title or url,
-            "markdown": markdown,
-            "source_url": source_url,
-        }
+        result = _fetch_raw(url, timeout=timeout)
+        if result.get("status") == "success":
+            result.setdefault("translated", False)
+            result.setdefault("detected_source", "")
+            result.setdefault("translate_provider", "")
+            if translate:
+                _apply_translation(
+                    result,
+                    target_language=target_language,
+                    timeout=timeout,
+                    bilingual=bilingual,
+                )
+        return result
     except RuntimeError as error:
         return {
             "status": "error",
@@ -695,13 +741,64 @@ def fetch_url_content(url: str, timeout: float) -> dict[str, Any]:
         }
 
 
+def _fetch_raw(url: str, *, timeout: float) -> dict[str, Any]:
+    readme_url = github_readme_url(url)
+    if readme_url:
+        try:
+            markdown, content_type = fetch(readme_url, timeout=timeout)
+            return {
+                "status": "success",
+                "content_type": content_type,
+                "title": markdown_title(markdown) or url,
+                "markdown": markdown.strip(),
+                "source_url": readme_url,
+            }
+        except RuntimeError:
+            pass
+
+    tweet_id = parse_tweet_id(url)
+    if tweet_id:
+        return fetch_x_content(url, tweet_id, timeout=timeout)
+
+    youtube_id = parse_youtube_id(url)
+    if youtube_id:
+        return fetch_youtube_content(url, youtube_id, timeout=timeout)
+
+    try:
+        html, content_type = fetch(url, timeout=timeout)
+        source_url = url
+    except RuntimeError:
+        wayback = try_wayback_fallback(url, timeout=timeout)
+        if wayback is None:
+            raise
+        html, content_type, source_url = wayback
+
+    page_title, markdown = html_to_markdown(html)
+    return {
+        "status": "success",
+        "content_type": content_type,
+        "title": page_title or url,
+        "markdown": markdown,
+        "source_url": source_url,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="抓取 URL 内容并转成 Markdown")
     parser.add_argument("url", help="要抓取的 URL")
     parser.add_argument("--timeout", type=float, default=20, help="抓取超时(秒),默认 20")
+    parser.add_argument("--no-translate", dest="translate", action="store_false", help="跳过英文翻译步骤")
+    parser.add_argument("--translate-target", default="zh-CN", help="翻译目标语言,默认 zh-CN")
+    parser.add_argument("--bilingual", action="store_true", help="输出英中段间对照；每批段落只发一次翻译请求")
     args = parser.parse_args()
 
-    result = fetch_url_content(args.url, timeout=args.timeout)
+    result = fetch_url_content(
+        args.url,
+        timeout=args.timeout,
+        translate=args.translate,
+        target_language=args.translate_target,
+        bilingual=args.bilingual,
+    )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     sys.exit(0 if result.get("status") == "success" else 1)
 

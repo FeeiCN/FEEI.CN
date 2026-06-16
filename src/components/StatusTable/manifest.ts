@@ -77,9 +77,7 @@ export const STATUS_MANIFEST: StatusEntry[] = [
     frequency: 'daily',
     timeField: 'fetchedAt',
     outputs: [{title: '港股打新数据', slug: '/hk-ipo-data'}],
-    sources: [
-      'docs/03-财务自由/03-投资/03-港股打新/04-港股打新数据.mdx',
-    ],
+    sources: ['static/hk-ipo/data.json'],
   },
   {
     key: 'financial-assets',
@@ -91,8 +89,8 @@ export const STATUS_MANIFEST: StatusEntry[] = [
       {title: '指数账号资产数据', slug: '/index-data'},
     ],
     sources: [
-      'docs/03-财务自由/03-投资/02-个股/01-个股数据.mdx',
-      'docs/03-财务自由/03-投资/01-指数基金/01-指数数据.mdx',
+      'static/account-assets/stock.json',
+      'static/account-assets/index.json',
     ],
   },
 ];

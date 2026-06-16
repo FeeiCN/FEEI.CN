@@ -1,3 +1,4 @@
+import {useEffect, useMemo, useState} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
@@ -9,6 +10,35 @@ type Trade = {
   name: string;
   pnl: number;
   sold?: boolean;
+};
+
+type Summary = {
+  totalCount: number;
+  totalPnl: number;
+  currency: string;
+};
+
+type IPORow = {
+  account: string;
+  code: string;
+  stockName: string;
+  tradeDate: string;
+  listingDate: string;
+  delta: number | null;
+  deltaText: string;
+  qty: number;
+  issuePrice: number | null;
+  price: number;
+  amount: number;
+  pnl: number | null;
+  pnlPct: number | null;
+};
+
+type IPOPayload = {
+  fetchedAt?: string;
+  summary: Summary;
+  trades: Trade[];
+  rows: IPORow[];
 };
 
 function processData(trades: Trade[]) {
@@ -184,7 +214,41 @@ function buildOption(trades: Trade[], isDark: boolean) {
   };
 }
 
-function Charts({trades}: {trades: Trade[]}) {
+function formatValue(value: number | string | null | undefined, digits = 2) {
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value === 'number') return value.toFixed(digits);
+  return String(value);
+}
+
+function formatPnl(value: number | null | undefined, digits = 0) {
+  if (typeof value !== 'number') return '';
+  return `${value >= 0 ? '+' : ''}${value.toFixed(digits)}`;
+}
+
+function formatPnlPct(value: number | null | undefined) {
+  if (typeof value !== 'number') return '';
+  return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+}
+
+function toneClass(value: number | null | undefined) {
+  if (typeof value !== 'number' || value === 0) return undefined;
+  return value > 0 ? styles.gain : styles.loss;
+}
+
+function buildPayloadFromTrades(trades: Trade[]): IPOPayload {
+  const totalPnl = trades.reduce((sum, trade) => sum + trade.pnl, 0);
+  return {
+    summary: {
+      totalCount: trades.length,
+      totalPnl,
+      currency: 'HKD',
+    },
+    trades,
+    rows: [],
+  };
+}
+
+function IPOChart({trades}: {trades: Trade[]}) {
   const {colorMode} = useColorMode();
   const isDark = colorMode === 'dark';
 
@@ -200,10 +264,125 @@ function Charts({trades}: {trades: Trade[]}) {
   );
 }
 
-export default function HKIPOCharts({trades}: {trades: Trade[]}) {
+function SummaryLine({summary}: {summary: Summary}) {
+  const pnl = formatPnl(summary.totalPnl, 0);
+  return (
+    <p className={styles.summary}>
+      共 {summary.totalCount} 条，合计盈亏{' '}
+      <span className={toneClass(summary.totalPnl)}>{pnl} {summary.currency}</span>
+    </p>
+  );
+}
+
+function IPOTable({rows}: {rows: IPORow[]}) {
+  if (rows.length === 0) return null;
+
+  return (
+    <div className={styles.tableWrap}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th>账户</th>
+            <th>代码</th>
+            <th>名称</th>
+            <th>交易时间</th>
+            <th>上市日期</th>
+            <th>距上市</th>
+            <th>数量</th>
+            <th>发行价</th>
+            <th>交易价</th>
+            <th>交易金额</th>
+            <th>盈亏</th>
+            <th>盈亏率</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={`${row.account}-${row.code}-${row.tradeDate}-${index}`}>
+              <td>{row.account}</td>
+              <td>{row.code}</td>
+              <td>{row.stockName}</td>
+              <td>{row.tradeDate}</td>
+              <td>{row.listingDate}</td>
+              <td>{row.deltaText}</td>
+              <td>{formatValue(row.qty)}</td>
+              <td>{formatValue(row.issuePrice)}</td>
+              <td>{formatValue(row.price)}</td>
+              <td>{formatValue(row.amount, 0)}</td>
+              <td className={toneClass(row.pnl)}>{formatPnl(row.pnl, 0)}</td>
+              <td className={toneClass(row.pnlPct)}>{formatPnlPct(row.pnlPct)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div className={styles.skeleton}>
+      <div className={styles.skeletonChart} />
+      <div className={styles.skeletonTable} />
+    </div>
+  );
+}
+
+function Dashboard({payload}: {payload: IPOPayload}) {
+  return (
+    <div>
+      <IPOChart trades={payload.trades} />
+      <SummaryLine summary={payload.summary} />
+      <IPOTable rows={payload.rows} />
+      {payload.fetchedAt && <div className={styles.footer}>数据更新于 {payload.fetchedAt}</div>}
+    </div>
+  );
+}
+
+function HKIPOInner({trades, dataUrl}: {trades?: Trade[]; dataUrl?: string}) {
+  const fallbackPayload = useMemo(() => buildPayloadFromTrades(trades ?? []), [trades]);
+  const [payload, setPayload] = useState<IPOPayload>(fallbackPayload);
+  const [loading, setLoading] = useState(Boolean(dataUrl));
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!dataUrl) {
+      setPayload(fallbackPayload);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(dataUrl, {cache: 'no-store'});
+        if (!response.ok) throw new Error('暂无港股打新数据');
+        const json = (await response.json()) as IPOPayload;
+        if (cancelled) return;
+        setPayload(json);
+      } catch (e) {
+        if (cancelled) return;
+        setError((e as Error).message || '加载失败');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dataUrl, fallbackPayload]);
+
+  if (loading) return <Skeleton />;
+  if (error) return <div className={styles.error}>{error}</div>;
+
+  return <Dashboard payload={payload} />;
+}
+
+export default function HKIPOCharts({trades, dataUrl}: {trades?: Trade[]; dataUrl?: string}) {
   return (
     <BrowserOnly fallback={<div style={{minHeight: 320}} />}>
-      {() => <Charts trades={trades} />}
+      {() => <HKIPOInner trades={trades} dataUrl={dataUrl} />}
     </BrowserOnly>
   );
 }

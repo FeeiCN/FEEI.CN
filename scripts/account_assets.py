@@ -16,7 +16,6 @@
 import argparse
 import json
 import logging
-import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -24,6 +23,8 @@ import sys
 
 from futu import *
 from futu.common.ft_logger import logger as futu_logger
+
+from git_ops import git_commit_and_push_target_repo, git_pull_target_repo
 
 
 TRD_ENV_MAP = {
@@ -66,27 +67,14 @@ FUNDS_CURRENCY_MAP = {
 SCRIPT_DIR = Path(__file__).resolve().parent
 SNAPSHOT_DIR = SCRIPT_DIR / "snapshots"
 FEEICN_REPO_ROOT = SCRIPT_DIR.parent
+STATIC_ACCOUNT_ASSETS_DIR = FEEICN_REPO_ROOT / "static/account-assets"
 PORT_LABELS = {
     11111: "FeeiCN",
     11112: "FeeiCN2",
 }
-ACCOUNT_OUTPUT_TARGETS = {
-    "FeeiCN2": FEEICN_REPO_ROOT / "docs/03-财务自由/03-投资/01-指数基金/01-指数数据.mdx",
-    "FeeiCN": FEEICN_REPO_ROOT / "docs/03-财务自由/03-投资/02-个股/01-个股数据.mdx",
-}
-ACCOUNT_MDX_CONFIG = {
-    "FeeiCN2": {
-        "slug": "/index-data",
-        "icon": "chart-line-icon",
-        "title": "指数账号资产数据",
-        "sidebar_badge": {"text": "数据", "color": "info"},
-    },
-    "FeeiCN": {
-        "slug": "/stock-data",
-        "icon": "chart-line-icon",
-        "title": "个股账号资产数据",
-        "sidebar_badge": {"text": "数据", "color": "info"},
-    },
+ACCOUNT_JSON_TARGETS = {
+    "FeeiCN2": STATIC_ACCOUNT_ASSETS_DIR / "index.json",
+    "FeeiCN": STATIC_ACCOUNT_ASSETS_DIR / "stock.json",
 }
 
 
@@ -99,80 +87,22 @@ def silence_futu_console_logs():
     futu_logger.console_level = logging.CRITICAL + 1
 
 
-def run_git_command(args, cwd):
-    completed = subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
-    if completed.returncode != 0:
-        details = (completed.stderr or completed.stdout).strip()
-        fail(f"git {' '.join(args)} failed: {details}")
-    return completed
-
-
-def git_pull_target_repo():
-    log("git pull FEEI.CN ...")
-    run_git_command(["pull", "--ff-only"], FEEICN_REPO_ROOT)
-    log("git pull 完成")
-
-
-def write_generated_mdx(account_label, markdown_text):
-    target_path = ACCOUNT_OUTPUT_TARGETS.get(account_label)
-    if not target_path:
-        return None
-
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    target_path.write_text(markdown_text, encoding="utf-8")
-    return target_path
-
-
-def git_commit_and_push_target_repo(paths):
-    relative_paths = [str(path.relative_to(FEEICN_REPO_ROOT)) for path in paths if path]
-    if not relative_paths:
-        return
-
-    run_git_command(["add", "--", *relative_paths], FEEICN_REPO_ROOT)
-    diff_check = subprocess.run(
-        ["git", "diff", "--cached", "--quiet", "--", *relative_paths],
-        cwd=FEEICN_REPO_ROOT,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
-    if diff_check.returncode == 0:
-        return
-    if diff_check.returncode != 1:
-        details = (diff_check.stderr or diff_check.stdout).strip()
-        fail(f"git diff --cached failed: {details}")
-
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    log("git commit ...")
-    run_git_command(
-        ["commit", "--only", "-m", f"[auto] 更新投资数据 {timestamp}", "--", *relative_paths],
-        FEEICN_REPO_ROOT,
-    )
-    log("git push ...")
-    run_git_command(["push"], FEEICN_REPO_ROOT)
-    log("git push 完成")
-
-
-def write_feeicn_outputs(port_results):
-    git_pull_target_repo()
+def write_static_json_outputs(port_results):
     updated_paths = []
     for result in port_results:
         label = result["account_label"]
-        config = ACCOUNT_MDX_CONFIG.get(label)
-        if not config:
+        target_path = ACCOUNT_JSON_TARGETS.get(label)
+        if not target_path:
             continue
-        mdx_text = render_account_mdx(result, config)
-        updated_path = write_generated_mdx(label, mdx_text)
-        if updated_path:
-            log(f"写入 {label} -> {updated_path.name}")
-            updated_paths.append(updated_path)
-    git_commit_and_push_target_repo(updated_paths)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = build_account_asset_payload(result)
+        target_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        log(f"写入 {label} -> {target_path.relative_to(FEEICN_REPO_ROOT)}")
+        updated_paths.append(target_path)
+    return updated_paths
 
 
 def dataframe_to_records(df):
@@ -544,16 +474,14 @@ def shorten_name(name):
     return name
 
 
-def _js_num(value):
-    v = round(float(value), 1)
-    return "0" if v == 0 else str(v)
+def round_number(value):
+    if not isinstance(value, (int, float)):
+        return value
+    return round(float(value), 1)
 
 
-def render_account_mdx(result, config):
-    all_snapshots = result.get("all_snapshots", [])
-    positions = result.get("positions", [])
-
-    history_lines = []
+def build_portfolio_history(all_snapshots):
+    history = []
     reversed_snapshots = list(reversed(all_snapshots))
     for i, (snapshot_date, snapshot) in enumerate(reversed_snapshots):
         fund = first_record(snapshot.get("funds", []))
@@ -564,63 +492,123 @@ def render_account_mdx(result, config):
         else:
             prev_fund = first_record(reversed_snapshots[i - 1][1].get("funds", []))
             daily_change = total_assets - float(prev_fund.get("total_assets") or 0)
-        history_lines.append(
-            f"    {{date: '{snapshot_date.strftime('%m-%d')}', "
-            f"totalAssets: {_js_num(total_assets)}, "
-            f"securitiesValue: {_js_num(market_val)}, "
-            f"dailyChange: {_js_num(daily_change)}}},"
-        )
+        history.append({
+            "date": snapshot_date.strftime("%m-%d"),
+            "fullDate": snapshot_date.strftime("%Y-%m-%d"),
+            "totalAssets": round_number(total_assets),
+            "securitiesValue": round_number(market_val),
+            "dailyChange": round_number(daily_change),
+        })
+    return history
 
-    holding_lines = []
-    for pos in positions:
-        market_val = pos.get("market_val") or 0
+
+def build_portfolio_holdings(positions):
+    holdings = []
+    for position in positions:
+        market_val = position.get("market_val") or 0
         if not market_val:
             continue
-        name = shorten_name(str(pos.get("stock_name", ""))).replace("'", "\\'")
-        currency = pos.get("currency", "")
-        pnl = pos.get("pl_val") or 0
-        pnl_pct = pos.get("pl_ratio") or 0
-        holding_lines.append(
-            f"    {{name: '{name}', value: {_js_num(market_val)}, currency: '{currency}', pnl: {_js_num(pnl)}, pnlPct: {_js_num(pnl_pct)}}},"
-        )
+        holdings.append({
+            "name": shorten_name(str(position.get("stock_name", ""))),
+            "value": round_number(market_val),
+            "currency": position.get("currency", ""),
+            "pnl": round_number(position.get("pl_val") or 0),
+            "pnlPct": round_number(position.get("pl_ratio") or 0),
+        })
+    return holdings
 
-    markdown_body = render_markdown([result])
-    if markdown_body.startswith("# 账户资产\n\n"):
-        markdown_body = markdown_body[len("# 账户资产\n\n"):]
 
-    badge = config.get("sidebar_badge")
-    badge_lines = []
-    if badge:
-        badge_lines = [
-            "sidebar_badge:",
-            f"  text: {badge['text']}",
-            f"  color: {badge.get('color', 'info')}",
-        ]
+def build_fund_rows(result):
+    fund_rows = []
+    all_snapshots = result.get("all_snapshots", [])
+    for i, (snapshot_date, snapshot) in enumerate(all_snapshots):
+        fund = first_record(snapshot.get("funds", []))
+        prev_snapshot = all_snapshots[i + 1][1] if i + 1 < len(all_snapshots) else {}
+        prev_fund = first_record(prev_snapshot.get("funds", []))
+        fund_rows.append({
+            "date": snapshot_date.strftime("%Y-%m-%d"),
+            "accountLabel": result["account_label"],
+            "currency": fund.get("currency", ""),
+            "totalAssets": round_number(fund.get("total_assets")),
+            "totalAssetsDelta": round_number(numeric_delta(fund, prev_fund, "total_assets")),
+            "cash": round_number(fund.get("cash")),
+            "marketVal": round_number(fund.get("market_val")),
+            "power": round_number(fund.get("power")),
+            "avlWithdrawalCash": round_number(fund.get("avl_withdrawal_cash")),
+        })
+    return fund_rows
 
-    return "\n".join([
-        "---",
-        f"slug: {config['slug']}",
-        f"icon: {config.get('icon', 'chart-line-icon')}",
-        f"title: {config['title']}",
-        f"fetchedAt: {datetime.now().isoformat(timespec='seconds')}",
-        *badge_lines,
-        "---",
-        "",
-        "import PortfolioCharts from '@site/src/components/PortfolioCharts';",
-        "",
-        "export const portfolioData = {",
-        "  history: [",
-        *history_lines,
-        "  ],",
-        "  holdings: [",
-        *holding_lines,
-        "  ],",
-        "};",
-        "",
-        "<PortfolioCharts data={portfolioData} />",
-        "",
-        markdown_body,
-    ])
+
+def build_position_row(position, account_label, is_summary=False):
+    return {
+        "accountLabel": account_label,
+        "stockName": position.get("stock_name"),
+        "positionMarket": position.get("position_market", ""),
+        "currency": infer_currency_by_market(position.get("position_market"), position.get("currency")),
+        "plVal": round_number(position.get("pl_val")),
+        "plRatio": round_number(position.get("pl_ratio")),
+        "todayPlVal": round_number(position.get("today_pl_val")),
+        "marketVal": round_number(position.get("market_val")),
+        "qty": round_number(position.get("qty")),
+        "nominalPrice": round_number(position.get("nominal_price")),
+        "dilutedCost": round_number(position.get("diluted_cost")),
+        "todayBuyVal": round_number(position.get("today_buy_val")),
+        "todayBuyQty": round_number(position.get("today_buy_qty")),
+        "todayTrdVal": round_number(position.get("today_trd_val")),
+        "todaySellVal": round_number(position.get("today_sell_val")),
+        "todaySellQty": round_number(position.get("today_sell_qty")),
+        "unrealizedPl": round_number(position.get("unrealized_pl")),
+        "realizedPl": round_number(position.get("realized_pl")),
+        "isSummary": is_summary,
+    }
+
+
+def build_position_summary_row(group_positions, account_label, currency):
+    return {
+        "accountLabel": account_label,
+        "stockName": f"汇总 ({currency or 'N/A'})",
+        "positionMarket": "",
+        "currency": currency,
+        "plVal": round_number(sum_numeric(group_positions, "pl_val")),
+        "plRatio": round_number(weighted_ratio(group_positions, "pl_ratio", "market_val")),
+        "todayPlVal": round_number(sum_numeric(group_positions, "today_pl_val")),
+        "marketVal": round_number(sum_numeric(group_positions, "market_val")),
+        "qty": round_number(sum_numeric(group_positions, "qty")),
+        "nominalPrice": None,
+        "dilutedCost": None,
+        "todayBuyVal": round_number(sum_numeric(group_positions, "today_buy_val")),
+        "todayBuyQty": round_number(sum_numeric(group_positions, "today_buy_qty")),
+        "todayTrdVal": round_number(sum_numeric(group_positions, "today_trd_val")),
+        "todaySellVal": round_number(sum_numeric(group_positions, "today_sell_val")),
+        "todaySellQty": round_number(sum_numeric(group_positions, "today_sell_qty")),
+        "unrealizedPl": round_number(sum_numeric(group_positions, "unrealized_pl")),
+        "realizedPl": round_number(sum_numeric(group_positions, "realized_pl")),
+        "isSummary": True,
+    }
+
+
+def build_position_rows(result):
+    account_label = result["account_label"]
+    positions = result.get("positions", [])
+    rows = [build_position_row(position, account_label) for position in positions]
+    for currency, group_positions in split_positions_by_currency(positions).items():
+        rows.append(build_position_summary_row(group_positions, account_label, currency))
+    return rows
+
+
+def build_account_asset_payload(result):
+    all_snapshots = result.get("all_snapshots", [])
+    positions = result.get("positions", [])
+    return {
+        "fetchedAt": datetime.now().isoformat(timespec="seconds"),
+        "accountLabel": result["account_label"],
+        "portfolio": {
+            "history": build_portfolio_history(all_snapshots),
+            "holdings": build_portfolio_holdings(positions),
+        },
+        "fundRows": build_fund_rows(result),
+        "positionRows": build_position_rows(result),
+    }
 
 
 def render_markdown(port_results):
@@ -808,7 +796,7 @@ def build_parser():
         "--no-write-feeicn",
         dest="no_write_feeicn",
         action="store_true",
-        help="兼容旧参数：不写入 FEEI.CN，仅输出到终端",
+        help="兼容旧参数：不写入 static/account-assets JSON，仅输出到终端",
     )
     return parser
 
@@ -892,6 +880,9 @@ def main():
     args = build_parser().parse_args()
     silence_futu_console_logs()
 
+    if not args.no_write_feeicn:
+        git_pull_target_repo(FEEICN_REPO_ROOT)
+
     ports = parse_ports(args.ports)
     log(f"并行查询 {len(ports)} 个账户: ports={ports}")
     port_results = [None] * len(ports)
@@ -904,8 +895,13 @@ def main():
     markdown_text = render_markdown(port_results)
     print(markdown_text)
     if not args.no_write_feeicn:
-        log("写入 FEEI.CN ...")
-        write_feeicn_outputs(port_results)
+        log("写入 static/account-assets JSON ...")
+        updated_paths = write_static_json_outputs(port_results)
+        git_commit_and_push_target_repo(
+            updated_paths,
+            repo_root=FEEICN_REPO_ROOT,
+            description="更新投资数据",
+        )
     log("全部完成")
 
 

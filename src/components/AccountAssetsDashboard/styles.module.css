@@ -1,32 +1,5 @@
-.wrap {
+.dashboard {
   width: 100%;
-  margin: 0.5rem 0 1.5rem;
-}
-
-.section {
-  margin-bottom: 1.5rem;
-}
-
-.sectionTitle {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: #94a3b8;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin-bottom: 0.25rem;
-}
-
-.summary {
-  margin: 0 0 1rem;
-  color: var(--ifm-color-emphasis-700);
-}
-
-.gain {
-  color: #ef4444;
-}
-
-.loss {
-  color: #22c55e;
 }
 
 .tableWrap {
@@ -56,6 +29,22 @@
   font-weight: 600;
 }
 
+.summaryRow td {
+  background: var(--ifm-table-stripe-background);
+}
+
+.strongCell {
+  font-weight: 700;
+}
+
+.gain {
+  color: #ef4444;
+}
+
+.loss {
+  color: #22c55e;
+}
+
 .footer {
   margin-top: 0.75rem;
   color: var(--ifm-color-emphasis-600);
@@ -83,7 +72,7 @@
 }
 
 .skeletonChart {
-  height: 320px;
+  height: 300px;
 }
 
 .skeletonTable {

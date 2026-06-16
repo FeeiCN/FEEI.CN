@@ -21,7 +21,6 @@
 import argparse
 import json
 import logging
-import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, date
@@ -30,6 +29,8 @@ from pathlib import Path
 from futu import *
 from futu.common.ft_logger import logger as futu_logger
 
+from git_ops import git_commit_and_push_target_repo, git_pull_target_repo
+
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 CACHE_DIR = SCRIPT_DIR / "cache"
@@ -37,7 +38,7 @@ LISTING_DATE_CACHE_FILE = CACHE_DIR / "listing_dates.json"
 ISSUE_PRICE_CACHE_FILE = CACHE_DIR / "issue_prices.json"
 
 FEEICN_REPO_ROOT = SCRIPT_DIR.parent
-OUTPUT_PATH = FEEICN_REPO_ROOT / "docs/03-财务自由/03-投资/03-港股打新/04-港股打新数据.mdx"
+OUTPUT_PATH = FEEICN_REPO_ROOT / "static/hk-ipo/data.json"
 
 
 def load_cache(path):
@@ -272,129 +273,75 @@ def fmt(value, default=""):
     return str(value)
 
 
-def run_git_command(args, cwd):
-    completed = subprocess.run(
-        ["git", *args], cwd=cwd, capture_output=True, text=True, encoding="utf-8",
-    )
-    if completed.returncode != 0:
-        details = (completed.stderr or completed.stdout).strip()
-        fail(f"git {' '.join(args)} failed: {details}")
-    return completed
-
-
 def write_to_feeicn(account_results):
-    log("git pull FEEI.CN ...")
-    run_git_command(["pull", "--ff-only"], FEEICN_REPO_ROOT)
-
-    content = render_markdown(account_results)
+    git_pull_target_repo(FEEICN_REPO_ROOT)
+    content = build_ipo_payload(account_results)
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(content, encoding="utf-8")
-    log(f"写入 {OUTPUT_PATH.name}")
-
-    relative_paths = [
-        str(OUTPUT_PATH.relative_to(FEEICN_REPO_ROOT)),
-    ]
-    run_git_command(["add", "--", *relative_paths], FEEICN_REPO_ROOT)
-    diff = subprocess.run(
-        ["git", "diff", "--cached", "--quiet", "--", *relative_paths],
-        cwd=FEEICN_REPO_ROOT, capture_output=True,
+    OUTPUT_PATH.write_text(
+        json.dumps(content, ensure_ascii=False, indent=2),
+        encoding="utf-8",
     )
-    if diff.returncode == 0:
-        log("无变更，跳过 commit")
-        return
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    log("git commit ...")
-    run_git_command(["commit", "--only", "-m", f"[auto] 更新港股打新数据 {timestamp}", "--", *relative_paths], FEEICN_REPO_ROOT)
-    log("git push ...")
-    run_git_command(["push"], FEEICN_REPO_ROOT)
-    log("git push 完成")
+    log(f"写入 {OUTPUT_PATH.relative_to(FEEICN_REPO_ROOT)}")
+    git_commit_and_push_target_repo(
+        [OUTPUT_PATH],
+        repo_root=FEEICN_REPO_ROOT,
+        description="更新港股打新数据",
+    )
 
 
-def render_markdown(account_results):
-    columns = [
-        ("label",        "账户"),
-        ("code",         "代码"),
-        ("stock_name",   "名称"),
-        ("create_time",  "交易时间"),
-        ("listing_date", "上市日期"),
-        ("delta_str",    "距上市"),
-        ("qty",          "数量"),
-        ("issue_price",  "发行价"),
-        ("price",        "交易价"),
-        ("amount",       "交易金额"),
-        ("pnl_str",      "盈亏"),
-        ("pnl_pct_str",  "盈亏率"),
-    ]
-    headers = [title for _, title in columns]
-    sep = ["---"] * len(headers)
-
-    # 合并所有账户订单
+def collect_all_orders(account_results):
     all_orders = []
     for result in account_results:
-        for o in result["ipo_orders"]:
-            all_orders.append({**o, "label": result["label"]})
+        for order in result["ipo_orders"]:
+            all_orders.append({**order, "label": result["label"]})
     all_orders.sort(key=lambda o: o.get("create_time", ""), reverse=True)
+    return all_orders
 
+
+def build_ipo_payload(account_results):
+    all_orders = collect_all_orders(account_results)
     total_pnl = sum(o["pnl"] for o in all_orders if o.get("pnl") is not None)
-    total_count = len(all_orders)
-    sign = "+" if total_pnl >= 0 else ""
 
-    # ipoTrades：包含所有打新订单，未卖出时保留在图表里，方便看见未兑现仓位
-    trades_for_chart = sorted(all_orders, key=lambda o: o.get("create_time", ""))
-    trade_lines = []
-    for o in trades_for_chart:
-        date = (o.get("create_time") or "")[:10]
-        account = o["label"]
-        name = str(o.get("stock_name", "")).replace("'", "\\'")
-        pnl = int(round(o["pnl"])) if o.get("pnl") is not None else 0
-        sold = "true" if o.get("pnl") is not None else "false"
-        trade_lines.append(
-            f"  {{date: '{date}', account: '{account}', name: '{name}', pnl: {pnl}, sold: {sold}}},"
-        )
+    trades = []
+    for order in sorted(all_orders, key=lambda o: o.get("create_time", "")):
+        trades.append({
+            "date": (order.get("create_time") or "")[:10],
+            "account": order["label"],
+            "name": order.get("stock_name", ""),
+            "pnl": int(round(order["pnl"])) if order.get("pnl") is not None else 0,
+            "sold": order.get("pnl") is not None,
+        })
 
-    lines = [
-        "---",
-        "slug: /hk-ipo-data",
-        "icon: chart-histogram-icon",
-        f"fetchedAt: {datetime.now().isoformat(timespec='seconds')}",
-        "sidebar_badge:",
-        "  text: 数据",
-        "  color: info",
-        "---",
-        "",
-        "import HKIPOCharts from '@site/src/components/HKIPOCharts';",
-        "",
-        "export const ipoTrades = [",
-        *trade_lines,
-        "];",
-        "",
-        "# 港股打新数据",
-        "",
-        "<HKIPOCharts trades={ipoTrades} />",
-        "",
-        f"共 {total_count} 条，合计盈亏 {sign}{total_pnl:.0f} HKD",
-        "",
-        "| " + " | ".join(headers) + " |",
-        "| " + " | ".join(sep) + " |",
-    ]
+    rows = []
+    for order in all_orders:
+        qty = order.get("qty") or 0
+        price = order.get("price") or 0
+        rows.append({
+            "account": order.get("label", ""),
+            "code": order.get("code", ""),
+            "stockName": order.get("stock_name", ""),
+            "tradeDate": (order.get("create_time") or "")[:10],
+            "listingDate": order.get("listing_date", ""),
+            "delta": order.get("delta"),
+            "deltaText": fmt_delta(order.get("delta")),
+            "qty": qty,
+            "issuePrice": order.get("issue_price"),
+            "price": price,
+            "amount": round(qty * price, 2),
+            "pnl": round(order["pnl"], 2) if order.get("pnl") is not None else None,
+            "pnlPct": round(order["pnl_pct"], 2) if order.get("pnl_pct") is not None else None,
+        })
 
-    for o in all_orders:
-        qty = o.get("qty") or 0
-        price = o.get("price") or 0
-        pnl_str, pnl_pct_str = fmt_pnl(o.get("pnl"), o.get("pnl_pct"))
-        row = {
-            **o,
-            "create_time": (o.get("create_time") or "")[:10],
-            "delta_str": fmt_delta(o.get("delta")),
-            "amount": f"{qty * price:.0f}",
-            "pnl_str": pnl_str,
-            "pnl_pct_str": pnl_pct_str,
-        }
-        cells = [fmt(row.get(key)) for key, _ in columns]
-        lines.append("| " + " | ".join(cells) + " |")
-
-    lines.append("")
-    return "\n".join(lines)
+    return {
+        "fetchedAt": datetime.now().isoformat(timespec="seconds"),
+        "summary": {
+            "totalCount": len(all_orders),
+            "totalPnl": round(total_pnl, 2),
+            "currency": "HKD",
+        },
+        "trades": trades,
+        "rows": rows,
+    }
 
 
 def fmt_pnl(pnl, pnl_pct):

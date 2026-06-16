@@ -175,7 +175,7 @@ async function main() {
     }
 
     const annualData = {
-      exportedAt: `${endDate}T23:59:59+08:00`,
+      exportedAt: new Date().toISOString(),
       dateRange: {
         start,
         end,

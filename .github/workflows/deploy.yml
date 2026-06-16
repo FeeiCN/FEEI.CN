@@ -82,6 +82,21 @@ jobs:
           new_head="$(git rev-parse HEAD)"
           echo "old_head=$old_head"
           echo "new_head=$new_head"
+
+          # /static/media and /static/music are gitignored on the server; bind
+          # them to the shared asset directories so Docusaurus MDX can resolve
+          # /media/... and /music/... during the build.
+          mkdir -p static
+          for asset in media music; do
+            target_var="$(printf '%s_ROOT' "$(printf '%s' "$asset" | tr '[:lower:]' '[:upper:]')")"
+            target="${!target_var}"
+            if [ -z "$target" ]; then
+              echo "Missing ${asset} target directory; skipping symlink."
+              continue
+            fi
+            rm -rf "static/$asset"
+            ln -sfn "$target" "static/$asset"
+          done
           group_end "Prepare repository"
 
           group_start "Install dependencies if needed"

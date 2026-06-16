@@ -1,0 +1,10 @@
+[Unit]
+Description=Sync Feei website media assets with rsync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/data/wufeifei.com
+Environment=MEDIA_RSYNC_ENV=/data/wufeifei.com/config/media-rsync.env
+ExecStart=/bin/bash /data/wufeifei.com/scripts/media-rsync.sh

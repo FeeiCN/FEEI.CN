@@ -1,6 +1,6 @@
 <div align="center">
 
-![Logo](static/img/logo.webp)
+![Logo](static/media/img/logo.webp)
 
 # FEEI.CN
 
@@ -109,8 +109,25 @@ src/
   css/         全局样式
 plugins/       自研 Docusaurus 插件（docMtimePlugin）
 scripts/       数据同步脚本（健康/阅读/LLM）
-static/        静态资源（图片/音乐/封面/地图数据）
+static/        静态资源（图片/音乐/媒体/结构化数据）
+  data/        JSON 等结构化数据（阅读/健康/地图/资产/港股打新/LLM 用量）
 ```
+
+### 媒体资源同步
+
+文章里的图片、视频、音频等大文件统一放在 `static/media/文章目录/`，例如 `static/media/annual-review-for-2025/`。该目录不进入 Git。文档中引用使用 `/media/annual-review-for-2025/example.webp` 这类路径，部署时 release 的 `/media` 会软链到服务器共享目录 `/data/wufeifei.com-site/shared/media`。
+
+首次配置：
+
+```bash
+cp config/media-rsync.env.example config/media-rsync.env
+# 修改 MEDIA_SYNC_REMOTE 为你的服务器 SSH 目标
+npm run sync-media
+```
+
+本机 macOS 定时同步模板在 `ops/media-rsync/com.feei.website-media-rsync.plist`。放入 `~/Library/LaunchAgents/` 后用 `launchctl bootstrap` 启动。Linux 服务器可参考同目录下的 `feeisite-media-rsync.service` 与 `feeisite-media-rsync.timer`。
+
+默认 `MEDIA_SYNC_DIRECTION=two-way` 会先拉取远程较新的文件，再推送本地较新的文件。双向模式不自动执行删除；需要删除同步时，临时改成 `pull` 或 `push` 并设置 `MEDIA_SYNC_DELETE=true`，确认方向后再执行。
 
 ### 部署
 

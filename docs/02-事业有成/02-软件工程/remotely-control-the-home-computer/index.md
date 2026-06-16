@@ -14,7 +14,7 @@ By using home broadband public IP, configuring port forwarding and DDNS, you can
 
 杭州电信正常情况下，不会给你分配公网 IP。你可以通过浏览器登录光猫管控地址（一般为`192.168.1.1`，账号密码写在光猫背面），登录后即可查看网关状态，里面有具体的 IP 信息。如果 IP 是`100.`开头，则说明没有分配公网 IP 地址。
 
-![](./光猫公网IP.jpg)
+![](/media/remotely-control-the-home-computer/光猫公网IP.jpg)
 
 此时可拨打电信客服（10000 号）转人工，直接说明要公网 IP，对方通常会立刻答应。10 分钟后重启光猫，再登录光猫查看，IP 地址就会变成正常的独享公网 IP。
 
@@ -50,7 +50,7 @@ Request timeout for icmp_seq 4
 
 此时登录光猫，将 7788 端口映射到电脑 IP 的 7788 端口上，即可实现通过互联网访问局域网内的某个端口服务。
 
-![](./光猫端口映射.jpg)
+![](/media/remotely-control-the-home-computer/光猫端口映射.jpg)
 
 要注意，电信运营商并不允许在家用宽带上搭建网站等服务，因此常见的80、8080、443等Web服务端口是被封禁了。
 
@@ -208,13 +208,13 @@ crontab -e
 
 将家中的MacBook电脑的Screen Sharing服务打开，该服务底层基于VNC协议的。
 
-![](./image.jpg)
-![](./image-1.jpg)
+![](/media/remotely-control-the-home-computer/image.jpg)
+![](/media/remotely-control-the-home-computer/image-1.jpg)
 
 之后就可以在另外一个网络下的电脑上，打开Screen Sharing应用，填入`vnc://ddns.feei.cn`，输入账号密码后，即可连接并控制家中的MacBook电脑。
 
-![](./screen-sharing.jpg)
-![](./screen-sharing-username-and-password.jpg)
+![](/media/remotely-control-the-home-computer/screen-sharing.jpg)
+![](/media/remotely-control-the-home-computer/screen-sharing-username-and-password.jpg)
 
 ## Improves speed
 
@@ -224,7 +224,7 @@ crontab -e
 
 - >=500Mbps
 
-![](./image.png)
+![](/media/remotely-control-the-home-computer/image.png)
 
 *1000Mbps，实际下载能达到75MB/s，上传速度能达到5.8MB/s。*
 
@@ -235,7 +235,7 @@ crontab -e
 - 使用支持>=Wi-Fi6路由器
 - 优化电脑和和路由器的位置使得电脑端接收Wi-Fi信号强度>=30dBm
 
-![](./wifi-netspot.jpg)
+![](/media/remotely-control-the-home-computer/wifi-netspot.jpg)
 
 *通过调整路由器和电脑的位置，优化Wi-Fi信号强度在-30dBm以内*
 
@@ -249,7 +249,7 @@ In VNC protocol, TCP is responsible for control, UDP is responsible for screen t
 
 如果你希望进一步提升远程控制体验，且服务端和客户端都是Apple Silicon M芯片，可升级最新macOS系统，使用[High Performance模式](https://support.apple.com/zh-cn/guide/remote-desktop/apdf8e09f5a9/mac)，在色彩、帧率以及响应速度上会有大幅变化，将拥有非常高清和流畅的体验。
 
-![](./Screen-Sharing-with-High-Performance.jpg)
+![](/media/remotely-control-the-home-computer/Screen-Sharing-with-High-Performance.jpg)
 
 *Screen Sharing.app中将Screen Sharing Type改为High Performance*
 

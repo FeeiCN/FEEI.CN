@@ -48,7 +48,7 @@ export default function CurrentlyReading({library, onSelect, maxItems = 6}: Prop
               {b.cover ? (
                 <img
                   className={styles.currentCover}
-                  src={`/reading/books/${b.bookId}/cover.jpg`}
+                  src={`/data/reading/books/${b.bookId}/cover.jpg`}
                   alt={b.title}
                   loading="lazy"
                   onError={(e) => {

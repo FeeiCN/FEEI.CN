@@ -4,7 +4,7 @@ import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const defaultTargetRoot = path.join(repoRoot, 'static', 'health');
+const defaultTargetRoot = path.join(repoRoot, 'static', 'data', 'health');
 const defaultMcpServerPath = '/Users/feei/Projects/health-auto-export-mcp-server/dist/server.js';
 const timeZone = 'Asia/Shanghai';
 const timeZoneOffset = '+0800';
@@ -465,7 +465,7 @@ Options:
   --year <year>              Export full year (defaults to current month if omitted).
   --month <YYYY-MM>          Export specific month.
   --end-date <YYYY-MM-DD>    End date. Defaults to today for current year/month.
-  --target <dir>             Output directory. Defaults to static/health.
+  --target <dir>             Output directory. Defaults to static/data/health.
   --mcp-server <file>        health_auto_export MCP server path.
   --timeout <ms>             Per-tool timeout. Defaults to 86400000.
   -h, --help                 Show this help.`);

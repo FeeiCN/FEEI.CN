@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Feei website media rsync periodically
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=feeisite-media-rsync.service
+
+[Install]
+WantedBy=timers.target

@@ -14,8 +14,8 @@ icon: home-icon
 
 作为蘑菇街第一个安全工程师，陪伴蘑菇街从创业阶段走向美国nasdaq上市，参与了几乎所有安全能力建设，从最开始的带安全产品研发到后面带整个安全团队，从做数字证书真切的感受到安全带给用户的价值，建设堡垒机时体会到安全卡口的优势巨大，到黑白盒漏洞扫描器（Vulture、PortScan、Cobra、GSIL、ESD）时感受自动化魅力以及深刻理解安全产品的三大核心指标：效率、覆盖率和准确性、入网与终端安全（GuGu）让更安全和好体验是可以兼得、主机采集和监控（HIDS）和应用运行间防护（RASP）让对抗更加纵深、情报系统（Dylan）让你拥有快人一步的应急响应、统一网关应用防火墙（WAF）让你把大部分自动化和无效Payload拒之门外、SIEM让你通过各个角落的细微变化发现异常、人机识别让你知道自动化的攻击流量如此大手段如此专业等等。
 
-![](./awareness.jpeg)
-![](./5th.jpeg)
+![](/media/a-security-engineer-2019/awareness.jpeg)
+![](/media/a-security-engineer-2019/5th.jpeg)
 
 *蘑菇街期间团队得到的一部分奖项*
 
@@ -23,7 +23,7 @@ icon: home-icon
 
 几年前猪猪侠去阿里云安全团队的时候推荐我过去，肖力打电话和我说40%网站都在阿里云上，保护这么多客户的安全未来大有可为，可后来因为种种原因还是留在了蘑菇街，那时的蘑菇街有高速成长的业务、熟悉的环境、靠谱的同事，最重要的是可以按照自己思路去做事。
 
-![](./mogu-security.jpeg)
+![](/media/a-security-engineer-2019/mogu-security.jpeg)
 
 *MOGU安全，还有几位没有来*
 
@@ -31,7 +31,7 @@ icon: home-icon
 
 刚好这时候认识了0101，他告诉我蚂蚁金服正在组建网商银行安全团队，不像上次那样，这次集齐了天时地利人和进入了蚂蚁金服，换工作和找女朋友一样，熟人介绍比中介介绍要好、你们要都单身都在寻找对象、你们要互相看得上且双方条件匹配、她的好让你可以长久在一起、最好是在一个城市因为异地恋比较困难。
 
-![](./first-day-in-ant.jpeg)
+![](/media/a-security-engineer-2019/first-day-in-ant.jpeg)
 
 *入职蚂蚁金服的第一天*
 
@@ -43,7 +43,7 @@ icon: home-icon
 
 ### 蚂蚁金服群星荟萃
 
-![](./baia.jpeg)
+![](/media/a-security-engineer-2019/baia.jpeg)
 
 *百阿降落伞班战蚂小组*
 
@@ -61,10 +61,10 @@ icon: home-icon
 
 19年受邀参加了首席安全官论坛、补天白帽大会、世界信息安全大会和企业信息安全峰会分享了一些观点和蚂蚁金服/网商银行的安全经验做法，同时也跟很多家公司做了深入正式/非正式的交流。
 
-![](./ciso-2019.jpeg)
-![](./butian-2019.jpeg)
-![](./insec-world-2019.jpeg)
-![](./eiss-2019.jpeg)
+![](/media/a-security-engineer-2019/ciso-2019.jpeg)
+![](/media/a-security-engineer-2019/butian-2019.jpeg)
+![](/media/a-security-engineer-2019/insec-world-2019.jpeg)
+![](/media/a-security-engineer-2019/eiss-2019.jpeg)
 
 *2019首席安全官年会*
 
@@ -80,20 +80,20 @@ icon: home-icon
 
 完成了第二次长途自驾，从头到尾一个人开8天3000+公里完成新疆北环线自驾，和18年大西北环线用时和路程都比较接近，2020年将继续来一次长途自驾，暂定新疆南环线或川藏线。
 
-![](./wulumuqi.jpeg)
-![](./xinjiang01.jpeg)
-![](./xinjiang02.jpeg)
-![](./xinjiang03.jpeg)
-![](./xinjiang04.jpeg)
-![](./xinjiang05.jpeg)
-![](./xinjiang06.jpeg)
+![](/media/a-security-engineer-2019/wulumuqi.jpeg)
+![](/media/a-security-engineer-2019/xinjiang01.jpeg)
+![](/media/a-security-engineer-2019/xinjiang02.jpeg)
+![](/media/a-security-engineer-2019/xinjiang03.jpeg)
+![](/media/a-security-engineer-2019/xinjiang04.jpeg)
+![](/media/a-security-engineer-2019/xinjiang05.jpeg)
+![](/media/a-security-engineer-2019/xinjiang06.jpeg)
 
 探索未知世界的旅程，会遇见美食、美景和美人，去感受雪山、湖泊、草原、戈壁、沙漠以及各地风土人情，现在回看那些照片和视频带来的震撼让自己内心还久久不能平静。当我有一天不工作了，我想我会开上牧马人把世界走一遭，各个地方都留下了我的足迹。
 
 另外每年常规国外休闲游去了曼谷，加上这次已经是第三次去泰国了，在泰国每个人都很友善，都带着真诚的笑容，生活节奏慢很多，性价比也很很高，休闲的第一选择。团建去的菲律宾长滩岛，海上项目比之前去的其它海岛性价比要高一些。另外借着出差顺便逛了下香港，那时候废青还没那么夸张。
 
-![](./long-island.jpeg)
-![](./hongkong-times-square.jpeg)
+![](/media/a-security-engineer-2019/long-island.jpeg)
+![](/media/a-security-engineer-2019/hongkong-times-square.jpeg)
 
 *长滩岛的落日太美了*
 
@@ -103,7 +103,7 @@ Joychou、Wilson、Mt三位朋友都在今年结婚了，在现场时眼眶湿�
 
 周末一有时间就会去朋友家蹭饭，说来也奇怪去蹭饭的几个朋友男主都会做饭还都挺好吃的，想想如果以后每天再也不用吃食堂或者外卖，能吃到那么好吃的菜是一件多么幸福的事情啊。
 
-![](./awasome-foods.jpeg)
+![](/media/a-security-engineer-2019/awasome-foods.jpeg)
 
 *这里的每道菜味道都非常好*
 
@@ -111,8 +111,8 @@ Joychou、Wilson、Mt三位朋友都在今年结婚了，在现场时眼眶湿�
 
 大房子买了两年了一直没装修，为啥？穷。真的是买得起装不起，用的东西不是最好的，每样东西单看都不贵，乘上面积就很夸张了，大面积装修太费钱了。你能信敲墙敲了快两万块？一个房子需要十台中央空调？19年五月开始，要到20年5月结束？这装修的钱我可以在武汉全款买一套了。
 
-![](./house-01.jpeg)
-![](./house-02.jpeg)
+![](/media/a-security-engineer-2019/house-01.jpeg)
+![](/media/a-security-engineer-2019/house-02.jpeg)
 
 *House 1st floor*
 

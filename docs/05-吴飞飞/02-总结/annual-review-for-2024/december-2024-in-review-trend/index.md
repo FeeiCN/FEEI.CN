@@ -24,8 +24,8 @@ The keyword for December 2024 is **Trend**. Company growth trends, emerging indu
 
 **Get anonymous labels** from coworkers about you. Recently, in a gathering with my manager and my team, we played this game. Each person drew a self-portrait and signed it on a piece of paper. With eyes closed, others wrote tags on the paper. Finally, they had to choose one tag that best described them and another that did not fit them at all and guess who wrote each tag. This game helped everyone refresh their impressions of each other and significantly increased mutual understanding within the team.
 
-![](./lable-of-feei-1-scaled.webp)
-![](./label-of-feei2-scaled.webp)
+![](/media/december-2024-in-review-trend/lable-of-feei-1-scaled.webp)
+![](/media/december-2024-in-review-trend/label-of-feei2-scaled.webp)
 
 ## Condense the Most Useful Knowledge
 
@@ -41,63 +41,63 @@ Generate image. Use comfyUI and Stable Diffusion.
 
 **Drink Water More Conveniently** . Getting up to pour water in the cold living room outside my workspace has always been a barrier to drinking enough water, although it does get me out of my seat more often. However, not having enough water is a bigger issue for me. So I bought a desktop water dispenser that connects to a large water jug. In the last month, my water intake has at least doubled.
 
-![The Baseboard Heater Under The Table and The Desktop Water Dispenser](./IMG_5673.webp)
+![The Baseboard Heater Under The Table and The Desktop Water Dispenser](/media/december-2024-in-review-trend/IMG_5673.webp)
 
 *The Baseboard Heater Under The Table and The Desktop Water Dispenser*
 
 **Home Assistant With Xiaomi** .
 
-![](./home-assistant-with-xiaomi.webp)
+![](/media/december-2024-in-review-trend/home-assistant-with-xiaomi.webp)
 
 ## Travel Around the World
 
 **Tongxiang, Jiaxing, Zhejiang** . After an hour-long drive off the highway, we arrived at a beautiful place that covered hundreds of acres with straw huts, ponds, streams, and various vegetables and animals, which tasted delicious. The accommodation was well-decorated, making it feel like a real Shangri-La. I look forward to having my own piece of land someday and creating my own Shangri-La.
 
-![](./IMG_5382-1.webp)
+![](/media/december-2024-in-review-trend/IMG_5382-1.webp)
 
 **Moganshan, Huzhou, Zhejiang** . It took about an hour by car to get there, and the hotel is made up of individual villas, with mountains behind them and a river in front. There is also a camping area nearby. I rode my bike for 15 kilometers through several villages that were very clean and quiet, reminiscent of rural areas in developed countries like Japan or Europe. If I had an independent house here, commuting to work within an hour’s drive would be a viable option.
 
-![](./IMG_5454.webp)
-![](./IMG_5458.webp)
+![](/media/december-2024-in-review-trend/IMG_5454.webp)
+![](/media/december-2024-in-review-trend/IMG_5458.webp)
 
 **Shenzhen, Guangdong** . I was invited to attend a private CISO meeting in Shenzhen. My hotel room overlooked a golf course, and the Cantonese cuisine I had at the hotel was excellent. I visited the famous Huaqiangbei area, where I finally got to try DianDouTe, which lived up to its reputation as both delicious and affordable. Drinking Tie Guan Yin tea brought back memories of Shishi City, where every household and shop has a set of teaware for guests to enjoy tea together when visiting each other’s homes. I also visited Talent Park, where I saw Pikachu and Sun Wukong statues, which reminded me of my favorite TV series “Ten Years of Love”, which is based on the entrepreneurial scene in Shenzhen. The book adaptation is titled “Heaven to the Left, Shenzhen to the Right.” Lying on the grass in the garden, looking at the high-rise buildings across from me, I started to wonder when I would be able to own a building like Xiao Ran does.
 
-![](./IMG_5405.webp)
-![](./IMG_5408.webp)
-![](./IMG_5442.webp)
-![](./IMG_5437.webp)
-![](./IMG_5430.webp)
-![](./IMG_5416.webp)
-![](./IMG_5418.webp)
-![](./IMG_5422.webp)
+![](/media/december-2024-in-review-trend/IMG_5405.webp)
+![](/media/december-2024-in-review-trend/IMG_5408.webp)
+![](/media/december-2024-in-review-trend/IMG_5442.webp)
+![](/media/december-2024-in-review-trend/IMG_5437.webp)
+![](/media/december-2024-in-review-trend/IMG_5430.webp)
+![](/media/december-2024-in-review-trend/IMG_5416.webp)
+![](/media/december-2024-in-review-trend/IMG_5418.webp)
+![](/media/december-2024-in-review-trend/IMG_5422.webp)
 
 *The Shenzhen City View on Airplane*
 
 **Shishi, Quanzhou & Xiamen, Fujian** . My parents operate a factory in Shishi City, where I spend every summer and winter vacation. Additionally, I went to elementary school there for several years. This city holds many fond memories for me, and I enjoy revisiting and marking each place that I used to visit.
 
-![](./IMG_9148.webp)
-![](./IMG_9231.webp)
-![](./IMG_9164.webp)
-![](./IMG_5496.webp)
-![](./IMG_9151.webp)
-![](./IMG_9156.webp)
-![](./IMG_9157.webp)
-![](./IMG_9149.webp)
-![](./IMG_9114.webp)
-![](./IMG_9147.webp)
-![](./IMG_5513.webp)
-![](./IMG_5516.webp)
-![](./IMG_9224.webp)
-![](./IMG_9219.webp)
-![](./IMG_5618.webp)
-![](./IMG_9188.webp)
-![](./IMG_9269.webp)
-![](./IMG_9240.webp)
-![](./IMG_9011.webp)
-![](./IMG_5506.webp)
-![](./IMG_9051.webp)
-![](./FullSizeRender.webp)
-![](./IMG_5616.webp)
+![](/media/december-2024-in-review-trend/IMG_9148.webp)
+![](/media/december-2024-in-review-trend/IMG_9231.webp)
+![](/media/december-2024-in-review-trend/IMG_9164.webp)
+![](/media/december-2024-in-review-trend/IMG_5496.webp)
+![](/media/december-2024-in-review-trend/IMG_9151.webp)
+![](/media/december-2024-in-review-trend/IMG_9156.webp)
+![](/media/december-2024-in-review-trend/IMG_9157.webp)
+![](/media/december-2024-in-review-trend/IMG_9149.webp)
+![](/media/december-2024-in-review-trend/IMG_9114.webp)
+![](/media/december-2024-in-review-trend/IMG_9147.webp)
+![](/media/december-2024-in-review-trend/IMG_5513.webp)
+![](/media/december-2024-in-review-trend/IMG_5516.webp)
+![](/media/december-2024-in-review-trend/IMG_9224.webp)
+![](/media/december-2024-in-review-trend/IMG_9219.webp)
+![](/media/december-2024-in-review-trend/IMG_5618.webp)
+![](/media/december-2024-in-review-trend/IMG_9188.webp)
+![](/media/december-2024-in-review-trend/IMG_9269.webp)
+![](/media/december-2024-in-review-trend/IMG_9240.webp)
+![](/media/december-2024-in-review-trend/IMG_9011.webp)
+![](/media/december-2024-in-review-trend/IMG_5506.webp)
+![](/media/december-2024-in-review-trend/IMG_9051.webp)
+![](/media/december-2024-in-review-trend/FullSizeRender.webp)
+![](/media/december-2024-in-review-trend/IMG_5616.webp)
 
 *Elementary School*
 
@@ -105,7 +105,7 @@ Generate image. Use comfyUI and Stable Diffusion.
 
 ### English
 
-![](./Duolingo_Sharing.webp)
+![](/media/december-2024-in-review-trend/Duolingo_Sharing.webp)
 
 ### Videos
 
@@ -116,12 +116,12 @@ Generate image. Use comfyUI and Stable Diffusion.
 
 ### Movies
 
-![](./shameless-s11.webp)
-![](./shogun.webp)
-![](./Alice_in_Borderland_S1.webp)
-![](./Alice_in_Borderland_S2.webp)
-![](./The-Butterfly-Effect.webp)
-![](./Squid_Game_S2.webp)
+![](/media/december-2024-in-review-trend/shameless-s11.webp)
+![](/media/december-2024-in-review-trend/shogun.webp)
+![](/media/december-2024-in-review-trend/Alice_in_Borderland_S1.webp)
+![](/media/december-2024-in-review-trend/Alice_in_Borderland_S2.webp)
+![](/media/december-2024-in-review-trend/The-Butterfly-Effect.webp)
+![](/media/december-2024-in-review-trend/Squid_Game_S2.webp)
 
 *Shameless S11*
 
@@ -146,12 +146,12 @@ Travel Expenses for a Visit to Fujian.
 - My income is decent enough that my need for money isn’t urgent, which has led to a lack of motivation to pursue other ways of earning. However, having more money would allow me to achieve my dreams earlier and do more of what I want. It could also improve the quality of life for my family.
 - Generate profits in fields where you excel, and within a limited timeframe, concentrate on optimizing your performance in these profitable areas. Avoid switching tracks randomly and limit experiments to unfamiliar territories to a minimum.
 
-![](./tesla-206-488.webp)
+![](/media/december-2024-in-review-trend/tesla-206-488.webp)
 
 **I have been allocated shares in new stock** . I applied for HKD 12 million across two accounts and made a profit of HKD 33,600. My success rate in winning new stock allocations is 92%, so I aim to maximize my gains by applying for two additional securities accounts next month.
 
-![](./7e6a7a89a6e5d63649bacd0de77ca407.webp)
-![](./a1c10af215506505e2acf327743ea857.webp)
+![](/media/december-2024-in-review-trend/7e6a7a89a6e5d63649bacd0de77ca407.webp)
+![](/media/december-2024-in-review-trend/a1c10af215506505e2acf327743ea857.webp)
 
 **The Nasdaq 100 index increased by HKD 600,000** .
 

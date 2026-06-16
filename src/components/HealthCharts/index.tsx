@@ -1608,7 +1608,7 @@ function HealthProviderInner({children}: {children: React.ReactNode}) {
     missingKeys.forEach((key) => {
       const isCurrent = key === `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
       const [y, m] = key.split('-');
-      fetch(`/health/${y}/${m}.json`, {
+      fetch(`/data/health/${y}/${m}.json`, {
         cache: isCurrent ? 'no-store' : 'default',
       })
         .then((r) => { if (!r.ok) throw new Error(); return r.json(); })

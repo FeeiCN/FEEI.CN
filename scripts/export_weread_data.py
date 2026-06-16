@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-"""Dump raw weRead API responses to static/reading/ for offline consumption.
+"""Dump raw weRead API responses to static/data/reading/ for offline consumption.
 
 Output structure (everything is the API's raw response, untouched):
 
-  static/reading/
+  static/data/reading/
     YYYY/MM.json              # /readdata/detail mode=monthly
     books/<bookId>/*.json     # per-book endpoints
     notebooks.json            # /user/notebooks
@@ -46,7 +46,7 @@ NOTEPAD_PAGE_SIZE = 100
 REVIEWS_PAGE_SIZE = 100
 BESTBOOKMARKS_DEFAULT_CHAPTER = 0
 
-OUT_DIR = Path(__file__).resolve().parent.parent / "static" / "reading"
+OUT_DIR = Path(__file__).resolve().parent.parent / "static" / "data" / "reading"
 FEEICN_REPO_ROOT = Path(__file__).resolve().parent.parent
 CACHE_DIR = Path(__file__).resolve().parent / "cache" / "weread_data"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -102,7 +102,7 @@ def load_state() -> dict[str, Any]:
 
 
 def _backfill_state_from_disk(state: dict[str, Any]) -> None:
-    """从 static/reading/ 已有文件反推 state，只补缺失项，不覆盖已有记录。
+    """从 static/data/reading/ 已有文件反推 state，只补缺失项，不覆盖已有记录。
 
     - monthly_ym：扫 YYYY/MM.json 文件名，全部并入（无损）
     - books：每个 books/<bid>/info.json 的 mtime 当 lastFetched；counts 留 0
@@ -566,7 +566,7 @@ def build_aggregates(out_dir: Path, start_year: int, end_year: int) -> dict[str,
         out_dir / "index.json",
         {
             "exportedAt": now_str(),
-            "source": "static/reading/YYYY/MM.json aggregated",
+            "source": "static/data/reading/YYYY/MM.json aggregated",
             "activeYears": active_years,
             "dateRange": date_range,
             "totals": {

@@ -67,7 +67,7 @@ FUNDS_CURRENCY_MAP = {
 SCRIPT_DIR = Path(__file__).resolve().parent
 SNAPSHOT_DIR = SCRIPT_DIR / "snapshots"
 FEEICN_REPO_ROOT = SCRIPT_DIR.parent
-STATIC_ACCOUNT_ASSETS_DIR = FEEICN_REPO_ROOT / "static/account-assets"
+STATIC_ACCOUNT_ASSETS_DIR = FEEICN_REPO_ROOT / "static/data/account-assets"
 PORT_LABELS = {
     11111: "FeeiCN",
     11112: "FeeiCN2",
@@ -796,7 +796,7 @@ def build_parser():
         "--no-write-feeicn",
         dest="no_write_feeicn",
         action="store_true",
-        help="兼容旧参数：不写入 static/account-assets JSON，仅输出到终端",
+        help="兼容旧参数：不写入 static/data/account-assets JSON，仅输出到终端",
     )
     return parser
 
@@ -895,7 +895,7 @@ def main():
     markdown_text = render_markdown(port_results)
     print(markdown_text)
     if not args.no_write_feeicn:
-        log("写入 static/account-assets JSON ...")
+        log("写入 static/data/account-assets JSON ...")
         updated_paths = write_static_json_outputs(port_results)
         git_commit_and_push_target_repo(
             updated_paths,

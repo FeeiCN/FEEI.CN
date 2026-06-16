@@ -12,19 +12,19 @@ The 2024 annual review was completed just before the Chinese New Year. I achieve
 
 ## 💼 Do the Best at Work
 
-![](./NIK_1059-opq3264472855.webp)
+![](/media/annual-review-for-2024/NIK_1059-opq3264472855.webp)
 
 *The Ring of 5th Anniversary*
 
 **My 5th Anniversary at Ant Group**. The most important things in life — houses, cars, money, career, and marriage — were all settled within these five years. I have gone from a young man eager to change the world to a middle-aged person who hopes to stay financially secure even if laid off at any time.
 
-![](./p9.webp)
+![](/media/annual-review-for-2024/p9.webp)
 
 *From CTO’s Letter*
 
 **Promoted to P9**. I was successfully promoted during the most challenging period, with only one person in the BU nominated for promotion. After joining as a P8 at age 27 five years ago, I finally succeeded in getting promoted to P9 at the age of 32. Instead of happiness and excitement, I feel mostly gratitude toward the [key people in my work life](https://feei.cn/key-people-in-my-work-life/). This promotion taught me that alignment between hierarchy and role is crucial, and that [the rules for advancement in internet companies have changed in today’s era](https://feei.cn/experiences-and-lessons-from-promotion/).
 
-![](./IMG_5743.webp)
+![](/media/annual-review-for-2024/IMG_5743.webp)
 
 *The Payment Security Team*
 
@@ -54,9 +54,9 @@ November 2024 in Review
 
 **LLM Is Now an Essential Part of My Daily Workflow**. I’ve subscribed to ChatGPT to solve issues that other LLMs can’t handle well. I’ve also experimented with Gemini, Copilot, Kimi, and Doubao. In addition, I have [locally installed Open WebUI + Ollama to run variants of Qwen, Llama, DeepSeek, and Gemma for translation, text generation, and basic question-answering tasks](https://feei.cn/install-llm-on-macos/). I also use ComfyUI + Stable Diffusion on my local machine for image generation and processing, primarily for blog post images.
 
-![Ollma-with-Open-WebUI](./Ollma-with-Open-WebUI.webp)
-![Install LLM on macOS](./using-local-llm-everywhere-scaled.webp)
-![Using LLM descrpt photos](./IMG_5366-scaled.webp)
+![Ollma-with-Open-WebUI](/media/annual-review-for-2024/Ollma-with-Open-WebUI.webp)
+![Install LLM on macOS](/media/annual-review-for-2024/using-local-llm-everywhere-scaled.webp)
+![Using LLM descrpt photos](/media/annual-review-for-2024/IMG_5366-scaled.webp)
 
 *Ollma-with-Open-WebUI*
 
@@ -69,12 +69,12 @@ November 2024 in Review
 
 **The most Comfortable Workspace.** In addition to my top-of-the-line MacBook Pro and four monitors, I recently purchased a Mac mini for use as a home server, at any time or anywhere, I can[remotely control my home computer](https://feei.cn/remotely-control-the-home-computer/). I also got an ergonomic chair that is more comfortable than before. Additionally, I installed a pegboard wall to display various figurines and models. A separate desk serves as my hardware workbench where I learn about IoT-related knowledge. To prevent cat hair from getting into the workspace, I installed glass doors in the room. I also set up an air conditioning system with fresh air ventilation, an air purifier, and a heater to maintain the air quality and temperature at the most comfortable levels, ensuring no dust is present. I also installed a small refrigerator and a water dispenser on my desk so that I can easily access drinks and food at all times, ensuring adequate hydration throughout the day. All devices run automatically, allowing me to go straight into my workspace when I get home, and I even contemplate sleeping there every day.
 
-![The Mac mini is so small and light](./IMG_5252-e1732794322276.webp)
-![](./IMG_5271-1-edited.webp)
-![](./IMG_5352.webp)
-![](./IMG_5673.webp)
-![](./IMG_8459-scaled.webp)
-![](./IMG_5285.webp)
+![The Mac mini is so small and light](/media/annual-review-for-2024/IMG_5252-e1732794322276.webp)
+![](/media/annual-review-for-2024/IMG_5271-1-edited.webp)
+![](/media/annual-review-for-2024/IMG_5352.webp)
+![](/media/annual-review-for-2024/IMG_5673.webp)
+![](/media/annual-review-for-2024/IMG_8459-scaled.webp)
+![](/media/annual-review-for-2024/IMG_5285.webp)
 
 *The Mac mini is so small and light*
 
@@ -88,95 +88,95 @@ November 2024 in Review
 
 **I Build a Vehicle that Can Traverse Mountains, Cross Rough Terrain, and Accommodate Eating and Sleeping** . The vehicle is equipped with factory-fitted front and rear metal bumpers and side steps, a 10,000-pound winch, nitrogen shocks, three differential locks, and an externally mounted spare tire. Additionally, I installed a stationary air conditioner, a 5.5 kWh lithium iron phosphate battery, on-the-go charging capabilities, and a 220V inverter for external power supply. I also added a CB radio and walkie-talkies. The rear seats were removed to create a large bed measuring 190 inches, with bags installed on the windows and a side tent mounted on the roof rack, along with shovels, recovery boards, and tables/chairs. This vehicle allows me to achieve my dream of traveling around the world, but currently, I can only camp overnight in the city outskirts.
 
-![](./IMG_9091.webp)
-![](./IMG_1559.webp)
-![](./IMG_9082.webp)
-![](./IMG_7252.webp)
-![](./IMG_4440-1024x768.webp)
-![](./IMG_1557.webp)
-![](./IMG_1560-1024x768.webp)
-![](./IMG_1561.webp)
-![](./IMG_1229.webp)
-![](./820bc3bc1d2560d009df8f2e843ecc5d.webp)
-![](./IMG_1585.webp)
-![](./IMG_6613-1024x683.webp)
-![](./ad4124b93b931ec76efd9efdad9bc74e-1024x683.webp)
-![](./IMG_3818.webp)
+![](/media/annual-review-for-2024/IMG_9091.webp)
+![](/media/annual-review-for-2024/IMG_1559.webp)
+![](/media/annual-review-for-2024/IMG_9082.webp)
+![](/media/annual-review-for-2024/IMG_7252.webp)
+![](/media/annual-review-for-2024/IMG_4440-1024x768.webp)
+![](/media/annual-review-for-2024/IMG_1557.webp)
+![](/media/annual-review-for-2024/IMG_1560-1024x768.webp)
+![](/media/annual-review-for-2024/IMG_1561.webp)
+![](/media/annual-review-for-2024/IMG_1229.webp)
+![](/media/annual-review-for-2024/820bc3bc1d2560d009df8f2e843ecc5d.webp)
+![](/media/annual-review-for-2024/IMG_1585.webp)
+![](/media/annual-review-for-2024/IMG_6613-1024x683.webp)
+![](/media/annual-review-for-2024/ad4124b93b931ec76efd9efdad9bc74e-1024x683.webp)
+![](/media/annual-review-for-2024/IMG_3818.webp)
 
 **Investigating a Variety of RV Options and Early Retirement Ways of Life** . As I mentioned before, my customized vehicle already meets most of my travel needs. However, in remote areas like Tibet and Xinjiang, accommodation can be poor or nonexistent, making an RV essential for long-term nomadic living. My close friend had the same idea as me, but he already bought two RVs and quit his job to put it into action. I have looked into trailer RVs, class B motorhomes, class C motorhomes, and truck-based RVs. The one that best fits my needs is the trailer RV, and I am currently preparing to get a C6 driver’s license. Moreover, I have subscribed to numerous channels of F.I.R.E practitioners, travel bloggers, off-road bloggers, and rural cottage bloggers to learn about their lifestyles.
 
-![](./622BC652-4F53-4052-8109-06F4E28D4246_1_105_c.webp)
-![](./IMG_2987.webp)
-![](./IMG_2245.webp)
-![](./IMG_1508-1.webp)
+![](/media/annual-review-for-2024/622BC652-4F53-4052-8109-06F4E28D4246_1_105_c.webp)
+![](/media/annual-review-for-2024/IMG_2987.webp)
+![](/media/annual-review-for-2024/IMG_2245.webp)
+![](/media/annual-review-for-2024/IMG_1508-1.webp)
 
 **This Year, I have Traveled to a Different Place Almost Every Month** . My trips included several long road trips, such as the Yunnan north-to-south loop, Guizhou loop drive, Neimenggu loop drive, and Fujian self-drive trip. I visited numerous cities including Chongqing, Jiujiang, Nanjing, Huzhou, Phuket, Lugu Lake, Dali, Lijiang, Xishuangbanna, Chengdu, Panzhihua, Guiyang, Jiaxing, Guangzhou, Xining, Qiqihar, Harbin, Qingdao, Hulunbeier, Aershan, Tongxiang, Moganshan, Shishi, Xiamen, and Shenzhen.
 
-![](./IMG_9269-300x200.webp)
-![](./IMG_9149-300x200.webp)
-![](./IMG_9224-300x200.webp)
-![](./IMG_9219-300x200.webp)
-![](./IMG_5454.webp)
-![](./IMG_5382-1-300x225.webp)
-![](./IMG_5206-300x225.webp)
-![](./IMG_5117-300x225.webp)
-![](./PWUWE3075-300x200.webp)
-![](./IMG_2825-300x225.webp)
-![](./IMG_2832-300x200.webp)
-![](./IMG_2838-300x200.webp)
-![](./IMG_2841-300x225.webp)
-![](./IMG_0637-300x225.webp)
-![](./IMG_2905-300x225.webp)
-![](./IMG_2910-300x225.webp)
-![](./IMG_2190-300x225.webp)
-![](./IMG_2232-300x200.webp)
-![](./IMG_2236-300x200.webp)
-![](./IMG_2238-300x200.webp)
-![](./IMG_2247-300x200.webp)
-![](./IMG_2481-300x200.webp)
-![](./1D8FDC0B-48F0-4718-AD58-417A3C166495-9195-00000749F937D483-300x200.webp)
-![](./4EBDF1B2-3912-4ECF-97B3-BA266987A8E4-9195-0000074A36538ACE-300x200.webp)
-![](./4282E489-68E5-4F79-9B5B-DF0B6CB5BCFC-9195-0000074AC1031988-300x200.webp)
-![](./IMG_4032-300x225.webp)
-![](./28166b04a2e4da7a4f01b7f8fb922099-300x200.webp)
-![](./ad4124b93b931ec76efd9efdad9bc74e-300x200.webp)
-![](./0c66acb8f326dd0030b45362bb92a743-300x169.webp)
-![](./3f8a42c0e072d8788582c9f13edb8090-300x200.webp)
-![](./059f88f40bfeac777a36d759d1ea5d11-300x169.webp)
-![](./85ac5b93102dec5f6422360902d0ce1e-300x169.webp)
-![](./Image-1-1-300x169.webp)
-![](./a2398d47a25e21106a460c6b32eb2704-300x169.webp)
-![](./Image-7-1-300x169.webp)
-![](./IMG_4594-300x200.webp)
-![](./IMG_4596-300x200.webp)
-![](./E478D681-7A05-464F-9FF7-065C14D13819-6637-0000056A8AA6D761-300x225.webp)
-![](./IMG_4593-300x200.webp)
-![](./IMG_4504-300x225.webp)
-![](./IMG_4473-300x225.webp)
-![](./dji_fly_20240930_154602_0061_1727700364146_photo-300x169.webp)
-![](./dji_fly_20241001_141200_0093_1728112151639_photo-300x169.webp)
-![](./dji_fly_20241001_141500_0096_1728112494446_photo-300x169.webp)
-![](./Image-1-1-1-300x169.webp)
-![](./IMG_1504-300x200.webp)
-![](./IMG_1529-300x200.webp)
-![](./IMG_4779-300x225.webp)
-![](./IMG_7524-300x200.webp)
-![](./IMG_7532-300x200.webp)
-![](./IMG_5422-225x300.webp)
-![](./IMG_5115-225x300.webp)
-![](./IMG_2504-225x300.webp)
-![](./IMG_0266-225x300.webp)
-![](./IMG_2412-225x300.webp)
-![](./IMG_2460-200x300.webp)
-![](./IMG_2475-225x300.webp)
-![](./IMG_2485-200x300.webp)
-![](./CFA48A1F-C719-472A-BDE0-DCCE422E26A1-12672-00000A0785FC6C74-169x300.webp)
-![](./55D39423-58C8-4827-AEAB-2DCA0B4DD325-12672-00000A08127963BC-169x300.webp)
-![](./E4C0F384-6CB0-4A71-84FC-D8CF4110D0E4-12672-00000A076BB0CB85-169x300.webp)
-![](./ed2af2405e50ab48e004c00287627ae2-139x300.webp)
-![](./IMG_1364-200x300.webp)
-![](./IMG_7822-200x300.webp)
-![](./IMG_7826-200x300.webp)
+![](/media/annual-review-for-2024/IMG_9269-300x200.webp)
+![](/media/annual-review-for-2024/IMG_9149-300x200.webp)
+![](/media/annual-review-for-2024/IMG_9224-300x200.webp)
+![](/media/annual-review-for-2024/IMG_9219-300x200.webp)
+![](/media/annual-review-for-2024/IMG_5454.webp)
+![](/media/annual-review-for-2024/IMG_5382-1-300x225.webp)
+![](/media/annual-review-for-2024/IMG_5206-300x225.webp)
+![](/media/annual-review-for-2024/IMG_5117-300x225.webp)
+![](/media/annual-review-for-2024/PWUWE3075-300x200.webp)
+![](/media/annual-review-for-2024/IMG_2825-300x225.webp)
+![](/media/annual-review-for-2024/IMG_2832-300x200.webp)
+![](/media/annual-review-for-2024/IMG_2838-300x200.webp)
+![](/media/annual-review-for-2024/IMG_2841-300x225.webp)
+![](/media/annual-review-for-2024/IMG_0637-300x225.webp)
+![](/media/annual-review-for-2024/IMG_2905-300x225.webp)
+![](/media/annual-review-for-2024/IMG_2910-300x225.webp)
+![](/media/annual-review-for-2024/IMG_2190-300x225.webp)
+![](/media/annual-review-for-2024/IMG_2232-300x200.webp)
+![](/media/annual-review-for-2024/IMG_2236-300x200.webp)
+![](/media/annual-review-for-2024/IMG_2238-300x200.webp)
+![](/media/annual-review-for-2024/IMG_2247-300x200.webp)
+![](/media/annual-review-for-2024/IMG_2481-300x200.webp)
+![](/media/annual-review-for-2024/1D8FDC0B-48F0-4718-AD58-417A3C166495-9195-00000749F937D483-300x200.webp)
+![](/media/annual-review-for-2024/4EBDF1B2-3912-4ECF-97B3-BA266987A8E4-9195-0000074A36538ACE-300x200.webp)
+![](/media/annual-review-for-2024/4282E489-68E5-4F79-9B5B-DF0B6CB5BCFC-9195-0000074AC1031988-300x200.webp)
+![](/media/annual-review-for-2024/IMG_4032-300x225.webp)
+![](/media/annual-review-for-2024/28166b04a2e4da7a4f01b7f8fb922099-300x200.webp)
+![](/media/annual-review-for-2024/ad4124b93b931ec76efd9efdad9bc74e-300x200.webp)
+![](/media/annual-review-for-2024/0c66acb8f326dd0030b45362bb92a743-300x169.webp)
+![](/media/annual-review-for-2024/3f8a42c0e072d8788582c9f13edb8090-300x200.webp)
+![](/media/annual-review-for-2024/059f88f40bfeac777a36d759d1ea5d11-300x169.webp)
+![](/media/annual-review-for-2024/85ac5b93102dec5f6422360902d0ce1e-300x169.webp)
+![](/media/annual-review-for-2024/Image-1-1-300x169.webp)
+![](/media/annual-review-for-2024/a2398d47a25e21106a460c6b32eb2704-300x169.webp)
+![](/media/annual-review-for-2024/Image-7-1-300x169.webp)
+![](/media/annual-review-for-2024/IMG_4594-300x200.webp)
+![](/media/annual-review-for-2024/IMG_4596-300x200.webp)
+![](/media/annual-review-for-2024/E478D681-7A05-464F-9FF7-065C14D13819-6637-0000056A8AA6D761-300x225.webp)
+![](/media/annual-review-for-2024/IMG_4593-300x200.webp)
+![](/media/annual-review-for-2024/IMG_4504-300x225.webp)
+![](/media/annual-review-for-2024/IMG_4473-300x225.webp)
+![](/media/annual-review-for-2024/dji_fly_20240930_154602_0061_1727700364146_photo-300x169.webp)
+![](/media/annual-review-for-2024/dji_fly_20241001_141200_0093_1728112151639_photo-300x169.webp)
+![](/media/annual-review-for-2024/dji_fly_20241001_141500_0096_1728112494446_photo-300x169.webp)
+![](/media/annual-review-for-2024/Image-1-1-1-300x169.webp)
+![](/media/annual-review-for-2024/IMG_1504-300x200.webp)
+![](/media/annual-review-for-2024/IMG_1529-300x200.webp)
+![](/media/annual-review-for-2024/IMG_4779-300x225.webp)
+![](/media/annual-review-for-2024/IMG_7524-300x200.webp)
+![](/media/annual-review-for-2024/IMG_7532-300x200.webp)
+![](/media/annual-review-for-2024/IMG_5422-225x300.webp)
+![](/media/annual-review-for-2024/IMG_5115-225x300.webp)
+![](/media/annual-review-for-2024/IMG_2504-225x300.webp)
+![](/media/annual-review-for-2024/IMG_0266-225x300.webp)
+![](/media/annual-review-for-2024/IMG_2412-225x300.webp)
+![](/media/annual-review-for-2024/IMG_2460-200x300.webp)
+![](/media/annual-review-for-2024/IMG_2475-225x300.webp)
+![](/media/annual-review-for-2024/IMG_2485-200x300.webp)
+![](/media/annual-review-for-2024/CFA48A1F-C719-472A-BDE0-DCCE422E26A1-12672-00000A0785FC6C74-169x300.webp)
+![](/media/annual-review-for-2024/55D39423-58C8-4827-AEAB-2DCA0B4DD325-12672-00000A08127963BC-169x300.webp)
+![](/media/annual-review-for-2024/E4C0F384-6CB0-4A71-84FC-D8CF4110D0E4-12672-00000A076BB0CB85-169x300.webp)
+![](/media/annual-review-for-2024/ed2af2405e50ab48e004c00287627ae2-139x300.webp)
+![](/media/annual-review-for-2024/IMG_1364-200x300.webp)
+![](/media/annual-review-for-2024/IMG_7822-200x300.webp)
+![](/media/annual-review-for-2024/IMG_7826-200x300.webp)
 
 *Xiamen*
 
@@ -191,12 +191,12 @@ November 2024 in Review
 
 **Completed Duolingo’s 365-Day Streak** . After more than a year of practice, my English skills—reading, listening, writing, and speaking—have improved. I can read cybersecurity-related articles without needing translation, but still struggle with man professional terms on Twitter and news platforms. Watching American TV shows, I only understand common sentences. My writing is good enough to complete monthly summaries independently, though there are issues with pronunciation for many words.
 
-![](./Duolingo_Sharing.webp)
-![](./duolingo-a-year.webp)
+![](/media/annual-review-for-2024/Duolingo_Sharing.webp)
+![](/media/annual-review-for-2024/duolingo-a-year.webp)
 
 ### Books
 
-![](./MEM-scaled.webp)
+![](/media/annual-review-for-2024/MEM-scaled.webp)
 
 *MEM Books*
 
@@ -204,8 +204,8 @@ November 2024 in Review
 
 In 2024, I spent a total of 158 hours reading, an increase of one hundred hours compared to last year. My focus was primarily on books related to history and economics.
 
-![](./wxread01.webp)
-![](./wxread02.webp)
+![](/media/annual-review-for-2024/wxread01.webp)
+![](/media/annual-review-for-2024/wxread02.webp)
 
 ### Movies
 
@@ -215,30 +215,30 @@ In 2024, I spent a total of 158 hours reading, an increase of one hundred hours 
 
 “I believe the answer to that question, like the answer to most questions, is fuck you!” – Lip Gallagher
 
-![](./shameless-s11.webp)
-![](./911-s8-scaled.webp)
-![](./911.webp)
-![](./3bodyproblem.webp)
-![](./Squid_Game_S2.webp)
-![](./Alice_in_Borderland_S2.webp)
-![](./Alice_in_Borderland_S1.webp)
-![](./shogun.webp)
-![](./三体.webp)
-![](./千与千寻.webp)
-![](./The-Butterfly-Effect.webp)
-![](./人生一串.webp)
-![](./凡人歌.webp)
-![](./周处除三害-scaled.webp)
-![](./大江大河之岁月如歌.webp)
-![](./年会不能停-scaled.webp)
-![](./抓娃娃.webp)
-![](./来福大酒店.webp)
-![](./漂白.webp)
-![](./热辣滚烫.webp)
-![](./胜券在握.webp)
-![](./谈判专家.webp)
-![](./逆行人生.webp)
-![](./飞驰人生2.webp)
+![](/media/annual-review-for-2024/shameless-s11.webp)
+![](/media/annual-review-for-2024/911-s8-scaled.webp)
+![](/media/annual-review-for-2024/911.webp)
+![](/media/annual-review-for-2024/3bodyproblem.webp)
+![](/media/annual-review-for-2024/Squid_Game_S2.webp)
+![](/media/annual-review-for-2024/Alice_in_Borderland_S2.webp)
+![](/media/annual-review-for-2024/Alice_in_Borderland_S1.webp)
+![](/media/annual-review-for-2024/shogun.webp)
+![](/media/annual-review-for-2024/三体.webp)
+![](/media/annual-review-for-2024/千与千寻.webp)
+![](/media/annual-review-for-2024/The-Butterfly-Effect.webp)
+![](/media/annual-review-for-2024/人生一串.webp)
+![](/media/annual-review-for-2024/凡人歌.webp)
+![](/media/annual-review-for-2024/周处除三害-scaled.webp)
+![](/media/annual-review-for-2024/大江大河之岁月如歌.webp)
+![](/media/annual-review-for-2024/年会不能停-scaled.webp)
+![](/media/annual-review-for-2024/抓娃娃.webp)
+![](/media/annual-review-for-2024/来福大酒店.webp)
+![](/media/annual-review-for-2024/漂白.webp)
+![](/media/annual-review-for-2024/热辣滚烫.webp)
+![](/media/annual-review-for-2024/胜券在握.webp)
+![](/media/annual-review-for-2024/谈判专家.webp)
+![](/media/annual-review-for-2024/逆行人生.webp)
+![](/media/annual-review-for-2024/飞驰人生2.webp)
 
 **Objective for 2025**
 
@@ -274,21 +274,21 @@ Besides the above, my primary income comes from salary, including base salary, a
 
 Based on this trend, achieving financial freedom won’t take long.
 
-![](./IMG_3677.webp)
-![](./IMG_4299.webp)
-![](./IMG_4301.webp)
-![](./IMG_4302.webp)
-![](./IMG_4303.webp)
-![](./IMG_4304.webp)
-![](./IMG_4305.webp)
-![](./tesla-stock-futu.webp)
-![](./7e6a7a89a6e5d63649bacd0de77ca407.webp)
-![](./a1c10af215506505e2acf327743ea857.webp)
-![](./buluke1.webp)
-![](./buluke2.webp)
-![](./tesla-206-488.webp)
-![](./tesla-240-480.webp)
-![](./tesla-stock-in-Nov-2024.webp)
+![](/media/annual-review-for-2024/IMG_3677.webp)
+![](/media/annual-review-for-2024/IMG_4299.webp)
+![](/media/annual-review-for-2024/IMG_4301.webp)
+![](/media/annual-review-for-2024/IMG_4302.webp)
+![](/media/annual-review-for-2024/IMG_4303.webp)
+![](/media/annual-review-for-2024/IMG_4304.webp)
+![](/media/annual-review-for-2024/IMG_4305.webp)
+![](/media/annual-review-for-2024/tesla-stock-futu.webp)
+![](/media/annual-review-for-2024/7e6a7a89a6e5d63649bacd0de77ca407.webp)
+![](/media/annual-review-for-2024/a1c10af215506505e2acf327743ea857.webp)
+![](/media/annual-review-for-2024/buluke1.webp)
+![](/media/annual-review-for-2024/buluke2.webp)
+![](/media/annual-review-for-2024/tesla-206-488.webp)
+![](/media/annual-review-for-2024/tesla-240-480.webp)
+![](/media/annual-review-for-2024/tesla-stock-in-Nov-2024.webp)
 
 **Objective for 2025**
 
@@ -305,29 +305,29 @@ In late May, she successfully underwent surgery and was discharged from the hosp
 
 My grandmother is a kind and devoted Buddhist, and I spent a significant portion of my childhood living with her. A large part of who I am today comes from her teachings, especially her lessons in kindness. When the time comes to repay her kindness, I will do so without hesitation. This is the second time I have encountered a family member with cancer. I have properly configured insurance coverage and take responsibility for your health. Life is short and unpredictable, so live in the moment.
 
-![](./IMG_4259.webp)
-![](./IMG_3703.webp)
-![](./IMG_3708.webp)
+![](/media/annual-review-for-2024/IMG_4259.webp)
+![](/media/annual-review-for-2024/IMG_3703.webp)
+![](/media/annual-review-for-2024/IMG_3708.webp)
 
 **Weight Roll Coaster** . By following a strict diet and regular exercise routine, my weight dropped from 81.3kg in January to 76.43kg in June (a loss of nearly 5kg or about 10 pounds), but by December it had returned to 80kg.
 
-![](./bmi.webp)
-![](./Weight.webp)
+![](/media/annual-review-for-2024/bmi.webp)
+![](/media/annual-review-for-2024/Weight.webp)
 
 *BMI*
 
 **Health Data Analysis** . Compared to the first half of the year, my workouts in the second half increased significantly and need to be maintained. However, my daily walking (3 kilometers/d), steps (4,279 steps/d), and climbing stairs (11 floors/d) are still below average. My sleep quality has been consistently good, with an average of 8.5 hours per night. In November, I spent more time outdoors, which improved my sleep duration and time in daylight. While I wash my hands twice a day, the duration is relatively short. My resting heart rate remains stable at 68 beats per minute, within the normal range. However, I failed to meet my goals for standing, moving, and exercising in most months, so I need to adjust my habits.
 
-![](./Steps.webp)
-![](./Workouts.webp)
-![](./Walking-Running-Distance.webp)
-![](./Flights-climbed.webp)
-![](./sleep-s1.webp)
-![](./sleep-s2.webp)
-![](./Handwashing.webp)
-![](./Time-in-daylight.webp)
-![](./Resting-heart-rate.webp)
-![](./Activity.webp)
+![](/media/annual-review-for-2024/Steps.webp)
+![](/media/annual-review-for-2024/Workouts.webp)
+![](/media/annual-review-for-2024/Walking-Running-Distance.webp)
+![](/media/annual-review-for-2024/Flights-climbed.webp)
+![](/media/annual-review-for-2024/sleep-s1.webp)
+![](/media/annual-review-for-2024/sleep-s2.webp)
+![](/media/annual-review-for-2024/Handwashing.webp)
+![](/media/annual-review-for-2024/Time-in-daylight.webp)
+![](/media/annual-review-for-2024/Resting-heart-rate.webp)
+![](/media/annual-review-for-2024/Activity.webp)
 
 *Steps*
 

@@ -6,7 +6,7 @@ icon: coin-bitcoin-icon
 
 ## 2026 Death Jaws Pattern
 
-![2026 Death Jaws Pattern](./death-jaws-pattern-2026.jpg)
+![2026 Death Jaws Pattern](/media/AI科技巨头/death-jaws-pattern-2026.jpg)
 
 *来源：Bloomberg, Kevin C. Smith, CFA / Crescat Capital（2026年2月）*
 
@@ -20,7 +20,7 @@ icon: coin-bitcoin-icon
 
 ## Apple on Capex：Nah, we're good
 
-![Apple on Capex](./apple-capex-2026.jpg)
+![Apple on Capex](/media/AI科技巨头/apple-capex-2026.jpg)
 
 *来源：FactSet, Snacks（2026年2月）*
 

@@ -145,7 +145,7 @@ const config: Config = {
       tagName: 'link',
       attributes: {
         rel: 'icon',
-        href: '/img/icons/feei-icon-32.webp',
+        href: '/media/img/icons/feei-icon-32.webp',
         sizes: '32x32',
       },
     },
@@ -153,7 +153,7 @@ const config: Config = {
       tagName: 'link',
       attributes: {
         rel: 'icon',
-        href: '/img/icons/feei-icon-192.webp',
+        href: '/media/img/icons/feei-icon-192.webp',
         sizes: '192x192',
       },
     },
@@ -161,14 +161,14 @@ const config: Config = {
       tagName: 'link',
       attributes: {
         rel: 'apple-touch-icon',
-        href: '/img/icons/feei-icon-180.webp',
+        href: '/media/img/icons/feei-icon-180.webp',
       },
     },
     {
       tagName: 'meta',
       attributes: {
         name: 'msapplication-TileImage',
-        content: '/img/icons/feei-icon-270.webp',
+        content: '/media/img/icons/feei-icon-270.webp',
       },
     },
   ],
@@ -222,7 +222,7 @@ const config: Config = {
       },
     },
     // Replace with your project's social card
-    image: 'img/icons/feei-icon-270.webp',
+    image: 'media/img/icons/feei-icon-270.webp',
     colorMode: {
       defaultMode: 'light',
       disableSwitch: false,
@@ -232,7 +232,7 @@ const config: Config = {
       hideOnScroll: false,
       logo: {
         alt: 'My Site Logo',
-        src: 'img/logo.webp',
+        src: 'media/img/logo.webp',
       },
       items: [
         {

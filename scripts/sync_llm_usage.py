@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Sync LLM token-usage summaries to static/llm-usage/<vendor>/.
+"""Sync LLM token-usage summaries to static/data/llm-usage/<vendor>/.
 
 Supports multiple vendors; each vendor has its own config + auth env var.
 The fetched payload is dropped verbatim into
-`static/llm-usage/<vendor>/usage_summary.json`, and the fetchedAt timestamp
+`static/data/llm-usage/<vendor>/usage_summary.json`, and the fetchedAt timestamp
 is overlaid on top of the raw envelope so the front-end can position the
 daily array on a calendar.
 
@@ -38,7 +38,7 @@ from tz import BEIJING_TZ
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
-OUT_DIR = REPO_ROOT / "static" / "llm-usage"
+OUT_DIR = REPO_ROOT / "static" / "data" / "llm-usage"
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -312,7 +312,7 @@ def collect_outputs() -> list[dict[str, str]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="拉取 LLM token 使用摘要并落盘到 static/llm-usage/，更新状态页"
+        description="拉取 LLM token 使用摘要并落盘到 static/data/llm-usage/，更新状态页"
     )
     parser.add_argument(
         "--vendor",

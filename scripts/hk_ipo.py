@@ -38,7 +38,7 @@ LISTING_DATE_CACHE_FILE = CACHE_DIR / "listing_dates.json"
 ISSUE_PRICE_CACHE_FILE = CACHE_DIR / "issue_prices.json"
 
 FEEICN_REPO_ROOT = SCRIPT_DIR.parent
-OUTPUT_PATH = FEEICN_REPO_ROOT / "static/hk-ipo/data.json"
+OUTPUT_PATH = FEEICN_REPO_ROOT / "static/data/hk-ipo/data.json"
 
 
 def load_cache(path):

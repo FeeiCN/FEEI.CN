@@ -346,18 +346,16 @@ function HeatmapSkeleton() {
 }
 
 async function fetchSplitPayload(): Promise<DailyPayload> {
-  const indexRes = await fetch('/reading/index.json', {cache: 'no-store'});
+  const indexRes = await fetch('/data/reading/index.json', {cache: 'no-store'});
   if (!indexRes.ok) {
-    const legacyRes = await fetch('/reading/reading_daily.json', {cache: 'no-store'});
-    if (!legacyRes.ok) throw new Error('index 与 legacy 均不可访问');
-    return legacyRes.json() as Promise<DailyPayload>;
+    throw new Error('阅读索引不可访问');
   }
   const index = (await indexRes.json()) as IndexPayload;
   const years = index.activeYears ?? [];
   const yearCacheBust = index.exportedAt ? `?v=${encodeURIComponent(index.exportedAt)}` : '';
   const yearFiles = await Promise.all(
     years.map(async (y) => {
-      const r = await fetch(`/reading/${y}.json${yearCacheBust}`, {cache: 'default'});
+      const r = await fetch(`/data/reading/${y}.json${yearCacheBust}`, {cache: 'default'});
       if (!r.ok) return {year: y, daily: {}} as YearFile;
       return (await r.json()) as YearFile;
     })

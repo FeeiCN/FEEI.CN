@@ -6,7 +6,9 @@
 
 - `docs/`：站点主体内容，按编号分组（`01-health/`、`02-capability/`、`03-wealth/`、`04-experience/`）。
 - `blog/`：博客文章。
-- `static/`：静态资源（图片、字体、抓取数据）。例如 `static/img/`、`static/reading/books/<bookId>/`。
+- `static/`：静态资源根目录。站点图标、PDF、音乐、媒体、结构化数据按子目录分开。
+- `static/data/`：结构化数据目录，例如 `static/data/reading/`、`static/data/health/`、`static/data/maps/`、`static/data/account-assets/`、`static/data/hk-ipo/`、`static/data/llm-usage/`。
+- `static/media/文章目录/`：文档正文引用的大体积媒体资源，例如 `static/media/annual-review-for-2025/`；文档使用 `/media/annual-review-for-2025/example.webp` 这类路径引用，由 rsync 同步，不进入 Git。文章目录名应尽量全站唯一，避免使用泛泛的 `assets/` 作为顶层目录。
 - `src/theme/`：Docusaurus 主题覆盖和 React 自定义组件。
 - `plugins/`：本地 Docusaurus 插件。
 - `guidelines/`：给 AI 协作助手的规则文件，**不会被 Docusaurus 收录到站点**。
@@ -33,10 +35,12 @@ npm run build 2>&1 | grep -E "WARNING|SUCCESS|ERROR"
 
 站点**禁止**引用任何外部资源（图片、字体、脚本、样式表）。所有可下载资源必须落到 `static/` 本地目录，组件用相对路径引用。
 
-- 新增图片/图标/字体 → 放到 `static/` 下，组件用 `/img/...`、`/reading/...` 等相对路径引用。
+- 新增站点图标/字体等媒体资源 → 放到 `static/media/` 下对应目录，组件用 `/media/img/...` 等相对路径引用。
+- 新增 JSON 等结构化数据 → 放到 `static/data/` 下对应目录，组件用 `/data/...` 路径引用。
+- 新增文档正文图片/视频/音频等大体积媒体 → 放到 `static/media/文章目录/`，文档用 `/media/文章目录/文件名` 引用，不要放在 `docs/` 文章目录下。
 - 已有外部 URL（CDN/hotlink）→ 必须下载到 `static/` 后改成本地路径。
 - 第三方 npm 包内置资源 → 通过 Docusaurus 标准 import 链入，不直接写绝对 URL。
-- 微信读书等抓取类资源（封面、JSON 元数据）→ 下载后用本地 `static/reading/books/<bookId>/...` 路径。
+- 微信读书等抓取类资源（封面、JSON 元数据）→ 下载后用本地 `static/data/reading/books/<bookId>/...` 路径。
 - 例外仅限 OG 图、Twitter Card 等社交平台抓取所需的绝对 URL（受限于平台协议）。
 
 ## 提交与合并请求

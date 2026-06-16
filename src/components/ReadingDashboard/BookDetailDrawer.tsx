@@ -37,7 +37,7 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
   const [introExpanded, setIntroExpanded] = useState(false);
   const triggerRef = useRef<HTMLElement | null>(null);
 
-  const baseUrl = `/reading/books/${bookId}`;
+  const baseUrl = `/data/reading/books/${bookId}`;
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -130,7 +130,7 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
   }, []);
 
   const cover = info?.cover || book?.cover || '';
-  const localCover = book?.bookId ? `/reading/books/${book.bookId}/cover.jpg` : '';
+  const localCover = book?.bookId ? `/data/reading/books/${book.bookId}/cover.jpg` : '';
   const title = info?.title || book?.title || '未命名';
   const author = info?.author || book?.author || '';
   const category = info?.category || book?.category || '';

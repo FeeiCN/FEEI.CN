@@ -30,12 +30,12 @@ qemu-img convert -O vmdk Windows11_InsiderPreview_Client_ARM64_en-us_27718.VHDX 
 
 ## Install Windows on VMware Fusion
 
-![](./image-1.png)
-![](./image-2.png)
-![](./image-3.png)
-![](./image-4.png)
-![](./image-5.png)
-![](./image-6.png)
+![](/media/install-windows-on-macos/image-1.png)
+![](/media/install-windows-on-macos/image-2.png)
+![](/media/install-windows-on-macos/image-3.png)
+![](/media/install-windows-on-macos/image-4.png)
+![](/media/install-windows-on-macos/image-5.png)
+![](/media/install-windows-on-macos/image-6.png)
 
 ## Active Windows 11
 
@@ -45,4 +45,4 @@ Activate Windows11 using[Microsoft-Activation-Scripts](https://github.com/massgr
 irm https://massgrave.dev/get | iex
 ```
 
-![](./image-7.jpg)
+![](/media/install-windows-on-macos/image-7.jpg)

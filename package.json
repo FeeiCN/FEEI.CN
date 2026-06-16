@@ -15,6 +15,9 @@
     "write-heading-ids": "docusaurus write-heading-ids",
     "export-health-year": "node scripts/export_health_year_from_mcp.mjs",
     "sync-health": "node scripts/sync_health_data.mjs",
+    "migrate-docs-media": "node scripts/migrate_docs_media.mjs",
+    "sync-media": "bash scripts/media-rsync.sh",
+    "sync-assets": "bash scripts/sync-static-assets.sh",
     "typecheck": "tsc"
   },
   "dependencies": {

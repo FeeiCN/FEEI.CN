@@ -28,7 +28,7 @@ type SummaryPayload = {
   base_resp?: {status_code?: number; status_msg?: string};
 };
 
-const DATA_PATH = '/llm-usage/minimax/usage_summary.json';
+const DATA_PATH = '/data/llm-usage/minimax/usage_summary.json';
 
 const RANK_COLORS: string[] = [
   'var(--llm-l1)',

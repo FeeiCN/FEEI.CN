@@ -95,7 +95,7 @@ function buildOption(trades: Trade[], isDark: boolean) {
     tooltip: {
       trigger: 'axis',
       axisPointer: {type: 'cross', label: {backgroundColor: '#7c3aed'}},
-      formatter: (params: Array<{seriesName: string; value: number | null; axisValue: string}>) => {
+      formatter: (params: Array<{seriesName: string; value?: number | null; axisValue?: string}>) => {
         const date = params[0]?.axisValue ?? '';
         const dayTrades = trades.filter((t) => t.date === date);
         const cnDay = dayTrades.filter((t) => t.account === 'FeeiCN');
@@ -119,8 +119,13 @@ function buildOption(trades: Trade[], isDark: boolean) {
         }
 
         params
-          .filter((p) => ['总累计', 'FeeiCN累计', 'FeeiCN2累计'].includes(p.seriesName) && p.value !== null)
-          .forEach((p) => lines.push(`${p.seriesName}：+${(p.value as number).toLocaleString()} HKD`));
+          .filter(
+            (p) =>
+              ['总累计', 'FeeiCN累计', 'FeeiCN2累计'].includes(p.seriesName) &&
+              typeof p.value === 'number' &&
+              Number.isFinite(p.value),
+          )
+          .forEach((p) => lines.push(`${p.seriesName}：+${p.value!.toLocaleString()} HKD`));
 
         return lines.join('<br/>');
       },

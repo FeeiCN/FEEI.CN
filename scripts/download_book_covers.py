@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Download book cover images from CDN to local static/reading/books/<bookId>/.
+"""Download book cover images from CDN to local static/data/reading/books/<bookId>/.
 
-Reads static/reading/stats.json for cover URLs, downloads each one with a
-3-attempt retry, and saves to static/reading/books/<bookId>/cover.<ext>.
+Reads static/data/reading/stats.json for cover URLs, downloads each one with a
+3-attempt retry, and saves to static/data/reading/books/<bookId>/cover.<ext>.
 
 Skips books that already have a local cover file. Idempotent.
 """
@@ -19,8 +19,8 @@ from pathlib import Path
 from typing import Optional
 
 ROOT = Path(__file__).resolve().parent.parent
-STATS = ROOT / "static" / "reading" / "stats.json"
-BOOKS_DIR = ROOT / "static" / "reading" / "books"
+STATS = ROOT / "static" / "data" / "reading" / "stats.json"
+BOOKS_DIR = ROOT / "static" / "data" / "reading" / "books"
 TIMEOUT = 30
 RETRIES = 3
 RETRY_BACKOFF = 1.5

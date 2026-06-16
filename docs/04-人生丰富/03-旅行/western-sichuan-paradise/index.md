@@ -18,8 +18,8 @@ icon: globe-icon
 
 快进入丹东镇的时候，看到路中间握着一只鹿？
 
-![](./IMG_6538-1-1024x683.webp)
-![](./IMG_6539-1-1024x683.webp)
+![](/media/western-sichuan-paradise/IMG_6538-1-1024x683.webp)
+![](/media/western-sichuan-paradise/IMG_6539-1-1024x683.webp)
 
 晚上就在丹东镇贸易中心（小卖部）旁，听着溪流声在车上睡了一夜。
 
@@ -27,13 +27,13 @@ icon: globe-icon
 
 接着开始向着牛肝马肺海进发，一路景色都很美。
 
-![](./IMG_6555-scaled.webp)
-![](./IMG_6584-1024x683.webp)
-![](./IMG_6585-1024x683.webp)
-![](./IMG_6556-1024x683.webp)
-![](./IMG_6559-scaled.webp)
-![](./IMG_6587-1024x683.webp)
-![](./IMG_6602-1024x683.webp)
+![](/media/western-sichuan-paradise/IMG_6555-scaled.webp)
+![](/media/western-sichuan-paradise/IMG_6584-1024x683.webp)
+![](/media/western-sichuan-paradise/IMG_6585-1024x683.webp)
+![](/media/western-sichuan-paradise/IMG_6556-1024x683.webp)
+![](/media/western-sichuan-paradise/IMG_6559-scaled.webp)
+![](/media/western-sichuan-paradise/IMG_6587-1024x683.webp)
+![](/media/western-sichuan-paradise/IMG_6602-1024x683.webp)
 
 本打算去牛肝马肺海，结果经历了数个小时的颠簸，通过无人机寻路，发现走的这条路只能通到两个很靠近的海子（后来民宿老板说这叫双眼海子），而牛肝马肺海在山的另外一边。来都来了，决定继续硬着头皮向前。
 
@@ -41,9 +41,9 @@ icon: globe-icon
 
 4000多米的海拔吃火锅，真是难忘的体验。
 
-![](./IMG_6625-1024x683.webp)
-![](./IMG_6615-1024x683.webp)
-![](./IMG_6613-1024x683.webp)
+![](/media/western-sichuan-paradise/IMG_6625-1024x683.webp)
+![](/media/western-sichuan-paradise/IMG_6615-1024x683.webp)
+![](/media/western-sichuan-paradise/IMG_6613-1024x683.webp)
 
 ## 途径金川情人海
 
@@ -113,7 +113,7 @@ icon: globe-icon
 
 开始穿越雪山，上山的路还是比较容易的。
 
-![](./DJI_20231008160200_0185_D-1024x576.webp)
+![](/media/western-sichuan-paradise/DJI_20231008160200_0185_D-1024x576.webp)
 
 *default*
 
@@ -145,7 +145,7 @@ icon: globe-icon
 
 随着天色逐渐变暗，接下来的路程开始非常谨慎的选择路线，我遇到了攀岩大石头、深半米的泥坑。过了一段涉水半米的河道后，在地图上看到有路了，没开多久就看见了让我爱死的土路。这个时候，我真的太爱土路了！我知道，只要我一直坚持下去，离柏油路就不会太远了。
 
-![](./IMG_8258-1-edited-scaled.webp)
+![](/media/western-sichuan-paradise/IMG_8258-1-edited-scaled.webp)
 
 ## 莫斯卡：土拨鼠和猴子的天堂
 
@@ -155,7 +155,7 @@ icon: globe-icon
 
 在莫斯卡村，接下来都是柏油路了，我又要开始下次穿越自驾的准备了。
 
-![](./IMG_2002-1024x768.webp)
+![](/media/western-sichuan-paradise/IMG_2002-1024x768.webp)
 
 *之后从莫斯卡回到丹巴县城，将车洗干净*
 

@@ -334,7 +334,7 @@ function BookCard({
   const pct = Math.max(0, Math.min(100, book.progress ?? 0));
   const isFinished = pct >= 99;
   const totalTime = formatDuration(book.totalReadTime ?? 0);
-  const localCover = `/reading/books/${book.bookId}/cover.jpg`;
+  const localCover = `/data/reading/books/${book.bookId}/cover.jpg`;
   return (
     <button
       type="button"

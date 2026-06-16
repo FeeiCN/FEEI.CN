@@ -674,8 +674,8 @@ function ChinaFootprintMapInner() {
     let cancelled = false;
 
     Promise.all([
-      fetch('/maps/china.json').then((response) => response.json()),
-      fetch('/maps/world.json').then((response) => response.json()),
+      fetch('/data/maps/china.json').then((response) => response.json()),
+      fetch('/data/maps/world.json').then((response) => response.json()),
     ])
       .then(([chinaGeoJson, worldGeoJson]: [GeoJson, GeoJson]) => {
         if (cancelled) return;

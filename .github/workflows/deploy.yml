@@ -12,6 +12,8 @@ concurrency:
 env:
   REPO_DIR: /data/wufeifei.com
   SITE_ROOT: /data/wufeifei.com-site
+  MEDIA_ROOT: /data/wufeifei-assets/media
+  MUSIC_ROOT: /data/wufeifei-assets/music
 
 jobs:
   deploy:
@@ -29,7 +31,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' bash -se" <<'EOF'
+            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' bash -se" <<'EOF'
           set -euo pipefail
 
           timer_start=0
@@ -66,6 +68,8 @@ jobs:
 
           repo_dir="$REPO_DIR"
           site_root="$SITE_ROOT"
+          media_root="$MEDIA_ROOT"
+          music_root="$MUSIC_ROOT"
           releases_dir="$site_root/releases"
           current_link="$site_root/current"
           next_current_link="$site_root/current.next"
@@ -111,6 +115,10 @@ jobs:
           group_end "Build Docusaurus"
 
           group_start "Publish release"
+          mkdir -p "$media_root" "$music_root"
+          rm -rf "$staging_dir/media" "$staging_dir/music"
+          ln -s "$media_root" "$staging_dir/media"
+          ln -s "$music_root" "$staging_dir/music"
           rm -rf "$release_dir"
           mv "$staging_dir" "$release_dir"
           ln -sfn "$release_dir" "$next_current_link"

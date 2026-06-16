@@ -172,10 +172,10 @@ server {
 
 ## 几张图
 
-![Ollma-with-Open-WebUI](./Ollma-with-Open-WebUI.jpg)
+![Ollma-with-Open-WebUI](/media/本地部署AI/Ollma-with-Open-WebUI.jpg)
 
 *Ollma + Open WebUI 实际界面*
 
-![](./using-local-llm-everywhere-scaled.jpg)
+![](/media/本地部署AI/using-local-llm-everywhere-scaled.jpg)
 
 *Using Local LLM Everywhere*

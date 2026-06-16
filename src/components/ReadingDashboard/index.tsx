@@ -36,10 +36,11 @@ function useReadingState() {
         if (!statsRes.ok) throw new Error(`stats 加载失败 (${statsRes.status})`);
         if (!idxRes.ok) throw new Error(`index 加载失败 (${idxRes.status})`);
         const statsData = (await statsRes.json()) as Stats;
-        const idxData = (await idxRes.json()) as {activeYears?: string[]};
+        const idxData = (await idxRes.json()) as {activeYears?: string[]; exportedAt?: string};
+        const yearCacheBust = idxData.exportedAt ? `?v=${encodeURIComponent(idxData.exportedAt)}` : '';
         const yearFiles = await Promise.all(
           (idxData.activeYears || []).map(async (y) => {
-            const r = await fetch(`/reading/${y}.json`, {cache: 'force-cache'});
+            const r = await fetch(`/reading/${y}.json${yearCacheBust}`, {cache: 'default'});
             if (!r.ok) return {year: y, daily: {}} as {year: string; daily: Record<string, {seconds: number}>};
             return (await r.json()) as {year: string; daily: Record<string, {seconds: number}>};
           }),

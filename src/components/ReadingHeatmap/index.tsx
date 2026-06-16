@@ -354,9 +354,10 @@ async function fetchSplitPayload(): Promise<DailyPayload> {
   }
   const index = (await indexRes.json()) as IndexPayload;
   const years = index.activeYears ?? [];
+  const yearCacheBust = index.exportedAt ? `?v=${encodeURIComponent(index.exportedAt)}` : '';
   const yearFiles = await Promise.all(
     years.map(async (y) => {
-      const r = await fetch(`/reading/${y}.json`, {cache: 'force-cache'});
+      const r = await fetch(`/reading/${y}.json${yearCacheBust}`, {cache: 'default'});
       if (!r.ok) return {year: y, daily: {}} as YearFile;
       return (await r.json()) as YearFile;
     })

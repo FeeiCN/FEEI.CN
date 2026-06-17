@@ -1,0 +1,135 @@
+.wrapper {
+  position: relative;
+}
+
+/* 主容器：宽度贴合搜索输入框，避免大块空白 */
+.suggestionsPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: var(--ifm-z-index-dropdown);
+  width: 320px;
+  max-width: calc(100vw - var(--ifm-navbar-padding-horizontal) * 2);
+  padding: var(--search-local-spacing, 12px);
+  background: var(--search-local-modal-background, #f5f6f7);
+  border-radius: 6px;
+  box-shadow: var(
+    --search-local-modal-shadow,
+    inset 1px 1px 0 0 hsla(0, 0%, 100%, 0.5),
+    0 3px 8px 0 #555a64
+  );
+}
+
+html[data-theme='dark'] .suggestionsPanel {
+  background: var(
+    --search-local-modal-background,
+    var(--ifm-background-color)
+  );
+  box-shadow: var(
+    --search-local-modal-shadow,
+    inset 1px 1px 0 0 #2c2e40,
+    0 3px 8px 0 #000309
+  );
+}
+
+/* 区块标题，与下拉里的"分类头"风格一致 */
+.suggestionsLabel {
+  padding: 0 12px 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--search-local-muted-color, #969faf);
+  letter-spacing: 0.04em;
+}
+
+html[data-theme='dark'] .suggestionsLabel {
+  color: var(--search-local-muted-color, var(--ifm-color-secondary-darkest));
+}
+
+/* 列表：每条用与搜索结果相同的矩形卡片 */
+.suggestionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--search-local-hit-height, 44px);
+  padding: 0 12px;
+  font-size: 0.9em;
+  font-weight: 500;
+  color: var(--search-local-hit-color, #444950);
+  background: var(--search-local-hit-background, #fff);
+  border: none;
+  border-radius: 4px;
+  box-shadow: var(--search-local-hit-shadow, 0 1px 3px 0 #d4d9e1);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: transform 0.08s ease;
+}
+
+html[data-theme='dark'] .suggestionItem {
+  background: var(--search-local-hit-background, var(--ifm-color-emphasis-100));
+  box-shadow: var(--search-local-hit-shadow, none);
+  color: var(--search-local-hit-color, var(--ifm-font-color-base));
+}
+
+.suggestionItem:hover {
+  background-color: var(
+    --search-local-highlight-color,
+    var(--ifm-color-primary)
+  );
+  color: var(
+    --search-local-hit-active-color,
+    var(--ifm-color-white)
+  ) !important;
+}
+
+.suggestionItem:hover .suggestionIcon {
+  color: var(
+    --search-local-hit-active-color,
+    var(--ifm-color-white)
+  ) !important;
+}
+
+.suggestionIcon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--search-local-muted-color, #969faf);
+}
+
+.suggestionText {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestionHint {
+  font-size: 0.75em;
+  color: var(--search-local-muted-color, #969faf);
+  margin-left: auto;
+  font-weight: 400;
+}
+
+html[data-theme='dark'] .suggestionHint {
+  color: var(--search-local-muted-color, var(--ifm-color-secondary-darkest));
+}
+
+.suggestionItem:hover .suggestionHint {
+  color: var(
+    --search-local-hit-active-color,
+    var(--ifm-color-white)
+  ) !important;
+}
+
+@media (max-width: 576px) {
+  .suggestionsPanel {
+    width: 280px;
+    right: -8px;
+  }
+}

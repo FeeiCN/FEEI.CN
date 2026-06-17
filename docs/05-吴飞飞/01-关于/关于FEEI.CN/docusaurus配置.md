@@ -1,4 +1,12 @@
-# Engineering: Docusaurus
+---
+slug: /docusaurus-config
+title: Docusaurus 配置
+icon: code-icon
+description: 入口页放在目录内部、sidebars 自动生成、缓存异常时运行 npm run clear。
+sidebar_badge:
+  text: SKILL
+  color: success
+---
 
 Docusaurus 配置相关规则。
 

@@ -1,4 +1,12 @@
-# AI: GitHub Issue → Content Workflow
+---
+slug: /github-issue-skill
+title: GitHub Issue 沉淀
+icon: code-icon
+description: 把 GitHub Issue 中的观点整理为站内文档的工作流：判断归属、补足逻辑、融入上下文、附 issue 编号。
+sidebar_badge:
+  text: SKILL
+  color: success
+---
 
 把 GitHub Issue 中的观点沉淀到站内文档的流程。
 

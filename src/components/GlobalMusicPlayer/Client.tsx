@@ -120,7 +120,7 @@ function ensurePlayerDOM(): {shell: HTMLDivElement; mount: HTMLDivElement} {
 }
 // ────────────────────────────────────────────────────────────────────────────
 
-function GlobalMusicPlayerClient() {
+function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitcher?: boolean}) {
   const musicIconAnimation = useControlledIconAnimation(true);
   const playerRef = useRef<APlayerInstance | null>(_player);
   const isListOpenRef = useRef(false);
@@ -503,6 +503,8 @@ function GlobalMusicPlayerClient() {
   }, [activeGroup, isPlayerVisible]);
 
   if (!activeGroup) return null;
+
+  if (!renderGroupSwitcher) return null;
 
   const handleGroupSelect = (groupId: string) => {
     shouldKeepListOpenOnNextMountRef.current = isPlayerVisible && (isListOpen || isListOpenRef.current);

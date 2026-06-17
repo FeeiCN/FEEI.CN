@@ -497,11 +497,17 @@ function buildChinaYearRows(data: ProvinceVisit[]): YearFootprintRow[] {
     }));
 }
 
-function buildWorldOption(isDark: boolean, isMobile: boolean) {
+function buildWorldOption(isDark: boolean, isMobile: boolean, yearRows: YearFootprintRow[]) {
   const labelColor = isDark ? '#cbd5e1' : '#475569';
   const borderColor = isDark ? '#334155' : '#cbd5e1';
   const countryMap = new Map(visitedCountries.map((item) => [item.name, item]));
   const pointCountries = visitedCountries.filter((item) => item.coord);
+
+  // 同一色系 teal：中国饱和度高（居住地），其他国家半透明（旅行目的地）
+  const homeColor = isDark ? 'rgba(45, 212, 191, 0.95)' : 'rgba(13, 148, 136, 0.92)';
+  const visitedColor = isDark ? 'rgba(45, 212, 191, 0.55)' : 'rgba(13, 148, 136, 0.5)';
+  const emphasisColor = isDark ? '#5eead4' : '#0d9488';
+  const emphasisBorder = isDark ? '#99f6e4' : '#0f766e';
 
   return {
     backgroundColor: 'transparent',
@@ -514,9 +520,24 @@ function buildWorldOption(isDark: boolean, isMobile: boolean) {
           return `${getWorldDisplayName(params.name)}<br/>尚未留下足迹`;
         }
 
-        return item.name === 'China'
-          ? `${item.displayName}<br/>点击查看中国省级足迹`
-          : `${item.displayName}<br/>已留下足迹`;
+        const years = yearRows
+          .filter((row) => row.footprints.some((fp) => fp.startsWith(item.displayName)))
+          .map((row) => row.year)
+          .join('、');
+
+        if (item.name === 'China') {
+          return [
+            `${item.displayName}（居住地）`,
+            `覆盖 ${item.value} 个省级行政区`,
+            '点击查看省级足迹',
+          ].join('<br/>');
+        }
+
+        return [
+          item.displayName,
+          `${item.value} 次到访 · ${years || '仅途径'}`,
+          '点击下方表格筛选该国足迹',
+        ].join('<br/>');
       },
     },
     series: [
@@ -539,8 +560,8 @@ function buildWorldOption(isDark: boolean, isMobile: boolean) {
             formatter: (params: {name: string}) => getWorldDisplayName(params.name),
           },
           itemStyle: {
-            areaColor: '#f97316',
-            borderColor: '#fb923c',
+            areaColor: emphasisColor,
+            borderColor: emphasisBorder,
           },
         },
         select: {
@@ -557,7 +578,16 @@ function buildWorldOption(isDark: boolean, isMobile: boolean) {
           tooltip: {
             formatter: (params: {name: string}) => {
               const item = countryMap.get(params.name);
-              return `${item?.displayName ?? getWorldDisplayName(params.name)}<br/>已留下足迹`;
+              if (!item) return getWorldDisplayName(params.name);
+              const years = yearRows
+                .filter((row) => row.footprints.some((fp) => fp.startsWith(item.displayName)))
+                .map((row) => row.year)
+                .join('、');
+              return [
+                item.displayName,
+                `${item.value} 次到访 · ${years || '仅途径'}`,
+                '点击下方表格筛选该国足迹',
+              ].join('<br/>');
             },
           },
           label: {show: false},
@@ -574,11 +604,9 @@ function buildWorldOption(isDark: boolean, isMobile: boolean) {
         data: visitedCountries.map((item) => ({
           ...item,
           itemStyle: {
-            areaColor: item.name === 'China'
-              ? (isDark ? '#f97316' : '#fb923c')
-              : (isDark ? 'rgba(45, 212, 191, 0.72)' : 'rgba(13, 148, 136, 0.68)'),
+            areaColor: item.name === 'China' ? homeColor : visitedColor,
             borderColor,
-            borderWidth: item.name === 'China' ? 1.2 : 0.7,
+            borderWidth: item.name === 'China' ? 1.4 : 0.7,
           },
         })),
       },
@@ -638,8 +666,8 @@ function buildChinaOption(data: ProvinceVisit[], isDark: boolean, isMobile: bool
         emphasis: {
           label: {show: true, color: isDark ? '#f8fafc' : '#0f172a'},
           itemStyle: {
-            areaColor: '#f97316',
-            borderColor: '#fb923c',
+            areaColor: isDark ? '#5eead4' : '#0d9488',
+            borderColor: isDark ? '#99f6e4' : '#0f766e',
           },
         },
         select: {
@@ -668,6 +696,7 @@ function ChinaFootprintMapInner() {
   const isDark = colorMode === 'dark';
   const [ready, setReady] = useState(false);
   const [view, setView] = useState<'world' | 'china'>('world');
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
   useEffect(() => {
@@ -695,9 +724,14 @@ function ChinaFootprintMapInner() {
     return () => window.removeEventListener('resize', handle);
   }, []);
 
+  const countryMap = useMemo(
+    () => new Map(visitedCountries.map((item) => [item.name, item])),
+    [],
+  );
+
   const option = useMemo(
     () => view === 'world'
-      ? buildWorldOption(isDark, isMobile)
+      ? buildWorldOption(isDark, isMobile, worldYearRows)
       : buildChinaOption(visitedProvinces, isDark, isMobile),
     [isDark, isMobile, view],
   );
@@ -707,17 +741,46 @@ function ChinaFootprintMapInner() {
     (sum, item) => sum + item.trips.reduce((tripSum, trip) => tripSum + trip.places.length, 0),
     0,
   );
-  const tableData = view === 'world' ? worldYearRows : buildChinaYearRows(visitedProvinces);
+
+  const allTableData = view === 'world' ? worldYearRows : buildChinaYearRows(visitedProvinces);
+
+  // 按国家筛选：仅在 world 视图 + 选中非中国国家时生效
+  const tableData = useMemo(() => {
+    if (view !== 'world' || !selectedCountry) return allTableData;
+    return allTableData
+      .map((row) => ({
+        ...row,
+        footprints: row.footprints.filter((fp) => fp.startsWith(selectedCountry)),
+      }))
+      .filter((row) => row.footprints.length > 0);
+  }, [allTableData, selectedCountry, view]);
+
+  const visitedCountriesCount = visitedCountries.length;
+  const chinaItem = countryMap.get('China');
 
   return (
     <div className={styles.wrap}>
-      {view === 'china' ? (
+      {view === 'world' ? (
+        <div className={styles.legend}>
+          <span className={styles.legendItem}>
+            <span className={`${styles.legendSwatch} ${styles.legendSwatchHome}`} />
+            中国（居住地，{chinaItem?.value ?? 0} 个省级行政区）
+          </span>
+          <span className={styles.legendItem}>
+            <span className={`${styles.legendSwatch} ${styles.legendSwatchVisited}`} />
+            旅行目的地（{visitedCountriesCount - 1} 个国家与地区）
+          </span>
+          <span className={styles.legendHint}>
+            悬停查看详情，点击国家/地区可筛选下方足迹表
+          </span>
+        </div>
+      ) : (
         <div className={styles.toolbar}>
           <button type="button" className={styles.button} onClick={() => setView('world')}>
             返回世界地图
           </button>
         </div>
-      ) : null}
+      )}
       {view === 'china' ? (
         <div className={styles.stats}>
           <div className={styles.stat}>
@@ -739,7 +802,16 @@ function ChinaFootprintMapInner() {
           onEvents={{
             click: (params: {name?: string}) => {
               if (view === 'world' && params.name === 'China') {
+                setSelectedCountry(null);
                 setView('china');
+                return;
+              }
+              if (view === 'world' && params.name) {
+                const item = countryMap.get(params.name);
+                if (!item) return;
+                setSelectedCountry((prev) =>
+                  prev === item.displayName ? null : item.displayName,
+                );
               }
             },
           }}
@@ -747,6 +819,19 @@ function ChinaFootprintMapInner() {
       ) : (
         <div className={styles.loading}>地图加载中</div>
       )}
+      {view === 'world' && selectedCountry ? (
+        <div className={styles.filterPill}>
+          <span className={styles.filterPillLabel}>当前筛选：</span>
+          <span className={styles.filterPillValue}>{selectedCountry}</span>
+          <button
+            type="button"
+            className={styles.filterPillClear}
+            onClick={() => setSelectedCountry(null)}
+            aria-label="清除筛选">
+            ✕
+          </button>
+        </div>
+      ) : null}
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
@@ -756,26 +841,34 @@ function ChinaFootprintMapInner() {
             </tr>
           </thead>
           <tbody>
-            {tableData.map((item) => (
-              <tr key={item.year}>
-                <td className={styles.yearCell}>{item.year}</td>
-                <td>
-                  <div className={styles.footprintList}>
-                    {buildDisplayFootprints(item.footprints, view).map(({province, places, key, indented}) => (
-                      <div
-                        key={key}
-                        className={indented
-                          ? `${styles.footprintItem} ${styles.footprintItemIndented}`
-                          : styles.footprintItem}
-                      >
-                        <span className={styles.provinceName}>{province}</span>
-                        {places}
-                      </div>
-                    ))}
-                  </div>
+            {tableData.length === 0 ? (
+              <tr>
+                <td colSpan={2} className={styles.emptyCell}>
+                  该国家/地区尚无足迹记录
                 </td>
               </tr>
-            ))}
+            ) : (
+              tableData.map((item) => (
+                <tr key={item.year}>
+                  <td className={styles.yearCell}>{item.year}</td>
+                  <td>
+                    <div className={styles.footprintList}>
+                      {buildDisplayFootprints(item.footprints, view).map(({province, places, key, indented}) => (
+                        <div
+                          key={key}
+                          className={indented
+                            ? `${styles.footprintItem} ${styles.footprintItemIndented}`
+                            : styles.footprintItem}
+                        >
+                          <span className={styles.provinceName}>{province}</span>
+                          {places}
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

@@ -64,11 +64,20 @@ export default function CurrentlyReading({library, onSelect, maxItems = 6}: Prop
               <div className={styles.currentMeta}>
                 <span className={styles.currentTitle}>{b.title || '未命名'}</span>
                 <span className={styles.currentAuthor}>{b.author || '—'}</span>
-                <div className={styles.progressBar} aria-label={`进度 ${pct}%`}>
+                <div
+                  className={styles.progressBar}
+                  data-near-done={pct >= 90 ? 'true' : 'false'}
+                  aria-label={`进度 ${pct}%`}>
                   <div className={styles.progressFill} style={{width: `${pct}%`}} />
+                  {pct >= 35 ? (
+                    <span className={styles.progressFillText}>{pct}%</span>
+                  ) : null}
                 </div>
                 <div className={styles.currentFooter}>
-                  <span>{pct}%</span>
+                  <span>
+                    {pct < 35 ? `${pct}%` : null}
+                    {pct >= 90 ? <span className={styles.nearDoneBadge}>快读完了</span> : null}
+                  </span>
                   <span>{formatRelativeTime(b.lastReadTime)}</span>
                 </div>
               </div>

@@ -270,9 +270,32 @@ function HeatmapStrip({
       .sort(([a], [b]) => a.localeCompare(b));
   }, [daily]);
 
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  const [hover, setHover] = useState<{
+    date: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const handleCellEnter = (date: string, event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = stripRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setHover({
+      date,
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    });
+  };
+
+  const handleCellLeave = () => setHover(null);
+
+  const hoveredBucket = hover ? daily[hover.date] : undefined;
+  const hoveredSeconds = hoveredBucket ? Number(hoveredBucket.seconds ?? 0) : 0;
+  const hoveredBooks = hoveredBucket?.books ?? [];
+
   return (
     <>
-      <div className={styles.strip}>
+      <div className={styles.strip} ref={stripRef}>
         {entries.map(([date, sec]) => (
           <div
             key={date}
@@ -292,9 +315,38 @@ function HeatmapStrip({
                       palette.l5,
                     ][stripLevel(sec) - 1],
             }}
-            title={`${date} · ${formatDuration(sec)}`}
+            onMouseEnter={(e) => handleCellEnter(date, e)}
+            onMouseMove={(e) => handleCellEnter(date, e)}
+            onMouseLeave={handleCellLeave}
           />
         ))}
+        {hover ? (
+          <div
+            className={styles.stripTooltip}
+            style={{left: hover.x, top: hover.y}}
+            role="tooltip">
+            <div className={styles.stripTooltipDate}>{hover.date}</div>
+            <div className={styles.stripTooltipDuration}>
+              阅读 {formatDuration(hoveredSeconds)}
+            </div>
+            {hoveredBooks.length > 0 ? (
+              <div className={styles.stripTooltipBooks}>
+                {hoveredBooks.slice(0, 3).map((book, idx) => (
+                  <span key={idx} className={styles.stripTooltipBook}>
+                    《{book}》
+                  </span>
+                ))}
+                {hoveredBooks.length > 3 ? (
+                  <span className={styles.stripTooltipMore}>
+                    等 {hoveredBooks.length} 本
+                  </span>
+                ) : null}
+              </div>
+            ) : (
+              <div className={styles.stripTooltipEmpty}>未记录书目</div>
+            )}
+          </div>
+        ) : null}
       </div>
       <div className={styles.footer}>
         <Legend palette={palette} />

@@ -10,6 +10,111 @@
   margin: 0 0 1rem;
 }
 
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem 1.25rem;
+  margin: 0 0 0.85rem;
+  padding: 0.7rem 0.95rem;
+  font-size: 0.82rem;
+  color: var(--ifm-color-emphasis-800);
+  background: var(--ifm-background-surface-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 8px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.legendHint {
+  margin-left: auto;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.78rem;
+}
+
+.legendSwatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.legendSwatchHome {
+  background: #0d9488;
+  border-color: #0f766e;
+}
+
+html[data-theme='dark'] .legendSwatchHome {
+  background: #2dd4bf;
+  border-color: #5eead4;
+}
+
+.legendSwatchVisited {
+  background: rgba(13, 148, 136, 0.5);
+  border-color: #0d9488;
+}
+
+html[data-theme='dark'] .legendSwatchVisited {
+  background: rgba(45, 212, 191, 0.55);
+  border-color: #2dd4bf;
+}
+
+.filterPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0.4rem 0.4rem 0.4rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-900);
+  background: var(--ifm-color-emphasis-100);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 999px;
+}
+
+.filterPillLabel {
+  color: var(--ifm-color-emphasis-700);
+}
+
+.filterPillValue {
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+}
+
+.filterPillClear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--ifm-color-emphasis-700);
+  background: var(--ifm-background-surface-color);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.filterPillClear:hover {
+  color: var(--ifm-color-white);
+  background: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+}
+
+.emptyCell {
+  padding: 1.25rem 0.75rem;
+  text-align: center;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.88rem;
+}
+
 .stat {
   min-width: 0;
   padding: 0.85rem 1rem;
@@ -141,5 +246,15 @@
   .table th,
   .table td {
     padding: 0.55rem 0.6rem;
+  }
+
+  .legend {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .legendHint {
+    margin-left: 0;
   }
 }

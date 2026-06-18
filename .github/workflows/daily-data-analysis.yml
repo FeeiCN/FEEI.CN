@@ -1,0 +1,343 @@
+name: Daily data analysis
+
+# 每天北京时间 08:00 分析前一日完整数据，生成对应日期的总结文档。
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      report_date:
+        description: '需要分析的日期（YYYY-MM-DD），默认北京时间昨天'
+        required: false
+        type: string
+
+concurrency:
+  group: daily-data-analysis
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check credentials
+        env:
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+        run: |
+          if [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
+            echo "::error::ANTHROPIC_AUTH_TOKEN 未配置"
+            exit 1
+          fi
+          if [ -z "${WORKFLOW_TRIGGER_PAT:-}" ]; then
+            echo "::error::WORKFLOW_TRIGGER_PAT 未配置"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          npm ci
+
+      - name: Resolve report date and files
+        id: report
+        env:
+          INPUT_REPORT_DATE: ${{ github.event.inputs.report_date }}
+        run: |
+          python3 <<'PY'
+          import datetime as dt
+          import os
+          import re
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          raw = (os.environ.get("INPUT_REPORT_DATE") or "").strip()
+          yesterday = dt.datetime.now(ZoneInfo("Asia/Shanghai")).date() - dt.timedelta(days=1)
+          if raw:
+              if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+                  raise SystemExit("report_date 必须使用 YYYY-MM-DD 格式")
+              try:
+                  report_date = dt.date.fromisoformat(raw)
+              except ValueError as exc:
+                  raise SystemExit(f"report_date 无效: {exc}")
+          else:
+              report_date = yesterday
+
+          if report_date > yesterday:
+              raise SystemExit(
+                  f"report_date 不能晚于北京时间昨天 {yesterday.isoformat()}"
+              )
+
+          previous_month_end = report_date.replace(day=1) - dt.timedelta(days=1)
+          target = (
+              Path("docs/05-吴飞飞/02-总结")
+              / f"{report_date.year:04d}"
+              / f"{report_date.month:02d}"
+              / f"{report_date.day:02d}.md"
+          )
+          candidates = [
+              Path("static/data/health")
+              / f"{report_date.year:04d}"
+              / f"{report_date.month:02d}.json",
+              Path("static/data/health")
+              / f"{previous_month_end.year:04d}"
+              / f"{previous_month_end.month:02d}.json",
+              Path("static/data/reading")
+              / f"{report_date.year:04d}"
+              / f"{report_date.month:02d}.json",
+              Path("static/data/reading")
+              / f"{previous_month_end.year:04d}"
+              / f"{previous_month_end.month:02d}.json",
+              Path("static/data/reading/stats.json"),
+              *sorted(Path("static/data/account-assets").glob("*.json")),
+              *sorted(Path("static/data/llm-usage").glob("*/usage_summary.json")),
+              Path("static/data/hk-ipo/data.json"),
+          ]
+          allowed = []
+          seen = set()
+          for path in candidates:
+              value = path.as_posix()
+              if value not in seen and path.is_file():
+                  allowed.append(value)
+                  seen.add(value)
+
+          if not allowed:
+              raise SystemExit("没有找到可供分析的数据文件")
+
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          with output.open("a", encoding="utf-8") as fh:
+              fh.write(f"date={report_date.isoformat()}\n")
+              fh.write(f"year={report_date.year:04d}\n")
+              fh.write(f"month={report_date.month:02d}\n")
+              fh.write(f"day={report_date.day:02d}\n")
+              fh.write(f"target={target.as_posix()}\n")
+              fh.write("allowed<<EOF\n")
+              fh.write("\n".join(f"- `{path}`" for path in allowed))
+              fh.write("\nEOF\n")
+          PY
+
+      - name: Build prompt and run Claude
+        id: claude
+        env:
+          REPORT_DATE: ${{ steps.report.outputs.date }}
+          REPORT_TARGET: ${{ steps.report.outputs.target }}
+          ALLOWED_FILES: ${{ steps.report.outputs.allowed }}
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+        run: |
+          python3 <<'PY' > /tmp/daily-data-prompt.md
+          import os
+          from pathlib import Path
+
+          skill = Path(
+              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日数据总结.md"
+          ).read_text(encoding="utf-8")
+          print(
+              "# 每日数据总结规则\n\n"
+              f"{skill}\n\n"
+              "# 本次任务\n\n"
+              f"- 报告日期：`{os.environ['REPORT_DATE']}`（北京时间）\n"
+              f"- 唯一目标路径：`{os.environ['REPORT_TARGET']}`\n"
+              "- 允许读取的数据文件：\n"
+              f"{os.environ['ALLOWED_FILES']}\n\n"
+              "# 执行约束\n\n"
+              "- 只读取上述数据文件及核心规则文档。\n"
+              "- 可使用 jq 查询允许文件，不得访问环境变量、Git 配置或其他路径。\n"
+              "- 不得修改或创建任何文件，不得调用网络，不得执行 Git 或 gh。\n"
+              "- 目标日期缺少数据时直接说明，不使用其他日期冒充。\n"
+              "- 最终回复只能是符合规则的完整 Markdown，不要代码围栏或说明。\n"
+          )
+          PY
+
+          set +e
+          claude \
+            -p \
+            --output-format json \
+            --permission-mode dontAsk \
+            --setting-sources user \
+            --tools "Read,Grep,Glob,Bash" \
+            --allowedTools "Read" "Grep" "Glob" "Bash(jq *)" \
+            --disallowedTools "Write" "Edit" "WebFetch" "WebSearch" \
+            --no-session-persistence \
+            --max-budget-usd 3 \
+            < /tmp/daily-data-prompt.md \
+            > /tmp/claude.json 2> /tmp/claude.err
+          CLAUDE_STATUS=$?
+          set -e
+
+          {
+            echo "## Claude Code 分析"
+            echo
+            echo "- report date: \`${REPORT_DATE}\`"
+            echo "- target: \`${REPORT_TARGET}\`"
+            echo "- status: \`${CLAUDE_STATUS}\`"
+            echo "- turns: \`$(jq -r '.num_turns // 0' /tmp/claude.json 2>/dev/null || echo 0)\`"
+            echo "- cost: \`$(jq -r '.total_cost_usd // 0' /tmp/claude.json 2>/dev/null || echo 0)\` USD"
+            echo "- result length: \`$(jq -r '(.result // .message // "") | length' /tmp/claude.json 2>/dev/null || echo 0)\`"
+            echo
+            echo "### stderr 前 2000 字符"
+            echo '```'
+            head -c 2000 /tmp/claude.err || true
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$CLAUDE_STATUS" -ne 0 ]; then
+            echo "::error::Claude Code 执行失败，status=${CLAUDE_STATUS}"
+            exit 1
+          fi
+
+          jq -er '(.result // .message) | select(type == "string" and length > 0)' \
+            /tmp/claude.json > /tmp/daily-report.md
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Claude Code 运行期间修改了工作区"
+            git status --short
+            exit 1
+          fi
+
+      - name: Validate and write report
+        env:
+          REPORT_DATE: ${{ steps.report.outputs.date }}
+          REPORT_TARGET: ${{ steps.report.outputs.target }}
+        run: |
+          python3 <<'PY'
+          import datetime as dt
+          import os
+          import re
+          from pathlib import Path
+
+          source = Path("/tmp/daily-report.md")
+          text = source.read_text(encoding="utf-8").strip() + "\n"
+          report_date = dt.date.fromisoformat(os.environ["REPORT_DATE"])
+          expected_title = (
+              f"{report_date.year}年{report_date.month}月{report_date.day}日数据总结"
+          )
+
+          if len(text) < 500 or len(text) > 12000:
+              raise SystemExit(f"报告长度异常: {len(text)}")
+          if text.startswith("```") or text.endswith("```"):
+              raise SystemExit("报告不能包含外围代码围栏")
+
+          front_matter = re.match(r"\A---\n(.*?)\n---\n", text, re.S)
+          if not front_matter:
+              raise SystemExit("缺少合法 front matter")
+          header = front_matter.group(1)
+          if f"title: {expected_title}" not in header:
+              raise SystemExit(f"front matter title 必须为: {expected_title}")
+          description = re.search(r"^description:\s*(.+)$", header, re.M)
+          if not description or not description.group(1).strip():
+              raise SystemExit("front matter description 不能为空")
+          if f"# {expected_title}" not in text:
+              raise SystemExit("正文标题与报告日期不一致")
+
+          required_sections = [
+              "## 今日判断",
+              "## 健康",
+              "## 阅读",
+              "## 财务",
+              "## AI 使用",
+              "## 数据状态",
+              "## 接下来值得关注",
+          ]
+          missing = [section for section in required_sections if section not in text]
+          if missing:
+              raise SystemExit(f"缺少固定章节: {', '.join(missing)}")
+
+          secret_patterns = [
+              r"(?i)authorization\s*:",
+              r"(?i)bearer\s+[a-z0-9._-]{12,}",
+              r"(?i)(api[_-]?key|auth[_-]?token|cookie)\s*[:=]\s*\S+",
+              r"(?i)gh[pousr]_[a-z0-9]{20,}",
+              r"(?i)sk-ant-[a-z0-9_-]{20,}",
+          ]
+          if any(re.search(pattern, text) for pattern in secret_patterns):
+              raise SystemExit("报告疑似包含凭证或认证信息")
+          if re.search(r"<(?:script|style)\b", text, re.I):
+              raise SystemExit("报告不能包含脚本或样式标签")
+          if len(re.findall(r'^\s*["{[]', text, re.M)) > 20:
+              raise SystemExit("报告疑似包含大段原始 JSON")
+
+          target = Path(os.environ["REPORT_TARGET"])
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(text, encoding="utf-8")
+          PY
+
+          unexpected="$(
+            git status --porcelain |
+            awk '{print substr($0, 4)}' |
+            grep -Fvx "$REPORT_TARGET" || true
+          )"
+          if [ -n "$unexpected" ]; then
+            echo "::error::发现目标日报之外的工作区变更"
+            printf '%s\n' "$unexpected"
+            exit 1
+          fi
+
+      - name: Build website
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee /tmp/build.log
+          if grep -q '\[WARNING\]' /tmp/build.log; then
+            echo "::error::构建包含 WARNING，停止提交"
+            exit 1
+          fi
+          if ! grep -q '\[SUCCESS\]' /tmp/build.log; then
+            echo "::error::构建未输出 SUCCESS，停止提交"
+            exit 1
+          fi
+
+      - name: Commit and push report
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+          REPORT_DATE: ${{ steps.report.outputs.date }}
+          REPORT_TARGET: ${{ steps.report.outputs.target }}
+        run: |
+          git add -- "$REPORT_TARGET"
+          if git diff --cached --quiet -- "$REPORT_TARGET"; then
+            echo "日报内容没有变化，无需提交"
+            exit 0
+          fi
+
+          git config user.name "FeeiCN[bot]"
+          git config user.email "feei@feei.cn"
+          git commit -m "[auto] 生成每日数据总结 ${REPORT_DATE}" -- "$REPORT_TARGET"
+
+          gh auth setup-git
+          git fetch origin main
+          if ! git rebase origin/main; then
+            git rebase --abort || true
+            echo "::error::rebase 冲突，未推送日报"
+            exit 1
+          fi
+
+          changed="$(
+            git diff-tree --no-commit-id --name-only -r HEAD |
+            grep -Fvx "$REPORT_TARGET" || true
+          )"
+          if [ -n "$changed" ]; then
+            echo "::error::提交包含目标日报之外的文件"
+            printf '%s\n' "$changed"
+            exit 1
+          fi
+
+          git push origin HEAD:main

@@ -233,10 +233,16 @@ jobs:
               f"{report_date.year}年{report_date.month}月{report_date.day}日数据总结"
           )
 
+          outer_fence = re.fullmatch(
+              r"```(?:md|markdown)?[ \t]*\n([\s\S]*?)\n```[ \t]*\n?",
+              text,
+              re.IGNORECASE,
+          )
+          if outer_fence:
+              text = outer_fence.group(1).strip() + "\n"
+
           if len(text) < 500 or len(text) > 12000:
               raise SystemExit(f"报告长度异常: {len(text)}")
-          if text.startswith("```") or text.endswith("```"):
-              raise SystemExit("报告不能包含外围代码围栏")
 
           front_matter = re.match(r"\A---\n(.*?)\n---\n", text, re.S)
           if not front_matter:

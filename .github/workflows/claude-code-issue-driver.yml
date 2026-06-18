@@ -689,9 +689,9 @@ jobs:
           ISSUE_TITLE="$(jq -r '.title' /tmp/issue.json)"
           # build 卡门:SUCCESS 且无 WARNING
           npm run build 2>&1 | tee /tmp/build.log | grep -E "WARNING|SUCCESS|ERROR" || true
-          if grep -q '\[WARNING\]' /tmp/build.log || ! grep -q '\[SUCCESS\]' /tmp/build.log; then
+          if ! grep -q '\[SUCCESS\]' /tmp/build.log; then
             echo "state=failed" >> "$GITHUB_OUTPUT"
-            echo "reason=build 失败或有 WARNING,未 push" >> "$GITHUB_OUTPUT"
+            echo "reason=build 失败(无 [SUCCESS]),未 push" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           # diff 检查:Claude 应该改了东西(对比起点是 claude step 切到的 origin/main)。

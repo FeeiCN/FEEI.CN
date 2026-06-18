@@ -2,6 +2,7 @@
 slug: /c-raf
 title: C-RAF网络防卫评估框架
 icon: shield-check
+description: 香港金融管理局 2020 年发布的网络弹性评估框架（C-RAF）2.0 简要介绍，涵盖固有风险评估与网络成熟度评估两大模块，是持牌银行网络风险评估的官方参考。
 ---
 
 

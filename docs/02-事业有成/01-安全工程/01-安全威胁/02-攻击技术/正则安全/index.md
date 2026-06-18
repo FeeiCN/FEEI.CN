@@ -3,6 +3,7 @@ slug: /regex-security
 title: 正则安全
 icon: filter-icon
 sidebar_position: 24
+description: 正则编写的系统化思路与安全陷阱：覆盖常见正则例子（用户名/手机号/IPv4/IPv6/邮箱/颜色）、正则绕过（域名白名单/路径穿越/Struts2 黑名单）和 ReDoS 攻击。
 ---
 
 正则基础知识

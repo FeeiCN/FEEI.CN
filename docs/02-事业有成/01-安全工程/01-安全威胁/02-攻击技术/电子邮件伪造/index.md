@@ -3,6 +3,7 @@ slug: /email-spoofing
 title: 电子邮件伪造
 icon: mail-filled-icon
 sidebar_position: 28
+description: 电子邮件伪造的技术原理与社会工程学：SMTP 协议设计缺陷、钓鱼邮件、实际伪造演示、伪造代码示例与防御方案。
 ---
 
 ## 邮件伪造原理

@@ -3,6 +3,7 @@ slug: /nbsp
 title: NbSP 零越范式
 sidebar_position: 2
 icon: lock-icon
+description: NbSP 零越范式（Non-bypassable Security Paradigm）深度文章：从埃本·埃美尔要塞类比入手，建立访问控制点的形式化框架与五类攻击分类。
 ---
 
 # NbSP 零越范式

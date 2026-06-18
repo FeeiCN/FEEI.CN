@@ -5,6 +5,7 @@ icon: github-icon
 sidebar_badge:
   text: 演讲
   color: secondary
+description: GSIL：GitHub 敏感信息泄漏监控的演讲材料 PDF，覆盖自动化监控、告警分级、响应流程与开源工具实现（演讲快照）。
 ---
 
 <iframe

@@ -1,6 +1,7 @@
 ---
 slug: /hack-back-hacking-team
 title: 反击安全公司Hacking Team
+description: 反击 Hacking Team 事件复盘：2015 年 Phineas Fisher 入侵意大利间谍软件公司的完整路径、利用漏洞与攻击动机。
 ---
 
 **专门从事网络监控业务的安全公司，自身却成为被入侵的对象。** 2015年7月5日，意大利间谍软件公司Hacking Team超过400GB数据通过其官方Twitter账号公开泄露，内容涵盖员工账号密码、电子邮件、客户信息和源代码。攻击者Phineas Fisher随后发布了详尽的攻击复盘，完整还原了入侵路径、利用的漏洞和攻击动机。

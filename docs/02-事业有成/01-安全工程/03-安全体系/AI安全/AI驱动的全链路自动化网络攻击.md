@@ -2,6 +2,7 @@
 slug: /ai-driven-automated-cyber-attack
 title: AI驱动的全链路自动化网络攻击
 icon: target-icon
+description: AI 驱动的全链路自动化网络攻击深度文章：把攻击从专家手工操作推进到可执行、可观测、可迭代的搜索系统，分技术难题与工程化挑战两大维度。
 ---
 
 # AI驱动的全链路自动化网络攻击

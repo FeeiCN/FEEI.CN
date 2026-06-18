@@ -3,6 +3,7 @@ slug: /ovtp
 title: OVTP 可溯范式
 sidebar_position: 3
 icon: user-check-icon
+description: OVTP 可溯范式（Operator-Voucher-Traceable Paradigm）深度文章：从太平洋战争类比入手，提出三维模型与客服/中介/链路三大困境分析。
 ---
 
 # OVTP 可溯范式

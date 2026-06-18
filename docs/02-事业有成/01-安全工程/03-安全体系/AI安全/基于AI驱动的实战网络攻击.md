@@ -5,6 +5,7 @@ icon: brain-circuit-icon
 sidebar_badge:
   text: 演讲
   color: secondary
+description: 基于 AI 驱动的实战网络攻击演讲材料 PDF，覆盖 APG / APG Runtime / Offensive Infrastructure 工程体系（演讲快照）。
 ---
 
 <iframe

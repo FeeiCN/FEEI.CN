@@ -3,6 +3,7 @@ slug: /esd
 title: 枚举子域名
 icon: magnifier-icon
 sidebar_position: 27
+description: 子域名枚举的多种思路：搜索引擎、HTTPS 证书、自身泄露、三方工具、DNS 查询，含 ESD 工具的开源代码和实现细节。
 ---
 
 ## 事情背景

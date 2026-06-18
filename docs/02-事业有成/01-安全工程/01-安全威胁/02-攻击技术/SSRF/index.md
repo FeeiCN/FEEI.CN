@@ -3,6 +3,7 @@ slug: /ssrf
 title: SSRF 服务端请求伪造
 icon: globe-icon
 sidebar_position: 15
+description: SSRF 服务端请求伪造的完整技术细节：覆盖 PHP/Java 多语言代码示例、gopher/file/dict 协议利用、云环境元数据升级为云账号接管、绕过技巧。
 ---
 
 ## 漏洞介绍

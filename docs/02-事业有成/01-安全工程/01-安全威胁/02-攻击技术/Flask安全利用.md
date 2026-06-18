@@ -3,6 +3,7 @@ slug: /flask-security
 title: Flask 常见利用点
 icon: python-icon
 sidebar_position: 17
+description: Flask 框架的 9 类常见漏洞逐一展示：每类都有漏洞代码示例、攻击演示和修复代码，技术细节扎实。
 ---
 
 ## Secret Key（Flask-Login）

@@ -5,6 +5,7 @@ icon: shield-check
 sidebar_badge:
   text: 演讲
   color: secondary
+description: 干掉所有密码的员工侧安全一站式解决方案 GuGu：覆盖网络/VPN/凭证/终端四类隐患的零信任架构（演讲 PDF 快照）。
 ---
 
 <iframe

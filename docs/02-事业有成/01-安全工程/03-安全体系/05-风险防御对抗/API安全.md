@@ -2,6 +2,7 @@
 slug: /api-security
 title: API安全
 icon: plug-connected-icon
+description: API 安全风险与解决方案：覆盖传输窃取（HTTPS）、未授权访问（API Key）、请求篡改（签名）、请求重放（时间戳+随机数）等风险的代码级实现。
 ---
 
 应用间HTTP接口互相调用非常常见，期间会存在哪些安全风险？如何保证API接口调用时的安全性，防止数据窃取、未授权访问、请求被篡改以及请求被重放等风险？

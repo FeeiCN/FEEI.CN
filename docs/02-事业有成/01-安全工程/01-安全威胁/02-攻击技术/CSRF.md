@@ -3,6 +3,7 @@ slug: /csrf
 title: CSRF 跨站请求伪造
 icon: at-sign-icon
 sidebar_position: 11
+description: CSRF 攻击的 200+ 条具体历史样本：覆盖从基础 GET 副作用到复杂链式利用，每个样本都是一个独立攻击场景。
 ---
 
 **CSRF 利用的是服务端对"请求来自已认证用户"的过度信任：只要浏览器携带了用户的 Cookie，服务端就认为请求合法，而浏览器在访问页面或加载资源时会自动附带对应域的 Cookie——攻击者不需要知道用户的 Cookie，只需要让用户的浏览器发出一个预定格式的请求。** 这与 XSS"在页面内执行 JS"的路径截然不同：CSRF 不需要注入代码，只需要触发一次 HTTP 请求。

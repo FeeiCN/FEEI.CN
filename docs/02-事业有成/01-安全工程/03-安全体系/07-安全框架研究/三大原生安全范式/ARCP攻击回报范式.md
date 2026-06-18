@@ -3,6 +3,7 @@ slug: /arcp
 title: ARCP 攻击回报范式
 sidebar_position: 4
 icon: gauge-icon
+description: ARCP 攻击回报范式（Attack-Reward-Cost Paradigm）的深度论述：将网络攻防建模为双方资源投入产出比的持续博弈，含经济学模型、重入成本、反制金字塔与态势评估方法。
 ---
 
 # ARCP 攻击回报范式

@@ -3,6 +3,7 @@ slug: /exif
 title: 图片 EXIF 信息
 icon: camera-icon
 sidebar_position: 29
+description: 图片 EXIF 信息的隐私泄露风险：从 EXIF 技术原理到 GPS 坐标转换、跨平台时间获取、隐私泄露场景，含完整 Python 实现代码。
 ---
 
 ## 1 技术原理

@@ -2,6 +2,7 @@
 slug: /app-necessary-personal-info
 title: 常见类型移动互联网应用程序必要个人信息范围规定
 sidebar_position: 16
+description: 《常见类型应用程序必要个人信息范围规定》全文收录，明确常见类型 App 收集个人信息的必要范围。
 ---
 
 

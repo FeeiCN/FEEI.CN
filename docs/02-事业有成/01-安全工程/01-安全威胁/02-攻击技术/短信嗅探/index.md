@@ -3,6 +3,7 @@ slug: /sms-sniffing
 title: 短信嗅探
 icon: telephone-icon
 sidebar_position: 26
+description: 2G 短信嗅探攻击：从 GSM 短信原理、A5 算法到 OsmocomBB 实操环境搭建、嗅探命令执行，含真实设备截图。
 ---
 
 ## 1 背景知识

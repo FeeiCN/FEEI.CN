@@ -3,6 +3,7 @@ slug: /sql-injection
 title: SQL 注入
 icon: code-icon
 sidebar_position: 1
+description: SQL 注入最详尽的历史样本库（300+ 条）：覆盖 MySQL/MSSQL/Oracle/PostgreSQL/SQLite/DB2 各种数据库、各种应用场景的具体绕过手法。
 ---
 
 **SQL 注入的根本危害在于应用层与数据库层之间的信任边界失效：数据库把用户可控的输入当作 SQL 代码解析执行，而非当作数据处理。** 这一边界一旦失效，攻击者就能以数据库引擎的身份读写任意数据，在高权限账号下进一步获取操作系统访问能力。

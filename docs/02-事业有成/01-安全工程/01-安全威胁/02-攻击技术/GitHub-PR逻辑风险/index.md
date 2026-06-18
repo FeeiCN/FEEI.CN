@@ -3,6 +3,7 @@ slug: /github-security
 title: GitHub 安全
 icon: github-icon
 sidebar_position: 25
+description: GitHub PR 三个真实漏洞案例的完整披露（HackerOne 报告 + 原始复现链接），并归纳出多类通用业务逻辑风险模式。
 ---
 
 最近看了几个 GitHub Pull Request 相关的漏洞，觉得很有意思，也能侧面反映当前业界在业务逻辑风险方面的一些现状，记录分享出来。

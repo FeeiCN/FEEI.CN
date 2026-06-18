@@ -3,6 +3,7 @@ slug: /sim-cloning
 title: 手机 SIM 卡复制
 icon: dialpad-icon
 sidebar_position: 30
+description: SIM 卡复制攻击的技术原理：从 SIM 卡基础概念到 2G/3G/4G/5G 认证流程、COMP128/Milenage 算法原理、侧信道攻击窃取密钥。
 ---
 
 **SIM 卡是手机号码身份认证的核心凭证，其内置的密钥 Ki 决定了入网身份，一旦该密钥被复制，攻击者即可完全接管目标手机号码，接打电话、收发短信和蜂窝网络均可被劫持。**

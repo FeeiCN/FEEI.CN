@@ -2,6 +2,7 @@
 slug: /building-a-trusted-in-depth-defense-system-based-on-native-security-paradigm
 title: 基于原生安全范式构建可信纵深防御体系
 icon: layers-icon
+description: 基于原生安全范式（NbSP 零越范式 + OVTP 可溯范式）和安全平行切面构建可信纵深防御体系的演讲文字稿，覆盖 0day 防御与敏感数据保护的最新实践（演讲快照）。
 sidebar_badge:
   text: 演讲
   color: secondary

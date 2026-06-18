@@ -269,5 +269,5 @@ export const localLyricsFileByAudioFile: Record<string, string> = {
   "魔鬼中的天使.mp3": "魔鬼中的天使.lrc",
   "黄昏-周传雄.mp3": "黄昏-周传雄.lrc",
   "黄梅戏-慕容晓晓.mp3": "黄梅戏-慕容晓晓.lrc",
-  "바보-BIGBANG.flac": "바보-BIGBANG.lrc",
+  "FOOL-BIGBANG.flac": "FOOL-BIGBANG.lrc",
 };

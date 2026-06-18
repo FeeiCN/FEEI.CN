@@ -74,6 +74,15 @@ jobs:
           current_link="$site_root/current"
           next_current_link="$site_root/current.next"
           releases_to_keep=2
+          staging_dir=""
+
+          cleanup_staging() {
+            if [ -n "$staging_dir" ] && [ -e "$staging_dir" ]; then
+              echo "Cleaning incomplete staging directory: $staging_dir"
+              rm -rf "$staging_dir"
+            fi
+          }
+          trap cleanup_staging EXIT
 
           group_start "Prepare repository"
           cd "$repo_dir"
@@ -83,20 +92,9 @@ jobs:
           echo "old_head=$old_head"
           echo "new_head=$new_head"
 
-          # /static/media and /static/music are gitignored on the server; bind
-          # them to the shared asset directories so Docusaurus MDX can resolve
-          # /media/... and /music/... during the build.
-          mkdir -p static
-          for asset in media music; do
-            target_var="$(printf '%s_ROOT' "$(printf '%s' "$asset" | tr '[:lower:]' '[:upper:]')")"
-            target="${!target_var}"
-            if [ -z "$target" ]; then
-              echo "Missing ${asset} target directory; skipping symlink."
-              continue
-            fi
-            rm -rf "static/$asset"
-            ln -sfn "$target" "static/$asset"
-          done
+          # media/music 由独立共享目录提供。构建前移除仓库中的链接，避免
+          # Docusaurus 把数 GB 媒体复制到 staging，发布时再挂回。
+          rm -rf static/media static/music
           group_end "Prepare repository"
 
           group_start "Install dependencies if needed"
@@ -108,11 +106,30 @@ jobs:
           fi
           group_end "Install dependencies if needed"
 
+          group_start "Clean oversized build cache"
+          webpack_cache="node_modules/.cache/webpack"
+          if [ -d "$webpack_cache" ]; then
+            cache_size_kb="$(du -sk "$webpack_cache" | cut -f1)"
+            echo "webpack_cache_size_kb=$cache_size_kb"
+            if [ "$cache_size_kb" -gt 2097152 ]; then
+              echo "Webpack cache exceeds 2GB; removing stale cache."
+              rm -rf "$webpack_cache"
+            fi
+          fi
+          group_end "Clean oversized build cache"
+
+          group_start "Clean stale releases"
+          mkdir -p "$releases_dir"
+          find "$releases_dir" -mindepth 1 -maxdepth 1 -type d -name '*.tmp' -exec rm -rf {} +
+          ls -1dt "$releases_dir"/* 2>/dev/null |
+            tail -n +$((releases_to_keep + 1)) |
+            xargs -r rm -rf
+          group_end "Clean stale releases"
+
           group_start "Prepare release directories"
           release_name="$(git rev-parse HEAD)"
           release_dir="$releases_dir/$release_name"
           staging_dir="${release_dir}.tmp"
-          mkdir -p "$releases_dir"
           rm -rf "$staging_dir"
           echo "release_dir=$release_dir"
           echo "staging_dir=$staging_dir"
@@ -141,6 +158,8 @@ jobs:
           group_end "Publish release"
 
           group_start "Clean old releases"
-          ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf
+          ls -1dt "$releases_dir"/* 2>/dev/null |
+            tail -n +$((releases_to_keep + 1)) |
+            xargs -r rm -rf
           group_end "Clean old releases"
           EOF

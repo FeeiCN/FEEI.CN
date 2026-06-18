@@ -102,7 +102,7 @@ const config: Config = {
       useCssCascadeLayers: true,
       siteStorageNamespacing: true,
       mdx1CompatDisabledByDefault: true,
-      fasterByDefault: false,
+      fasterByDefault: true,
     }, // Improve compatibility with the upcoming Docusaurus v4
   },
 

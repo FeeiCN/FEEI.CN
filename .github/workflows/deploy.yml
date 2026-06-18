@@ -4,6 +4,17 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'docs/**'
+      - 'src/**'
+      - 'static/**'
+      - 'plugins/**'
+      - 'docusaurus.config.ts'
+      - 'sidebars.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - '.github/workflows/deploy.yml'
 
 concurrency:
   group: deploy
@@ -14,6 +25,7 @@ env:
   SITE_ROOT: /data/wufeifei.com-site
   MEDIA_ROOT: /data/wufeifei-assets/media
   MUSIC_ROOT: /data/wufeifei-assets/music
+  DATA_ROOT: /data/wufeifei-assets/data
 
 jobs:
   deploy:
@@ -31,7 +43,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' bash -se" <<'EOF'
+            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' bash -se" <<'EOF'
           set -euo pipefail
 
           timer_start=0
@@ -70,32 +82,74 @@ jobs:
           site_root="$SITE_ROOT"
           media_root="$MEDIA_ROOT"
           music_root="$MUSIC_ROOT"
+          data_root="$DATA_ROOT"
           releases_dir="$site_root/releases"
           current_link="$site_root/current"
           next_current_link="$site_root/current.next"
           releases_to_keep=2
           staging_dir=""
+          hidden_data_dir="$repo_dir/static/.data.deploy-hidden"
 
-          cleanup_staging() {
+          restore_data_source() {
+            if [ -d "$hidden_data_dir" ]; then
+              if [ ! -e "$repo_dir/static/data" ]; then
+                mv "$hidden_data_dir" "$repo_dir/static/data"
+              else
+                rm -rf "$hidden_data_dir"
+              fi
+            fi
+          }
+          cleanup_deploy() {
+            restore_data_source
             if [ -n "$staging_dir" ] && [ -e "$staging_dir" ]; then
               echo "Cleaning incomplete staging directory: $staging_dir"
               rm -rf "$staging_dir"
             fi
           }
-          trap cleanup_staging EXIT
+          trap cleanup_deploy EXIT
 
           group_start "Prepare repository"
           cd "$repo_dir"
+          restore_data_source
           old_head="$(git rev-parse HEAD)"
           git pull origin main
           new_head="$(git rev-parse HEAD)"
+          deployed_head=""
+          if [ -L "$current_link" ]; then
+            deployed_head="$(basename "$(readlink -f "$current_link")")"
+          fi
           echo "old_head=$old_head"
           echo "new_head=$new_head"
+          echo "deployed_head=${deployed_head:-none}"
 
           # media/music 由独立共享目录提供。构建前移除仓库中的链接，避免
           # Docusaurus 把数 GB 媒体复制到 staging，发布时再挂回。
           rm -rf static/media static/music
           group_end "Prepare repository"
+
+          group_start "Sync shared data"
+          mkdir -p "$data_root"
+          rsync -a --delete static/data/ "$data_root/"
+          group_end "Sync shared data"
+
+          data_only=false
+          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
+            changed_files="$(git diff --name-only "$deployed_head" "$new_head")"
+            if [ -n "$changed_files" ] &&
+               ! printf '%s\n' "$changed_files" | grep -qv '^static/data/'; then
+              data_only=true
+            fi
+          fi
+
+          if [ "$data_only" = true ]; then
+            group_start "Publish data only"
+            current_release="$(readlink -f "$current_link")"
+            rm -rf "$current_release/data"
+            ln -s "$data_root" "$current_release/data"
+            echo "Only static/data changed; skipped Docusaurus build."
+            group_end "Publish data only"
+            exit 0
+          fi
 
           group_start "Install dependencies if needed"
           if ! git diff --quiet "$old_head" "$new_head" -- package.json package-lock.json; then
@@ -107,13 +161,13 @@ jobs:
           group_end "Install dependencies if needed"
 
           group_start "Clean oversized build cache"
-          webpack_cache="node_modules/.cache/webpack"
-          if [ -d "$webpack_cache" ]; then
-            cache_size_kb="$(du -sk "$webpack_cache" | cut -f1)"
-            echo "webpack_cache_size_kb=$cache_size_kb"
+          build_cache="node_modules/.cache"
+          if [ -d "$build_cache" ]; then
+            cache_size_kb="$(du -sk "$build_cache" | cut -f1)"
+            echo "build_cache_size_kb=$cache_size_kb"
             if [ "$cache_size_kb" -gt 2097152 ]; then
-              echo "Webpack cache exceeds 2GB; removing stale cache."
-              rm -rf "$webpack_cache"
+              echo "Build cache exceeds 2GB; removing stale cache."
+              rm -rf "$build_cache"
             fi
           fi
           group_end "Clean oversized build cache"
@@ -131,6 +185,7 @@ jobs:
           release_dir="$releases_dir/$release_name"
           staging_dir="${release_dir}.tmp"
           rm -rf "$staging_dir"
+          mv static/data "$hidden_data_dir"
           echo "release_dir=$release_dir"
           echo "staging_dir=$staging_dir"
           group_end "Prepare release directories"
@@ -145,12 +200,14 @@ jobs:
             npm run build -- --out-dir "$staging_dir"
           fi
           group_end "Build Docusaurus"
+          restore_data_source
 
           group_start "Publish release"
-          mkdir -p "$media_root" "$music_root"
-          rm -rf "$staging_dir/media" "$staging_dir/music"
+          mkdir -p "$media_root" "$music_root" "$data_root"
+          rm -rf "$staging_dir/media" "$staging_dir/music" "$staging_dir/data"
           ln -s "$media_root" "$staging_dir/media"
           ln -s "$music_root" "$staging_dir/music"
+          ln -s "$data_root" "$staging_dir/data"
           rm -rf "$release_dir"
           mv "$staging_dir" "$release_dir"
           ln -sfn "$release_dir" "$next_current_link"

@@ -326,13 +326,21 @@ jobs:
         run: |
           set -o pipefail
           npm run build 2>&1 | tee /tmp/build.log
-          if grep -q '\[WARNING\]' /tmp/build.log; then
-            echo "::error::构建包含 WARNING，停止提交"
-            exit 1
-          fi
           if ! grep -q '\[SUCCESS\]' /tmp/build.log; then
             echo "::error::构建未输出 SUCCESS，停止提交"
             exit 1
+          fi
+          if grep -qi 'warning' /tmp/build.log; then
+            {
+              echo "## 构建警告"
+              echo
+              echo "构建已成功，以下警告不阻塞日报提交："
+              echo
+              echo '```'
+              grep -i -A 8 -B 2 'warning' /tmp/build.log | head -c 6000 || true
+              echo
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Commit and push report

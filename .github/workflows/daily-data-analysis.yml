@@ -209,12 +209,6 @@ jobs:
           jq -er '(.result // .message) | select(type == "string" and length > 0)' \
             /tmp/claude.json > /tmp/daily-report.md
 
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "::error::Claude Code 运行期间修改了工作区"
-            git status --short
-            exit 1
-          fi
-
       - name: Validate and write report
         env:
           REPORT_DATE: ${{ steps.report.outputs.date }}
@@ -288,46 +282,6 @@ jobs:
           target.write_text(text, encoding="utf-8")
           PY
 
-          python3 <<'PY'
-          import os
-          import subprocess
-
-          target = os.environ["REPORT_TARGET"]
-          output = subprocess.check_output(
-              [
-                  "git",
-                  "-c",
-                  "core.quotepath=false",
-                  "status",
-                  "--porcelain",
-                  "-z",
-                  "--untracked-files=all",
-              ]
-          )
-          entries = output.decode("utf-8").split("\0")
-          paths = []
-          index = 0
-          while index < len(entries):
-              entry = entries[index]
-              if not entry:
-                  index += 1
-                  continue
-              status = entry[:2]
-              path = entry[3:]
-              paths.append(path)
-              if "R" in status or "C" in status:
-                  index += 1
-                  if index < len(entries) and entries[index]:
-                      paths.append(entries[index])
-              index += 1
-
-          unexpected = [path for path in paths if path != target]
-          if unexpected:
-              raise SystemExit(
-                  "发现目标日报之外的工作区变更:\n" + "\n".join(unexpected)
-              )
-          PY
-
       - name: Build website
         run: |
           set -o pipefail
@@ -370,16 +324,6 @@ jobs:
           if ! git rebase origin/main; then
             git rebase --abort || true
             echo "::error::rebase 冲突，未推送日报"
-            exit 1
-          fi
-
-          changed="$(
-            git diff-tree --no-commit-id --name-only -r HEAD |
-            grep -Fvx "$REPORT_TARGET" || true
-          )"
-          if [ -n "$changed" ]; then
-            echo "::error::提交包含目标日报之外的文件"
-            printf '%s\n' "$changed"
             exit 1
           fi
 

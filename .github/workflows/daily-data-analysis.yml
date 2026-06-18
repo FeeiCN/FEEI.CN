@@ -282,16 +282,37 @@ jobs:
           target.write_text(text, encoding="utf-8")
           PY
 
-          unexpected="$(
-            git status --porcelain |
-            awk '{print substr($0, 4)}' |
-            grep -Fvx "$REPORT_TARGET" || true
-          )"
-          if [ -n "$unexpected" ]; then
-            echo "::error::发现目标日报之外的工作区变更"
-            printf '%s\n' "$unexpected"
-            exit 1
-          fi
+          python3 <<'PY'
+          import os
+          import subprocess
+
+          target = os.environ["REPORT_TARGET"]
+          output = subprocess.check_output(
+              ["git", "-c", "core.quotepath=false", "status", "--porcelain", "-z"]
+          )
+          entries = output.decode("utf-8").split("\0")
+          paths = []
+          index = 0
+          while index < len(entries):
+              entry = entries[index]
+              if not entry:
+                  index += 1
+                  continue
+              status = entry[:2]
+              path = entry[3:]
+              paths.append(path)
+              if "R" in status or "C" in status:
+                  index += 1
+                  if index < len(entries) and entries[index]:
+                      paths.append(entries[index])
+              index += 1
+
+          unexpected = [path for path in paths if path != target]
+          if unexpected:
+              raise SystemExit(
+                  "发现目标日报之外的工作区变更:\n" + "\n".join(unexpected)
+              )
+          PY
 
       - name: Build website
         run: |

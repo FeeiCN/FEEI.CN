@@ -22,6 +22,7 @@
 | 04-人生丰富 散文、游记 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/散文写作.md` |
 | GitHub Issue 内容沉淀 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/github-issue-skill.md` |
 | 每日健康、阅读、财务、AI 数据分析与总结 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/每日数据总结.md` |
+| 音乐库添加/删除/分组/歌词映射 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/音乐库管理.md` |
 | 创建/维护 SKILL 文档（位置、front matter、CLAUDE.md 登记、写作语气） | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL原则.md` |
 
 读取路由指向的文件后，按其内容处理当前任务；不要把规则外推到其他任务类型。

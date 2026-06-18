@@ -288,7 +288,15 @@ jobs:
 
           target = os.environ["REPORT_TARGET"]
           output = subprocess.check_output(
-              ["git", "-c", "core.quotepath=false", "status", "--porcelain", "-z"]
+              [
+                  "git",
+                  "-c",
+                  "core.quotepath=false",
+                  "status",
+                  "--porcelain",
+                  "-z",
+                  "--untracked-files=all",
+              ]
           )
           entries = output.decode("utf-8").split("\0")
           paths = []

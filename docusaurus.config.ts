@@ -111,6 +111,7 @@ const config: Config = {
     format: 'detect',
     hooks: {
       onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn',
+      onBrokenMarkdownImages: isStrictBuild ? 'throw' : 'ignore',
     },
     preprocessor: ({fileContent}) => {
       // Escape * inside URLs — security write-ups use *** to mask IPs/domains,

@@ -185,19 +185,53 @@ jobs:
           release_dir="$releases_dir/$release_name"
           staging_dir="${release_dir}.tmp"
           rm -rf "$staging_dir"
+          if [ -e "$staging_dir" ]; then
+            echo "ERROR: failed to clean staging dir before build: $staging_dir"
+            ls -la "$staging_dir" || true
+            exit 1
+          fi
           mv static/data "$hidden_data_dir"
           echo "release_dir=$release_dir"
           echo "staging_dir=$staging_dir"
           group_end "Prepare release directories"
 
           group_start "Build Docusaurus"
-          if [ -x /usr/bin/time ]; then
-            /usr/bin/time -v npm run build -- --out-dir "$staging_dir"
-          elif [ -x /bin/time ]; then
-            /bin/time -v npm run build -- --out-dir "$staging_dir"
-          else
-            echo "GNU time not found. Running build without resource profiling."
-            npm run build -- --out-dir "$staging_dir"
+          # Docusaurus's tryToBuildLocale uses fs.rmdir on the out-dir, which
+          # fails with ENOTEMPTY if stale files survive from a prior
+          # interrupted run. Wrap the build in a short retry loop that
+          # re-cleans the staging dir between attempts.
+          run_build() {
+            if [ -x /usr/bin/time ]; then
+              /usr/bin/time -v npm run build -- --out-dir "$staging_dir"
+            elif [ -x /bin/time ]; then
+              /bin/time -v npm run build -- --out-dir "$staging_dir"
+            else
+              echo "GNU time not found. Running build without resource profiling."
+              npm run build -- --out-dir "$staging_dir"
+            fi
+          }
+          build_max_attempts=3
+          build_attempt=0
+          build_ok=false
+          while [ "$build_attempt" -lt "$build_max_attempts" ]; do
+            build_attempt=$((build_attempt + 1))
+            rm -rf "$staging_dir"
+            if [ -e "$staging_dir" ]; then
+              echo "WARN: staging dir not clean before attempt $build_attempt: $staging_dir"
+              ls -la "$staging_dir" || true
+              continue
+            fi
+            echo "Build attempt $build_attempt of $build_max_attempts"
+            if run_build; then
+              build_ok=true
+              break
+            fi
+            echo "Build attempt $build_attempt failed; retrying in 5s"
+            sleep 5
+          done
+          if [ "$build_ok" != "true" ]; then
+            echo "Build failed after $build_max_attempts attempts"
+            exit 1
           fi
           group_end "Build Docusaurus"
           restore_data_source

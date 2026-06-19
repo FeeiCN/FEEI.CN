@@ -17,7 +17,11 @@ description: 基于 AI 驱动的实战网络攻击演讲材料 PDF，覆盖 APG 
 >
 </iframe>
 
-[打开 PDF](/media/files/基于AI驱动的实战网络攻击-吴飞飞（Feei）v1.1-20251117.pdf)
+<div style={{margin: '12px 0 24px'}}>
+  <a className="button button--primary" href="/media/files/基于AI驱动的实战网络攻击-吴飞飞（Feei）v1.1-20251117.pdf" target="_blank" rel="noopener noreferrer">
+    打开 / 下载 PDF
+  </a>
+</div>
 
 2025 年 11 月，上海·磐石行动，《基于 AI 驱动的实战网络攻击》主题演讲 PPT 和讲稿已经过数据输出审批。
 

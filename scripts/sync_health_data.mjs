@@ -17,7 +17,7 @@ const args = parseArgs(process.argv.slice(2));
 const commitMessage = args.message ?? `[auto] 更新健康数据 ${formatLocalDateTime(new Date())}`;
 const remote = args.remote ?? 'origin';
 const branch = args.branch ?? currentBranch();
-const healthDir = path.join('static', 'health');
+const healthDir = path.join('static', 'data', 'health');
 
 ensureNoStagedChanges();
 run('git', ['pull', '--rebase', '--autostash']);
@@ -30,7 +30,7 @@ for (const month of monthsToExport) {
   const [y, m] = month.split('-');
   const targetFile = path.join(y, `${m}.json`);
 
-  run('npm', ['run', 'export-health-year', '--', '--month', month]);
+  run('npm', ['run', 'export-health-year', '--', '--year', y, '--month', month]);
 
   if (!fs.existsSync(path.join(repoRoot, healthDir, targetFile))) {
     throw new Error(`Health data file does not exist: ${targetFile}`);

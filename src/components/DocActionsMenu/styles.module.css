@@ -1,0 +1,207 @@
+/* ── Wrapper ────────────────────────────────────────── */
+.wrapper {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* ── Trigger — split pill ───────────────────────────── */
+.trigger {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 999px;
+  background: var(--ifm-background-color);
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+  overflow: hidden;
+}
+
+.trigger:hover {
+  border-color: var(--ifm-color-emphasis-400);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.07);
+}
+
+.trigger[data-state='copied'] {
+  border-color: var(--ifm-color-success);
+  color: var(--ifm-color-success);
+}
+
+.trigger[data-state='error'] {
+  border-color: var(--ifm-color-danger);
+  color: var(--ifm-color-danger);
+}
+
+/* Left section: icon + label — direct copy action */
+.triggerMain {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px 5px 11px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.triggerMain:hover {
+  background: var(--ifm-color-emphasis-100);
+}
+
+.triggerIcon {
+  display: flex;
+  align-items: center;
+  opacity: 0.75;
+}
+
+.triggerText {
+  /* hidden on mobile via media query below */
+}
+
+/* Vertical separator */
+.triggerSep {
+  width: 1px;
+  background: var(--ifm-color-emphasis-300);
+  flex-shrink: 0;
+  align-self: stretch;
+}
+
+/* Right section: chevron — opens dropdown */
+.triggerChevron {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border: none;
+  background: transparent;
+  color: var(--ifm-color-emphasis-500);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.triggerChevron:hover {
+  background: var(--ifm-color-emphasis-100);
+}
+
+/* ── Dropdown ───────────────────────────────────────── */
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 280px;
+  background: var(--ifm-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.04),
+    0 10px 30px rgba(0, 0, 0, 0.08);
+  z-index: 200;
+  overflow: hidden;
+  padding: 6px 0;
+}
+
+/* ── Menu item (button and <a> share same class) ─────── */
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 14px;
+  margin: 0 6px;
+  width: calc(100% - 12px);
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.1s;
+  box-sizing: border-box;
+}
+
+.item:hover {
+  background: var(--ifm-color-emphasis-100);
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Icon column */
+.itemIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  color: var(--ifm-color-emphasis-600);
+}
+
+/* Text column */
+.itemBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ifm-font-color-base);
+  line-height: 1.4;
+}
+
+.itemDesc {
+  font-size: 0.75rem;
+  color: var(--ifm-color-emphasis-600);
+  line-height: 1.35;
+}
+
+/* Inline external link indicator, inside .itemTitle */
+.externalArrow {
+  font-size: 0.72rem;
+  opacity: 0.45;
+  flex-shrink: 0;
+  font-style: normal;
+}
+
+/* ── Mobile ─────────────────────────────────────────── */
+@media (max-width: 996px) {
+  /* Hide label text — keep icon + chevron only */
+  .triggerText {
+    display: none;
+  }
+
+  /* Tighten left section padding without text */
+  .triggerMain {
+    padding: 5px 7px 5px 9px;
+  }
+
+  /* Dropdown opens left-aligned on narrow viewports */
+  .menu {
+    right: auto;
+    left: 0;
+    min-width: 240px;
+  }
+}
+
+/* Section divider */
+.divider {
+  height: 1px;
+  background: var(--ifm-color-emphasis-200);
+  margin: 6px 0;
+}

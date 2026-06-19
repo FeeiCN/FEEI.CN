@@ -972,6 +972,16 @@
   vertical-align: middle;
 }
 
+@media (max-width: 996px) {
+  .docTitleIcon {
+    display: none !important;
+  }
+
+  .docTitleWithIcon {
+    gap: 0;
+  }
+}
+
 .markdown > header:first-child h1 {
   margin-top: 0.15rem;
   margin-bottom: 0.85rem;
@@ -980,6 +990,12 @@
 
 .markdown > header:first-child + * {
   margin-top: 0;
+}
+
+@media (min-width: 997px) {
+  .pagination-nav {
+    display: none;
+  }
 }
 
 .navbarItemLabel {

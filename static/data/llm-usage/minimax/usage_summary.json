@@ -1,9 +1,9 @@
 {
   "vendor": "minimax",
-  "fetchedAt": "2026-06-18 08:07:03",
-  "total_days": 10,
-  "total_token_consumed": "1.17B",
-  "usage_ranking_percent": 8.830662606203152,
+  "fetchedAt": "2026-06-19 08:20:20",
+  "total_days": 11,
+  "total_token_consumed": "1.21B",
+  "usage_ranking_percent": 8.498666670391701,
   "most_active_day": {
     "date": "2026-06-10",
     "token_count": "203.88M",
@@ -12,8 +12,8 @@
     "music_count": "0",
     "voice_character_count": "0"
   },
-  "active_days": 10,
-  "current_consecutive_days": 10,
+  "active_days": 11,
+  "current_consecutive_days": 11,
   "daily_token_usage": {
     "2026-06-08": 90993082,
     "2026-06-09": 165014375,
@@ -24,19 +24,10 @@
     "2026-06-14": 88162330,
     "2026-06-15": 57005624,
     "2026-06-16": 35709922,
-    "2026-06-17": 103481783
+    "2026-06-17": 103481783,
+    "2026-06-18": 45405912
   },
   "date_model_usage": [
-    {
-      "date": "2026-01-02",
-      "models": [],
-      "total_input_token": 0,
-      "total_cache_read_token": 0,
-      "total_cache_create_token": 0,
-      "total_output_token": 0,
-      "total_token": 0,
-      "cache_hit_percent": "0%"
-    },
     {
       "date": "2026-01-03",
       "models": [],
@@ -1919,26 +1910,45 @@
       "models": [
         {
           "model": "MiniMax-M3-512k",
-          "input_token": 1656488,
-          "cache_read_token": 1544685,
+          "input_token": 45041447,
+          "cache_read_token": 42578920,
           "cache_create_token": 0,
-          "output_token": 11338,
-          "total_token": 3212511,
-          "cache_hit_percent": "93.25%"
+          "output_token": 296872,
+          "total_token": 87917239,
+          "cache_hit_percent": "94.53%"
+        },
+        {
+          "model": "MiniMax-M2.7",
+          "input_token": 66195,
+          "cache_read_token": 0,
+          "cache_create_token": 64637,
+          "output_token": 1398,
+          "total_token": 132230,
+          "cache_hit_percent": "0.00%"
         }
       ],
-      "total_input_token": 1656488,
-      "total_cache_read_token": 1544685,
+      "total_input_token": 45107642,
+      "total_cache_read_token": 42578920,
+      "total_cache_create_token": 64637,
+      "total_output_token": 298270,
+      "total_token": 45405912,
+      "cache_hit_percent": "94.39%"
+    },
+    {
+      "date": "2026-06-19",
+      "models": [],
+      "total_input_token": 0,
+      "total_cache_read_token": 0,
       "total_cache_create_token": 0,
-      "total_output_token": 11338,
-      "total_token": 1667826,
-      "cache_hit_percent": "93.25%"
+      "total_output_token": 0,
+      "total_token": 0,
+      "cache_hit_percent": "0%"
     }
   ],
-  "last_update_time": "06-18 08:00",
+  "last_update_time": "06-19 08:00",
   "base_resp": {
     "status_code": 0,
     "status_msg": "success"
   },
-  "daily_avg_token_consumed": "116.74M"
+  "daily_avg_token_consumed": "110.26M"
 }

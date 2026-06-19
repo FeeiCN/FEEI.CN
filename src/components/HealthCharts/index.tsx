@@ -1594,7 +1594,22 @@ function HealthProviderInner({children}: {children: React.ReactNode}) {
         .flatMap(([y, months]) => months.map((m) => `${y}-${String(m).padStart(2, '0')}`))
         .sort();
     } else {
-      targetMonthKeys = [`${currentYear}-${String(currentMonth).padStart(2, '0')}`];
+      // recent: walk back `range` days and collect every month key on the way
+      const days = RANGE_DAYS[scope.range];
+      const today = new Date();
+      const start = new Date(today);
+      start.setDate(start.getDate() - days);
+      const keys: string[] = [];
+      const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth(), 1);
+      while (cur <= end) {
+        const y = cur.getFullYear();
+        const m = cur.getMonth() + 1;
+        const key = `${y}-${String(m).padStart(2, '0')}`;
+        if (MONTH_MAP[y]?.includes(m)) keys.push(key);
+        cur.setMonth(cur.getMonth() + 1);
+      }
+      targetMonthKeys = keys;
     }
 
     const missingKeys = targetMonthKeys.filter((k) => !allData[k]);

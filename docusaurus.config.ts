@@ -256,11 +256,16 @@ const config: Config = {
           ],
         },
         {
-          type: 'docSidebar',
-          sidebarId: 'financeFreedomSidebar',
+          type: 'dropdown',
           position: 'left',
           label: '财务自由',
           icon: 'brand-bags-fm-icon',
+          items: [
+            {type: 'docSidebar', sidebarId: 'workSavingsSidebar', label: '工作储蓄', icon: 'piggy-bank'},
+            {type: 'docSidebar', sidebarId: 'expenseControlSidebar', label: '控制支出', icon: 'receipt'},
+            {type: 'docSidebar', sidebarId: 'investmentSidebar', label: '投资理财', icon: 'chart-line-icon'},
+            {type: 'docSidebar', sidebarId: 'insuranceSidebar', label: '基础保障', icon: 'shield-check'},
+          ],
         },
         {
           type: 'dropdown',

@@ -18,6 +18,11 @@ import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useCon
 type APlayerConstructor = new (options: APlayerOptions) => APlayerInstance;
 const babyMusicManifestUrl = '/music/baby-music/manifest.json';
 const musicPlayerPlayEventName = 'feei:music-player-play';
+// Emitted by the player whenever the active track changes (manual switch,
+// auto-advance on `ended`, programmatic list.switch). Surfaces the new
+// groupId + trackIndex so the music library page can keep its "now playing"
+// highlight in sync without polling the player.
+const musicPlayerStateEventName = 'feei:music-player-state';
 const initialMusicGroups = [...siteMusicGroups, ...buildAllDerivedGroups(siteMusicGroups)];
 const fullScreenLyricLineHeight = 48;
 const playerStateStorageKey = 'feei-global-music-player-state-v1';
@@ -36,6 +41,11 @@ type StoredPlayerState = {
 type MusicPlayerPlayDetail = {
   groupId?: string;
   trackIndex?: number;
+};
+
+type MusicPlayerStateDetail = {
+  groupId: string;
+  trackIndex: number;
 };
 
 type ExtendedAPlayer = APlayerInstance & {
@@ -182,6 +192,15 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
     player.template?.lrcButton?.classList.add('aplayer-icon-lrc-inactivity');
   };
 
+  const dispatchPlayerState = (groupId: string, trackIndex: number) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+      new CustomEvent<MusicPlayerStateDetail>(musicPlayerStateEventName, {
+        detail: {groupId, trackIndex},
+      }),
+    );
+  };
+
   const playRequestedTrack = (group: PlaylistGroup | undefined, trackIndex?: number) => {
     const player = playerRef.current as ExtendedAPlayer | null;
     if (!group || !player) return false;
@@ -196,6 +215,7 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
       player.play?.();
       void player.audio?.play?.().catch(() => {});
       persistGroupPlayback(group, player);
+      dispatchPlayerState(group.id, safeTrackIndex);
       return true;
     } catch {
       return false;
@@ -414,6 +434,10 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
             player.list?.switch?.(restoreTrackIndex);
           } catch {}
         }
+        // The first `listswitch` for a fresh mount won't reach the handler
+        // (it's registered a few lines below), so dispatch the state event
+        // manually so the music library page can update its highlight.
+        dispatchPlayerState(currentGroup.id, restoreTrackIndex);
         restorePlaybackProgress();
 
         let hasAttemptedAutoplay = false;
@@ -441,6 +465,7 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
             lyricContainer.querySelector('.aplayer-lrc-current')?.classList.remove('aplayer-lrc-current');
             lyricContainer.getElementsByTagName('p').item(0)?.classList.add('aplayer-lrc-current');
           }
+          dispatchPlayerState(currentGroup.id, player.list?.index ?? 0);
         });
         player.on?.('play', () => persistGroupPlayback(currentGroup, player));
         player.on?.('pause', () => persistGroupPlayback(currentGroup, player));

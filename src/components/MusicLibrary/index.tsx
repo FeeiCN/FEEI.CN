@@ -3,9 +3,7 @@ import clsx from 'clsx';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   buildArtistGroups,
-  buildLanguageGroups,
-  buildMusicFilterGroups,
-  buildSceneGroups,
+  buildFilterGroups,
   playlistGroupFromManifest,
   primaryArtistOf,
   siteMusicGroups,
@@ -18,14 +16,30 @@ import styles from './styles.module.css';
 
 const babyMusicManifestUrl = '/music/baby-music/manifest.json';
 const musicPlayerPlayEventName = 'feei:music-player-play';
+const musicPlayerStateEventName = 'feei:music-player-state';
 
 type MusicPlayerPlayDetail = {
   groupId: string;
   trackIndex?: number;
 };
 
+type MusicPlayerStateDetail = {
+  groupId: string;
+  trackIndex: number;
+};
+
+type TrackLocation = {groupId: string; index: number};
+
 function MusicLibraryClient() {
-  const [baseGroups, setBaseGroups] = useState<PlaylistGroup[]>(siteMusicGroups);
+  // Core groups are static (shipped in playlist.ts). The baby-music manifest
+  // loads asynchronously and is appended to extensionGroups so we can keep
+  // the two lifecycles separate and reason about cache invalidation per side.
+  const [coreGroups] = useState<PlaylistGroup[]>(siteMusicGroups);
+  const [extensionGroups, setExtensionGroups] = useState<PlaylistGroup[]>([]);
+  const baseGroups = useMemo(
+    () => [...coreGroups, ...extensionGroups],
+    [coreGroups, extensionGroups],
+  );
   const [activeGroupId, setActiveGroupId] = useState(siteMusicGroups[0]?.id ?? '');
   const [searchQuery, setSearchQuery] = useState('');
   const [singerDrawerOpen, setSingerDrawerOpen] = useState(false);
@@ -42,7 +56,7 @@ function MusicLibraryClient() {
         if (!response.ok) return;
         const manifest = (await response.json()) as PlaylistManifestGroup[];
         if (disposed || manifest.length === 0) return;
-        setBaseGroups([...siteMusicGroups, ...manifest.map(playlistGroupFromManifest)]);
+        setExtensionGroups(manifest.map(playlistGroupFromManifest));
       } catch {}
     }
 
@@ -56,11 +70,7 @@ function MusicLibraryClient() {
   const derived = useMemo(
     () => ({
       fixed: baseGroups,
-      filter: [
-        ...buildMusicFilterGroups(baseGroups),
-        ...buildLanguageGroups(baseGroups),
-        ...buildSceneGroups(baseGroups),
-      ],
+      filter: buildFilterGroups(baseGroups),
       artist: buildArtistGroups(baseGroups),
     }),
     [baseGroups],
@@ -112,6 +122,17 @@ function MusicLibraryClient() {
 
   const flatTracks = useMemo(() => groupedTracks.flatMap((g) => g.tracks), [groupedTracks]);
 
+  // O(1) lookup of "where in the visible list is this track?" — replaces the
+  // O(n) flatTracks.indexOf calls that used to fire in both the render loop
+  // and the onMouseEnter handler.
+  const flatIndexByTrack = useMemo(() => {
+    const map = new Map<PlaylistGroup['tracks'][number], number>();
+    flatTracks.forEach((track, index) => {
+      if (!map.has(track)) map.set(track, index);
+    });
+    return map;
+  }, [flatTracks]);
+
   useEffect(() => {
     setHighlightedIndex(0);
   }, [activeGroupId, searchQuery]);
@@ -123,6 +144,21 @@ function MusicLibraryClient() {
   const playFromGlobalPlayer = useCallback((detail: MusicPlayerPlayDetail) => {
     window.dispatchEvent(new CustomEvent<MusicPlayerPlayDetail>(musicPlayerPlayEventName, {detail}));
     setCurrentTrackKey(`${detail.groupId}:${detail.trackIndex ?? 0}`);
+  }, []);
+
+  // Reverse channel: the global player dispatches `feei:music-player-state`
+  // whenever the active track changes (manual switch, auto-advance on
+  // `ended`, mount-time restore). Keep `currentTrackKey` in sync so the
+  // "now playing" highlight follows along even when the user uses the
+  // mini-player controls.
+  useEffect(() => {
+    const handlePlayerState = (event: Event) => {
+      const detail = (event as CustomEvent<MusicPlayerStateDetail>).detail;
+      if (!detail?.groupId) return;
+      setCurrentTrackKey(`${detail.groupId}:${detail.trackIndex ?? 0}`);
+    };
+    window.addEventListener(musicPlayerStateEventName, handlePlayerState);
+    return () => window.removeEventListener(musicPlayerStateEventName, handlePlayerState);
   }, []);
 
   const selectGroup = useCallback((groupId: string) => {
@@ -138,20 +174,28 @@ function MusicLibraryClient() {
     [playFromGlobalPlayer, selectGroup],
   );
 
+  // O(1) lookup of "which base group does this track belong to, and at what
+  // index?" — replaces the baseGroups.find(...).tracks.indexOf(...) chain
+  // that ran on every click and made the search-state trackKey wrong.
+  const trackLocationByTrack = useMemo(() => {
+    const map = new Map<PlaylistGroup['tracks'][number], TrackLocation>();
+    baseGroups.forEach((group) => {
+      group.tracks.forEach((track, index) => {
+        if (!map.has(track)) {
+          map.set(track, {groupId: group.id, index});
+        }
+      });
+    });
+    return map;
+  }, [baseGroups]);
+
   const playTrack = useCallback(
     (track: PlaylistGroup['tracks'][number]) => {
-      if (searchActive) {
-        const sourceGroup = baseGroups.find((g) => g.tracks.includes(track));
-        if (sourceGroup) {
-          const trackIndex = sourceGroup.tracks.indexOf(track);
-          playFromGlobalPlayer({groupId: sourceGroup.id, trackIndex});
-        }
-        return;
-      }
-      const trackIndex = activeGroup.tracks.indexOf(track);
-      playFromGlobalPlayer({groupId: activeGroup.id, trackIndex: Math.max(0, trackIndex)});
+      const location = trackLocationByTrack.get(track);
+      if (!location) return;
+      playFromGlobalPlayer({groupId: location.groupId, trackIndex: location.index});
     },
-    [activeGroup, baseGroups, playFromGlobalPlayer, searchActive],
+    [playFromGlobalPlayer, trackLocationByTrack],
   );
 
   const totalTracks = useMemo(
@@ -338,9 +382,10 @@ function MusicLibraryClient() {
                 </div>
               )}
               {group.tracks.map((track) => {
-                const flatIndex = flatTracks.indexOf(track);
-                const trackKey = `${activeGroupId}:${activeGroup?.tracks.indexOf(track) ?? -1}`;
-                const isCurrent = currentTrackKey === trackKey;
+                const flatIndex = flatIndexByTrack.get(track) ?? -1;
+                const trackLocation = trackLocationByTrack.get(track);
+                const trackKey = trackLocation ? `${trackLocation.groupId}:${trackLocation.index}` : '';
+                const isCurrent = trackKey !== '' && currentTrackKey === trackKey;
                 const isHighlighted = flatIndex === highlightedIndex;
                 const hideArtist = Boolean(group.artist) || isArtistGrouping;
                 return (

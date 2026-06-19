@@ -465,10 +465,12 @@ export const buildArtistGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => {
     buckets.get(artist)!.push(track);
   });
   return Array.from(buckets.entries())
-    .sort(([a], [b]) => {
-      if (a === '未知歌手') return 1;
-      if (b === '未知歌手') return -1;
-      return a.localeCompare(b, 'zh-Hans-CN');
+    .sort(([aName, aTracks], [bName, bTracks]) => {
+      if (aName === '未知歌手') return 1;
+      if (bName === '未知歌手') return -1;
+      const countDiff = bTracks.length - aTracks.length;
+      if (countDiff !== 0) return countDiff;
+      return aName.localeCompare(bName, 'zh-Hans-CN');
     })
     .map(([artist, tracks]) => ({
       id: `artist-${artist}`,
@@ -496,10 +498,17 @@ export const buildSceneGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => {
     .filter((group) => group.tracks.length > 0);
 };
 
-export const buildAllDerivedGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => [
+// Non-artist derived groups: hand-curated filters, language buckets, and scene presets.
+// Exposed separately so MusicLibrary can render them in a different surface
+// (filter chips) than artist groups (drawer), without duplicating the 3 calls.
+export const buildFilterGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => [
   ...buildMusicFilterGroups(groups),
   ...buildLanguageGroups(groups),
   ...buildSceneGroups(groups),
+];
+
+export const buildAllDerivedGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => [
+  ...buildFilterGroups(groups),
   ...buildArtistGroups(groups),
 ];
 

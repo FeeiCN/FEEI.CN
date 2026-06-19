@@ -4,7 +4,6 @@ import type * as Preset from '@docusaurus/preset-classic';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import docMtimePlugin from './plugins/docMtimePlugin';
-import statusDataPlugin from './plugins/status-data';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -200,7 +199,7 @@ const config: Config = {
     ],
   ],
 
-  plugins: [docMtimePlugin, statusDataPlugin],
+  plugins: [docMtimePlugin],
 
   themes: [
     [

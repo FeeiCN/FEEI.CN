@@ -5,14 +5,35 @@ import styles from './styles.module.css';
 
 type DailyTokenBucket = Record<string, number>;
 
-type MostActiveDay = {
-  date?: string;
-  token_count?: string;
-  image_count?: number;
-  video_count?: number;
-  music_count?: number;
-  voice_character_count?: number;
+type DateUsageStats = Record<string, {
+  total_requests?: number;
+  total_input_tokens?: number;
+  total_output_tokens?: number;
+  total_cache_tokens?: number;
+  total_cache_creation_tokens?: number;
+  total_cache_read_tokens?: number;
+  total_tokens?: number;
+  total_cost?: number;
+  total_actual_cost?: number;
+  average_duration_ms?: number;
+}>;
+
+type ModelUsage = {
+  model?: string;
+  total_token?: number;
+  input_token?: number;
+  output_token?: number;
+  cache_read_token?: number;
+  cache_create_token?: number;
+  cache_hit_percent?: string;
 };
+
+type DateModelUsage = Array<{
+  date?: string;
+  models?: ModelUsage[];
+  total_token?: number;
+  cache_hit_percent?: string;
+}>;
 
 type SummaryPayload = {
   vendor?: string;
@@ -21,14 +42,40 @@ type SummaryPayload = {
   total_token_consumed?: string;
   daily_avg_token_consumed?: string;
   usage_ranking_percent?: number;
-  most_active_day?: MostActiveDay;
   active_days?: number;
   current_consecutive_days?: number;
-  daily_token_usage?: DailyTokenBucket[];
+  daily_token_usage?: DailyTokenBucket;
+  date_usage_stats?: DateUsageStats;
+  date_model_usage?: DateModelUsage | Record<string, ModelUsage[]>;
   base_resp?: {status_code?: number; status_msg?: string};
 };
 
-const DATA_PATH = '/data/llm-usage/minimax/usage_summary.json';
+type VendorConfig = {
+  id: string;
+  label: string;
+  path: string;
+};
+
+type VendorPayload = {
+  config: VendorConfig;
+  payload: SummaryPayload;
+};
+
+type DailyVendorBreakdown = {
+  id: string;
+  label: string;
+  tokens: number;
+  stats?: DateUsageStats[string];
+  models: ModelUsage[];
+};
+
+type DailyBreakdown = Record<string, DailyVendorBreakdown[]>;
+
+const VENDORS: VendorConfig[] = [
+  {id: 'minimax', label: 'MiniMax', path: '/data/llm-usage/minimax/usage_summary.json'},
+  {id: 'openai', label: 'OpenAI', path: '/data/llm-usage/openai/usage_summary.json'},
+  {id: 'anthropic', label: 'Anthropic', path: '/data/llm-usage/anthropic/usage_summary.json'},
+];
 
 const RANK_COLORS: string[] = [
   'var(--llm-l1)',
@@ -49,26 +96,77 @@ function getDayRow(date: Date): number {
   return g === 0 ? 6 : g - 1;
 }
 
-function parseTokenString(value: string | undefined | null): number {
-  if (!value) return 0;
-  const trimmed = value.trim();
-  const match = /^([\d.]+)\s*([KkMmBb])?/.exec(trimmed);
-  if (!match) return 0;
-  const num = Number(match[1]);
-  const unit = (match[2] || '').toUpperCase();
-  if (!Number.isFinite(num)) return 0;
-  if (unit === 'K') return num * 1_000;
-  if (unit === 'M') return num * 1_000_000;
-  if (unit === 'B') return num * 1_000_000_000;
-  return num;
-}
-
 function formatTokenCount(value: number): string {
   if (!value) return '0';
   if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
   return String(Math.round(value));
+}
+
+function formatLegendTokenCount(value: number): string {
+  if (!value) return '0';
+  if (value >= 1_000_000_000) return `${Math.round(value / 1_000_000_000)}B`;
+  if (value >= 1_000_000) return `${Math.round(value / 1_000_000)}M`;
+  if (value >= 1_000) return `${Math.round(value / 1_000)}K`;
+  return String(Math.round(value));
+}
+
+function formatCurrency(value: number | undefined): string {
+  if (!value) return '$0';
+  return `$${value.toFixed(value >= 10 ? 2 : 4)}`;
+}
+
+function formatDurationMs(value: number | undefined): string {
+  if (!value) return '—';
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}s`;
+  return `${Math.round(value)}ms`;
+}
+
+function getDailyTokens(payload: SummaryPayload): DailyTokenBucket {
+  const daily = payload.daily_token_usage;
+  if (!daily || Array.isArray(daily)) return {};
+  return daily;
+}
+
+function getModelsForDate(payload: SummaryPayload, date: string): ModelUsage[] {
+  const usage = payload.date_model_usage;
+  if (!usage) return [];
+  if (Array.isArray(usage)) {
+    const item = usage.find((entry) => entry.date === date);
+    return item?.models || [];
+  }
+  const direct = usage[date];
+  return Array.isArray(direct) ? direct : [];
+}
+
+function buildDailyBreakdown(vendors: VendorPayload[]): {
+  daily: DailyTokenBucket;
+  breakdown: DailyBreakdown;
+} {
+  const daily: DailyTokenBucket = {};
+  const breakdown: DailyBreakdown = {};
+  for (const vendor of vendors) {
+    const vendorDaily = getDailyTokens(vendor.payload);
+    for (const [date, rawTokens] of Object.entries(vendorDaily)) {
+      const tokens = Number(rawTokens || 0);
+      if (tokens <= 0) continue;
+      daily[date] = (daily[date] || 0) + tokens;
+      const items = breakdown[date] || [];
+      items.push({
+        id: vendor.config.id,
+        label: vendor.config.label,
+        tokens,
+        stats: vendor.payload.date_usage_stats?.[date],
+        models: getModelsForDate(vendor.payload, date),
+      });
+      breakdown[date] = items;
+    }
+  }
+  for (const date of Object.keys(breakdown)) {
+    breakdown[date].sort((a, b) => b.tokens - a.tokens);
+  }
+  return {daily, breakdown};
 }
 
 function pickLevel(tokens: number, max: number): 0 | 1 | 2 | 3 | 4 | 5 {
@@ -79,12 +177,6 @@ function pickLevel(tokens: number, max: number): 0 | 1 | 2 | 3 | 4 | 5 {
   if (ratio <= 0.6) return 3;
   if (ratio <= 0.8) return 4;
   return 5;
-}
-
-function dateMinusDays(base: Date, days: number): Date {
-  const d = new Date(base);
-  d.setDate(d.getDate() - days);
-  return d;
 }
 
 function formatDate(date: Date): string {
@@ -116,11 +208,11 @@ function StatCard({value, label}: {value: React.ReactNode; label: string}) {
 function Legend({max}: {max: number}) {
   const items = [
     {label: '无', color: 'var(--llm-empty)'},
-    {label: `< ${formatTokenCount(max * 0.2)}`, color: RANK_COLORS[0]},
-    {label: formatTokenCount(max * 0.4), color: RANK_COLORS[1]},
-    {label: formatTokenCount(max * 0.6), color: RANK_COLORS[2]},
-    {label: formatTokenCount(max * 0.8), color: RANK_COLORS[3]},
-    {label: `≥ ${formatTokenCount(max * 0.8)}`, color: RANK_COLORS[4]},
+    {label: `< ${formatLegendTokenCount(max * 0.2)}`, color: RANK_COLORS[0]},
+    {label: formatLegendTokenCount(max * 0.4), color: RANK_COLORS[1]},
+    {label: formatLegendTokenCount(max * 0.6), color: RANK_COLORS[2]},
+    {label: formatLegendTokenCount(max * 0.8), color: RANK_COLORS[3]},
+    {label: `≥ ${formatLegendTokenCount(max * 0.8)}`, color: RANK_COLORS[4]},
   ];
   return (
     <div className={styles.legend}>
@@ -136,10 +228,12 @@ function Legend({max}: {max: number}) {
 
 function Heatmap({
   daily,
+  breakdown,
   fetchedAt,
   emptyHint,
 }: {
   daily: Record<string, number>;
+  breakdown: DailyBreakdown;
   fetchedAt: string | null;
   emptyHint: string;
 }) {
@@ -150,6 +244,7 @@ function Heatmap({
     date: string;
     tokens: number;
     pct: number;
+    vendors: DailyVendorBreakdown[];
   } | null>(null);
 
   const endDate = useMemo(() => {
@@ -249,9 +344,10 @@ function Heatmap({
         date: cell.date,
         tokens: cell.tokens,
         pct,
+        vendors: breakdown[cell.date] || [],
       });
     },
-    [max],
+    [breakdown, max],
   );
 
   const handleMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -353,6 +449,47 @@ function Heatmap({
               ? `${formatTokenCount(hover.tokens)} token`
               : '无 token 用量'}
           </div>
+          {hover.vendors.length > 0 && (
+            <div className={styles.tooltipVendors}>
+              {hover.vendors.map((vendor) => (
+                <div key={vendor.id} className={styles.tooltipVendor}>
+                  <div className={styles.tooltipVendorHeader}>
+                    <span>{vendor.label}</span>
+                    <strong>{formatTokenCount(vendor.tokens)}</strong>
+                  </div>
+                  {vendor.models.length > 0 ? (
+                    <div className={styles.tooltipModels}>
+                      {vendor.models.slice(0, 4).map((model) => (
+                        <div key={model.model || 'unknown'} className={styles.tooltipModel}>
+                          <span>{model.model || 'Unknown model'}</span>
+                          <span>
+                            {formatTokenCount(Number(model.total_token || 0))}
+                            {model.cache_hit_percent ? ` · cache ${model.cache_hit_percent}` : ''}
+                          </span>
+                        </div>
+                      ))}
+                      {vendor.models.length > 4 && (
+                        <div className={styles.tooltipMuted}>
+                          另 {vendor.models.length - 4} 个模型
+                        </div>
+                      )}
+                    </div>
+                  ) : vendor.stats ? (
+                    <div className={styles.tooltipStats}>
+                      <span>请求 {vendor.stats.total_requests || 0} 次</span>
+                      <span>输入 {formatTokenCount(vendor.stats.total_input_tokens || 0)}</span>
+                      <span>输出 {formatTokenCount(vendor.stats.total_output_tokens || 0)}</span>
+                      <span>缓存 {formatTokenCount(vendor.stats.total_cache_tokens || 0)}</span>
+                      <span>费用 {formatCurrency(vendor.stats.total_cost)}</span>
+                      <span>均耗时 {formatDurationMs(vendor.stats.average_duration_ms)}</span>
+                    </div>
+                  ) : (
+                    <div className={styles.tooltipMuted}>暂无模型明细</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       <div className={styles.footer}>
@@ -367,27 +504,54 @@ function Heatmap({
   );
 }
 
-function ActiveVendorSection({payload}: {payload: SummaryPayload}) {
-  const daily = payload.daily_token_usage || {};
-  const totalTokens = parseTokenString(payload.total_token_consumed);
-  const dailyAvgTokens = parseTokenString(payload.daily_avg_token_consumed);
-  const activeDays = Number(payload.active_days || 0);
-  const consecutiveDays = Number(payload.current_consecutive_days || 0);
-  const ranking = Number(payload.usage_ranking_percent || 0);
+function ActiveVendorSection({vendors}: {vendors: VendorPayload[]}) {
+  const {daily, breakdown} = useMemo(() => buildDailyBreakdown(vendors), [vendors]);
+  const totalTokens = Object.values(daily).reduce((sum, value) => sum + Number(value || 0), 0);
+  const activeDays = Object.values(daily).filter((value) => Number(value || 0) > 0).length;
+  const vendorSummaries = vendors.map(({config, payload}) => ({
+    id: config.id,
+    label: config.label,
+    total: Object.values(getDailyTokens(payload)).reduce((sum, value) => sum + Number(value || 0), 0),
+    fetchedAt: payload.fetchedAt,
+  }));
+  const latestFetchedAt = vendors
+    .map((vendor) => vendor.payload.fetchedAt)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1) || null;
 
   return (
     <section className={styles.section}>
       <div className={styles.statsSummary}>
         <StatCard value={formatTokenCount(totalTokens)} label="累计消耗 (token)" />
-        <StatCard value={formatTokenCount(dailyAvgTokens)} label="日均消耗 (token)" />
-        <StatCard value={activeDays} label="活跃天数" />
-        <StatCard value={consecutiveDays} label="连续活跃" />
         <StatCard
-          value={ranking > 0 ? `前 ${ranking.toFixed(1)}%` : '—'}
-          label="使用排名"
+          value={formatTokenCount(activeDays ? totalTokens / activeDays : 0)}
+          label="活跃日均消耗"
         />
+        <StatCard value={activeDays} label="活跃天数" />
+        <StatCard value={vendors.length} label="数据平台" />
       </div>
-      <Heatmap daily={daily} fetchedAt={payload.fetchedAt ?? null} emptyHint="暂无 token 用量数据" />
+      <div className={styles.vendorList}>
+        {vendorSummaries.map((vendor) => (
+          <span
+            key={vendor.id}
+            className={styles.vendorBadge}
+            data-active={vendor.total > 0}
+            title={vendor.fetchedAt ? `更新于 ${vendor.fetchedAt}` : undefined}
+          >
+            {vendor.label}
+            <span className={styles.vendorBadgeSuffix}>
+              {vendor.total > 0 ? formatTokenCount(vendor.total) : '无数据'}
+            </span>
+          </span>
+        ))}
+      </div>
+      <Heatmap
+        daily={daily}
+        breakdown={breakdown}
+        fetchedAt={latestFetchedAt}
+        emptyHint="暂无 token 用量数据"
+      />
     </section>
   );
 }
@@ -407,7 +571,7 @@ function Skeleton() {
 
 function DashboardInner() {
   const {colorMode} = useColorMode();
-  const [data, setData] = useState<SummaryPayload | null>(null);
+  const [data, setData] = useState<VendorPayload[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -415,25 +579,24 @@ function DashboardInner() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(DATA_PATH, {cache: 'no-store'});
-        if (!res.ok) {
-          if (!cancelled) {
-            setError('暂无可用的模型使用数据');
-            setLoading(false);
-          }
-          return;
-        }
-        const contentType = res.headers.get('content-type') || '';
-        if (!contentType.includes('json')) {
-          if (!cancelled) {
-            setError('暂无可用的模型使用数据');
-            setLoading(false);
-          }
-          return;
-        }
-        const json = (await res.json()) as SummaryPayload;
+        const loaded = await Promise.all(
+          VENDORS.map(async (config) => {
+            const res = await fetch(config.path, {cache: 'no-store'});
+            if (!res.ok) return null;
+            const contentType = res.headers.get('content-type') || '';
+            if (!contentType.includes('json')) return null;
+            const payload = (await res.json()) as SummaryPayload;
+            return {config, payload};
+          }),
+        );
         if (cancelled) return;
-        setData(json);
+        const valid = loaded.filter((item): item is VendorPayload => item !== null);
+        if (!valid.length) {
+          setError('暂无可用的模型使用数据');
+          setLoading(false);
+          return;
+        }
+        setData(valid);
         setLoading(false);
       } catch (e) {
         if (cancelled) return;
@@ -448,14 +611,19 @@ function DashboardInner() {
 
   if (loading) return <Skeleton />;
   if (error) return <div className={styles.error}>{error}</div>;
-  if (!data) return <div className={styles.error}>暂无数据</div>;
+  if (!data.length) return <div className={styles.error}>暂无数据</div>;
 
   return (
     <div className={styles.dashboard} data-theme-mode={colorMode === 'dark' ? 'dark' : 'light'}>
-      <ActiveVendorSection payload={data} />
-      {data.fetchedAt && (
+      <ActiveVendorSection vendors={data} />
+      {data.some((vendor) => vendor.payload.fetchedAt) && (
         <div className={styles.footer}>
-          <span>数据更新于 {data.fetchedAt}</span>
+          <span>
+            数据更新于{' '}
+            {data
+              .map((vendor) => `${vendor.config.label}: ${vendor.payload.fetchedAt || '未知'}`)
+              .join(' · ')}
+          </span>
         </div>
       )}
     </div>

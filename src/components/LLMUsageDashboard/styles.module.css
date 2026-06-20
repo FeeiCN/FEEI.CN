@@ -249,8 +249,8 @@
   left: 0;
   pointer-events: none;
   z-index: 10;
-  min-width: 120px;
-  max-width: 220px;
+  min-width: 180px;
+  max-width: 340px;
   padding: 8px 10px;
   border-radius: 6px;
   background: var(--llm-tooltip-bg);
@@ -259,7 +259,7 @@
   color: var(--llm-tooltip-text);
   font-size: 12px;
   line-height: 1.45;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .tooltipDate {
@@ -274,6 +274,59 @@
   font-variant-numeric: tabular-nums;
   color: var(--llm-tooltip-text);
   letter-spacing: 0.01em;
+}
+
+.tooltipVendors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--llm-tooltip-border);
+}
+
+.tooltipVendor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltipVendorHeader,
+.tooltipModel {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tooltipVendorHeader {
+  font-weight: 600;
+}
+
+.tooltipModels,
+.tooltipStats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--llm-tooltip-muted);
+  font-size: 11px;
+}
+
+.tooltipModel span:first-child {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tooltipModel span:last-child {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltipMuted {
+  color: var(--llm-tooltip-muted);
+  font-size: 11px;
 }
 
 .footer {
@@ -332,6 +385,13 @@
   letter-spacing: 0;
   font-weight: 400;
   opacity: 0.7;
+}
+
+.vendorList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 @media (max-width: 768px) {

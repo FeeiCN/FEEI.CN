@@ -31,6 +31,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from git_ops import git_commit_and_push_target_repo, git_pull_target_repo
@@ -70,10 +71,12 @@ VENDOR_CONFIG: dict[str, dict[str, Any]] = {
         },
     },
     "openai": {
-        "url": "https://api.openai.com/v1/usage",
+        "url": "https://ai.feei.cn/api/v1/usage/stats",
         "auth_env": "OPENAI_ADMIN_KEY",
         "auth_header": "Authorization: Bearer {}",
         "accept": JSON_ACCEPT,
+        "custom_fetcher": "feeiai_usage_stats",
+        "sync_days": 30,
     },
 }
 
@@ -88,6 +91,9 @@ def fetch_summary(vendor: str) -> dict[str, Any]:
         raise SystemExit(
             f"[{vendor}] 未设置 {cfg['auth_env']}，请先 export {cfg['auth_env']}=<凭证>"
         )
+
+    if cfg.get("custom_fetcher") == "feeiai_usage_stats":
+        return fetch_feeiai_usage_stats(vendor, cfg, auth)
 
     auth_template = cfg.get("auth_header") or "Cookie: {}"
     header_name, _, _ = auth_template.partition(":")
@@ -113,6 +119,102 @@ def fetch_summary(vendor: str) -> dict[str, Any]:
                 continue
             break
     raise RuntimeError(f"[{vendor}] 接口请求失败: {last_error}")
+
+
+def _request_json(url: str, headers: dict[str, str]) -> dict[str, Any]:
+    request = Request(url, headers=headers)
+    last_error: Exception | None = None
+    for attempt in range(1, RETRIES + 1):
+        try:
+            with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            if not isinstance(payload, dict):
+                raise RuntimeError(f"接口返回不是 JSON object: {type(payload).__name__}")
+            return payload
+        except (HTTPError, URLError, json.JSONDecodeError, RuntimeError) as error:
+            last_error = error
+            if attempt < RETRIES:
+                time.sleep(2 ** (attempt - 1))
+                continue
+            break
+    raise RuntimeError(f"接口请求失败: {last_error}")
+
+
+def fetch_feeiai_usage_stats(vendor: str, cfg: dict[str, Any], auth: str) -> dict[str, Any]:
+    """Fetch daily OpenAI-compatible usage from ai.feei.cn.
+
+    The endpoint returns one date range summary. We query each Beijing date
+    separately so local history can keep date->tokens maps.
+    """
+    sync_days = int(os.environ.get("OPENAI_SYNC_DAYS") or cfg.get("sync_days") or 30)
+    end_date = datetime.now(tz=BEIJING_TZ).date()
+    start_date = end_date - timedelta(days=max(sync_days - 1, 0))
+    headers = {
+        "Authorization": f"Bearer {auth}",
+        "User-Agent": USER_AGENT,
+        "Accept": cfg.get("accept", JSON_ACCEPT),
+    }
+
+    daily_token_usage: dict[str, int] = {}
+    date_usage_stats: dict[str, Any] = {}
+    total_requests = 0
+    total_cost = 0.0
+    total_actual_cost = 0.0
+
+    day = start_date
+    while day <= end_date:
+        date_key = day.isoformat()
+        query = urlencode(
+            {
+                "start_date": date_key,
+                "end_date": date_key,
+                "timezone": "Asia/Shanghai",
+            }
+        )
+        payload = _request_json(f"{cfg['url']}?{query}", headers)
+        if payload.get("code") != 0:
+            raise RuntimeError(
+                f"[{vendor}] 接口报错 code={payload.get('code')} message={payload.get('message')}"
+            )
+        data = payload.get("data") or {}
+        if not isinstance(data, dict):
+            raise RuntimeError(f"[{vendor}] data 不是对象: {type(data).__name__}")
+
+        total_tokens = int(data.get("total_tokens") or 0)
+        if total_tokens > 0:
+            daily_token_usage[date_key] = total_tokens
+        total_requests += int(data.get("total_requests") or 0)
+        total_cost += float(data.get("total_cost") or 0)
+        total_actual_cost += float(data.get("total_actual_cost") or 0)
+        date_usage_stats[date_key] = {
+            "total_requests": int(data.get("total_requests") or 0),
+            "total_input_tokens": int(data.get("total_input_tokens") or 0),
+            "total_output_tokens": int(data.get("total_output_tokens") or 0),
+            "total_cache_tokens": int(data.get("total_cache_tokens") or 0),
+            "total_cache_creation_tokens": int(data.get("total_cache_creation_tokens") or 0),
+            "total_cache_read_tokens": int(data.get("total_cache_read_tokens") or 0),
+            "total_tokens": total_tokens,
+            "total_cost": round(float(data.get("total_cost") or 0), 6),
+            "total_actual_cost": round(float(data.get("total_actual_cost") or 0), 6),
+            "average_duration_ms": data.get("average_duration_ms"),
+        }
+        day += timedelta(days=1)
+
+    return {
+        "source": "ai.feei.cn",
+        "source_endpoint": cfg["url"],
+        "timezone": "Asia/Shanghai",
+        "sync_window": {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "days": sync_days,
+        },
+        "daily_token_usage": daily_token_usage,
+        "date_usage_stats": date_usage_stats,
+        "window_total_requests": total_requests,
+        "window_total_cost": round(total_cost, 6),
+        "window_total_actual_cost": round(total_actual_cost, 6),
+    }
 
 
 def write_summary(vendor: str, payload: dict[str, Any]) -> Path:
@@ -247,7 +349,15 @@ def merge_with_history(
         "token_count": _format_token_count(max_tokens),
     })
 
-    return {
+    merged_usage_stats = {}
+    existing_usage_stats = (existing or {}).get("date_usage_stats") or {}
+    new_usage_stats = new.get("date_usage_stats") or {}
+    if isinstance(existing_usage_stats, dict):
+        merged_usage_stats.update(existing_usage_stats)
+    if isinstance(new_usage_stats, dict):
+        merged_usage_stats.update(new_usage_stats)
+
+    merged = {
         **new,
         "total_token_consumed": _format_token_count(total_tokens),
         "total_days": active_days,
@@ -259,6 +369,9 @@ def merge_with_history(
             total_tokens / active_days if active_days > 0 else 0
         ),
     }
+    if merged_usage_stats:
+        merged["date_usage_stats"] = merged_usage_stats
+    return merged
 
 
 def _normalize_daily(value: Any, anchor_str: str) -> dict[str, int]:

@@ -1,0 +1,191 @@
+name: Save daily diary issue
+
+# 每天北京时间 23:30 查找标题为 YYYY-MM-DD日记 的 owner issue,
+# 将 issue body 保存到 static/data/daily/YYYY/MM/DD.md,然后关闭 issue。
+
+on:
+  schedule:
+    - cron: '30 15 * * *'
+  workflow_dispatch:
+    inputs:
+      report_date:
+        description: '需要处理的日期（YYYY-MM-DD），默认北京时间今天'
+        required: false
+        type: string
+
+concurrency:
+  group: save-daily-diary
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  save:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve date and find diary issue
+        id: diary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_REPORT_DATE: ${{ github.event.inputs.report_date }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          python3 <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          raw = (os.environ.get("INPUT_REPORT_DATE") or "").strip()
+          if raw:
+              if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+                  raise SystemExit("report_date 必须使用 YYYY-MM-DD 格式")
+              try:
+                  report_date = dt.date.fromisoformat(raw)
+              except ValueError as exc:
+                  raise SystemExit(f"report_date 无效: {exc}")
+          else:
+              report_date = dt.datetime.now(ZoneInfo("Asia/Shanghai")).date()
+
+          repo = os.environ["REPO"]
+          owner = os.environ["OWNER"]
+          title = f"{report_date.isoformat()}日记"
+          search = f"{title} in:title author:{owner}"
+
+          completed = subprocess.run(
+              [
+                  "gh",
+                  "issue",
+                  "list",
+                  "--repo",
+                  repo,
+                  "--state",
+                  "open",
+                  "--search",
+                  search,
+                  "--limit",
+                  "20",
+                  "--json",
+                  "number,title,body,author,createdAt,url",
+              ],
+              check=True,
+              text=True,
+              capture_output=True,
+          )
+          issues = json.loads(completed.stdout or "[]")
+          matches = [
+              issue
+              for issue in issues
+              if issue.get("title") == title
+              and (issue.get("author") or {}).get("login") == owner
+          ]
+          matches.sort(key=lambda issue: issue.get("createdAt") or "", reverse=True)
+
+          target = (
+              Path("static/data/daily")
+              / f"{report_date.year:04d}"
+              / f"{report_date.month:02d}"
+              / f"{report_date.day:02d}.md"
+          )
+
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          with output.open("a", encoding="utf-8") as fh:
+              fh.write(f"date={report_date.isoformat()}\n")
+              fh.write(f"target={target.as_posix()}\n")
+              if not matches:
+                  fh.write("found=no\n")
+                  print(f"未找到 open issue: {title}")
+                  raise SystemExit(0)
+
+              selected = matches[0]
+              Path("/tmp/diary-issue.json").write_text(
+                  json.dumps(selected, ensure_ascii=False, indent=2),
+                  encoding="utf-8",
+              )
+              fh.write("found=yes\n")
+              fh.write(f"issue_number={selected['number']}\n")
+              fh.write(f"issue_url={selected['url']}\n")
+
+          print(f"命中日记 issue #{matches[0]['number']}: {matches[0]['url']}")
+          if len(matches) > 1:
+              print(f"::warning::找到 {len(matches)} 个同标题日记 issue,仅处理最新创建的一条")
+          PY
+
+      - name: Save diary markdown
+        id: save
+        if: steps.diary.outputs.found == 'yes'
+        env:
+          TARGET: ${{ steps.diary.outputs.target }}
+        run: |
+          git pull --rebase origin main
+          python3 <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          issue = json.loads(Path("/tmp/diary-issue.json").read_text(encoding="utf-8"))
+          target = Path(os.environ["TARGET"])
+          target.parent.mkdir(parents=True, exist_ok=True)
+          body = (issue.get("body") or "").rstrip()
+          target.write_text(body + "\n", encoding="utf-8")
+          print(f"已写入 {target.as_posix()}")
+          PY
+
+      - name: Commit diary markdown
+        id: commit
+        if: steps.diary.outputs.found == 'yes'
+        env:
+          ISSUE_NUMBER: ${{ steps.diary.outputs.issue_number }}
+          TARGET: ${{ steps.diary.outputs.target }}
+        run: |
+          if [ -z "$(git status --porcelain -- "$TARGET")" ]; then
+            echo "日记内容无变化: $TARGET"
+            echo "processed=yes" >> "$GITHUB_OUTPUT"
+            echo "committed=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$TARGET"
+          git commit -m "保存日记数据 (#${ISSUE_NUMBER})"
+
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "processed=yes" >> "$GITHUB_OUTPUT"
+              echo "committed=yes" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              git fetch origin main
+              git rebase origin/main
+              sleep 5
+            fi
+          done
+
+          echo "::error::push main 失败"
+          exit 1
+
+      - name: Close diary issue
+        if: steps.diary.outputs.found == 'yes' && steps.commit.outputs.processed == 'yes'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.diary.outputs.issue_number }}
+          REPO: ${{ github.repository }}
+          TARGET: ${{ steps.diary.outputs.target }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "已保存日记到 \`$TARGET\`。"
+          gh issue close "$ISSUE_NUMBER" --repo "$REPO" --comment "日记已处理完成。"

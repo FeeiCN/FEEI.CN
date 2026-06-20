@@ -110,6 +110,18 @@ jobs:
               *sorted(Path("static/data/account-assets").glob("*.json")),
               *sorted(Path("static/data/llm-usage").glob("*/usage_summary.json")),
               Path("static/data/hk-ipo/data.json"),
+              Path("static/data/weather")
+              / f"{report_date.year:04d}"
+              / f"{report_date.month:02d}"
+              / f"{report_date.day:02d}.json",
+              Path("static/data/drive")
+              / f"{report_date.year:04d}"
+              / f"{report_date.month:02d}"
+              / f"{report_date.day:02d}.json",
+              Path("static/data/daily")
+              / f"{report_date.year:04d}"
+              / f"{report_date.month:02d}"
+              / f"{report_date.day:02d}.md",
           ]
           allowed = []
           seen = set()
@@ -195,6 +207,9 @@ jobs:
               "- 这不是流水账，也不是自我批判，而是一套自我校准系统：你必须把分析组织成“事实 -> 判断 -> 改进”的闭环。\n"
               "- 你需要始终围绕四个长期方向思考：健康幸福、事业有成、财务自由、丰富人生。\n"
               "- 健康对应健康幸福，财务对应财务自由，阅读主要对应丰富人生，AI 使用主要作为事业有成的代理信号。\n"
+              "- 天气用于解释当日出行、户外活动、睡眠/运动环境和生活节奏；只能作为背景变量，不能强行归因。\n"
+              "- 行车记录用于还原当日移动轨迹和时间切片；git 记录用于总结当日工程/写作推进，但不能把 commit 数量直接等同于产出质量。\n"
+              "- 日记是当日主观事实和感受的第一手记录，用于校准数据无法覆盖的家庭、生活、情绪、环境和工作细节；但不要全文复述，不要替代结构化判断。\n"
               "- AI 使用不能直接等同于产出高低；它只能辅助判断工作流强度、任务密度和是否被低价值事务劫持。\n"
               "- 你要像不同领域的分析师一样输出结论：健康像恢复/负荷分析师，阅读像学习投入分析师，财务像资产配置与风险分析师，AI 使用像生产力与工作流分析师。\n"
               "- 每个板块都必须先给专业判断，再给数字证据；不要先报数再找结论。\n"
@@ -204,12 +219,15 @@ jobs:
               "# 输出 JSON 结构\n\n"
               "{\n"
               '  "top_signals": [\n'
-              '    {"area": "健康|阅读|财务|AI使用|跨板块", "summary": "一句话结论", "evidence": ["证据1", "证据2"], "confidence": "high|medium|low"}\n'
+              '    {"area": "健康|阅读|财务|AI使用|天气|行车|日记|Git|跨板块", "summary": "一句话结论", "evidence": ["证据1", "证据2"], "confidence": "high|medium|low"}\n'
               "  ],\n"
               '  "health_insights": [{"expert_view": "恢复与负荷分析", "summary": "", "positioning": "", "evidence": [], "means": "", "not_means": "", "uncertainty": "", "professional_suggestion": ""}],\n'
               '  "reading_insights": [{"expert_view": "学习投入与阅读行为分析", "summary": "", "positioning": "", "evidence": [], "means": "", "not_means": "", "uncertainty": "", "professional_suggestion": ""}],\n'
               '  "finance_insights": [{"expert_view": "资产配置与风险暴露分析", "summary": "", "positioning": "", "evidence": [], "means": "", "not_means": "", "uncertainty": "", "professional_suggestion": ""}],\n'
               '  "ai_insights": [{"expert_view": "AI 生产力与工作流强度分析", "summary": "", "positioning": "", "evidence": [], "means": "", "not_means": "", "uncertainty": "", "professional_suggestion": ""}],\n'
+              '  "life_log_insights": [{"expert_view": "生活记录与主观体验分析", "summary": "", "evidence": [], "means": "", "not_means": "", "uncertainty": "", "professional_suggestion": ""}],\n'
+              '  "environment_mobility_insights": [{"expert_view": "生活环境与出行节奏分析", "summary": "", "evidence": [], "means": "", "not_means": "", "uncertainty": "", "professional_suggestion": ""}],\n'
+              '  "git_insights": [{"expert_view": "工程推进与知识沉淀分析", "summary": "", "evidence": [], "means": "", "not_means": "", "uncertainty": "", "professional_suggestion": ""}],\n'
               '  "cross_domain_insights": [{"summary": "", "evidence": [], "uncertainty": ""}],\n'
               '  "data_status": [{"area": "", "status": "完整|切片|延迟|不可用", "detail": ""}],\n'
               '  "follow_ups": ["后续关注点1", "后续关注点2"],\n'
@@ -347,6 +365,8 @@ jobs:
               "- 每个板块默认站在该领域专家视角写第一句：健康先写恢复/负荷判断，阅读先写学习投入结构判断，财务先写风险与趋势判断，AI 使用先写工作流强度或平台结构判断。\n"
               "- 每个板块的结尾可以给出一条专业但克制的建议：只谈继续观察、验证、排查或关注，不给医疗诊断和投资买卖建议。\n"
               "- 每个板块最多引用两到三组核心数字，数字只服务于结论，不要把正文写成报表转述。\n"
+              "- 如果上下文里有日记、天气、行车或 git 记录，必须在 `## 行动记录` 中总结：日记里最重要的生活事实和主观体验是什么，天气如何构成当天环境，行车记录说明了哪些移动切片，git 记录说明了哪些工程/写作推进。\n"
+              "- `## 行动记录` 只能写事实和谨慎判断，不要全文复述日记，不要把天气强行解释为健康变化原因，不要把 commit 数量直接等同于工作质量。\n"
               "- 建议每个板块默认按这个顺序写：专家判断 -> 相对位置 -> 关键证据 -> 边界/不确定性 -> 明日动作。\n"
               "- 直接按下面的骨架成文，并保留 `**明日动作**：` 这个粗体前缀，不要改写成别的标题或列表标记：\n"
               "  `## 健康 ... \\n\\n**明日动作**：...`\n"
@@ -710,6 +730,7 @@ jobs:
               "## 阅读",
               "## 财务",
               "## AI 使用",
+              "## 行动记录",
               "## 数据状态",
               "## 接下来值得关注",
           ]

@@ -22,7 +22,7 @@ permissions:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Check credentials
@@ -56,6 +56,9 @@ jobs:
         run: |
           npm install -g @anthropic-ai/claude-code
           npm ci
+
+      - name: Prepare Claude wrapper
+        run: chmod +x scripts/run_claude_with_retry.sh
 
       - name: Resolve report date and files
         id: report
@@ -219,16 +222,15 @@ jobs:
           PY
 
           set +e
-          claude \
-            -p \
-            --output-format json \
-            --permission-mode dontAsk \
-            --setting-sources user \
-            --tools "" \
-            --no-session-persistence \
-            --max-budget-usd 3 \
-            < /tmp/daily-analysis-prompt.md \
-            > /tmp/claude-analysis.json 2> /tmp/claude-analysis.err
+          scripts/run_claude_with_retry.sh \
+            --label "structured insights" \
+            --prompt-file /tmp/daily-analysis-prompt.md \
+            --output-file /tmp/claude-analysis.json \
+            --stderr-file /tmp/claude-analysis.err \
+            --meta-file /tmp/claude-analysis.meta \
+            --attempts 2 \
+            --timeout-seconds 480 \
+            --max-budget-usd 3
           CLAUDE_STATUS=$?
           set -e
 
@@ -237,6 +239,13 @@ jobs:
             echo
             echo "- report date: \`${REPORT_DATE}\`"
             echo "- status: \`${CLAUDE_STATUS}\`"
+            echo
+            echo "### attempt metadata"
+            echo '```'
+            cat /tmp/claude-analysis.meta || true
+            echo
+            echo '```'
+            echo
             echo "- turns: \`$(jq -r '.num_turns // 0' /tmp/claude-analysis.json 2>/dev/null || echo 0)\`"
             echo "- cost: \`$(jq -r '.total_cost_usd // 0' /tmp/claude-analysis.json 2>/dev/null || echo 0)\` USD"
             echo "- result length: \`$(jq -r '(.result // .message // "") | length' /tmp/claude-analysis.json 2>/dev/null || echo 0)\`"
@@ -333,6 +342,7 @@ jobs:
               "- 如果分析结论里置信度低或数据状态不完整，必须在正文中明确降级表述。\n"
               "- 这不是日报播报，不是流水账，也不是自我批判；它是一份自我校准记录，必须写出“事实 -> 判断 -> 改进”。\n"
               "- 不要把成文写成逐段数字播报。每个板块都应优先写结构变化、相对位置、解释候选、边界，以及一个具体明日动作。\n"
+              "- 把“明日动作”当作硬格式，而不是可选建议：默认至少三个板块要各自以单独一行 `**明日动作**：...` 收尾。\n"
               "- 接下来值得关注默认承载“明日动作”，每条都必须具体到可执行或可验证，不能写成“更努力”“更自律”这种空话。\n"
               "- 尽量写出像下面这样的句子：'这更像一次回撤中的反弹，而不是趋势反转'、'这说明当日输入强度降温，但不等于月度连续性中断'、'当前最大的事实不是异常，而是数据不完整，不能下结论'。\n"
               "- 至少保留一条跨板块洞察，说明多个方向之间的关系或判断边界。\n"
@@ -341,22 +351,45 @@ jobs:
               "- 每个板块的结尾可以给出一条专业但克制的建议：只谈继续观察、验证、排查或关注，不给医疗诊断和投资买卖建议。\n"
               "- 每个板块最多引用两到三组核心数字，数字只服务于结论，不要把正文写成报表转述。\n"
               "- 建议每个板块默认按这个顺序写：专家判断 -> 相对位置 -> 关键证据 -> 边界/不确定性 -> 明日动作。\n"
+              "- 直接按下面的骨架成文，并保留 `**明日动作**：` 这个粗体前缀，不要改写成别的标题或列表标记：\n"
+              "  `## 健康 ... \\n\\n**明日动作**：...`\n"
+              "  `## 阅读 ... \\n\\n**明日动作**：...`\n"
+              "  `## 财务 ... \\n\\n**明日动作**：...`\n"
+              "  `## AI 使用 ... \\n\\n**明日动作**：...`\n"
           )
           PY
 
           set +e
-          claude \
-            -p \
-            --output-format json \
-            --permission-mode dontAsk \
-            --setting-sources user \
-            --tools "" \
-            --no-session-persistence \
-            --max-budget-usd 3 \
-            < /tmp/daily-report-prompt.md \
-            > /tmp/claude-report.json 2> /tmp/claude-report.err
+          scripts/run_claude_with_retry.sh \
+            --label "final report" \
+            --prompt-file /tmp/daily-report-prompt.md \
+            --output-file /tmp/claude-report.json \
+            --stderr-file /tmp/claude-report.err \
+            --meta-file /tmp/claude-report.meta \
+            --attempts 2 \
+            --timeout-seconds 420 \
+            --max-budget-usd 3
           CLAUDE_STATUS=$?
           set -e
+
+          {
+            echo "## Claude final report"
+            echo
+            echo "- report date: \`${REPORT_DATE}\`"
+            echo "- status: \`${CLAUDE_STATUS}\`"
+            echo
+            echo "### attempt metadata"
+            echo '```'
+            cat /tmp/claude-report.meta || true
+            echo
+            echo '```'
+            echo
+            echo "### stderr 前 2000 字符"
+            echo '```'
+            head -c 2000 /tmp/claude-report.err || true
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$CLAUDE_STATUS" -ne 0 ]; then
             echo "::error::Claude Code 成文失败，status=${CLAUDE_STATUS}"
@@ -372,6 +405,111 @@ jobs:
           value = payload.get("result", payload.get("message"))
           if not isinstance(value, str) or not value.strip():
               raise SystemExit("Claude report 未返回非空字符串")
+
+          text = value.strip()
+          fence = re.fullmatch(r"```(?:md|markdown)?\s*([\s\S]*?)\s*```", text, re.I)
+          if fence:
+              text = fence.group(1).strip()
+
+          Path("/tmp/daily-report.md").write_text(text + "\n", encoding="utf-8")
+          PY
+
+      - name: Repair missing action markers
+        env:
+          REPORT_DATE: ${{ steps.report.outputs.date }}
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+        run: |
+          python3 <<'PY'
+          import re
+          from pathlib import Path
+
+          text = Path("/tmp/daily-report.md").read_text(encoding="utf-8")
+          count = len(re.findall(r"\*\*明日动作\*\*：", text))
+          Path("/tmp/daily-report-action-count.txt").write_text(str(count), encoding="utf-8")
+          PY
+
+          ACTION_COUNT="$(cat /tmp/daily-report-action-count.txt)"
+          if [ "${ACTION_COUNT}" -ge 3 ]; then
+            echo "已有 ${ACTION_COUNT} 处明日动作标记，无需修复"
+            exit 0
+          fi
+
+          python3 <<'PY' > /tmp/daily-report-repair-prompt.md
+          import os
+          from pathlib import Path
+
+          skill = Path(
+              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日三省吾身.md"
+          ).read_text(encoding="utf-8")
+          analysis = Path("/tmp/daily-analysis.json").read_text(encoding="utf-8")
+          report = Path("/tmp/daily-report.md").read_text(encoding="utf-8")
+          count = Path("/tmp/daily-report-action-count.txt").read_text(encoding="utf-8").strip()
+
+          print(
+              "# 每日三省吾身规则\n\n"
+              f"{skill}\n\n"
+              "# 结构化分析结论\n\n"
+              f"```json\n{analysis}\n```\n\n"
+              "# 当前候选日报\n\n"
+              f"```md\n{report}\n```\n\n"
+              "# 修复任务\n\n"
+              f"- 报告日期：`{os.environ['REPORT_DATE']}`\n"
+              f"- 当前只检测到 `{count}` 处 `**明日动作**：` 标记，未达到至少 3 处。\n"
+              "- 请在不改变核心判断、front matter、章节结构和跨板块洞察的前提下，重写成完整 Markdown。\n"
+              "- 健康、阅读、财务、AI 使用四个板块中，至少三个板块要以单独一行 `**明日动作**：...` 收束。\n"
+              "- 只修复动作闭环，不要把文章大幅扩写，不要解释，不要代码围栏。\n"
+          )
+          PY
+
+          set +e
+          scripts/run_claude_with_retry.sh \
+            --label "repair action markers" \
+            --prompt-file /tmp/daily-report-repair-prompt.md \
+            --output-file /tmp/claude-report-repair.json \
+            --stderr-file /tmp/claude-report-repair.err \
+            --meta-file /tmp/claude-report-repair.meta \
+            --attempts 2 \
+            --timeout-seconds 300 \
+            --max-budget-usd 2
+          CLAUDE_STATUS=$?
+          set -e
+
+          {
+            echo "## Claude action-marker repair"
+            echo
+            echo "- report date: \`${REPORT_DATE}\`"
+            echo "- original action count: \`${ACTION_COUNT}\`"
+            echo "- status: \`${CLAUDE_STATUS}\`"
+            echo
+            echo "### attempt metadata"
+            echo '```'
+            cat /tmp/claude-report-repair.meta || true
+            echo
+            echo '```'
+            echo
+            echo "### stderr 前 2000 字符"
+            echo '```'
+            head -c 2000 /tmp/claude-report-repair.err || true
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$CLAUDE_STATUS" -ne 0 ]; then
+            echo "::error::明日动作修复失败，status=${CLAUDE_STATUS}"
+            exit 1
+          fi
+
+          python3 <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/claude-report-repair.json").read_text(encoding="utf-8"))
+          value = payload.get("result", payload.get("message"))
+          if not isinstance(value, str) or not value.strip():
+              raise SystemExit("Claude repair 未返回非空字符串")
 
           text = value.strip()
           fence = re.fullmatch(r"```(?:md|markdown)?\s*([\s\S]*?)\s*```", text, re.I)
@@ -433,18 +571,36 @@ jobs:
           PY
 
           set +e
-          claude \
-            -p \
-            --output-format json \
-            --permission-mode dontAsk \
-            --setting-sources user \
-            --tools "" \
-            --no-session-persistence \
-            --max-budget-usd 2 \
-            < /tmp/daily-critique-prompt.md \
-            > /tmp/claude-critique.json 2> /tmp/claude-critique.err
+          scripts/run_claude_with_retry.sh \
+            --label "quality critique" \
+            --prompt-file /tmp/daily-critique-prompt.md \
+            --output-file /tmp/claude-critique.json \
+            --stderr-file /tmp/claude-critique.err \
+            --meta-file /tmp/claude-critique.meta \
+            --attempts 2 \
+            --timeout-seconds 360 \
+            --max-budget-usd 2
           CLAUDE_STATUS=$?
           set -e
+
+          {
+            echo "## Claude quality critique"
+            echo
+            echo "- report date: \`${REPORT_DATE}\`"
+            echo "- status: \`${CLAUDE_STATUS}\`"
+            echo
+            echo "### attempt metadata"
+            echo '```'
+            cat /tmp/claude-critique.meta || true
+            echo
+            echo '```'
+            echo
+            echo "### stderr 前 2000 字符"
+            echo '```'
+            head -c 2000 /tmp/claude-critique.err || true
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$CLAUDE_STATUS" -ne 0 ]; then
             echo "::error::Claude Code 质量复核失败，status=${CLAUDE_STATUS}"
@@ -498,8 +654,8 @@ jobs:
           PY
 
           {
-            echo "## Claude quality critique"
             echo
+            echo "### parsed critique"
             echo '```json'
             cat /tmp/daily-critique.json
             echo

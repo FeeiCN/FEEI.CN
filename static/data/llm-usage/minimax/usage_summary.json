@@ -1,9 +1,9 @@
 {
   "vendor": "minimax",
-  "fetchedAt": "2026-06-20 08:00:26",
+  "fetchedAt": "2026-06-20 20:52:11",
   "total_days": 12,
   "total_token_consumed": "1.24B",
-  "usage_ranking_percent": 8.315046227859415,
+  "usage_ranking_percent": 8.301941586458678,
   "most_active_day": {
     "date": "2026-06-10",
     "token_count": "203.88M",
@@ -1956,16 +1956,26 @@
     },
     {
       "date": "2026-06-20",
-      "models": [],
-      "total_input_token": 0,
-      "total_cache_read_token": 0,
+      "models": [
+        {
+          "model": "MiniMax-M3-512k",
+          "input_token": 1273048,
+          "cache_read_token": 362472,
+          "cache_create_token": 0,
+          "output_token": 113767,
+          "total_token": 1749287,
+          "cache_hit_percent": "28.47%"
+        }
+      ],
+      "total_input_token": 1273048,
+      "total_cache_read_token": 362472,
       "total_cache_create_token": 0,
-      "total_output_token": 0,
-      "total_token": 0,
-      "cache_hit_percent": "0%"
+      "total_output_token": 113767,
+      "total_token": 1386815,
+      "cache_hit_percent": "28.47%"
     }
   ],
-  "last_update_time": "06-20 08:00",
+  "last_update_time": "06-20 20:00",
   "base_resp": {
     "status_code": 0,
     "status_msg": "success"

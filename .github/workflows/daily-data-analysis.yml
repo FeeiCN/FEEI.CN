@@ -424,7 +424,9 @@ jobs:
               '    "not_number_repetition": true,\n'
               '    "has_cross_domain": true,\n'
               '    "states_uncertainty": true,\n'
-              '    "follows_analysis": true\n'
+              '    "follows_analysis": true,\n'
+              '    "has_concrete_actions": true,\n'
+              '    "not_self_criticism": true\n'
               "  }\n"
               "}\n"
           )
@@ -575,6 +577,17 @@ jobs:
               raise SystemExit("报告不能包含脚本或样式标签")
           if len(re.findall(r'^\s*["{[]', text, re.M)) > 20:
               raise SystemExit("报告疑似包含大段原始 JSON")
+          if text.count("**明日动作**") < 3:
+              raise SystemExit("三省吾身的具体动作不足，至少需要 3 处明日动作")
+          self_criticism_patterns = [
+              r"我太差劲了",
+              r"我又失败了",
+              r"以后要自律",
+              r"我不行",
+              r"浪费时间了，我太",
+          ]
+          if any(re.search(pattern, text) for pattern in self_criticism_patterns):
+              raise SystemExit("报告出现自责式表达，不符合三省吾身的校准原则")
 
           critique = json.loads(Path("/tmp/daily-critique.json").read_text(encoding="utf-8"))
           if critique.get("verdict") != "pass":
@@ -588,6 +601,8 @@ jobs:
               "has_cross_domain",
               "states_uncertainty",
               "follows_analysis",
+              "has_concrete_actions",
+              "not_self_criticism",
           ]
           failed_checks = [key for key in required_checks if checks.get(key) is not True]
           if failed_checks:

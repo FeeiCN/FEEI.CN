@@ -7,6 +7,9 @@ name: Fetch issue content
 # 新 issue 标题包含"天气"时,把 issue body 中的 JSON 保存到:
 # static/data/weather/YYYY/MM/DD.json
 #
+# 新 issue 标题包含"上车"或"下车"时,把 issue body 中的地址保存到:
+# static/data/drive/YYYY/MM/DD.json
+#
 # 为防止外部贡献者刷 runner 资源,仅处理仓库 owner 创建的 issue。
 # fetch_url_content.py 只用 Python 标准库,无需额外依赖。
 
@@ -30,7 +33,9 @@ jobs:
       github.event.issue.user.login == github.repository_owner &&
       (startsWith(github.event.issue.title, 'http://') ||
        startsWith(github.event.issue.title, 'https://') ||
-       contains(github.event.issue.title, '天气'))
+       contains(github.event.issue.title, '天气') ||
+       contains(github.event.issue.title, '上车') ||
+       contains(github.event.issue.title, '下车'))
 
     steps:
       - name: Classify issue
@@ -50,8 +55,11 @@ jobs:
           elif [[ "$title" == *天气* ]]; then
             echo "mode=weather" >> "$GITHUB_OUTPUT"
             echo "命中天气: $title"
+          elif [[ "$title" == *上车* || "$title" == *下车* ]]; then
+            echo "mode=drive" >> "$GITHUB_OUTPUT"
+            echo "命中行车: $title"
           else
-            echo "标题既不是单个 URL,也不包含天气,跳过: $ISSUE_TITLE"
+            echo "标题既不是单个 URL,也不包含天气/上车/下车,跳过: $ISSUE_TITLE"
             echo "mode=skip" >> "$GITHUB_OUTPUT"
           fi
 
@@ -64,6 +72,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Sync main before writing data
+        if: steps.classify.outputs.mode == 'weather' || steps.classify.outputs.mode == 'drive'
+        run: |
+          git pull --rebase origin main
 
       - name: Save weather JSON
         id: weather
@@ -136,7 +149,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
           git add "$WEATHER_PATH"
           git commit -m "保存天气数据 (#${ISSUE_NUMBER})"
           git push origin main
@@ -153,6 +165,110 @@ jobs:
         run: |
           gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "已保存天气数据到 \`$WEATHER_PATH\`。"
           gh issue close "$ISSUE_NUMBER" --repo "$REPO" --comment "天气数据已处理完成。"
+
+      - name: Save drive JSON
+        id: drive
+        if: steps.classify.outputs.mode == 'drive'
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python3 <<'PY'
+          import datetime
+          import json
+          import os
+          import pathlib
+          import re
+          import sys
+
+          title = os.environ.get("ISSUE_TITLE", "")
+          address = os.environ.get("ISSUE_BODY", "").strip()
+          issue_number = os.environ.get("ISSUE_NUMBER", "")
+
+          match = re.search(
+              r"(?<!\d)(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2}:\d{2}).*?(上车|下车)",
+              title,
+          )
+          if not match:
+              print(f"::error::行车 issue 标题缺少 YYYY-MM-DD HH:MM:SS + 上车/下车: {title}")
+              sys.exit(1)
+
+          year, month, day, time_key, action = match.groups()
+          try:
+              datetime.datetime.strptime(f"{year}-{month}-{day} {time_key}", "%Y-%m-%d %H:%M:%S")
+          except ValueError as exc:
+              print(f"::error::行车 issue 标题时间无效: {match.group(0)} ({exc})")
+              sys.exit(1)
+
+          data_dir = pathlib.Path("static/data/drive") / year / month
+          data_dir.mkdir(parents=True, exist_ok=True)
+          data_file = data_dir / f"{day}.json"
+
+          if data_file.exists():
+              try:
+                  data = json.loads(data_file.read_text(encoding="utf-8"))
+              except json.JSONDecodeError as exc:
+                  print(f"::error::现有行车 JSON 无法解析: {data_file} ({exc})")
+                  sys.exit(1)
+              if not isinstance(data, dict):
+                  print(f"::error::现有行车 JSON 顶层必须是对象: {data_file}")
+                  sys.exit(1)
+          else:
+              data = {}
+
+          data[time_key] = {
+              "action": action,
+              "address": address,
+          }
+          data_file.write_text(
+              json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fp:
+              fp.write(f"path={data_file.as_posix()}\n")
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fp:
+              fp.write("### drive JSON saved\n\n")
+              fp.write(f"- issue: #{issue_number}\n")
+              fp.write(f"- title: {title}\n")
+              fp.write(f"- action: {action}\n")
+              fp.write(f"- address: {address}\n")
+              fp.write(f"- path: `{data_file.as_posix()}`\n")
+          PY
+
+      - name: Commit drive JSON
+        id: commit_drive
+        if: steps.classify.outputs.mode == 'drive'
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          DRIVE_PATH: ${{ steps.drive.outputs.path }}
+        run: |
+          if [ -z "$(git status --porcelain -- "$DRIVE_PATH")" ]; then
+            echo "行车 JSON 无变化: $DRIVE_PATH"
+            echo "committed=no" >> "$GITHUB_OUTPUT"
+            echo "processed=yes" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$DRIVE_PATH"
+          git commit -m "保存行车数据 (#${ISSUE_NUMBER})"
+          git push origin main
+          echo "committed=yes" >> "$GITHUB_OUTPUT"
+          echo "processed=yes" >> "$GITHUB_OUTPUT"
+
+      - name: Close drive issue
+        if: steps.classify.outputs.mode == 'drive' && steps.commit_drive.outputs.processed == 'yes'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          DRIVE_PATH: ${{ steps.drive.outputs.path }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "已保存行车数据到 \`$DRIVE_PATH\`。"
+          gh issue close "$ISSUE_NUMBER" --repo "$REPO" --comment "行车数据已处理完成。"
 
       # fetch_url_content.py 默认会调 translate_text.py → claude CLI 做翻译。
       # 凭证缺失时让 fetch 以 --no-translate 模式跑,只抓原文不发翻译请求。

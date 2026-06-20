@@ -11,6 +11,11 @@
 3. 不要重构无关代码或顺手清理请求范围外的内容。
 4. 不确定时，用最小范围验证；不要扩大上下文。
 
+## 前端与主题覆盖
+
+- Docusaurus 的 navbar、sidebar、dropdown、active 状态等问题，优先修改 `src/theme/` 或通用客户端逻辑，不要先给单个栏目写特例配置。
+- 改动 `src/theme/`、`src/clientModules/` 等主题覆盖代码后，如果界面无变化，先确认本地 dev server 是否已重新编译；必要时重启 `npm run start` 后再判断是否生效。
+
 ## Context Loading
 
 | 任务类型 | 读取 |
@@ -36,5 +41,6 @@
 
 ## 安全与权限
 
+- 提交前先执行 `git pull --rebase origin main` 同步远端状态，尽量避免本地 commit 后再处理 non-fast-forward。
 - `git push` 前必须向用户确认，得到明确同意后才能执行。
 - `build/`、`.docusaurus/` 是 Docusaurus 生成产物，不要手动编辑，下次构建会被覆盖。

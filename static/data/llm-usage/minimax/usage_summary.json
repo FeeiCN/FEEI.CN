@@ -1,9 +1,9 @@
 {
   "vendor": "minimax",
-  "fetchedAt": "2026-06-19 08:20:20",
-  "total_days": 11,
-  "total_token_consumed": "1.21B",
-  "usage_ranking_percent": 8.498666670391701,
+  "fetchedAt": "2026-06-20 08:00:26",
+  "total_days": 12,
+  "total_token_consumed": "1.24B",
+  "usage_ranking_percent": 8.315046227859415,
   "most_active_day": {
     "date": "2026-06-10",
     "token_count": "203.88M",
@@ -12,8 +12,8 @@
     "music_count": "0",
     "voice_character_count": "0"
   },
-  "active_days": 11,
-  "current_consecutive_days": 11,
+  "active_days": 12,
+  "current_consecutive_days": 12,
   "daily_token_usage": {
     "2026-06-08": 90993082,
     "2026-06-09": 165014375,
@@ -25,19 +25,10 @@
     "2026-06-15": 57005624,
     "2026-06-16": 35709922,
     "2026-06-17": 103481783,
-    "2026-06-18": 45405912
+    "2026-06-18": 45405912,
+    "2026-06-19": 25930582
   },
   "date_model_usage": [
-    {
-      "date": "2026-01-03",
-      "models": [],
-      "total_input_token": 0,
-      "total_cache_read_token": 0,
-      "total_cache_create_token": 0,
-      "total_output_token": 0,
-      "total_token": 0,
-      "cache_hit_percent": "0%"
-    },
     {
       "date": "2026-01-04",
       "models": [],
@@ -1936,6 +1927,35 @@
     },
     {
       "date": "2026-06-19",
+      "models": [
+        {
+          "model": "MiniMax-M3-512k",
+          "input_token": 25474843,
+          "cache_read_token": 23852927,
+          "cache_create_token": 0,
+          "output_token": 275860,
+          "total_token": 49603630,
+          "cache_hit_percent": "93.63%"
+        },
+        {
+          "model": "MiniMax-M2.7",
+          "input_token": 174209,
+          "cache_read_token": 41580,
+          "cache_create_token": 14480,
+          "output_token": 5670,
+          "total_token": 235939,
+          "cache_hit_percent": "23.87%"
+        }
+      ],
+      "total_input_token": 25649052,
+      "total_cache_read_token": 23894507,
+      "total_cache_create_token": 14480,
+      "total_output_token": 281530,
+      "total_token": 25930582,
+      "cache_hit_percent": "93.16%"
+    },
+    {
+      "date": "2026-06-20",
       "models": [],
       "total_input_token": 0,
       "total_cache_read_token": 0,
@@ -1945,10 +1965,10 @@
       "cache_hit_percent": "0%"
     }
   ],
-  "last_update_time": "06-19 08:00",
+  "last_update_time": "06-20 08:00",
   "base_resp": {
     "status_code": 0,
     "status_msg": "success"
   },
-  "daily_avg_token_consumed": "110.26M"
+  "daily_avg_token_consumed": "103.23M"
 }

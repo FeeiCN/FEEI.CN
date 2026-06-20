@@ -177,23 +177,28 @@ jobs:
           from pathlib import Path
 
           skill = Path(
-              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日数据总结.md"
+              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日三省吾身.md"
           ).read_text(encoding="utf-8")
           context = Path("/tmp/daily-analysis-context.json").read_text(encoding="utf-8")
           print(
-              "# 每日数据总结规则\n\n"
+              "# 每日三省吾身规则\n\n"
               f"{skill}\n\n"
               "# 结构化分析上下文\n\n"
               f"```json\n{context}\n```\n\n"
               "# 本次任务\n\n"
               f"- 报告日期：`{os.environ['REPORT_DATE']}`（北京时间）\n"
-              "- 你的任务不是直接输出日报，而是先输出一份结构化分析 JSON。\n\n"
+              "- 你的任务不是直接输出日报，而是先输出一份用于每日三省吾身的结构化分析 JSON。\n\n"
               "# 执行约束\n\n"
               "- 只基于以上结构化分析上下文和规则做判断，不要再重复读取原始数据文件。\n"
               "- 不得调用网络，不得执行 Git 或 gh，不得修改文件。\n"
               "- 如果上下文显示数据不完整或同步延迟，必须降低判断强度。\n"
+              "- 这不是流水账，也不是自我批判，而是一套自我校准系统：你必须把分析组织成“事实 -> 判断 -> 改进”的闭环。\n"
+              "- 你需要始终围绕四个长期方向思考：健康幸福、事业有成、财务自由、丰富人生。\n"
+              "- 健康对应健康幸福，财务对应财务自由，阅读主要对应丰富人生，AI 使用主要作为事业有成的代理信号。\n"
+              "- AI 使用不能直接等同于产出高低；它只能辅助判断工作流强度、任务密度和是否被低价值事务劫持。\n"
               "- 你要像不同领域的分析师一样输出结论：健康像恢复/负荷分析师，阅读像学习投入分析师，财务像资产配置与风险分析师，AI 使用像生产力与工作流分析师。\n"
               "- 每个板块都必须先给专业判断，再给数字证据；不要先报数再找结论。\n"
+              "- 每个板块都要尽量产出一个具体、可执行、可验证的明日动作或继续观察动作，避免空泛建议。\n"
               "- 建议只能是观察、验证、继续跟踪的建议，不能越权给医疗诊断或投资买卖建议。\n"
               "- 最终只输出合法 JSON，不要 Markdown，不要代码围栏，不要解释。\n\n"
               "# 输出 JSON 结构\n\n"
@@ -248,8 +253,30 @@ jobs:
             exit 1
           fi
 
-          jq -er '(.result // .message) | fromjson' \
-            /tmp/claude-analysis.json > /tmp/daily-analysis.json
+          python3 <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/claude-analysis.json").read_text(encoding="utf-8"))
+          value = payload.get("result", payload.get("message"))
+
+          if isinstance(value, (dict, list)):
+              parsed = value
+          elif isinstance(value, str):
+              text = value.strip()
+              fence = re.fullmatch(r"```(?:json)?\s*([\s\S]*?)\s*```", text, re.I)
+              if fence:
+                  text = fence.group(1).strip()
+              parsed = json.loads(text)
+          else:
+              raise SystemExit(f"Claude analysis 输出格式不支持: {type(value).__name__}")
+
+          Path("/tmp/daily-analysis.json").write_text(
+              json.dumps(parsed, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+          PY
 
       - name: Run Claude for final report
         id: claude_report
@@ -265,12 +292,12 @@ jobs:
           from pathlib import Path
 
           skill = Path(
-              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日数据总结.md"
+              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日三省吾身.md"
           ).read_text(encoding="utf-8")
           context = Path("/tmp/daily-analysis-context.json").read_text(encoding="utf-8")
           analysis = Path("/tmp/daily-analysis.json").read_text(encoding="utf-8")
           print(
-              "# 每日数据总结规则\n\n"
+              "# 每日三省吾身规则\n\n"
               f"{skill}\n\n"
               "# 结构化分析上下文\n\n"
               f"```json\n{context}\n```\n\n"
@@ -280,16 +307,19 @@ jobs:
               f"- 报告日期：`{os.environ['REPORT_DATE']}`（北京时间）\n"
               f"- 唯一目标路径：`{os.environ['REPORT_TARGET']}`\n\n"
               "# 执行约束\n\n"
-              "- 只能基于以上上下文与分析结论写成日报。\n"
+              "- 只能基于以上上下文与分析结论写成每日三省吾身。\n"
               "- 最终只输出符合规则的完整 Markdown，不要解释，不要代码围栏。\n"
               "- 如果分析结论里置信度低或数据状态不完整，必须在正文中明确降级表述。\n"
-              "- 不要把日报写成逐段数字播报。每个板块都应优先写结构变化、相对位置、解释候选与边界。\n"
+              "- 这不是日报播报，不是流水账，也不是自我批判；它是一份自我校准记录，必须写出“事实 -> 判断 -> 改进”。\n"
+              "- 不要把成文写成逐段数字播报。每个板块都应优先写结构变化、相对位置、解释候选、边界，以及一个具体明日动作。\n"
+              "- 接下来值得关注默认承载“明日动作”，每条都必须具体到可执行或可验证，不能写成“更努力”“更自律”这种空话。\n"
               "- 尽量写出像下面这样的句子：'这更像一次回撤中的反弹，而不是趋势反转'、'这说明当日输入强度降温，但不等于月度连续性中断'、'当前最大的事实不是异常，而是数据不完整，不能下结论'。\n"
               "- 至少保留一条跨板块洞察，说明多个方向之间的关系或判断边界。\n"
+              "- 健康对应健康幸福，财务对应财务自由，阅读主要对应丰富人生，AI 使用主要作为事业有成的代理信号；不要把 AI 用量高低直接写成工作做得好坏。\n"
               "- 每个板块默认站在该领域专家视角写第一句：健康先写恢复/负荷判断，阅读先写学习投入结构判断，财务先写风险与趋势判断，AI 使用先写工作流强度或平台结构判断。\n"
               "- 每个板块的结尾可以给出一条专业但克制的建议：只谈继续观察、验证、排查或关注，不给医疗诊断和投资买卖建议。\n"
               "- 每个板块最多引用两到三组核心数字，数字只服务于结论，不要把正文写成报表转述。\n"
-              "- 建议每个板块默认按这个顺序写：专家判断 -> 相对位置 -> 关键证据 -> 边界/不确定性。\n"
+              "- 建议每个板块默认按这个顺序写：专家判断 -> 相对位置 -> 关键证据 -> 边界/不确定性 -> 明日动作。\n"
           )
           PY
 
@@ -312,8 +342,23 @@ jobs:
             exit 1
           fi
 
-          jq -er '(.result // .message) | select(type == "string" and length > 0)' \
-            /tmp/claude-report.json > /tmp/daily-report.md
+          python3 <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/claude-report.json").read_text(encoding="utf-8"))
+          value = payload.get("result", payload.get("message"))
+          if not isinstance(value, str) or not value.strip():
+              raise SystemExit("Claude report 未返回非空字符串")
+
+          text = value.strip()
+          fence = re.fullmatch(r"```(?:md|markdown)?\s*([\s\S]*?)\s*```", text, re.I)
+          if fence:
+              text = fence.group(1).strip()
+
+          Path("/tmp/daily-report.md").write_text(text + "\n", encoding="utf-8")
+          PY
 
       - name: Run Claude quality critique
         id: claude_critique
@@ -328,13 +373,13 @@ jobs:
           import os
 
           skill = Path(
-              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日数据总结.md"
+              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日三省吾身.md"
           ).read_text(encoding="utf-8")
           analysis = Path("/tmp/daily-analysis.json").read_text(encoding="utf-8")
           report = Path("/tmp/daily-report.md").read_text(encoding="utf-8")
 
           print(
-              "# 每日数据总结规则\n\n"
+              "# 每日三省吾身规则\n\n"
               f"{skill}\n\n"
               "# 结构化分析结论\n\n"
               f"```json\n{analysis}\n```\n\n"
@@ -342,8 +387,10 @@ jobs:
               f"```md\n{report}\n```\n\n"
               "# 你的任务\n\n"
               f"- 评审报告日期：`{os.environ['REPORT_DATE']}`\n"
-              "- 你是严格的主编和领域分析 reviewer，不要改写日报，只评审质量。\n"
-              "- 重点判断：是否仍然数字复述；是否真正有专家判断；是否有跨板块洞察；是否明确了不确定边界；是否把分析结论准确写进成文。\n"
+              "- 你是严格的主编和领域分析 reviewer，不要改写成文，只评审质量。\n"
+              "- 重点判断：它是否真的是一份每日三省吾身，而不是数字播报、流水账或自我批判。\n"
+              "- 重点判断：是否真正形成了“事实 -> 判断 -> 改进”的闭环；是否真正有专家判断；是否有跨板块洞察；是否明确了不确定边界；是否把分析结论准确写进成文。\n"
+              "- 重点判断：接下来值得关注是否具体到可执行动作，而不是空泛口号；AI 使用是否被误写成产出好坏的直接证明。\n"
               "- 最终只输出 JSON，不要解释，不要 Markdown。\n\n"
               "# 输出 JSON 结构\n\n"
               "{\n"
@@ -381,8 +428,30 @@ jobs:
             exit 1
           fi
 
-          jq -er '(.result // .message) | fromjson' \
-            /tmp/claude-critique.json > /tmp/daily-critique.json
+          python3 <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/claude-critique.json").read_text(encoding="utf-8"))
+          value = payload.get("result", payload.get("message"))
+
+          if isinstance(value, (dict, list)):
+              parsed = value
+          elif isinstance(value, str):
+              text = value.strip()
+              fence = re.fullmatch(r"```(?:json)?\s*([\s\S]*?)\s*```", text, re.I)
+              if fence:
+                  text = fence.group(1).strip()
+              parsed = json.loads(text)
+          else:
+              raise SystemExit(f"Claude critique 输出格式不支持: {type(value).__name__}")
+
+          Path("/tmp/daily-critique.json").write_text(
+              json.dumps(parsed, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+          PY
 
           {
             echo "## Claude quality critique"
@@ -409,8 +478,9 @@ jobs:
           text = source.read_text(encoding="utf-8").strip() + "\n"
           report_date = dt.date.fromisoformat(os.environ["REPORT_DATE"])
           expected_title = (
-              f"{report_date.year}年{report_date.month}月{report_date.day}日数据总结"
+              f"{report_date.year}年{report_date.month}月{report_date.day}日三省吾身"
           )
+          expected_slug = f"/{report_date.isoformat()}"
 
           outer_fence = re.fullmatch(
               r"```(?:md|markdown)?[ \t]*\n([\s\S]*?)\n```[ \t]*\n?",
@@ -427,6 +497,8 @@ jobs:
           if not front_matter:
               raise SystemExit("缺少合法 front matter")
           header = front_matter.group(1)
+          if f"slug: {expected_slug}" not in header:
+              raise SystemExit(f"front matter slug 必须为: {expected_slug}")
           if f"title: {expected_title}" not in header:
               raise SystemExit(f"front matter title 必须为: {expected_title}")
           description = re.search(r"^description:\s*(.+)$", header, re.M)
@@ -519,7 +591,7 @@ jobs:
 
           git config user.name "FeeiCN[bot]"
           git config user.email "feei@feei.cn"
-          git commit -m "[auto] 生成每日数据总结 ${REPORT_DATE}" -- "$REPORT_TARGET"
+          git commit -m "[auto] 生成每日三省吾身 ${REPORT_DATE}" -- "$REPORT_TARGET"
 
           gh auth setup-git
           git fetch origin main

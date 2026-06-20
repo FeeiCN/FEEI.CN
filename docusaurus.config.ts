@@ -287,7 +287,7 @@ const config: Config = {
           icon: 'at-sign-icon',
           items: [
             {type: 'docSidebar', sidebarId: 'aboutMeSidebar', label: '关于', icon: 'user'},
-            {type: 'docSidebar', sidebarId: 'lifeProgressSidebar', label: '年度总结', icon: 'gauge-icon'},
+            {type: 'docSidebar', sidebarId: 'lifeProgressSidebar', label: '三省吾身', icon: 'gauge-icon'},
           ],
         },
         {

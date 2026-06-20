@@ -132,39 +132,84 @@ jobs:
               fh.write("allowed<<EOF\n")
               fh.write("\n".join(f"- `{path}`" for path in allowed))
               fh.write("\nEOF\n")
+              fh.write("allowed_paths<<EOF\n")
+              fh.write("\n".join(allowed))
+              fh.write("\nEOF\n")
           PY
 
-      - name: Build prompt and run Claude
-        id: claude
+      - name: Build structured analysis context
         env:
           REPORT_DATE: ${{ steps.report.outputs.date }}
-          REPORT_TARGET: ${{ steps.report.outputs.target }}
-          ALLOWED_FILES: ${{ steps.report.outputs.allowed }}
+          ALLOWED_PATHS: ${{ steps.report.outputs.allowed_paths }}
+        run: |
+          python3 <<'PY' > /tmp/allowed-args.txt
+          import os
+          for line in (os.environ.get("ALLOWED_PATHS") or "").splitlines():
+              value = line.strip()
+              if value:
+                  print(f'--allowed-file={value}')
+          PY
+
+          python3 scripts/build_daily_analysis_context.py \
+            --report-date "${REPORT_DATE}" \
+            $(tr '\n' ' ' < /tmp/allowed-args.txt) \
+            --output /tmp/daily-analysis-context.json
+
+          {
+            echo "## Structured analysis context"
+            echo
+            echo '```json'
+            head -c 12000 /tmp/daily-analysis-context.json
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run Claude for structured insights
+        id: claude_analysis
+        env:
+          REPORT_DATE: ${{ steps.report.outputs.date }}
           ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
           ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
           ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
         run: |
-          python3 <<'PY' > /tmp/daily-data-prompt.md
+          python3 <<'PY' > /tmp/daily-analysis-prompt.md
           import os
           from pathlib import Path
 
           skill = Path(
               "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日数据总结.md"
           ).read_text(encoding="utf-8")
+          context = Path("/tmp/daily-analysis-context.json").read_text(encoding="utf-8")
           print(
               "# 每日数据总结规则\n\n"
               f"{skill}\n\n"
+              "# 结构化分析上下文\n\n"
+              f"```json\n{context}\n```\n\n"
               "# 本次任务\n\n"
               f"- 报告日期：`{os.environ['REPORT_DATE']}`（北京时间）\n"
-              f"- 唯一目标路径：`{os.environ['REPORT_TARGET']}`\n"
-              "- 允许读取的数据文件：\n"
-              f"{os.environ['ALLOWED_FILES']}\n\n"
+              "- 你的任务不是直接输出日报，而是先输出一份结构化分析 JSON。\n\n"
               "# 执行约束\n\n"
-              "- 只读取上述数据文件及核心规则文档。\n"
-              "- 可使用 jq 查询允许文件，不得访问环境变量、Git 配置或其他路径。\n"
-              "- 不得修改或创建任何文件，不得调用网络，不得执行 Git 或 gh。\n"
-              "- 目标日期缺少数据时直接说明，不使用其他日期冒充。\n"
-              "- 最终回复只能是符合规则的完整 Markdown，不要代码围栏或说明。\n"
+              "- 只基于以上结构化分析上下文和规则做判断，不要再重复读取原始数据文件。\n"
+              "- 不得调用网络，不得执行 Git 或 gh，不得修改文件。\n"
+              "- 如果上下文显示数据不完整或同步延迟，必须降低判断强度。\n"
+              "- 你要像不同领域的分析师一样输出结论：健康像恢复/负荷分析师，阅读像学习投入分析师，财务像资产配置与风险分析师，AI 使用像生产力与工作流分析师。\n"
+              "- 每个板块都必须先给专业判断，再给数字证据；不要先报数再找结论。\n"
+              "- 建议只能是观察、验证、继续跟踪的建议，不能越权给医疗诊断或投资买卖建议。\n"
+              "- 最终只输出合法 JSON，不要 Markdown，不要代码围栏，不要解释。\n\n"
+              "# 输出 JSON 结构\n\n"
+              "{\n"
+              '  "top_signals": [\n'
+              '    {"area": "健康|阅读|财务|AI使用|跨板块", "summary": "一句话结论", "evidence": ["证据1", "证据2"], "confidence": "high|medium|low"}\n'
+              "  ],\n"
+              '  "health_insights": [{"expert_view": "恢复与负荷分析", "summary": "", "positioning": "", "evidence": [], "means": "", "not_means": "", "uncertainty": "", "professional_suggestion": ""}],\n'
+              '  "reading_insights": [{"expert_view": "学习投入与阅读行为分析", "summary": "", "positioning": "", "evidence": [], "means": "", "not_means": "", "uncertainty": "", "professional_suggestion": ""}],\n'
+              '  "finance_insights": [{"expert_view": "资产配置与风险暴露分析", "summary": "", "positioning": "", "evidence": [], "means": "", "not_means": "", "uncertainty": "", "professional_suggestion": ""}],\n'
+              '  "ai_insights": [{"expert_view": "AI 生产力与工作流强度分析", "summary": "", "positioning": "", "evidence": [], "means": "", "not_means": "", "uncertainty": "", "professional_suggestion": ""}],\n'
+              '  "cross_domain_insights": [{"summary": "", "evidence": [], "uncertainty": ""}],\n'
+              '  "data_status": [{"area": "", "status": "完整|切片|延迟|不可用", "detail": ""}],\n'
+              '  "follow_ups": ["后续关注点1", "后续关注点2"],\n'
+              '  "quality_self_check": {"not_number_repetition": true, "has_cross_domain": true, "states_uncertainty": true, "has_positioning": true, "has_expert_judgment": true}\n'
+              "}\n"
           )
           PY
 
@@ -174,29 +219,26 @@ jobs:
             --output-format json \
             --permission-mode dontAsk \
             --setting-sources user \
-            --tools "Read,Grep,Glob,Bash" \
-            --allowedTools "Read" "Grep" "Glob" "Bash(jq *)" \
-            --disallowedTools "Write" "Edit" "WebFetch" "WebSearch" \
+            --tools "" \
             --no-session-persistence \
             --max-budget-usd 3 \
-            < /tmp/daily-data-prompt.md \
-            > /tmp/claude.json 2> /tmp/claude.err
+            < /tmp/daily-analysis-prompt.md \
+            > /tmp/claude-analysis.json 2> /tmp/claude-analysis.err
           CLAUDE_STATUS=$?
           set -e
 
           {
-            echo "## Claude Code 分析"
+            echo "## Claude structured analysis"
             echo
             echo "- report date: \`${REPORT_DATE}\`"
-            echo "- target: \`${REPORT_TARGET}\`"
             echo "- status: \`${CLAUDE_STATUS}\`"
-            echo "- turns: \`$(jq -r '.num_turns // 0' /tmp/claude.json 2>/dev/null || echo 0)\`"
-            echo "- cost: \`$(jq -r '.total_cost_usd // 0' /tmp/claude.json 2>/dev/null || echo 0)\` USD"
-            echo "- result length: \`$(jq -r '(.result // .message // "") | length' /tmp/claude.json 2>/dev/null || echo 0)\`"
+            echo "- turns: \`$(jq -r '.num_turns // 0' /tmp/claude-analysis.json 2>/dev/null || echo 0)\`"
+            echo "- cost: \`$(jq -r '.total_cost_usd // 0' /tmp/claude-analysis.json 2>/dev/null || echo 0)\` USD"
+            echo "- result length: \`$(jq -r '(.result // .message // "") | length' /tmp/claude-analysis.json 2>/dev/null || echo 0)\`"
             echo
             echo "### stderr 前 2000 字符"
             echo '```'
-            head -c 2000 /tmp/claude.err || true
+            head -c 2000 /tmp/claude-analysis.err || true
             echo
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
@@ -206,8 +248,150 @@ jobs:
             exit 1
           fi
 
+          jq -er '(.result // .message) | fromjson' \
+            /tmp/claude-analysis.json > /tmp/daily-analysis.json
+
+      - name: Run Claude for final report
+        id: claude_report
+        env:
+          REPORT_DATE: ${{ steps.report.outputs.date }}
+          REPORT_TARGET: ${{ steps.report.outputs.target }}
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+        run: |
+          python3 <<'PY' > /tmp/daily-report-prompt.md
+          import os
+          from pathlib import Path
+
+          skill = Path(
+              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日数据总结.md"
+          ).read_text(encoding="utf-8")
+          context = Path("/tmp/daily-analysis-context.json").read_text(encoding="utf-8")
+          analysis = Path("/tmp/daily-analysis.json").read_text(encoding="utf-8")
+          print(
+              "# 每日数据总结规则\n\n"
+              f"{skill}\n\n"
+              "# 结构化分析上下文\n\n"
+              f"```json\n{context}\n```\n\n"
+              "# 结构化分析结论\n\n"
+              f"```json\n{analysis}\n```\n\n"
+              "# 本次任务\n\n"
+              f"- 报告日期：`{os.environ['REPORT_DATE']}`（北京时间）\n"
+              f"- 唯一目标路径：`{os.environ['REPORT_TARGET']}`\n\n"
+              "# 执行约束\n\n"
+              "- 只能基于以上上下文与分析结论写成日报。\n"
+              "- 最终只输出符合规则的完整 Markdown，不要解释，不要代码围栏。\n"
+              "- 如果分析结论里置信度低或数据状态不完整，必须在正文中明确降级表述。\n"
+              "- 不要把日报写成逐段数字播报。每个板块都应优先写结构变化、相对位置、解释候选与边界。\n"
+              "- 尽量写出像下面这样的句子：'这更像一次回撤中的反弹，而不是趋势反转'、'这说明当日输入强度降温，但不等于月度连续性中断'、'当前最大的事实不是异常，而是数据不完整，不能下结论'。\n"
+              "- 至少保留一条跨板块洞察，说明多个方向之间的关系或判断边界。\n"
+              "- 每个板块默认站在该领域专家视角写第一句：健康先写恢复/负荷判断，阅读先写学习投入结构判断，财务先写风险与趋势判断，AI 使用先写工作流强度或平台结构判断。\n"
+              "- 每个板块的结尾可以给出一条专业但克制的建议：只谈继续观察、验证、排查或关注，不给医疗诊断和投资买卖建议。\n"
+              "- 每个板块最多引用两到三组核心数字，数字只服务于结论，不要把正文写成报表转述。\n"
+              "- 建议每个板块默认按这个顺序写：专家判断 -> 相对位置 -> 关键证据 -> 边界/不确定性。\n"
+          )
+          PY
+
+          set +e
+          claude \
+            -p \
+            --output-format json \
+            --permission-mode dontAsk \
+            --setting-sources user \
+            --tools "" \
+            --no-session-persistence \
+            --max-budget-usd 3 \
+            < /tmp/daily-report-prompt.md \
+            > /tmp/claude-report.json 2> /tmp/claude-report.err
+          CLAUDE_STATUS=$?
+          set -e
+
+          if [ "$CLAUDE_STATUS" -ne 0 ]; then
+            echo "::error::Claude Code 成文失败，status=${CLAUDE_STATUS}"
+            exit 1
+          fi
+
           jq -er '(.result // .message) | select(type == "string" and length > 0)' \
-            /tmp/claude.json > /tmp/daily-report.md
+            /tmp/claude-report.json > /tmp/daily-report.md
+
+      - name: Run Claude quality critique
+        id: claude_critique
+        env:
+          REPORT_DATE: ${{ steps.report.outputs.date }}
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+        run: |
+          python3 <<'PY' > /tmp/daily-critique-prompt.md
+          from pathlib import Path
+          import os
+
+          skill = Path(
+              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日数据总结.md"
+          ).read_text(encoding="utf-8")
+          analysis = Path("/tmp/daily-analysis.json").read_text(encoding="utf-8")
+          report = Path("/tmp/daily-report.md").read_text(encoding="utf-8")
+
+          print(
+              "# 每日数据总结规则\n\n"
+              f"{skill}\n\n"
+              "# 结构化分析结论\n\n"
+              f"```json\n{analysis}\n```\n\n"
+              "# 候选日报\n\n"
+              f"```md\n{report}\n```\n\n"
+              "# 你的任务\n\n"
+              f"- 评审报告日期：`{os.environ['REPORT_DATE']}`\n"
+              "- 你是严格的主编和领域分析 reviewer，不要改写日报，只评审质量。\n"
+              "- 重点判断：是否仍然数字复述；是否真正有专家判断；是否有跨板块洞察；是否明确了不确定边界；是否把分析结论准确写进成文。\n"
+              "- 最终只输出 JSON，不要解释，不要 Markdown。\n\n"
+              "# 输出 JSON 结构\n\n"
+              "{\n"
+              '  "verdict": "pass|fail",\n'
+              '  "score": 0,\n'
+              '  "strengths": ["优点1", "优点2"],\n'
+              '  "issues": [{"severity": "high|medium|low", "message": "问题描述"}],\n'
+              '  "checks": {\n'
+              '    "expert_judgment": true,\n'
+              '    "not_number_repetition": true,\n'
+              '    "has_cross_domain": true,\n'
+              '    "states_uncertainty": true,\n'
+              '    "follows_analysis": true\n'
+              "  }\n"
+              "}\n"
+          )
+          PY
+
+          set +e
+          claude \
+            -p \
+            --output-format json \
+            --permission-mode dontAsk \
+            --setting-sources user \
+            --tools "" \
+            --no-session-persistence \
+            --max-budget-usd 2 \
+            < /tmp/daily-critique-prompt.md \
+            > /tmp/claude-critique.json 2> /tmp/claude-critique.err
+          CLAUDE_STATUS=$?
+          set -e
+
+          if [ "$CLAUDE_STATUS" -ne 0 ]; then
+            echo "::error::Claude Code 质量复核失败，status=${CLAUDE_STATUS}"
+            exit 1
+          fi
+
+          jq -er '(.result // .message) | fromjson' \
+            /tmp/claude-critique.json > /tmp/daily-critique.json
+
+          {
+            echo "## Claude quality critique"
+            echo
+            echo '```json'
+            cat /tmp/daily-critique.json
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validate and write report
         env:
@@ -216,6 +400,7 @@ jobs:
         run: |
           python3 <<'PY'
           import datetime as dt
+          import json
           import os
           import re
           from pathlib import Path
@@ -276,6 +461,23 @@ jobs:
               raise SystemExit("报告不能包含脚本或样式标签")
           if len(re.findall(r'^\s*["{[]', text, re.M)) > 20:
               raise SystemExit("报告疑似包含大段原始 JSON")
+
+          critique = json.loads(Path("/tmp/daily-critique.json").read_text(encoding="utf-8"))
+          if critique.get("verdict") != "pass":
+              raise SystemExit(f"质量复核未通过: {critique}")
+          if int(critique.get("score") or 0) < 7:
+              raise SystemExit(f"质量复核分数过低: {critique.get('score')}")
+          checks = critique.get("checks") or {}
+          required_checks = [
+              "expert_judgment",
+              "not_number_repetition",
+              "has_cross_domain",
+              "states_uncertainty",
+              "follows_analysis",
+          ]
+          failed_checks = [key for key in required_checks if checks.get(key) is not True]
+          if failed_checks:
+              raise SystemExit(f"质量复核检查未通过: {', '.join(failed_checks)}")
 
           target = Path(os.environ["REPORT_TARGET"])
           target.parent.mkdir(parents=True, exist_ok=True)

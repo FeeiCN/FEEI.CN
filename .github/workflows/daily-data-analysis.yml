@@ -804,7 +804,7 @@ jobs:
 
           git config user.name "FeeiCN[bot]"
           git config user.email "feei@feei.cn"
-          git commit -m "[auto] 生成每日三省吾身 ${REPORT_DATE}" -- "$REPORT_TARGET"
+          git commit --no-verify -m "[auto] 生成每日三省吾身 ${REPORT_DATE}" -- "$REPORT_TARGET"
 
           gh auth setup-git
           git fetch origin main

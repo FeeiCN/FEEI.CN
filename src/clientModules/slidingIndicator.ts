@@ -72,8 +72,21 @@ function setup({container, links, id, axis}: IndicatorConfig) {
     indicator.style.opacity = '1';
   }
 
-  function hideIndicator() {
+  function findActiveLink(): HTMLElement | null {
+    return containerEl.querySelector<HTMLElement>(`${links}--active, ${links}[aria-current='page']`);
+  }
+
+  function moveToActiveLink() {
+    const activeLink = findActiveLink();
+    if (activeLink) {
+      moveTo(activeLink);
+      return;
+    }
     indicator.style.opacity = '0';
+  }
+
+  function hideIndicator() {
+    moveToActiveLink();
   }
 
   function handlePointerOver(event: Event) {
@@ -94,8 +107,10 @@ function setup({container, links, id, axis}: IndicatorConfig) {
 
   containerEl.addEventListener('pointerover', handlePointerOver, {signal});
   containerEl.addEventListener('focusin', handlePointerOver, {signal});
-  containerEl.addEventListener('click', hideIndicator, {signal});
-  containerEl.addEventListener('mouseleave', hideIndicator, {signal});
+  containerEl.addEventListener('click', () => setTimeout(moveToActiveLink, 0), {signal});
+  containerEl.addEventListener('mouseleave', moveToActiveLink, {signal});
+
+  moveToActiveLink();
 }
 
 function init() {

@@ -28,6 +28,7 @@ STATE_FILE = Path(__file__).parent / "cache" / "weread_latest_highlight_state.js
 HIGHLIGHTS_META_FILE = (
     Path(__file__).resolve().parent.parent
     / "static"
+    / "data"
     / "reading"
     / "highlights-meta.json"
 )

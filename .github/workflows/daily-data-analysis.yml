@@ -258,19 +258,40 @@ jobs:
           import re
           from pathlib import Path
 
-          payload = json.loads(Path("/tmp/claude-analysis.json").read_text(encoding="utf-8"))
-          value = payload.get("result", payload.get("message"))
+          def parse_embedded_json(value):
+              if isinstance(value, (dict, list)):
+                  return value
+              if not isinstance(value, str):
+                  raise SystemExit(f"Claude analysis 输出格式不支持: {type(value).__name__}")
 
-          if isinstance(value, (dict, list)):
-              parsed = value
-          elif isinstance(value, str):
+              decoder = json.JSONDecoder()
+              candidates = []
               text = value.strip()
               fence = re.fullmatch(r"```(?:json)?\s*([\s\S]*?)\s*```", text, re.I)
               if fence:
-                  text = fence.group(1).strip()
-              parsed = json.loads(text)
-          else:
-              raise SystemExit(f"Claude analysis 输出格式不支持: {type(value).__name__}")
+                  candidates.append(fence.group(1).strip())
+              candidates.append(text)
+
+              for candidate in candidates:
+                  try:
+                      return json.loads(candidate)
+                  except json.JSONDecodeError:
+                      pass
+                  for index, char in enumerate(candidate):
+                      if char not in "{[":
+                          continue
+                      try:
+                          parsed, _ = decoder.raw_decode(candidate[index:])
+                          return parsed
+                      except json.JSONDecodeError:
+                          continue
+
+              preview = text[:500].replace("\n", "\\n")
+              raise SystemExit(f"Claude analysis JSON 解析失败，前 500 字符: {preview}")
+
+          payload = json.loads(Path("/tmp/claude-analysis.json").read_text(encoding="utf-8"))
+          value = payload.get("result", payload.get("message"))
+          parsed = parse_embedded_json(value)
 
           Path("/tmp/daily-analysis.json").write_text(
               json.dumps(parsed, ensure_ascii=False, indent=2),
@@ -433,19 +454,40 @@ jobs:
           import re
           from pathlib import Path
 
-          payload = json.loads(Path("/tmp/claude-critique.json").read_text(encoding="utf-8"))
-          value = payload.get("result", payload.get("message"))
+          def parse_embedded_json(value):
+              if isinstance(value, (dict, list)):
+                  return value
+              if not isinstance(value, str):
+                  raise SystemExit(f"Claude critique 输出格式不支持: {type(value).__name__}")
 
-          if isinstance(value, (dict, list)):
-              parsed = value
-          elif isinstance(value, str):
+              decoder = json.JSONDecoder()
+              candidates = []
               text = value.strip()
               fence = re.fullmatch(r"```(?:json)?\s*([\s\S]*?)\s*```", text, re.I)
               if fence:
-                  text = fence.group(1).strip()
-              parsed = json.loads(text)
-          else:
-              raise SystemExit(f"Claude critique 输出格式不支持: {type(value).__name__}")
+                  candidates.append(fence.group(1).strip())
+              candidates.append(text)
+
+              for candidate in candidates:
+                  try:
+                      return json.loads(candidate)
+                  except json.JSONDecodeError:
+                      pass
+                  for index, char in enumerate(candidate):
+                      if char not in "{[":
+                          continue
+                      try:
+                          parsed, _ = decoder.raw_decode(candidate[index:])
+                          return parsed
+                      except json.JSONDecodeError:
+                          continue
+
+              preview = text[:500].replace("\n", "\\n")
+              raise SystemExit(f"Claude critique JSON 解析失败，前 500 字符: {preview}")
+
+          payload = json.loads(Path("/tmp/claude-critique.json").read_text(encoding="utf-8"))
+          value = payload.get("result", payload.get("message"))
+          parsed = parse_embedded_json(value)
 
           Path("/tmp/daily-critique.json").write_text(
               json.dumps(parsed, ensure_ascii=False, indent=2),

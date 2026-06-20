@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+"$ROOT/scripts/sync-agent-docs.sh"
+git add "$ROOT/AI.md" "$ROOT/AGENTS.md" "$ROOT/CLAUDE.md"

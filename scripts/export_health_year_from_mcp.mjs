@@ -8,6 +8,62 @@ const defaultTargetRoot = path.join(repoRoot, 'static', 'data', 'health');
 const defaultMcpServerPath = '/Users/feei/Projects/health-auto-export-mcp-server/dist/server.js';
 const timeZone = 'Asia/Shanghai';
 const timeZoneOffset = '+0800';
+const activeEnergyBucketMinutes = 5;
+const activeEnergySegmentThresholdKJ = 5;
+const activeEnergyMergeGapMinutes = 10;
+const movementBucketMinutes = 5;
+const movementSegmentThresholdSteps = 30;
+const movementSegmentThresholdDistanceKm = 0.02;
+const movementMergeGapMinutes = 5;
+const flightsBucketMinutes = 5;
+const flightsSegmentThreshold = 0.5;
+const flightsMergeGapMinutes = 5;
+const standBucketMinutes = 5;
+const standSegmentThresholdMinutes = 1;
+const standMergeGapMinutes = 0;
+const physicalEffortBucketMinutes = 5;
+const physicalEffortSegmentThresholdAvg = 5;
+const physicalEffortSegmentThresholdMax = 8;
+const physicalEffortMergeGapMinutes = 10;
+const daylightBucketMinutes = 5;
+const daylightSegmentThresholdMinutes = 1;
+const daylightMergeGapMinutes = 5;
+const exerciseTimeBucketMinutes = 5;
+const dailyHealthMetricCatalog = [
+  'active_energy',
+  'apple_exercise_time',
+  'apple_sleeping_wrist_temperature',
+  'apple_stand_hour',
+  'apple_stand_time',
+  'blood_oxygen_saturation',
+  'body_fat_percentage',
+  'body_mass_index',
+  'cardio_recovery',
+  'environmental_audio_exposure',
+  'flights_climbed',
+  'handwashing',
+  'heart_rate',
+  'heart_rate_variability',
+  'lean_body_mass',
+  'physical_effort',
+  'respiratory_rate',
+  'resting_heart_rate',
+  'sleep_analysis',
+  'stair_speed_down',
+  'stair_speed_up',
+  'step_count',
+  'time_in_daylight',
+  'vo2_max',
+  'walking_heart_rate_average',
+  'walking_running_distance',
+  'weight_body_mass',
+];
+const dailyHealthMetricBlacklist = new Set([
+  'basal_energy_burned',
+]);
+const dailyHealthMetrics = dailyHealthMetricCatalog
+  .filter((metric) => !dailyHealthMetricBlacklist.has(metric))
+  .join(',');
 
 const collectionMappings = [
   {
@@ -16,6 +72,10 @@ const collectionMappings = [
       metrics: '',
       interval: 'days',
       aggregate: true,
+    },
+    rawArgs: {
+      metrics: dailyHealthMetrics,
+      aggregate: false,
     },
     targetSection: 'healthMetrics',
     targetKey: 'metrics',
@@ -28,6 +88,11 @@ const collectionMappings = [
       includeRoutes: false,
       metadataAggregation: 'minutes',
     },
+    rawArgs: {
+      includeMetadata: true,
+      includeRoutes: false,
+      metadataAggregation: 'minutes',
+    },
     targetSection: 'workouts',
     targetKey: 'workouts',
     sourceKeys: ['workouts'],
@@ -35,6 +100,7 @@ const collectionMappings = [
   {
     tool: 'get_medications',
     args: {},
+    optional: true,
     targetSection: 'medications',
     targetKey: 'medications',
     sourceKeys: ['medications'],
@@ -84,7 +150,11 @@ async function main() {
     return;
   }
 
-  const targetYear = args.year ?? getCurrentYear();
+  if (args.date && (args.month || args.endDate)) {
+    throw new Error('--date cannot be combined with --month or --end-date');
+  }
+
+  const targetYear = args.date ? args.date.slice(0, 4) : (args.year ?? getCurrentYear());
   const targetMonth = args.month;
   assertYear(targetYear);
 
@@ -92,7 +162,14 @@ async function main() {
 
   let startDate, endDate, targetFile;
 
-  if (targetMonth) {
+  if (args.date) {
+    assertDate(args.date);
+    if (args.year && args.year !== targetYear) {
+      throw new Error(`--year ${args.year} does not match --date ${args.date}`);
+    }
+    startDate = args.date;
+    endDate = args.date;
+  } else if (targetMonth) {
     assertMonth(targetMonth);
     const [y, m] = targetMonth.split('-');
     startDate = `${y}-${m}-01`;
@@ -128,7 +205,7 @@ async function main() {
   }
 
   fs.mkdirSync(targetRoot, {recursive: true});
-  if (targetMonth || !args.year) {
+  if (args.date || targetMonth || !args.year) {
     fs.mkdirSync(path.join(targetRoot, targetYear), {recursive: true});
   }
 
@@ -140,55 +217,65 @@ async function main() {
     await client.start();
     await client.initialize();
 
-    const data = {};
-    const summary = {};
+    const exportedAt = new Date().toISOString();
 
-    for (const mapping of collectionMappings) {
-      const toolArgs = {
-        start,
-        end,
-        ...mapping.args,
+    if (targetFile) {
+      const data = {};
+      const summary = {};
+
+      for (const mapping of collectionMappings) {
+        process.stderr.write(`Exporting ${mapping.targetSection}...\n`);
+        const {records} = await collectMappingRecords(client, mapping, {
+          start,
+          end,
+          args: mapping.args,
+          allowErrors: mapping.optional === true,
+        });
+
+        if (mapping.targetSection === 'healthMetrics') {
+          data[mapping.targetSection] = {
+            [mapping.targetKey]: Array.isArray(records) ? records : [],
+          };
+          summary[mapping.targetSection] = sumMetricRecords(data[mapping.targetSection][mapping.targetKey]);
+          continue;
+        }
+
+        if (Array.isArray(records) && records.length > 0) {
+          data[mapping.targetSection] = {
+            [mapping.targetKey]: records,
+          };
+        } else {
+          data[mapping.targetSection] = {};
+        }
+
+        summary[mapping.targetSection] = Array.isArray(records) ? records.length : 0;
+      }
+
+      const annualData = {
+        exportedAt,
+        dateRange: {
+          start,
+          end,
+        },
+        data,
       };
 
-      process.stderr.write(`Exporting ${mapping.targetSection}...\n`);
-      const payload = await client.callTool(mapping.tool, toolArgs);
-      const sourceData = extractData(payload);
-      const records = findCollection(sourceData, mapping.sourceKeys);
+      fs.writeFileSync(targetFile, `${JSON.stringify(annualData, null, 2)}\n`);
 
-      if (mapping.targetSection === 'healthMetrics') {
-        data[mapping.targetSection] = {
-          [mapping.targetKey]: Array.isArray(records) ? records : [],
-        };
-        summary[mapping.targetSection] = sumMetricRecords(data[mapping.targetSection][mapping.targetKey]);
-        continue;
+      console.log(`Exported ${targetYear} health data to ${path.relative(repoRoot, targetFile)}`);
+      for (const [section, count] of Object.entries(summary)) {
+        console.log(`${section}: ${count}`);
       }
-
-      if (Array.isArray(records) && records.length > 0) {
-        data[mapping.targetSection] = {
-          [mapping.targetKey]: records,
-        };
-      } else {
-        data[mapping.targetSection] = {};
-      }
-
-      summary[mapping.targetSection] = Array.isArray(records) ? records.length : 0;
     }
 
-    const annualData = {
-      exportedAt: new Date().toISOString(),
-      dateRange: {
-        start,
-        end,
-      },
-      data,
-    };
+    const dailyFiles = await exportDailyCompactFiles(client, {
+      startDate,
+      endDate,
+      targetRoot,
+      exportedAt,
+    });
 
-    fs.writeFileSync(targetFile, `${JSON.stringify(annualData, null, 2)}\n`);
-
-    console.log(`Exported ${targetYear} health data to ${path.relative(repoRoot, targetFile)}`);
-    for (const [section, count] of Object.entries(summary)) {
-      console.log(`${section}: ${count}`);
-    }
+    console.log(`Exported ${dailyFiles.length} daily compact health files`);
   } finally {
     await client.close();
   }
@@ -421,6 +508,1116 @@ function findCollection(sourceData, sourceKeys) {
   return [];
 }
 
+async function collectMappingRecords(client, mapping, options) {
+  const toolArgs = {
+    start: options.start,
+    end: options.end,
+    ...(options.args ?? {}),
+  };
+
+  try {
+    const payload = await client.callTool(mapping.tool, toolArgs);
+    const sourceData = extractData(payload);
+    return {
+      records: findCollection(sourceData, mapping.sourceKeys),
+    };
+  } catch (error) {
+    if (!options.allowErrors) {
+      throw error;
+    }
+
+    return {
+      records: [],
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function exportDailyCompactFiles(client, options) {
+  const dailyFiles = [];
+
+  for (const day of enumerateDates(options.startDate, options.endDate)) {
+    const [year, month, date] = day.split('-');
+    const dailyStart = `${day} 00:00:00 ${timeZoneOffset}`;
+    const dailyEnd = `${day} 23:59:59 ${timeZoneOffset}`;
+    const data = {};
+    const summary = {};
+    const errors = {};
+
+    for (const mapping of collectionMappings) {
+      process.stderr.write(`Exporting compact ${day} ${mapping.targetSection}...\n`);
+      const {records, error} = await collectMappingRecords(client, mapping, {
+        start: dailyStart,
+        end: dailyEnd,
+        args: mapping.rawArgs ?? mapping.args,
+        allowErrors: true,
+      });
+
+      if (mapping.targetSection === 'healthMetrics') {
+        data[mapping.targetSection] = {
+          [mapping.targetKey]: Array.isArray(records) ? records : [],
+        };
+        summary[mapping.targetSection] = sumMetricRecords(data[mapping.targetSection][mapping.targetKey]);
+      } else if (Array.isArray(records) && records.length > 0) {
+        data[mapping.targetSection] = {
+          [mapping.targetKey]: records,
+        };
+        summary[mapping.targetSection] = records.length;
+      } else {
+        data[mapping.targetSection] = {};
+        summary[mapping.targetSection] = 0;
+      }
+
+      if (error) {
+        errors[mapping.targetSection] = error;
+      }
+    }
+
+    const compactData = buildDailyCompactData(data);
+    const dailyData = {
+      exportedAt: options.exportedAt,
+      date: day,
+      dateRange: {
+        start: dailyStart,
+        end: dailyEnd,
+      },
+      summary: {
+        rawRecords: summary,
+        ...compactData.summary,
+      },
+      timeline: compactData.timeline,
+      series: compactData.series,
+      data: compactData.data,
+    };
+
+    if (Object.keys(errors).length > 0) {
+      dailyData.errors = errors;
+    }
+
+    const dailyDir = path.join(options.targetRoot, year, month);
+    const dailyFile = path.join(dailyDir, `${date}.json`);
+    fs.mkdirSync(dailyDir, {recursive: true});
+    fs.writeFileSync(dailyFile, `${JSON.stringify(dailyData, null, 2)}\n`);
+    dailyFiles.push(dailyFile);
+  }
+
+  return dailyFiles;
+}
+
+function buildDailyCompactData(data) {
+  const healthMetrics = data.healthMetrics?.metrics ?? [];
+  const metrics = [];
+  const summary = {};
+  const timeline = [];
+  const series = {};
+  const movementMetrics = {};
+
+  for (const metric of healthMetrics) {
+    if (metric.name === 'basal_energy_burned') {
+      summary.basalEnergy = summarizeEnergy(metric);
+      continue;
+    }
+
+    if (metric.name === 'active_energy') {
+      const activeEnergy = buildActiveEnergy(metric);
+      summary.activeEnergy = activeEnergy.summary;
+      series.activeEnergy5m = activeEnergy.series;
+      timeline.push(...activeEnergy.segments);
+      continue;
+    }
+
+    if (metric.name === 'step_count' || metric.name === 'walking_running_distance') {
+      movementMetrics[metric.name] = metric;
+      continue;
+    }
+
+    if (metric.name === 'flights_climbed') {
+      const flights = buildFlightsClimbed(metric);
+      summary.flightsClimbed = flights.summary;
+      series.flightsClimbed5m = flights.series;
+      timeline.push(...flights.segments);
+      continue;
+    }
+
+    if (metric.name === 'apple_stand_time') {
+      const standTime = buildStandTime(metric);
+      summary.standTime = standTime.summary;
+      series.standTime5m = standTime.series;
+      timeline.push(...standTime.segments);
+      continue;
+    }
+
+    if (metric.name === 'heart_rate') {
+      const heartRate = buildHeartRate(metric);
+      summary.heartRate = heartRate.summary;
+      series.heartRate5m = heartRate.series;
+      timeline.push(...heartRate.segments);
+      continue;
+    }
+
+    if (metric.name === 'physical_effort') {
+      const physicalEffort = buildPhysicalEffort(metric);
+      summary.physicalEffort = physicalEffort.summary;
+      series.physicalEffort5m = physicalEffort.series;
+      timeline.push(...physicalEffort.segments);
+      continue;
+    }
+
+    if (metric.name === 'handwashing') {
+      const handwashing = buildHandwashing(metric);
+      summary.handwashing = handwashing.summary;
+      timeline.push(...handwashing.timeline);
+      continue;
+    }
+
+    if (metric.name === 'apple_exercise_time') {
+      const exerciseTime = buildExerciseTime(metric);
+      summary.exerciseTime = exerciseTime.summary;
+      series.exerciseTime5m = exerciseTime.series;
+      continue;
+    }
+
+    if (metric.name === 'time_in_daylight') {
+      const daylight = buildDaylight(metric);
+      summary.daylight = daylight.summary;
+      series.daylight5m = daylight.series;
+      timeline.push(...daylight.segments);
+      continue;
+    }
+
+    if (metric.name === 'walking_heart_rate_average') {
+      summary.walkingHeartRateAverage = summarizeQuantityMetric(metric, 1);
+      continue;
+    }
+
+    if (metric.name === 'vo2_max') {
+      summary.vo2Max = summarizeQuantityMetric(metric, 2);
+      continue;
+    }
+
+    if (metric.name === 'cardio_recovery') {
+      summary.cardioRecovery = summarizeQuantityMetric(metric, 1);
+      continue;
+    }
+
+    if (metric.name === 'sleep_analysis') {
+      timeline.push(...buildSleepTimeline(metric));
+    }
+
+    metrics.push(metric);
+  }
+
+  if (movementMetrics.step_count || movementMetrics.walking_running_distance) {
+    const movement = buildMovement(movementMetrics);
+    summary.movement = movement.summary;
+    series.movement5m = movement.series;
+    timeline.push(...movement.segments);
+  }
+
+  const workouts = data.workouts?.workouts ?? [];
+  const compactWorkouts = buildCompactWorkouts(workouts);
+  summary.workouts = compactWorkouts.summary;
+  timeline.push(...compactWorkouts.timeline);
+  timeline.sort(compareTimelineItems);
+
+  return {
+    summary,
+    timeline,
+    series,
+    data: {
+      ...data,
+      workouts: {
+        workouts: compactWorkouts.workouts,
+      },
+      healthMetrics: {
+        metrics,
+      },
+    },
+  };
+}
+
+function summarizeEnergy(metric) {
+  const data = Array.isArray(metric?.data) ? metric.data : [];
+  const totalKJ = data.reduce((sum, record) => sum + Number(record.qty ?? 0), 0);
+
+  return {
+    units: metric.units,
+    totalKJ: round(totalKJ, 3),
+    totalKcal: round(kjToKcal(totalKJ), 3),
+    omittedRawRecords: data.length,
+  };
+}
+
+function buildActiveEnergy(metric) {
+  const data = Array.isArray(metric?.data) ? metric.data : [];
+  const buckets = new Map();
+  let totalKJ = 0;
+
+  for (const record of data) {
+    const minute = minuteOfDay(record.date);
+    if (minute === null) {
+      continue;
+    }
+
+    const bucketStart = Math.floor(minute / activeEnergyBucketMinutes) * activeEnergyBucketMinutes;
+    const qty = Number(record.qty ?? 0);
+    totalKJ += qty;
+    buckets.set(bucketStart, (buckets.get(bucketStart) ?? 0) + qty);
+  }
+
+  const bucketRows = Array.from(buckets.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([minute, value]) => [formatMinuteOfDay(minute), round(value, 3)]);
+
+  return {
+    summary: {
+      units: metric.units,
+      totalKJ: round(totalKJ, 3),
+      totalKcal: round(kjToKcal(totalKJ), 3),
+      omittedRawRecords: data.length,
+      bucketMinutes: activeEnergyBucketMinutes,
+      segmentThresholdKJ: activeEnergySegmentThresholdKJ,
+      segmentMergeGapMinutes: activeEnergyMergeGapMinutes,
+    },
+    series: {
+      units: metric.units,
+      bucketMinutes: activeEnergyBucketMinutes,
+      values: bucketRows,
+    },
+    segments: buildActiveEnergySegments(buckets),
+  };
+}
+
+function buildActiveEnergySegments(buckets) {
+  const activeBuckets = Array.from(buckets.entries())
+    .filter(([, value]) => value >= activeEnergySegmentThresholdKJ)
+    .sort((a, b) => a[0] - b[0]);
+  const segments = [];
+  let current = null;
+
+  for (const [minute, value] of activeBuckets) {
+    if (!current || minute - current.endMinute > activeEnergyMergeGapMinutes) {
+      if (current) {
+        segments.push(formatActiveEnergySegment(current));
+      }
+      current = {
+        startMinute: minute,
+        endMinute: minute + activeEnergyBucketMinutes,
+        energyKJ: 0,
+        bucketCount: 0,
+      };
+    } else {
+      current.endMinute = minute + activeEnergyBucketMinutes;
+    }
+
+    current.energyKJ += value;
+    current.bucketCount += 1;
+  }
+
+  if (current) {
+    segments.push(formatActiveEnergySegment(current));
+  }
+
+  return segments;
+}
+
+function formatActiveEnergySegment(segment) {
+  return {
+    type: 'active_energy',
+    level: 'high',
+    start: formatMinuteOfDay(segment.startMinute),
+    end: formatMinuteOfDay(segment.endMinute),
+    durationMinutes: segment.endMinute - segment.startMinute,
+    energyKJ: round(segment.energyKJ, 3),
+    energyKcal: round(kjToKcal(segment.energyKJ), 3),
+    bucketCount: segment.bucketCount,
+  };
+}
+
+function buildMovement(metrics) {
+  const stepMetric = metrics.step_count;
+  const distanceMetric = metrics.walking_running_distance;
+  const buckets = new Map();
+  const stepRecords = Array.isArray(stepMetric?.data) ? stepMetric.data : [];
+  const distanceRecords = Array.isArray(distanceMetric?.data) ? distanceMetric.data : [];
+
+  addMetricToBuckets(buckets, stepRecords, movementBucketMinutes, 'steps');
+  addMetricToBuckets(buckets, distanceRecords, movementBucketMinutes, 'distanceKm');
+
+  const sortedBuckets = Array.from(buckets.entries()).sort((a, b) => a[0] - b[0]);
+  const values = sortedBuckets.map(([minute, bucket]) => [
+    formatMinuteOfDay(minute),
+    round(bucket.steps ?? 0, 1),
+    round(bucket.distanceKm ?? 0, 4),
+  ]);
+  const totalSteps = sumRecords(stepRecords);
+  const totalDistanceKm = sumRecords(distanceRecords);
+
+  return {
+    summary: {
+      steps: round(totalSteps, 1),
+      distanceKm: round(totalDistanceKm, 4),
+      omittedRawRecords: stepRecords.length + distanceRecords.length,
+      bucketMinutes: movementBucketMinutes,
+      segmentThresholdSteps: movementSegmentThresholdSteps,
+      segmentThresholdDistanceKm: movementSegmentThresholdDistanceKm,
+      segmentMergeGapMinutes: movementMergeGapMinutes,
+    },
+    series: {
+      units: ['count', 'km'],
+      bucketMinutes: movementBucketMinutes,
+      values,
+    },
+    segments: buildMovementSegments(sortedBuckets),
+  };
+}
+
+function buildMovementSegments(sortedBuckets) {
+  const activeBuckets = sortedBuckets.filter(([, bucket]) => (
+    (bucket.steps ?? 0) >= movementSegmentThresholdSteps ||
+    (bucket.distanceKm ?? 0) >= movementSegmentThresholdDistanceKm
+  ));
+  const segments = [];
+  let current = null;
+
+  for (const [minute, bucket] of activeBuckets) {
+    if (!current || minute - current.endMinute > movementMergeGapMinutes) {
+      if (current) {
+        segments.push(formatMovementSegment(current));
+      }
+      current = {
+        startMinute: minute,
+        endMinute: minute + movementBucketMinutes,
+        steps: 0,
+        distanceKm: 0,
+        bucketCount: 0,
+      };
+    } else {
+      current.endMinute = minute + movementBucketMinutes;
+    }
+
+    current.steps += bucket.steps ?? 0;
+    current.distanceKm += bucket.distanceKm ?? 0;
+    current.bucketCount += 1;
+  }
+
+  if (current) {
+    segments.push(formatMovementSegment(current));
+  }
+
+  return segments;
+}
+
+function formatMovementSegment(segment) {
+  return {
+    type: 'movement',
+    start: formatMinuteOfDay(segment.startMinute),
+    end: formatMinuteOfDay(segment.endMinute),
+    durationMinutes: segment.endMinute - segment.startMinute,
+    steps: round(segment.steps, 1),
+    distanceKm: round(segment.distanceKm, 4),
+    bucketCount: segment.bucketCount,
+  };
+}
+
+function buildFlightsClimbed(metric) {
+  const data = Array.isArray(metric?.data) ? metric.data : [];
+  const buckets = new Map();
+  addMetricToBuckets(buckets, data, flightsBucketMinutes, 'flights');
+  const sortedBuckets = Array.from(buckets.entries()).sort((a, b) => a[0] - b[0]);
+  const values = sortedBuckets.map(([minute, bucket]) => [
+    formatMinuteOfDay(minute),
+    round(bucket.flights ?? 0, 3),
+  ]);
+  const totalFlights = sumRecords(data);
+
+  return {
+    summary: {
+      units: metric.units,
+      total: round(totalFlights, 3),
+      omittedRawRecords: data.length,
+      bucketMinutes: flightsBucketMinutes,
+      segmentThreshold: flightsSegmentThreshold,
+      segmentMergeGapMinutes: flightsMergeGapMinutes,
+    },
+    series: {
+      units: metric.units,
+      bucketMinutes: flightsBucketMinutes,
+      values,
+    },
+    segments: buildSingleValueSegments(sortedBuckets, {
+      type: 'stairs',
+      valueKey: 'flights',
+      outputKey: 'flights',
+      bucketMinutes: flightsBucketMinutes,
+      threshold: flightsSegmentThreshold,
+      mergeGapMinutes: flightsMergeGapMinutes,
+      decimals: 3,
+    }),
+  };
+}
+
+function buildStandTime(metric) {
+  const data = Array.isArray(metric?.data) ? metric.data : [];
+  const buckets = new Map();
+  addMetricToBuckets(buckets, data, standBucketMinutes, 'minutes');
+  const sortedBuckets = Array.from(buckets.entries()).sort((a, b) => a[0] - b[0]);
+  const values = sortedBuckets.map(([minute, bucket]) => [
+    formatMinuteOfDay(minute),
+    round(bucket.minutes ?? 0, 1),
+  ]);
+  const totalMinutes = sumRecords(data);
+
+  return {
+    summary: {
+      units: metric.units,
+      totalMinutes: round(totalMinutes, 1),
+      omittedRawRecords: data.length,
+      bucketMinutes: standBucketMinutes,
+      segmentThresholdMinutes: standSegmentThresholdMinutes,
+      segmentMergeGapMinutes: standMergeGapMinutes,
+    },
+    series: {
+      units: metric.units,
+      bucketMinutes: standBucketMinutes,
+      values,
+    },
+    segments: buildSingleValueSegments(sortedBuckets, {
+      type: 'stand',
+      valueKey: 'minutes',
+      outputKey: 'durationMinutes',
+      bucketMinutes: standBucketMinutes,
+      threshold: standSegmentThresholdMinutes,
+      mergeGapMinutes: standMergeGapMinutes,
+      decimals: 1,
+    }),
+  };
+}
+
+function buildHeartRate(metric) {
+  const data = Array.isArray(metric?.data) ? metric.data : [];
+  const buckets = new Map();
+  let min = Infinity;
+  let max = -Infinity;
+  let sum = 0;
+  let count = 0;
+
+  for (const record of data) {
+    const minute = minuteOfDay(record.date);
+    const value = Number(record.Avg ?? record.qty);
+    if (minute === null || !Number.isFinite(value)) {
+      continue;
+    }
+
+    const bucketStart = Math.floor(minute / 5) * 5;
+    const bucket = buckets.get(bucketStart) ?? {
+      sum: 0,
+      count: 0,
+      min: Infinity,
+      max: -Infinity,
+    };
+    const recordMin = Number(record.Min ?? value);
+    const recordMax = Number(record.Max ?? value);
+    bucket.sum += value;
+    bucket.count += 1;
+    bucket.min = Math.min(bucket.min, recordMin);
+    bucket.max = Math.max(bucket.max, recordMax);
+    buckets.set(bucketStart, bucket);
+
+    min = Math.min(min, recordMin);
+    max = Math.max(max, recordMax);
+    sum += value;
+    count += 1;
+  }
+
+  const values = Array.from(buckets.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([minute, bucket]) => [
+      formatMinuteOfDay(minute),
+      round(bucket.sum / bucket.count, 1),
+      round(bucket.min, 1),
+      round(bucket.max, 1),
+    ]);
+
+  return {
+    summary: {
+      units: metric.units,
+      avg: count > 0 ? round(sum / count, 1) : null,
+      min: count > 0 ? round(min, 1) : null,
+      max: count > 0 ? round(max, 1) : null,
+      omittedRawRecords: data.length,
+      bucketMinutes: 5,
+    },
+    series: {
+      units: metric.units,
+      bucketMinutes: 5,
+      values,
+    },
+    segments: buildHeartRateSegments(values),
+  };
+}
+
+function buildHeartRateSegments(values) {
+  const highBuckets = values
+    .map(([time, avg, min, max]) => ({
+      minute: parseClockMinute(time),
+      avg,
+      min,
+      max,
+    }))
+    .filter((bucket) => bucket.minute !== null && (bucket.avg >= 120 || bucket.max >= 150));
+  const segments = [];
+  let current = null;
+
+  for (const bucket of highBuckets) {
+    if (!current || bucket.minute - current.endMinute > 10) {
+      if (current) {
+        segments.push(formatHeartRateSegment(current));
+      }
+      current = {
+        startMinute: bucket.minute,
+        endMinute: bucket.minute + 5,
+        sum: 0,
+        count: 0,
+        min: Infinity,
+        max: -Infinity,
+      };
+    } else {
+      current.endMinute = bucket.minute + 5;
+    }
+
+    current.sum += bucket.avg;
+    current.count += 1;
+    current.min = Math.min(current.min, bucket.min);
+    current.max = Math.max(current.max, bucket.max);
+  }
+
+  if (current) {
+    segments.push(formatHeartRateSegment(current));
+  }
+
+  return segments.filter((segment) => segment.durationMinutes >= 10);
+}
+
+function formatHeartRateSegment(segment) {
+  return {
+    type: 'heart_rate_zone',
+    level: 'high',
+    start: formatMinuteOfDay(segment.startMinute),
+    end: formatMinuteOfDay(segment.endMinute),
+    durationMinutes: segment.endMinute - segment.startMinute,
+    avg: round(segment.sum / segment.count, 1),
+    min: round(segment.min, 1),
+    max: round(segment.max, 1),
+  };
+}
+
+function buildPhysicalEffort(metric) {
+  const data = Array.isArray(metric?.data) ? metric.data : [];
+  const buckets = new Map();
+  let min = Infinity;
+  let max = -Infinity;
+  let sum = 0;
+  let count = 0;
+
+  for (const record of data) {
+    const minute = minuteOfDay(record.start ?? record.date);
+    const value = Number(record.qty);
+    if (minute === null || !Number.isFinite(value)) {
+      continue;
+    }
+
+    const bucketStart = Math.floor(minute / physicalEffortBucketMinutes) * physicalEffortBucketMinutes;
+    const bucket = buckets.get(bucketStart) ?? {
+      sum: 0,
+      count: 0,
+      min: Infinity,
+      max: -Infinity,
+    };
+    bucket.sum += value;
+    bucket.count += 1;
+    bucket.min = Math.min(bucket.min, value);
+    bucket.max = Math.max(bucket.max, value);
+    buckets.set(bucketStart, bucket);
+
+    min = Math.min(min, value);
+    max = Math.max(max, value);
+    sum += value;
+    count += 1;
+  }
+
+  const values = Array.from(buckets.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([minute, bucket]) => [
+      formatMinuteOfDay(minute),
+      round(bucket.sum / bucket.count, 2),
+      round(bucket.min, 2),
+      round(bucket.max, 2),
+    ]);
+
+  return {
+    summary: {
+      units: metric.units,
+      avg: count > 0 ? round(sum / count, 2) : null,
+      min: count > 0 ? round(min, 2) : null,
+      max: count > 0 ? round(max, 2) : null,
+      omittedRawRecords: data.length,
+      bucketMinutes: physicalEffortBucketMinutes,
+      segmentThresholdAvg: physicalEffortSegmentThresholdAvg,
+      segmentThresholdMax: physicalEffortSegmentThresholdMax,
+      segmentMergeGapMinutes: physicalEffortMergeGapMinutes,
+    },
+    series: {
+      units: metric.units,
+      bucketMinutes: physicalEffortBucketMinutes,
+      values,
+    },
+    segments: buildPhysicalEffortSegments(values),
+  };
+}
+
+function buildPhysicalEffortSegments(values) {
+  const highBuckets = values
+    .map(([time, avg, min, max]) => ({
+      minute: parseClockMinute(time),
+      avg,
+      min,
+      max,
+    }))
+    .filter((bucket) => bucket.minute !== null && (
+      bucket.avg >= physicalEffortSegmentThresholdAvg ||
+      bucket.max >= physicalEffortSegmentThresholdMax
+    ));
+  const segments = [];
+  let current = null;
+
+  for (const bucket of highBuckets) {
+    if (!current || bucket.minute - current.endMinute > physicalEffortMergeGapMinutes) {
+      if (current) {
+        segments.push(formatPhysicalEffortSegment(current));
+      }
+      current = {
+        startMinute: bucket.minute,
+        endMinute: bucket.minute + physicalEffortBucketMinutes,
+        sum: 0,
+        count: 0,
+        min: Infinity,
+        max: -Infinity,
+      };
+    } else {
+      current.endMinute = bucket.minute + physicalEffortBucketMinutes;
+    }
+
+    current.sum += bucket.avg;
+    current.count += 1;
+    current.min = Math.min(current.min, bucket.min);
+    current.max = Math.max(current.max, bucket.max);
+  }
+
+  if (current) {
+    segments.push(formatPhysicalEffortSegment(current));
+  }
+
+  return segments;
+}
+
+function formatPhysicalEffortSegment(segment) {
+  return {
+    type: 'effort_zone',
+    level: 'high',
+    start: formatMinuteOfDay(segment.startMinute),
+    end: formatMinuteOfDay(segment.endMinute),
+    durationMinutes: segment.endMinute - segment.startMinute,
+    avg: round(segment.sum / segment.count, 2),
+    min: round(segment.min, 2),
+    max: round(segment.max, 2),
+  };
+}
+
+function buildHandwashing(metric) {
+  const data = Array.isArray(metric?.data) ? metric.data : [];
+  const events = data.map((record) => ({
+    type: 'handwashing',
+    start: record.start ?? record.date,
+    end: record.end,
+    durationSeconds: round(Number(record.qty ?? 0), 1),
+    status: record.value,
+    source: record.source,
+  }));
+  const totalSeconds = events.reduce((sum, event) => sum + (event.durationSeconds ?? 0), 0);
+
+  return {
+    summary: {
+      units: metric.units,
+      count: events.length,
+      totalSeconds: round(totalSeconds, 1),
+      completedCount: events.filter((event) => event.status === '已完成' || event.status === '完成').length,
+      omittedRawRecords: data.length,
+    },
+    timeline: events,
+  };
+}
+
+function buildExerciseTime(metric) {
+  const data = Array.isArray(metric?.data) ? metric.data : [];
+  const buckets = new Map();
+  addMetricToBuckets(buckets, data, exerciseTimeBucketMinutes, 'minutes');
+  const sortedBuckets = Array.from(buckets.entries()).sort((a, b) => a[0] - b[0]);
+  const values = sortedBuckets.map(([minute, bucket]) => [
+    formatMinuteOfDay(minute),
+    round(bucket.minutes ?? 0, 1),
+  ]);
+  const totalMinutes = sumRecords(data);
+
+  return {
+    summary: {
+      units: metric.units,
+      totalMinutes: round(totalMinutes, 1),
+      omittedRawRecords: data.length,
+      bucketMinutes: exerciseTimeBucketMinutes,
+    },
+    series: {
+      units: metric.units,
+      bucketMinutes: exerciseTimeBucketMinutes,
+      values,
+    },
+  };
+}
+
+function buildDaylight(metric) {
+  const data = Array.isArray(metric?.data) ? metric.data : [];
+  const buckets = new Map();
+  addMetricToBuckets(buckets, data, daylightBucketMinutes, 'minutes');
+  const sortedBuckets = Array.from(buckets.entries()).sort((a, b) => a[0] - b[0]);
+  const values = sortedBuckets.map(([minute, bucket]) => [
+    formatMinuteOfDay(minute),
+    round(bucket.minutes ?? 0, 1),
+  ]);
+  const totalMinutes = sumRecords(data);
+
+  return {
+    summary: {
+      units: metric.units,
+      totalMinutes: round(totalMinutes, 1),
+      omittedRawRecords: data.length,
+      bucketMinutes: daylightBucketMinutes,
+      segmentThresholdMinutes: daylightSegmentThresholdMinutes,
+      segmentMergeGapMinutes: daylightMergeGapMinutes,
+    },
+    series: {
+      units: metric.units,
+      bucketMinutes: daylightBucketMinutes,
+      values,
+    },
+    segments: buildSingleValueSegments(sortedBuckets, {
+      type: 'daylight',
+      valueKey: 'minutes',
+      outputKey: 'durationMinutes',
+      bucketMinutes: daylightBucketMinutes,
+      threshold: daylightSegmentThresholdMinutes,
+      mergeGapMinutes: daylightMergeGapMinutes,
+      decimals: 1,
+    }),
+  };
+}
+
+function summarizeQuantityMetric(metric, decimals) {
+  const data = Array.isArray(metric?.data) ? metric.data : [];
+  const values = data.map((record) => Number(record.qty)).filter(Number.isFinite);
+  const latest = data.at(-1);
+
+  if (values.length === 0) {
+    return {
+      units: metric.units,
+      count: 0,
+      omittedRawRecords: data.length,
+    };
+  }
+
+  return {
+    units: metric.units,
+    count: values.length,
+    latest: round(Number(latest?.qty ?? values.at(-1)), decimals),
+    latestDate: latest?.date,
+    avg: round(values.reduce((sum, value) => sum + value, 0) / values.length, decimals),
+    min: round(Math.min(...values), decimals),
+    max: round(Math.max(...values), decimals),
+    omittedRawRecords: data.length,
+  };
+}
+
+function buildSingleValueSegments(sortedBuckets, options) {
+  const activeBuckets = sortedBuckets.filter(([, bucket]) => (bucket[options.valueKey] ?? 0) >= options.threshold);
+  const segments = [];
+  let current = null;
+
+  for (const [minute, bucket] of activeBuckets) {
+    if (!current || minute - current.endMinute > options.mergeGapMinutes) {
+      if (current) {
+        segments.push(formatSingleValueSegment(current, options));
+      }
+      current = {
+        startMinute: minute,
+        endMinute: minute + options.bucketMinutes,
+        value: 0,
+        bucketCount: 0,
+      };
+    } else {
+      current.endMinute = minute + options.bucketMinutes;
+    }
+
+    current.value += bucket[options.valueKey] ?? 0;
+    current.bucketCount += 1;
+  }
+
+  if (current) {
+    segments.push(formatSingleValueSegment(current, options));
+  }
+
+  return segments;
+}
+
+function formatSingleValueSegment(segment, options) {
+  return {
+    type: options.type,
+    start: formatMinuteOfDay(segment.startMinute),
+    end: formatMinuteOfDay(segment.endMinute),
+    durationMinutes: segment.endMinute - segment.startMinute,
+    [options.outputKey]: round(segment.value, options.decimals),
+    bucketCount: segment.bucketCount,
+  };
+}
+
+function addMetricToBuckets(buckets, records, bucketMinutes, key) {
+  for (const record of records) {
+    const minute = minuteOfDay(record.date);
+    if (minute === null) {
+      continue;
+    }
+
+    const bucketStart = Math.floor(minute / bucketMinutes) * bucketMinutes;
+    const bucket = buckets.get(bucketStart) ?? {};
+    bucket[key] = (bucket[key] ?? 0) + Number(record.qty ?? 0);
+    buckets.set(bucketStart, bucket);
+  }
+}
+
+function sumRecords(records) {
+  return records.reduce((sum, record) => sum + Number(record.qty ?? 0), 0);
+}
+
+function buildSleepTimeline(metric) {
+  const data = Array.isArray(metric?.data) ? metric.data : [];
+  return data.map((record) => ({
+    type: 'sleep',
+    stage: normalizeSleepStage(record.value),
+    label: record.value,
+    start: record.start ?? record.startDate ?? record.date,
+    end: record.end ?? record.endDate,
+    durationMinutes: round(Number(record.qty ?? 0) * 60, 1),
+    source: record.source,
+  }));
+}
+
+function buildWorkoutTimeline(workouts) {
+  if (!Array.isArray(workouts)) {
+    return [];
+  }
+
+  return workouts.map((workout) => ({
+    type: 'workout',
+    workoutType: workout.workoutActivityType ?? workout.activityType ?? workout.type,
+    start: workout.start ?? workout.startDate,
+    end: workout.end ?? workout.endDate,
+    durationMinutes: workout.duration,
+    source: workout.source,
+  }));
+}
+
+function buildCompactWorkouts(workouts) {
+  if (!Array.isArray(workouts)) {
+    return {
+      summary: {
+        count: 0,
+      },
+      workouts: [],
+      timeline: [],
+    };
+  }
+
+  const compactWorkouts = workouts.map(compactWorkout);
+
+  return {
+    summary: {
+      count: compactWorkouts.length,
+      durationMinutes: round(compactWorkouts.reduce((sum, workout) => sum + (workout.durationMinutes ?? 0), 0), 1),
+      activeEnergyKJ: round(compactWorkouts.reduce((sum, workout) => sum + (workout.activeEnergyKJ ?? 0), 0), 1),
+      distanceKm: round(compactWorkouts.reduce((sum, workout) => sum + (workout.distanceKm ?? 0), 0), 3),
+      steps: round(compactWorkouts.reduce((sum, workout) => sum + (workout.steps ?? 0), 0), 0),
+    },
+    workouts: compactWorkouts,
+    timeline: compactWorkouts.map((workout) => ({
+      type: 'workout',
+      ...workout,
+    })),
+  };
+}
+
+function compactWorkout(workout) {
+  const durationMinutes = workout.duration === undefined ? undefined : round(Number(workout.duration) / 60, 1);
+  const distanceKm = workout.distance?.qty ?? sumWorkoutRecords(workout.walkingAndRunningDistance);
+  const steps = sumWorkoutRecords(workout.stepCount);
+  const activeEnergyKJ = workout.activeEnergyBurned?.qty ?? sumWorkoutRecords(workout.activeEnergy);
+  const basalEnergyKJ = workout.basalEnergyBurned?.qty ?? sumWorkoutRecords(workout.basalEnergy);
+  const heartRate = summarizeWorkoutHeartRate(workout);
+
+  return dropUndefined({
+    id: workout.id,
+    name: workout.name,
+    workoutType: workout.workoutActivityType ?? workout.activityType ?? workout.type,
+    location: workout.location,
+    isIndoor: workout.isIndoor,
+    start: workout.start ?? workout.startDate,
+    end: workout.end ?? workout.endDate,
+    durationMinutes,
+    activeEnergyKJ: round(activeEnergyKJ, 1),
+    basalEnergyKJ: round(basalEnergyKJ, 1),
+    totalEnergyKJ: workout.totalEnergy?.qty === undefined ? undefined : round(Number(workout.totalEnergy.qty), 1),
+    distanceKm: round(distanceKm, 3),
+    steps: round(steps, 0),
+    flights: workout.flightsClimbed?.qty === undefined ? undefined : round(Number(workout.flightsClimbed.qty), 2),
+    avgHeartRate: heartRate.avg,
+    minHeartRate: heartRate.min,
+    maxHeartRate: heartRate.max,
+    avgSpeed: workout.avgSpeed?.qty === undefined ? undefined : round(Number(workout.avgSpeed.qty), 2),
+    maxSpeed: workout.maxSpeed?.qty === undefined ? undefined : round(Number(workout.maxSpeed.qty), 2),
+    temperature: workout.temperature?.qty === undefined ? undefined : round(Number(workout.temperature.qty), 1),
+    humidity: workout.humidity?.qty === undefined ? undefined : round(Number(workout.humidity.qty), 1),
+  });
+}
+
+function summarizeWorkoutHeartRate(workout) {
+  const candidates = [];
+
+  if (Array.isArray(workout.heartRateData)) {
+    candidates.push(...workout.heartRateData);
+  }
+  if (Array.isArray(workout.heartRate)) {
+    candidates.push(...workout.heartRate);
+  }
+
+  const values = candidates
+    .map((record) => Number(record.Avg ?? record.qty))
+    .filter(Number.isFinite);
+  const avgValue = workout.avgHeartRate?.qty;
+  const maxValue = workout.maxHeartRate?.qty;
+
+  if (values.length === 0) {
+    return {
+      avg: avgValue === undefined ? undefined : round(Number(avgValue), 1),
+      min: undefined,
+      max: maxValue === undefined ? undefined : round(Number(maxValue), 1),
+    };
+  }
+
+  return {
+    avg: avgValue === undefined ? round(values.reduce((sum, value) => sum + value, 0) / values.length, 1) : round(Number(avgValue), 1),
+    min: round(Math.min(...values), 1),
+    max: maxValue === undefined ? round(Math.max(...values), 1) : round(Number(maxValue), 1),
+  };
+}
+
+function sumWorkoutRecords(records) {
+  if (!Array.isArray(records)) {
+    return 0;
+  }
+
+  return records.reduce((sum, record) => sum + Number(record.qty ?? 0), 0);
+}
+
+function dropUndefined(value) {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined && item !== null));
+}
+
+function normalizeSleepStage(value) {
+  const stageMap = {
+    '清醒': 'awake',
+    '核心': 'core',
+    '深度': 'deep',
+    '快速动眼期': 'rem',
+  };
+  return stageMap[value] ?? value;
+}
+
+function compareTimelineItems(a, b) {
+  return timelineSortValue(a) - timelineSortValue(b);
+}
+
+function timelineSortValue(item) {
+  const value = item.start ?? item.date ?? '';
+  const fullDateMinute = minuteOfDay(value);
+  const minute = parseClockMinute(value);
+  if (fullDateMinute !== null) {
+    return fullDateMinute;
+  }
+  return minute === null ? Number.MAX_SAFE_INTEGER : minute;
+}
+
+function minuteOfDay(value) {
+  const match = value?.match(/\d{4}-\d{2}-\d{2} (\d{2}):(\d{2}):/);
+  if (!match) {
+    return null;
+  }
+
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function parseClockMinute(value) {
+  const match = value?.match(/^(\d{2}):(\d{2})$/);
+  if (!match) {
+    return null;
+  }
+
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function formatMinuteOfDay(minute) {
+  const normalized = Math.min(minute, 24 * 60);
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function kjToKcal(value) {
+  return value / 4.184;
+}
+
+function round(value, decimals) {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
+function enumerateDates(startDate, endDate) {
+  assertDate(startDate);
+  assertDate(endDate);
+
+  const dates = [];
+  const current = parseDateOnly(startDate);
+  const end = parseDateOnly(endDate);
+
+  while (current <= end) {
+    dates.push(formatLocalDate(current));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+
+  return dates;
+}
+
+function parseDateOnly(value) {
+  const [year, month, date] = value.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, date));
+}
+
 function sumMetricRecords(metrics) {
   if (!Array.isArray(metrics)) {
     return 0;
@@ -440,7 +1637,7 @@ function parseArgs(argv) {
       continue;
     }
 
-    if (arg === '--year' || arg === '--month' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
+    if (arg === '--year' || arg === '--month' || arg === '--date' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
       const value = argv[index + 1];
 
       if (!value || value.startsWith('--')) {
@@ -464,6 +1661,7 @@ function printHelp() {
 Options:
   --year <year>              Export full year (defaults to current month if omitted).
   --month <YYYY-MM>          Export specific month.
+  --date <YYYY-MM-DD>        Export only one daily compact file without writing month summary.
   --end-date <YYYY-MM-DD>    End date. Defaults to today for current year/month.
   --target <dir>             Output directory. Defaults to static/data/health.
   --mcp-server <file>        health_auto_export MCP server path.

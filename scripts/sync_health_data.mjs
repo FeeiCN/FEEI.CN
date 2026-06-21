@@ -39,6 +39,11 @@ for (const month of monthsToExport) {
   if (!isPathClean(path.join(healthDir, targetFile))) {
     changedFiles.push(path.join(healthDir, targetFile));
   }
+
+  const targetDailyDir = path.join(y, m);
+  if (!isPathClean(path.join(healthDir, targetDailyDir))) {
+    changedFiles.push(path.join(healthDir, targetDailyDir));
+  }
 }
 
 if (changedFiles.length === 0) {

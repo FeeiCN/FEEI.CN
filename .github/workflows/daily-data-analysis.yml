@@ -1,10 +1,10 @@
 name: Daily data analysis
 
-# 每天北京时间 08:00 分析前一日完整数据，生成对应日期的总结文档。
+# 每天北京时间 08:30 分析前一日完整数据，生成对应日期的总结文档。
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '30 0 * * *'
   workflow_dispatch:
     inputs:
       report_date:

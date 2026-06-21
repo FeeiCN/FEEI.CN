@@ -718,6 +718,10 @@ function buildDailyCompactData(data) {
   const compactWorkouts = buildCompactWorkouts(workouts);
   summary.workouts = compactWorkouts.summary;
   timeline.push(...compactWorkouts.timeline);
+
+  const collectionEvents = buildCollectionEvents(data);
+  Object.assign(summary, collectionEvents.summary);
+  timeline.push(...collectionEvents.timeline);
   timeline.sort(compareTimelineItems);
 
   return {
@@ -734,6 +738,88 @@ function buildDailyCompactData(data) {
       },
     },
   };
+}
+
+function buildCollectionEvents(data) {
+  const summary = {};
+  const timeline = [];
+  const collectionBuilders = [
+    ['stateOfMind', 'stateOfMind', buildStateOfMindCollection],
+    ['medications', 'medications', buildGenericCollection('medication')],
+    ['heartNotifications', 'heartRateNotifications', buildGenericCollection('heart_notification')],
+    ['cycleTracking', 'cycleTracking', buildGenericCollection('cycle_tracking')],
+    ['ecg', 'ecg', buildGenericCollection('ecg')],
+    ['symptoms', 'symptoms', buildGenericCollection('symptom')],
+  ];
+
+  for (const [section, key, builder] of collectionBuilders) {
+    const records = data[section]?.[key];
+    if (!Array.isArray(records)) {
+      summary[section] = {count: 0};
+      continue;
+    }
+
+    const built = builder(records);
+    summary[section] = built.summary;
+    timeline.push(...built.timeline);
+  }
+
+  return {summary, timeline};
+}
+
+function buildStateOfMindCollection(records) {
+  const timeline = records.map((record) => dropUndefined({
+    type: 'state_of_mind',
+    kind: record.kind,
+    start: normalizeTimelineDateTime(record.start),
+    end: normalizeTimelineDateTime(record.end),
+    valenceClassification: record.valenceClassification,
+    valence: record.valence === undefined ? undefined : round(Number(record.valence), 3),
+    labels: record.labels,
+    associations: record.associations,
+  }));
+
+  return {
+    summary: {
+      count: records.length,
+      byKind: countBy(records, (record) => record.kind),
+      byValenceClassification: countBy(records, (record) => record.valenceClassification),
+    },
+    timeline,
+  };
+}
+
+function buildGenericCollection(type) {
+  return (records) => ({
+    summary: {
+      count: records.length,
+    },
+    timeline: records
+      .filter((record) => record.start ?? record.date ?? record.end)
+      .map((record) => dropUndefined({
+        type,
+        start: normalizeTimelineDateTime(record.start ?? record.date),
+        end: normalizeTimelineDateTime(record.end),
+        value: record.value,
+        name: record.name,
+        source: record.source,
+      })),
+  });
+}
+
+function countBy(records, selector) {
+  const counts = {};
+
+  for (const record of records) {
+    const key = selector(record);
+    if (!key) {
+      continue;
+    }
+
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+
+  return counts;
 }
 
 function summarizeEnergy(metric) {
@@ -1556,9 +1642,13 @@ function compareTimelineItems(a, b) {
 function timelineSortValue(item) {
   const value = item.start ?? item.date ?? '';
   const fullDateMinute = minuteOfDay(value);
+  const isoMinute = isoMinuteOfDay(value);
   const minute = parseClockMinute(value);
   if (fullDateMinute !== null) {
     return fullDateMinute;
+  }
+  if (isoMinute !== null) {
+    return isoMinute;
   }
   return minute === null ? Number.MAX_SAFE_INTEGER : minute;
 }
@@ -1579,6 +1669,50 @@ function parseClockMinute(value) {
   }
 
   return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function isoMinuteOfDay(value) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(date).map((part) => [part.type, part.value]));
+
+  return Number(parts.hour) * 60 + Number(parts.minute);
+}
+
+function normalizeTimelineDateTime(value) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+    return value;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(date).map((part) => [part.type, part.value]));
+
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second} ${timeZoneOffset}`;
 }
 
 function formatMinuteOfDay(minute) {

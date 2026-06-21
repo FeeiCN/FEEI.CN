@@ -1,6 +1,6 @@
 name: Daily data analysis
 
-# 每天北京时间 08:30 分析前一日完整数据，生成对应日期的总结文档。
+# 每天北京时间 08:30 分析前一日完整数据，生成对应日期的结构化分析。
 
 on:
   schedule:
@@ -88,10 +88,10 @@ jobs:
 
           previous_month_end = report_date.replace(day=1) - dt.timedelta(days=1)
           target = (
-              Path("docs/05-吴飞飞/02-总结")
+              Path("static/data/daily-analysis")
               / f"{report_date.year:04d}"
               / f"{report_date.month:02d}"
-              / f"{report_date.day:02d}.md"
+              / f"{report_date.day:02d}.json"
           )
           candidates = [
               Path("static/data/health")
@@ -323,363 +323,7 @@ jobs:
           )
           PY
 
-      - name: Run Claude for final report
-        id: claude_report
-        env:
-          REPORT_DATE: ${{ steps.report.outputs.date }}
-          REPORT_TARGET: ${{ steps.report.outputs.target }}
-          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
-          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
-        run: |
-          python3 <<'PY' > /tmp/daily-report-prompt.md
-          import os
-          from pathlib import Path
-
-          skill = Path(
-              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日三省吾身.md"
-          ).read_text(encoding="utf-8")
-          context = Path("/tmp/daily-analysis-context.json").read_text(encoding="utf-8")
-          analysis = Path("/tmp/daily-analysis.json").read_text(encoding="utf-8")
-          print(
-              "# 每日三省吾身规则\n\n"
-              f"{skill}\n\n"
-              "# 结构化分析上下文\n\n"
-              f"```json\n{context}\n```\n\n"
-              "# 结构化分析结论\n\n"
-              f"```json\n{analysis}\n```\n\n"
-              "# 本次任务\n\n"
-              f"- 报告日期：`{os.environ['REPORT_DATE']}`（北京时间）\n"
-              f"- 唯一目标路径：`{os.environ['REPORT_TARGET']}`\n\n"
-              "# 执行约束\n\n"
-              "- 只能基于以上上下文与分析结论写成每日三省吾身。\n"
-              "- 最终只输出符合规则的完整 Markdown，不要解释，不要代码围栏。\n"
-              "- 如果分析结论里置信度低或数据状态不完整，必须在正文中明确降级表述。\n"
-              "- 这不是日报播报，不是流水账，也不是自我批判；它是一份自我校准记录，必须写出“事实 -> 判断 -> 改进”。\n"
-              "- 不要把成文写成逐段数字播报。每个板块都应优先写结构变化、相对位置、解释候选、边界，以及一个具体明日动作。\n"
-              "- 把“明日动作”当作硬格式，而不是可选建议：默认至少三个板块要各自以单独一行 `**明日动作**：...` 收尾。\n"
-              "- 接下来值得关注默认承载“明日动作”，每条都必须具体到可执行或可验证，不能写成“更努力”“更自律”这种空话。\n"
-              "- 尽量写出像下面这样的句子：'这更像一次回撤中的反弹，而不是趋势反转'、'这说明当日输入强度降温，但不等于月度连续性中断'、'当前最大的事实不是异常，而是数据不完整，不能下结论'。\n"
-              "- 至少保留一条跨板块洞察，说明多个方向之间的关系或判断边界。\n"
-              "- 健康对应健康幸福，财务对应财务自由，阅读主要对应丰富人生，AI 使用主要作为事业有成的代理信号；不要把 AI 用量高低直接写成工作做得好坏。\n"
-              "- 每个板块默认站在该领域专家视角写第一句：健康先写恢复/负荷判断，阅读先写学习投入结构判断，财务先写风险与趋势判断，AI 使用先写工作流强度或平台结构判断。\n"
-              "- 每个板块的结尾可以给出一条专业但克制的建议：只谈继续观察、验证、排查或关注，不给医疗诊断和投资买卖建议。\n"
-              "- 每个板块最多引用两到三组核心数字，数字只服务于结论，不要把正文写成报表转述。\n"
-              "- 如果上下文里有日记、天气、行车或 git 记录，必须在 `## 行动记录` 中总结：日记里最重要的生活事实和主观体验是什么，天气如何构成当天环境，行车记录说明了哪些移动切片，git 记录说明了哪些工程/写作推进。\n"
-              "- `## 行动记录` 只能写事实和谨慎判断，不要全文复述日记，不要把天气强行解释为健康变化原因，不要把 commit 数量直接等同于工作质量。\n"
-              "- 建议每个板块默认按这个顺序写：专家判断 -> 相对位置 -> 关键证据 -> 边界/不确定性 -> 明日动作。\n"
-              "- 直接按下面的骨架成文，并保留 `**明日动作**：` 这个粗体前缀，不要改写成别的标题或列表标记：\n"
-              "  `## 健康 ... \\n\\n**明日动作**：...`\n"
-              "  `## 阅读 ... \\n\\n**明日动作**：...`\n"
-              "  `## 财务 ... \\n\\n**明日动作**：...`\n"
-              "  `## AI 使用 ... \\n\\n**明日动作**：...`\n"
-          )
-          PY
-
-          set +e
-          bash scripts/run_claude_with_retry.sh \
-            --label "final report" \
-            --prompt-file /tmp/daily-report-prompt.md \
-            --output-file /tmp/claude-report.json \
-            --stderr-file /tmp/claude-report.err \
-            --meta-file /tmp/claude-report.meta \
-            --attempts 2 \
-            --timeout-seconds 420 \
-            --max-budget-usd 3
-          CLAUDE_STATUS=$?
-          set -e
-
-          {
-            echo "## Claude final report"
-            echo
-            echo "- report date: \`${REPORT_DATE}\`"
-            echo "- status: \`${CLAUDE_STATUS}\`"
-            echo
-            echo "### attempt metadata"
-            echo '```'
-            cat /tmp/claude-report.meta || true
-            echo
-            echo '```'
-            echo
-            echo "### stderr 前 2000 字符"
-            echo '```'
-            head -c 2000 /tmp/claude-report.err || true
-            echo
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$CLAUDE_STATUS" -ne 0 ]; then
-            echo "::error::Claude Code 成文失败，status=${CLAUDE_STATUS}"
-            exit 1
-          fi
-
-          python3 <<'PY'
-          import json
-          import re
-          from pathlib import Path
-
-          payload = json.loads(Path("/tmp/claude-report.json").read_text(encoding="utf-8"))
-          value = payload.get("result", payload.get("message"))
-          if not isinstance(value, str) or not value.strip():
-              raise SystemExit("Claude report 未返回非空字符串")
-
-          text = value.strip()
-          fence = re.fullmatch(r"```(?:md|markdown)?\s*([\s\S]*?)\s*```", text, re.I)
-          if fence:
-              text = fence.group(1).strip()
-
-          Path("/tmp/daily-report.md").write_text(text + "\n", encoding="utf-8")
-          PY
-
-      - name: Repair missing action markers
-        env:
-          REPORT_DATE: ${{ steps.report.outputs.date }}
-          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
-          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
-        run: |
-          python3 <<'PY'
-          import re
-          from pathlib import Path
-
-          text = Path("/tmp/daily-report.md").read_text(encoding="utf-8")
-          count = len(re.findall(r"\*\*明日动作\*\*：", text))
-          Path("/tmp/daily-report-action-count.txt").write_text(str(count), encoding="utf-8")
-          PY
-
-          ACTION_COUNT="$(cat /tmp/daily-report-action-count.txt)"
-          if [ "${ACTION_COUNT}" -ge 3 ]; then
-            echo "已有 ${ACTION_COUNT} 处明日动作标记，无需修复"
-            exit 0
-          fi
-
-          python3 <<'PY' > /tmp/daily-report-repair-prompt.md
-          import os
-          from pathlib import Path
-
-          skill = Path(
-              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日三省吾身.md"
-          ).read_text(encoding="utf-8")
-          analysis = Path("/tmp/daily-analysis.json").read_text(encoding="utf-8")
-          report = Path("/tmp/daily-report.md").read_text(encoding="utf-8")
-          count = Path("/tmp/daily-report-action-count.txt").read_text(encoding="utf-8").strip()
-
-          print(
-              "# 每日三省吾身规则\n\n"
-              f"{skill}\n\n"
-              "# 结构化分析结论\n\n"
-              f"```json\n{analysis}\n```\n\n"
-              "# 当前候选日报\n\n"
-              f"```md\n{report}\n```\n\n"
-              "# 修复任务\n\n"
-              f"- 报告日期：`{os.environ['REPORT_DATE']}`\n"
-              f"- 当前只检测到 `{count}` 处 `**明日动作**：` 标记，未达到至少 3 处。\n"
-              "- 请在不改变核心判断、front matter、章节结构和跨板块洞察的前提下，重写成完整 Markdown。\n"
-              "- 健康、阅读、财务、AI 使用四个板块中，至少三个板块要以单独一行 `**明日动作**：...` 收束。\n"
-              "- 只修复动作闭环，不要把文章大幅扩写，不要解释，不要代码围栏。\n"
-          )
-          PY
-
-          set +e
-          bash scripts/run_claude_with_retry.sh \
-            --label "repair action markers" \
-            --prompt-file /tmp/daily-report-repair-prompt.md \
-            --output-file /tmp/claude-report-repair.json \
-            --stderr-file /tmp/claude-report-repair.err \
-            --meta-file /tmp/claude-report-repair.meta \
-            --attempts 2 \
-            --timeout-seconds 300 \
-            --max-budget-usd 2
-          CLAUDE_STATUS=$?
-          set -e
-
-          {
-            echo "## Claude action-marker repair"
-            echo
-            echo "- report date: \`${REPORT_DATE}\`"
-            echo "- original action count: \`${ACTION_COUNT}\`"
-            echo "- status: \`${CLAUDE_STATUS}\`"
-            echo
-            echo "### attempt metadata"
-            echo '```'
-            cat /tmp/claude-report-repair.meta || true
-            echo
-            echo '```'
-            echo
-            echo "### stderr 前 2000 字符"
-            echo '```'
-            head -c 2000 /tmp/claude-report-repair.err || true
-            echo
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$CLAUDE_STATUS" -ne 0 ]; then
-            echo "::error::明日动作修复失败，status=${CLAUDE_STATUS}"
-            exit 1
-          fi
-
-          python3 <<'PY'
-          import json
-          import re
-          from pathlib import Path
-
-          payload = json.loads(Path("/tmp/claude-report-repair.json").read_text(encoding="utf-8"))
-          value = payload.get("result", payload.get("message"))
-          if not isinstance(value, str) or not value.strip():
-              raise SystemExit("Claude repair 未返回非空字符串")
-
-          text = value.strip()
-          fence = re.fullmatch(r"```(?:md|markdown)?\s*([\s\S]*?)\s*```", text, re.I)
-          if fence:
-              text = fence.group(1).strip()
-
-          Path("/tmp/daily-report.md").write_text(text + "\n", encoding="utf-8")
-          PY
-
-      - name: Run Claude quality critique
-        id: claude_critique
-        env:
-          REPORT_DATE: ${{ steps.report.outputs.date }}
-          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
-          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
-        run: |
-          python3 <<'PY' > /tmp/daily-critique-prompt.md
-          from pathlib import Path
-          import os
-
-          skill = Path(
-              "docs/05-吴飞飞/01-关于/关于FEEI.CN/每日三省吾身.md"
-          ).read_text(encoding="utf-8")
-          analysis = Path("/tmp/daily-analysis.json").read_text(encoding="utf-8")
-          report = Path("/tmp/daily-report.md").read_text(encoding="utf-8")
-
-          print(
-              "# 每日三省吾身规则\n\n"
-              f"{skill}\n\n"
-              "# 结构化分析结论\n\n"
-              f"```json\n{analysis}\n```\n\n"
-              "# 候选日报\n\n"
-              f"```md\n{report}\n```\n\n"
-              "# 你的任务\n\n"
-              f"- 评审报告日期：`{os.environ['REPORT_DATE']}`\n"
-              "- 你是严格的主编和领域分析 reviewer，不要改写成文，只评审质量。\n"
-              "- 重点判断：它是否真的是一份每日三省吾身，而不是数字播报、流水账或自我批判。\n"
-              "- 重点判断：是否真正形成了“事实 -> 判断 -> 改进”的闭环；是否真正有专家判断；是否有跨板块洞察；是否明确了不确定边界；是否把分析结论准确写进成文。\n"
-              "- 重点判断：接下来值得关注是否具体到可执行动作，而不是空泛口号；AI 使用是否被误写成产出好坏的直接证明。\n"
-              "- 最终只输出 JSON，不要解释，不要 Markdown。\n\n"
-              "# 输出 JSON 结构\n\n"
-              "{\n"
-              '  "verdict": "pass|fail",\n'
-              '  "score": 0,\n'
-              '  "strengths": ["优点1", "优点2"],\n'
-              '  "issues": [{"severity": "high|medium|low", "message": "问题描述"}],\n'
-              '  "checks": {\n'
-              '    "expert_judgment": true,\n'
-              '    "not_number_repetition": true,\n'
-              '    "has_cross_domain": true,\n'
-              '    "states_uncertainty": true,\n'
-              '    "follows_analysis": true,\n'
-              '    "has_concrete_actions": true,\n'
-              '    "not_self_criticism": true\n'
-              "  }\n"
-              "}\n"
-          )
-          PY
-
-          set +e
-          bash scripts/run_claude_with_retry.sh \
-            --label "quality critique" \
-            --prompt-file /tmp/daily-critique-prompt.md \
-            --output-file /tmp/claude-critique.json \
-            --stderr-file /tmp/claude-critique.err \
-            --meta-file /tmp/claude-critique.meta \
-            --attempts 2 \
-            --timeout-seconds 360 \
-            --max-budget-usd 2
-          CLAUDE_STATUS=$?
-          set -e
-
-          {
-            echo "## Claude quality critique"
-            echo
-            echo "- report date: \`${REPORT_DATE}\`"
-            echo "- status: \`${CLAUDE_STATUS}\`"
-            echo
-            echo "### attempt metadata"
-            echo '```'
-            cat /tmp/claude-critique.meta || true
-            echo
-            echo '```'
-            echo
-            echo "### stderr 前 2000 字符"
-            echo '```'
-            head -c 2000 /tmp/claude-critique.err || true
-            echo
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$CLAUDE_STATUS" -ne 0 ]; then
-            echo "::error::Claude Code 质量复核失败，status=${CLAUDE_STATUS}"
-            exit 1
-          fi
-
-          python3 <<'PY'
-          import json
-          import re
-          from pathlib import Path
-
-          def parse_embedded_json(value):
-              if isinstance(value, (dict, list)):
-                  return value
-              if not isinstance(value, str):
-                  raise SystemExit(f"Claude critique 输出格式不支持: {type(value).__name__}")
-
-              decoder = json.JSONDecoder()
-              candidates = []
-              text = value.strip()
-              fence = re.fullmatch(r"```(?:json)?\s*([\s\S]*?)\s*```", text, re.I)
-              if fence:
-                  candidates.append(fence.group(1).strip())
-              candidates.append(text)
-
-              for candidate in candidates:
-                  try:
-                      return json.loads(candidate)
-                  except json.JSONDecodeError:
-                      pass
-                  for index, char in enumerate(candidate):
-                      if char not in "{[":
-                          continue
-                      try:
-                          parsed, _ = decoder.raw_decode(candidate[index:])
-                          return parsed
-                      except json.JSONDecodeError:
-                          continue
-
-              preview = text[:500].replace("\n", "\\n")
-              raise SystemExit(f"Claude critique JSON 解析失败，前 500 字符: {preview}")
-
-          payload = json.loads(Path("/tmp/claude-critique.json").read_text(encoding="utf-8"))
-          value = payload.get("result", payload.get("message"))
-          parsed = parse_embedded_json(value)
-
-          Path("/tmp/daily-critique.json").write_text(
-              json.dumps(parsed, ensure_ascii=False, indent=2),
-              encoding="utf-8",
-          )
-          PY
-
-          {
-            echo
-            echo "### parsed critique"
-            echo '```json'
-            cat /tmp/daily-critique.json
-            echo
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Validate and write report
+      - name: Validate and write structured analysis
         env:
           REPORT_DATE: ${{ steps.report.outputs.date }}
           REPORT_TARGET: ${{ steps.report.outputs.target }}
@@ -691,52 +335,32 @@ jobs:
           import re
           from pathlib import Path
 
-          source = Path("/tmp/daily-report.md")
-          text = source.read_text(encoding="utf-8").strip() + "\n"
+          source = Path("/tmp/daily-analysis.json")
+          payload = json.loads(source.read_text(encoding="utf-8"))
+          if not isinstance(payload, dict):
+              raise SystemExit("结构化分析必须是 JSON 对象")
+
           report_date = dt.date.fromisoformat(os.environ["REPORT_DATE"])
-          expected_title = (
-              f"{report_date.year}年{report_date.month}月{report_date.day}日三省吾身"
-          )
-          expected_slug = f"/{report_date.isoformat()}"
+          payload["date"] = report_date.isoformat()
+          payload["generatedAt"] = dt.datetime.now(dt.timezone.utc).isoformat()
 
-          outer_fence = re.fullmatch(
-              r"```(?:md|markdown)?[ \t]*\n([\s\S]*?)\n```[ \t]*\n?",
-              text,
-              re.IGNORECASE,
-          )
-          if outer_fence:
-              text = outer_fence.group(1).strip() + "\n"
-
-          if len(text) < 500 or len(text) > 12000:
-              raise SystemExit(f"报告长度异常: {len(text)}")
-
-          front_matter = re.match(r"\A---\n(.*?)\n---\n", text, re.S)
-          if not front_matter:
-              raise SystemExit("缺少合法 front matter")
-          header = front_matter.group(1)
-          if f"slug: {expected_slug}" not in header:
-              raise SystemExit(f"front matter slug 必须为: {expected_slug}")
-          if f"title: {expected_title}" not in header:
-              raise SystemExit(f"front matter title 必须为: {expected_title}")
-          description = re.search(r"^description:\s*(.+)$", header, re.M)
-          if not description or not description.group(1).strip():
-              raise SystemExit("front matter description 不能为空")
-          if f"# {expected_title}" not in text:
-              raise SystemExit("正文标题与报告日期不一致")
-
-          required_sections = [
-              "## 今日判断",
-              "## 健康",
-              "## 阅读",
-              "## 财务",
-              "## AI 使用",
-              "## 行动记录",
-              "## 数据状态",
-              "## 接下来值得关注",
+          required_arrays = [
+              "top_signals",
+              "health_insights",
+              "reading_insights",
+              "finance_insights",
+              "ai_insights",
+              "data_status",
+              "follow_ups",
           ]
-          missing = [section for section in required_sections if section not in text]
+          missing = [key for key in required_arrays if not isinstance(payload.get(key), list)]
           if missing:
-              raise SystemExit(f"缺少固定章节: {', '.join(missing)}")
+              raise SystemExit(f"结构化分析缺少数组字段: {', '.join(missing)}")
+
+          checks = payload.get("quality_self_check") or {}
+          for key in ["not_number_repetition", "has_cross_domain", "states_uncertainty", "has_positioning", "has_expert_judgment"]:
+              if checks.get(key) is not True:
+                  raise SystemExit(f"结构化分析质量自检未通过: {key}")
 
           secret_patterns = [
               r"(?i)authorization\s*:",
@@ -745,14 +369,9 @@ jobs:
               r"(?i)gh[pousr]_[a-z0-9]{20,}",
               r"(?i)sk-ant-[a-z0-9_-]{20,}",
           ]
-          if any(re.search(pattern, text) for pattern in secret_patterns):
-              raise SystemExit("报告疑似包含凭证或认证信息")
-          if re.search(r"<(?:script|style)\b", text, re.I):
-              raise SystemExit("报告不能包含脚本或样式标签")
-          if len(re.findall(r'^\s*["{[]', text, re.M)) > 20:
-              raise SystemExit("报告疑似包含大段原始 JSON")
-          if text.count("**明日动作**") < 3:
-              raise SystemExit("三省吾身的具体动作不足，至少需要 3 处明日动作")
+          serialized = json.dumps(payload, ensure_ascii=False)
+          if any(re.search(pattern, serialized) for pattern in secret_patterns):
+              raise SystemExit("结构化分析疑似包含凭证或认证信息")
           self_criticism_patterns = [
               r"我太差劲了",
               r"我又失败了",
@@ -760,31 +379,28 @@ jobs:
               r"我不行",
               r"浪费时间了，我太",
           ]
-          if any(re.search(pattern, text) for pattern in self_criticism_patterns):
-              raise SystemExit("报告出现自责式表达，不符合三省吾身的校准原则")
-
-          critique = json.loads(Path("/tmp/daily-critique.json").read_text(encoding="utf-8"))
-          if critique.get("verdict") != "pass":
-              raise SystemExit(f"质量复核未通过: {critique}")
-          if int(critique.get("score") or 0) < 7:
-              raise SystemExit(f"质量复核分数过低: {critique.get('score')}")
-          checks = critique.get("checks") or {}
-          required_checks = [
-              "expert_judgment",
-              "not_number_repetition",
-              "has_cross_domain",
-              "states_uncertainty",
-              "follows_analysis",
-              "has_concrete_actions",
-              "not_self_criticism",
-          ]
-          failed_checks = [key for key in required_checks if checks.get(key) is not True]
-          if failed_checks:
-              raise SystemExit(f"质量复核检查未通过: {', '.join(failed_checks)}")
+          if any(re.search(pattern, serialized) for pattern in self_criticism_patterns):
+              raise SystemExit("结构化分析出现自责式表达，不符合三省吾身的校准原则")
 
           target = Path(os.environ["REPORT_TARGET"])
           target.parent.mkdir(parents=True, exist_ok=True)
-          target.write_text(text, encoding="utf-8")
+          target.write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          index = target.parents[2] / "index.json"
+          dates = set()
+          for path in target.parents[2].glob("*/*/*.json"):
+              try:
+                  year, month, filename = path.relative_to(target.parents[2]).parts
+              except ValueError:
+                  continue
+              dates.add(f"{year}-{month}-{Path(filename).stem}")
+          index.write_text(
+              json.dumps({"dates": sorted(dates)}, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
           PY
 
       - name: Build website
@@ -808,21 +424,21 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Commit and push report
+      - name: Commit and push analysis
         env:
           GH_TOKEN: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
           REPORT_DATE: ${{ steps.report.outputs.date }}
           REPORT_TARGET: ${{ steps.report.outputs.target }}
         run: |
-          git add -- "$REPORT_TARGET"
-          if git diff --cached --quiet -- "$REPORT_TARGET"; then
-            echo "日报内容没有变化，无需提交"
+          git add -- "$REPORT_TARGET" static/data/daily-analysis/index.json
+          if git diff --cached --quiet -- "$REPORT_TARGET" static/data/daily-analysis/index.json; then
+            echo "结构化分析没有变化，无需提交"
             exit 0
           fi
 
           git config user.name "FeeiCN[bot]"
           git config user.email "feei@feei.cn"
-          git commit --no-verify -m "[auto] 生成每日三省吾身 ${REPORT_DATE}" -- "$REPORT_TARGET"
+          git commit --no-verify -m "[auto] 生成每日三省吾身分析 ${REPORT_DATE}" -- "$REPORT_TARGET" static/data/daily-analysis/index.json
 
           if [ -n "$(git status --short)" ]; then
             echo "检测到 commit 后残留工作区改动，rebase 前先清理："
@@ -835,7 +451,7 @@ jobs:
             git fetch origin main
             if ! git rebase origin/main; then
               git rebase --abort || true
-              echo "::error::rebase 冲突，未推送日报"
+              echo "::error::rebase 冲突，未推送结构化分析"
               exit 1
             fi
 
@@ -849,5 +465,5 @@ jobs:
             fi
           done
 
-          echo "::error::推送日报失败，超过最大重试次数"
+          echo "::error::推送结构化分析失败，超过最大重试次数"
           exit 1

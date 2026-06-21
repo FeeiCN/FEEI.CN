@@ -3,8 +3,10 @@ icon: gauge-icon
 hide_table_of_contents: true
 slug: /review
 sidebar_position: 0
+tags: [数据]
 ---
 
+import DailyReflectionDashboard from '@site/src/components/DailyReflectionDashboard';
 import {
   AnnualReviewBridgeRow,
   AnnualReviewCell,
@@ -18,7 +20,9 @@ import {
   AnnualReviewTagList,
 } from '@site/src/components/AnnualReviewTable';
 
-# 人生进度
+# 三省吾身
+
+<DailyReflectionDashboard>
 
 <AnnualReviewTable>
   <AnnualReviewRow year="2030" age="38岁" emphasis="goal">
@@ -689,3 +693,5 @@ import {
     <AnnualReviewCell tone="life" empty />
   </AnnualReviewRow>
 </AnnualReviewTable>
+
+</DailyReflectionDashboard>

@@ -141,6 +141,19 @@ jobs:
           target.parent.mkdir(parents=True, exist_ok=True)
           body = (issue.get("body") or "").rstrip()
           target.write_text(body + "\n", encoding="utf-8")
+
+          index = Path("static/data/daily/index.json")
+          dates = set()
+          for path in Path("static/data/daily").glob("*/*/*.md"):
+              try:
+                  year, month, filename = path.relative_to("static/data/daily").parts
+              except ValueError:
+                  continue
+              dates.add(f"{year}-{month}-{Path(filename).stem}")
+          index.write_text(
+              json.dumps({"dates": sorted(dates)}, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
           print(f"已写入 {target.as_posix()}")
           PY
 
@@ -151,7 +164,7 @@ jobs:
           ISSUE_NUMBER: ${{ steps.diary.outputs.issue_number }}
           TARGET: ${{ steps.diary.outputs.target }}
         run: |
-          if [ -z "$(git status --porcelain -- "$TARGET")" ]; then
+          if [ -z "$(git status --porcelain -- "$TARGET" static/data/daily/index.json)" ]; then
             echo "日记内容无变化: $TARGET"
             echo "processed=yes" >> "$GITHUB_OUTPUT"
             echo "committed=no" >> "$GITHUB_OUTPUT"
@@ -160,7 +173,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$TARGET"
+          git add "$TARGET" static/data/daily/index.json
           git commit -m "保存日记数据 (#${ISSUE_NUMBER})"
 
           for attempt in 1 2 3; do

@@ -56,6 +56,11 @@ type VendorConfig = {
   path: string;
 };
 
+type TimeScope =
+  | {mode: 'recent'; range: '7d' | '30d' | '90d' | '1y'}
+  | {mode: 'year'; year: number}
+  | {mode: 'all'};
+
 type VendorPayload = {
   config: VendorConfig;
   payload: SummaryPayload;
@@ -70,6 +75,7 @@ type DailyVendorBreakdown = {
 };
 
 type DailyBreakdown = Record<string, DailyVendorBreakdown[]>;
+type DashboardVariant = 'heatmap' | 'stackedBar';
 
 const VENDORS: VendorConfig[] = [
   {id: 'minimax', label: 'MiniMax', path: '/data/llm-usage/minimax/usage_summary.json'},
@@ -90,6 +96,23 @@ const MONTH_LABELS = [
   '1月', '2月', '3月', '4月', '5月', '6月',
   '7月', '8月', '9月', '10月', '11月', '12月',
 ];
+const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
+
+function filterDateRecord<T>(record: Record<string, T>, scope?: TimeScope): Record<string, T> {
+  if (!scope || scope.mode === 'all') return record;
+  const entries = Object.entries(record);
+  if (scope.mode === 'year') {
+    const prefix = `${scope.year}-`;
+    return Object.fromEntries(entries.filter(([date]) => date.startsWith(prefix)));
+  }
+  const dates = entries.map(([date]) => date).sort();
+  const latest = dates.at(-1);
+  if (!latest) return {};
+  const cutoff = new Date(`${latest}T00:00:00`);
+  cutoff.setDate(cutoff.getDate() - RANGE_DAYS[scope.range]);
+  const cutoffKey = formatDate(cutoff);
+  return Object.fromEntries(entries.filter(([date]) => date >= cutoffKey));
+}
 
 function getDayRow(date: Date): number {
   const g = date.getDay();
@@ -231,11 +254,13 @@ function Heatmap({
   breakdown,
   fetchedAt,
   emptyHint,
+  onDateSelect,
 }: {
   daily: Record<string, number>;
   breakdown: DailyBreakdown;
   fetchedAt: string | null;
   emptyHint: string;
+  onDateSelect?: (date: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [hover, setHover] = useState<{
@@ -427,6 +452,7 @@ function Heatmap({
                       style={c.tokens > 0 ? {backgroundColor: vendorColor(c.level)} : undefined}
                       onMouseEnter={(e) => handleEnter(e, c)}
                       onMouseMove={handleMove}
+                      onClick={() => onDateSelect?.(c.date)}
                     />
                   );
                 }),
@@ -504,10 +530,12 @@ function Heatmap({
   );
 }
 
-function ActiveVendorSection({vendors}: {vendors: VendorPayload[]}) {
+function ActiveVendorSection({vendors, onDateSelect, timeScope}: {vendors: VendorPayload[]; onDateSelect?: (date: string) => void; timeScope?: TimeScope}) {
   const {daily, breakdown} = useMemo(() => buildDailyBreakdown(vendors), [vendors]);
-  const totalTokens = Object.values(daily).reduce((sum, value) => sum + Number(value || 0), 0);
-  const activeDays = Object.values(daily).filter((value) => Number(value || 0) > 0).length;
+  const scopedDaily = useMemo(() => filterDateRecord(daily, timeScope), [daily, timeScope]);
+  const scopedBreakdown = useMemo(() => filterDateRecord(breakdown, timeScope), [breakdown, timeScope]);
+  const totalTokens = Object.values(scopedDaily).reduce((sum, value) => sum + Number(value || 0), 0);
+  const activeDays = Object.values(scopedDaily).filter((value) => Number(value || 0) > 0).length;
   const vendorSummaries = vendors.map(({config, payload}) => ({
     id: config.id,
     label: config.label,
@@ -547,11 +575,95 @@ function ActiveVendorSection({vendors}: {vendors: VendorPayload[]}) {
         ))}
       </div>
       <Heatmap
-        daily={daily}
-        breakdown={breakdown}
+        daily={scopedDaily}
+        breakdown={scopedBreakdown}
         fetchedAt={latestFetchedAt}
         emptyHint="暂无 token 用量数据"
+        onDateSelect={onDateSelect}
       />
+    </section>
+  );
+}
+
+function StackedBarChart({
+  vendors,
+  onDateSelect,
+  timeScope,
+}: {
+  vendors: VendorPayload[];
+  onDateSelect?: (date: string) => void;
+  timeScope?: TimeScope;
+}) {
+  const vendorDaily = useMemo(() => {
+    return vendors.map((vendor) => ({
+      ...vendor,
+      daily: filterDateRecord(getDailyTokens(vendor.payload), timeScope),
+    }));
+  }, [vendors, timeScope]);
+  const dates = useMemo(() => {
+    return [...new Set(vendorDaily.flatMap((vendor) => Object.keys(vendor.daily)))].sort();
+  }, [vendorDaily]);
+  const totals = useMemo(() => {
+    return dates.map((date) => vendorDaily.reduce((sum, vendor) => sum + Number(vendor.daily[date] || 0), 0));
+  }, [dates, vendorDaily]);
+  const max = Math.max(1, ...totals);
+  const chartHeight = 240;
+  const labelHeight = 32;
+  const width = Math.max(520, dates.length * 24);
+  const plotHeight = chartHeight - labelHeight - 12;
+  const barGap = 8;
+  const barWidth = Math.max(8, Math.min(22, (width - barGap * (dates.length + 1)) / Math.max(1, dates.length)));
+  const colors: Record<string, string> = {
+    minimax: '#f97316',
+    openai: '#10b981',
+    anthropic: '#7c3aed',
+  };
+
+  if (!dates.length) {
+    return <div className={styles.error}>当前时间范围暂无 AI 使用数据</div>;
+  }
+
+  return (
+    <section className={styles.section}>
+      <div className={styles.stackedBarScroll}>
+        <svg className={styles.stackedBarChart} viewBox={`0 0 ${width} ${chartHeight}`} style={{width, height: chartHeight}} role="img">
+          {dates.map((date, index) => {
+            const x = barGap + index * (barWidth + barGap);
+            let y = plotHeight;
+            const dayTotal = totals[index] || 0;
+            return (
+              <g key={date} className={styles.stackedBarGroup} onClick={() => onDateSelect?.(date)}>
+                <title>{date} · {formatTokenCount(dayTotal)} token</title>
+                {vendorDaily.map((vendor) => {
+                  const value = Number(vendor.daily[date] || 0);
+                  if (value <= 0) return null;
+                  const height = Math.max(1, (value / max) * plotHeight);
+                  y -= height;
+                  return (
+                    <rect
+                      key={vendor.config.id}
+                      x={x}
+                      y={y}
+                      width={barWidth}
+                      height={height}
+                      rx={2}
+                      fill={colors[vendor.config.id] || '#64748b'}
+                    />
+                  );
+                })}
+                <text
+                  x={x + barWidth / 2}
+                  y={plotHeight + 14}
+                  textAnchor="middle"
+                  className={styles.stackedBarLabel}
+                >
+                  {dates.length <= 35 || index % Math.ceil(dates.length / 18) === 0 ? date.slice(5) : ''}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
     </section>
   );
 }
@@ -569,7 +681,7 @@ function Skeleton() {
   );
 }
 
-function DashboardInner() {
+function DashboardInner({onDateSelect, timeScope, variant = 'heatmap'}: {onDateSelect?: (date: string) => void; timeScope?: TimeScope; variant?: DashboardVariant}) {
   const {colorMode} = useColorMode();
   const [data, setData] = useState<VendorPayload[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -615,8 +727,12 @@ function DashboardInner() {
 
   return (
     <div className={styles.dashboard} data-theme-mode={colorMode === 'dark' ? 'dark' : 'light'}>
-      <ActiveVendorSection vendors={data} />
-      {data.some((vendor) => vendor.payload.fetchedAt) && (
+      {variant === 'stackedBar' ? (
+        <StackedBarChart vendors={data} onDateSelect={onDateSelect} timeScope={timeScope} />
+      ) : (
+        <ActiveVendorSection vendors={data} onDateSelect={onDateSelect} timeScope={timeScope} />
+      )}
+      {variant !== 'stackedBar' && data.some((vendor) => vendor.payload.fetchedAt) && (
         <div className={styles.footer}>
           <span>
             数据更新于{' '}
@@ -630,10 +746,10 @@ function DashboardInner() {
   );
 }
 
-export default function LLMUsageDashboard() {
+export default function LLMUsageDashboard({onDateSelect, timeScope, variant}: {onDateSelect?: (date: string) => void; timeScope?: TimeScope; variant?: DashboardVariant}) {
   return (
     <BrowserOnly fallback={<div style={{minHeight: 180}} />}>
-      {() => <DashboardInner />}
+      {() => <DashboardInner onDateSelect={onDateSelect} timeScope={timeScope} variant={variant} />}
     </BrowserOnly>
   );
 }

@@ -82,6 +82,67 @@
   font-weight: 600;
 }
 
+.scopeControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.scopeBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.18rem;
+  border: 1px solid var(--ifm-color-emphasis-200, #e2e8f0);
+  border-radius: 999px;
+  background: var(--ifm-background-color);
+}
+
+.scopeBar::-webkit-scrollbar {
+  display: none;
+}
+
+.scopeOptionBar {
+  flex: 1 1 auto;
+}
+
+.scopeBtn {
+  flex: 0 0 auto;
+  padding: 0.24rem 0.62rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ifm-color-content-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.scopeBtn:not(.scopeBtnActive):hover {
+  color: var(--ifm-color-primary);
+  background: var(--ifm-color-emphasis-100, rgba(0,0,0,0.04));
+}
+
+.scopeBtnActive {
+  background: var(--ifm-color-primary);
+  color: #fff !important;
+  font-weight: 650;
+}
+
+.scopeLoading {
+  flex: 0 0 auto;
+  padding: 0 0.35rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
 .dashGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -226,6 +287,11 @@
   border: 1px solid var(--ifm-color-emphasis-200, #e2e8f0);
   border-radius: 10px;
   padding: 1rem;
+}
+
+.section canvas,
+.section svg {
+  cursor: crosshair;
 }
 
 .sectionGroup {

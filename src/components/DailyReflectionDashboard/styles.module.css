@@ -35,7 +35,7 @@
 }
 
 .calendarTopline span,
-.signalPanel > span {
+.healthChartsPanelHead span {
   color: var(--accent);
   font-size: 0.74rem;
   font-weight: 700;
@@ -44,10 +44,7 @@
 }
 
 .calendarShell,
-.reflectionSection,
-.signalPanel,
-.legacy,
-.footerGrid article {
+.healthChartsPanel {
   border: 1px solid var(--line);
   border-radius: 22px;
   background: var(--surface);
@@ -57,9 +54,9 @@
 
 .calendarShell {
   display: grid;
-  grid-template-columns: minmax(9rem, 0.18fr) minmax(0, 0.82fr);
-  gap: 1rem;
-  align-items: end;
+  grid-template-columns: 1fr;
+  gap: 0.78rem;
+  align-items: stretch;
   padding: 0.85rem 1rem;
 }
 
@@ -90,9 +87,125 @@
   min-width: 0;
 }
 
+.dailyDetailPanel {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.dailyBasicInfo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) max-content minmax(11rem, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.72rem 0.82rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+}
+
+.dailyBasicInfo > div {
+  min-width: 0;
+}
+
+.dailyBasicInfo span,
+.dailyBasicInfo small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.dailyBasicInfo strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 1rem;
+  letter-spacing: -0.03em;
+}
+
+.dailyBasicMeta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.28rem;
+}
+
+.dailyBasicMeta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0.18rem 0.48rem;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--text);
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.dailyWeather {
+  display: grid;
+  gap: 0.1rem;
+  justify-items: end;
+  text-align: right;
+}
+
+.dailyWeather span {
+  color: var(--accent);
+  font-weight: 820;
+}
+
+.dailyWeather small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dailyDetailTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.2rem;
+  padding: 0.18rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+}
+
+.dailyDetailTabs button {
+  min-width: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.38rem 0.5rem;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.dailyDetailTabs button:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dailyDetailTabActive {
+  background: var(--accent) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 22px rgba(10, 132, 255, 0.18);
+}
+
 .timelinePanel,
 .dailyDiary,
-.analysisReport {
+.analysisReport,
+.healthChartsPanel {
   min-width: 0;
 }
 
@@ -109,21 +222,11 @@
 
 .panelHead {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr) max-content;
-  gap: 0.08rem 0.55rem;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 0.25rem 0.65rem;
   align-items: center;
   padding: 0.1rem 0.1rem 0.54rem;
   border-bottom: 1px solid var(--line);
-}
-
-.panelKicker {
-  padding: 0.2rem 0.44rem;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
 }
 
 .panelHead div {
@@ -181,9 +284,9 @@
 [data-theme='dark'] .dailyDiary {
   border-color: rgba(255, 255, 255, 0.08);
   background:
-    linear-gradient(90deg, transparent 0 1.36rem, rgba(255, 255, 255, 0.08) 1.36rem calc(1.36rem + 1px), transparent calc(1.36rem + 1px)),
-    repeating-linear-gradient(to bottom, transparent 0 1.76rem, rgba(255, 255, 255, 0.035) 1.76rem calc(1.76rem + 1px)),
-    linear-gradient(135deg, rgba(39, 35, 29, 0.8), rgba(28, 25, 23, 0.7));
+    linear-gradient(90deg, transparent 0 1.36rem, rgba(255, 255, 255, 0.055) 1.36rem calc(1.36rem + 1px), transparent calc(1.36rem + 1px)),
+    repeating-linear-gradient(to bottom, transparent 0 1.76rem, rgba(255, 255, 255, 0.026) 1.76rem calc(1.76rem + 1px)),
+    linear-gradient(135deg, rgba(34, 33, 31, 0.82), rgba(24, 24, 25, 0.78));
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.18);
 }
 
@@ -216,76 +319,198 @@
   letter-spacing: 0.01em;
 }
 
-.dailyLetterhead {
-  margin: 0.42rem 0;
-}
-
-.dailyNoteGrid {
+.healthChartsPanel {
   display: grid;
-  gap: 0.26rem;
-  margin: 0.36rem 0 0.32rem;
+  gap: 0.85rem;
+  margin-top: 0.2rem;
+  padding: 0.9rem 1rem 1rem;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.035);
+  backdrop-filter: blur(18px);
+  max-height: 46rem;
+  overflow: auto;
+  scrollbar-width: thin;
 }
 
-.dailyNote {
-  position: relative;
-  width: min(100%, 35rem);
-  max-width: 100%;
-  margin: 0 !important;
-  padding: 0.08rem 0.5rem 0.1rem;
-  border-radius: 0.42rem 0.7rem 0.5rem 0.62rem;
-  background: linear-gradient(100deg, var(--note-bg), color-mix(in srgb, var(--note-bg) 52%, transparent) 78%, transparent);
-  box-decoration-break: clone;
-  transform: rotate(var(--note-tilt));
+.dataDomainTabs {
+  position: sticky;
+  top: 3.05rem;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.2rem;
+  padding: 0.18rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  backdrop-filter: blur(18px);
 }
 
-.dailyNote::before {
-  content: '';
-  position: absolute;
-  inset: 0.12rem -0.12rem 0.06rem 0.16rem;
-  z-index: -1;
-  border-radius: 45% 52% 46% 58%;
-  background: color-mix(in srgb, var(--note-bg) 64%, transparent);
-  filter: blur(0.5px);
-  transform: rotate(calc(var(--note-tilt) * -1.8));
-}
-
-.dailyNote strong {
-  font-family: 'PingFang SC', 'Hiragino Sans GB', sans-serif;
-  font-size: 0.92em;
-  margin-right: 0.36rem;
-  color: color-mix(in srgb, var(--text) 82%, var(--note-ink));
-  text-decoration: none !important;
-}
-
-.dailyNote_health {
-  --note-bg: rgba(187, 247, 208, 0.42);
-  --note-ink: #15803d;
-  --note-tilt: -0.25deg;
-}
-
-.dailyNote_career {
-  --note-bg: rgba(191, 219, 254, 0.4);
-  --note-ink: #1d4ed8;
-  --note-tilt: 0.18deg;
-}
-
-.dailyNote_finance {
-  --note-bg: rgba(254, 240, 138, 0.4);
-  --note-ink: #a16207;
-  --note-tilt: -0.16deg;
-}
-
-.dailyNote_life {
-  --note-bg: rgba(253, 186, 116, 0.34);
-  --note-ink: #c2410c;
-  --note-tilt: 0.24deg;
-}
-
-.dailyLetterheadDivider {
-  width: min(82%, 34rem);
-  margin: 0.48rem 0 0.62rem 1.05rem;
+.dataDomainTabs button {
+  min-width: 0;
   border: 0;
-  border-top: 1px dashed rgba(120, 113, 108, 0.26);
+  border-radius: 999px;
+  padding: 0.38rem 0.5rem;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.dataDomainTabs button:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dataDomainTabActive {
+  background: var(--accent) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 22px rgba(10, 132, 255, 0.18);
+}
+
+.objectiveTimeControls {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.12rem 0;
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+}
+
+.objectiveTimeBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.18rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-strong);
+}
+
+.objectiveTimeBar::-webkit-scrollbar {
+  display: none;
+}
+
+.objectiveTimeOptions {
+  flex: 1 1 auto;
+}
+
+.objectiveTimeBar button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.3rem 0.64rem;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 720;
+  white-space: nowrap;
+}
+
+.objectiveTimeBar button:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.objectiveTimeActive {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+
+.healthChartsPanelHead {
+  position: sticky;
+  top: 6rem;
+  z-index: 4;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+}
+
+.healthChartsPanelHead > div {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 8rem;
+}
+
+.healthChartsPanelHead span {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.healthChartsPanelHead p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.healthChartsGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.healthChartSection {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.healthChartSection h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  letter-spacing: -0.02em;
+}
+
+.embeddedDashboard,
+.embeddedDashboardStack {
+  min-width: 0;
+}
+
+.embeddedDashboardStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.embeddedDashboardSection {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.embeddedDashboardSection h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  letter-spacing: -0.02em;
+}
+
+.embeddedDashboard :global(.container),
+.embeddedDashboardStack :global(.container) {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
+.embeddedDashboard :global(table),
+.embeddedDashboardStack :global(table) {
+  font-size: 0.76rem;
 }
 
 .dailyDiary .markdown {
@@ -320,6 +545,11 @@
   border: 1px solid rgba(120, 113, 108, 0.18);
   background: var(--soft);
   box-shadow: 0 10px 24px rgba(120, 113, 108, 0.09);
+}
+
+[data-theme='dark'] .diaryImages img {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.26);
 }
 
 .diaryImagesSingle {
@@ -1002,11 +1232,11 @@
 
 .calendarTopline {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-bottom: 1.55rem;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 0;
 }
 
 .calendarTopline h2 {
@@ -1019,7 +1249,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
-  padding: 0.25rem;
+  padding: 0.2rem;
   border-radius: 999px;
   background: var(--soft);
 }
@@ -1049,6 +1279,59 @@
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+}
+
+.calendarSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.calendarSummary div {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.calendarSummary strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 0.96rem;
+  letter-spacing: -0.02em;
+}
+
+.calendarSummary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.calendarSummary button,
+.calendarCollapseButton {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.34rem 0.68rem;
+  background: var(--surface-strong);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.calendarSummary button:hover,
+.calendarCollapseButton:hover {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+  color: var(--accent);
 }
 
 .calendarBody {
@@ -1204,17 +1487,35 @@
 .calendarFooter {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.4rem 0.7rem;
   color: var(--muted);
   font-size: 0.74rem;
+}
+
+.calendarProgress {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.calendarMeta {
+  color: var(--muted);
+}
+
+.calendarCollapseButton {
+  margin-left: auto;
+}
+
+.calendarCollapseButton + .calendarLegend {
+  margin-left: 0;
 }
 
 .calendarLegend {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  margin-left: auto;
 }
 
 .calendarLegend i {
@@ -1334,154 +1635,13 @@
   font-weight: 800;
 }
 
-.signalPanel {
-  margin-top: 0.65rem;
-  padding: 0.75rem;
-}
-
-.signalPanel > div {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: 0.55rem;
-  margin-top: 0.55rem;
-}
-
-.signalPanel article {
-  padding: 0.65rem;
-  border-radius: 16px;
-  background: var(--soft);
-}
-
-.signalPanel strong {
-  color: var(--accent);
-}
-
-.sections {
-  display: grid;
-  gap: 0.65rem;
-  margin-top: 0.65rem;
-}
-
-.reflectionSection {
-  display: grid;
-  grid-template-columns: minmax(10rem, 2fr) minmax(0, 8fr);
-  gap: 1rem;
-  align-items: start;
-  padding: 0.75rem 0.9rem;
-}
-
-.sectionHead {
-  display: grid;
-  gap: 0.45rem;
-  align-content: start;
-}
-
-.sectionHead > span {
-  width: fit-content;
-  padding: 0.24rem 0.45rem;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  text-align: center;
-  font-size: 0.68rem;
-  font-weight: 800;
-}
-
-.sectionHead h2 {
-  margin: 0;
-  font-size: clamp(1.25rem, 2.4vw, 1.65rem);
-  letter-spacing: -0.05em;
-}
-
-.sectionHead p {
-  margin: 0.1rem 0 0;
-  color: var(--muted);
-  font-size: 0.86rem;
-}
-
-.sectionBody {
-  min-width: 0;
-}
-
-.sectionGrid {
-  display: grid;
-  grid-template-columns: minmax(16rem, 0.42fr) minmax(0, 0.58fr);
-  gap: 0.6rem;
-}
-
-.objectivePanel,
-.analysisPanel {
-  padding: 0.7rem;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: var(--surface-strong);
-}
-
-.objectivePanel h3,
-.analysisPanel h3,
-.footerGrid h2,
-.legacy h2 {
-  margin: 0 0 0.45rem;
-  font-size: 0.92rem;
-  letter-spacing: -0.02em;
-}
-
-.objectiveStack {
-  display: grid;
-  gap: 0.55rem;
-}
-
-.metricGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(7.2rem, 1fr));
-  gap: 0.45rem;
-}
-
-.metricCard {
-  min-height: 4.4rem;
-  padding: 0.58rem;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, var(--surface-strong), rgba(245, 245, 247, 0.72));
-}
-
-[data-theme='dark'] .metricCard {
-  background:
-    linear-gradient(180deg, rgba(39, 39, 42, 0.88), rgba(17, 17, 19, 0.74));
-}
-
-.metricCard span {
-  display: block;
-  color: var(--muted);
-  font-size: 0.7rem;
-}
-
-.metricCard strong {
-  display: block;
-  margin-top: 0.22rem;
-  font-size: clamp(0.94rem, 1.6vw, 1.12rem);
-  letter-spacing: -0.04em;
-}
-
-.metricCard small {
-  display: block;
-  margin-top: 0.25rem;
-  color: var(--muted);
-  line-height: 1.3;
-  font-size: 0.72rem;
-}
-
-.objectiveStack h4,
 .markdown h4 {
   margin: 0 0 0.28rem;
   font-size: 0.84rem;
 }
 
 .markdown p,
-.insight p,
-.signalPanel p,
-.footerGrid p {
+.insight p {
   line-height: 1.55;
   margin: 0.35rem 0;
 }
@@ -1508,11 +1668,6 @@
 .insight li {
   margin: 0.16rem 0;
   line-height: 1.42;
-}
-
-.analysisPanel .insight:nth-of-type(n + 3),
-.objectivePanel .markdown p:nth-of-type(n + 4) {
-  display: none;
 }
 
 .pill {
@@ -1544,52 +1699,6 @@
   overflow: auto;
   white-space: pre-wrap;
   font-size: 0.78rem;
-}
-
-.timeline {
-  display: grid;
-  gap: 0.4rem;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.timeline li {
-  padding: 0.5rem;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--soft);
-}
-
-.timeline time {
-  color: var(--muted);
-  font-size: 0.78rem;
-}
-
-.timeline span {
-  margin-left: 0.5rem;
-  color: var(--accent);
-  font-weight: 800;
-}
-
-.timeline p {
-  margin: 0.2rem 0 0;
-}
-
-.legacy {
-  margin-top: 0.65rem;
-  padding: 0.75rem;
-}
-
-.footerGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-  gap: 0.65rem;
-  margin-top: 0.65rem;
-}
-
-.footerGrid article {
-  padding: 0.75rem;
 }
 
 .statusList {
@@ -1648,6 +1757,20 @@
     gap: 0.45rem;
   }
 
+  .dailyBasicInfo {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .dailyBasicMeta {
+    justify-content: flex-start;
+  }
+
+  .dailyWeather {
+    justify-items: start;
+    text-align: left;
+  }
+
   .panelHead {
     grid-template-columns: 1fr;
   }
@@ -1662,15 +1785,6 @@
 
   .timelineTrack {
     min-height: 27rem;
-  }
-
-  .reflectionSection {
-    grid-template-columns: 1fr;
-    gap: 0.55rem;
-  }
-
-  .sectionGrid {
-    grid-template-columns: 1fr;
   }
 
   .reflectionCalendar {

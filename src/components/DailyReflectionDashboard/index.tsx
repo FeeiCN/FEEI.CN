@@ -1,4 +1,9 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
+import AccountAssetsDashboard from '@site/src/components/AccountAssetsDashboard';
+import {HealthProvider, HealthSection, type TimeScope as HealthTimeScope} from '@site/src/components/HealthCharts';
+import HKIPOCharts from '@site/src/components/HKIPOCharts';
+import LLMUsageDashboard from '@site/src/components/LLMUsageDashboard';
+import ReadingDashboard from '@site/src/components/ReadingDashboard';
 import styles from './styles.module.css';
 
 type DailyReflectionDashboardProps = {
@@ -100,39 +105,6 @@ type DailyHealthData = {
   timeline?: DailyHealthTimelineRecord[];
 };
 
-type ReadingData = {
-  fetchedAt?: string;
-  readTimes?: Record<string, number>;
-  readLongest?: Array<{book?: {title?: string; author?: string}; readTime?: number; readingTime?: number}>;
-  preferCategory?: Array<{categoryTitle?: string; readingTime?: number}>;
-};
-
-type ReadingYearData = {
-  daily?: Record<string, {seconds?: number}>;
-};
-
-type LlmUsage = {
-  vendor?: string;
-  fetchedAt?: string;
-  daily_token_usage?: Record<string, number> | Array<{date?: string; token_count?: number | string; total_token?: number}>;
-  date_usage_stats?: Record<string, {total_requests?: number; total_tokens?: number; total_cost?: number}>;
-  date_model_usage?: Array<{
-    date?: string;
-    models?: Array<{model_name?: string; model?: string; total_token?: number; total_tokens?: number}>;
-    total_token?: number;
-  }>;
-};
-
-type AccountAssets = {
-  portfolio?: {
-    history?: Array<{
-      fullDate?: string;
-      totalAssets?: number;
-      dailyChange?: number;
-    }>;
-  };
-};
-
 type DriveLog = Record<string, {action?: string; address?: string}>;
 
 type WeatherSummary = {
@@ -190,20 +162,6 @@ type TimelineTooltip = {
   y: number;
 };
 
-type StateOfMindSummary = {
-  title: string;
-  detail: string;
-};
-
-type HealthSummary = {
-  sleep: string;
-  weight: string;
-  workouts: number;
-  workoutMinutes: number;
-  steps: number;
-  standMinutes: number;
-};
-
 type CalendarCell = {
   date: string;
   score: number;
@@ -216,6 +174,15 @@ type CalendarHover = CalendarCell & {
   x: number;
   y: number;
 };
+
+type DataDomain = 'health' | 'career' | 'finance' | 'life';
+type DailyDetailTab = 'diary' | 'timeline' | 'analysis';
+type ObjectiveTimeScope =
+  | {mode: 'recent'; range: '7d' | '30d' | '90d' | '1y'}
+  | {mode: 'year'; year: number}
+  | {mode: 'all'};
+
+const OBJECTIVE_RANGE_LABELS: Record<string, string> = {'7d': '7天', '30d': '30天', '90d': '90天', '1y': '近1年'};
 
 const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
@@ -291,6 +258,11 @@ function diffDays(start: string, end: string): number {
   const startTime = parseDateKey(start).getTime();
   const endTime = parseDateKey(end).getTime();
   return Math.max(0, Math.floor((endTime - startTime) / 86400000));
+}
+
+function formatPercent(value: number): string {
+  if (!Number.isFinite(value)) return '0%';
+  return `${formatNumber(value, 1)}%`;
 }
 
 function getWeekdayLabel(date: string): string {
@@ -426,104 +398,12 @@ function formatNumber(value: unknown, maximumFractionDigits = 0): string {
   return new Intl.NumberFormat('zh-CN', {maximumFractionDigits}).format(number);
 }
 
-function formatMoney(value: unknown): string {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return '暂无';
-  return `${number >= 0 ? '' : '-'}¥${formatNumber(Math.abs(number), 0)}`;
-}
-
-function formatTokenMillions(value: unknown): string {
-  const number = Number(value);
-  if (!Number.isFinite(number) || number <= 0) return '0 M';
-  return `${formatNumber(number / 1_000_000, number >= 10_000_000 ? 1 : 2)} M`;
-}
-
 function formatDuration(seconds: unknown): string {
   const value = Number(seconds);
   if (!Number.isFinite(value) || value <= 0) return '0 分钟';
   const minutes = Math.round(value / 60);
   if (minutes < 60) return `${minutes} 分钟`;
   return `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分钟`;
-}
-
-function formatStateOfMindClassification(value?: string): string {
-  const labels: Record<string, string> = {
-    very_pleasant: '非常愉悦',
-    veryPleasant: '非常愉悦',
-    HKStateOfMindValenceClassificationVeryPleasant: '非常愉悦',
-    pleasant: '愉悦',
-    Pleasant: '愉悦',
-    HKStateOfMindValenceClassificationPleasant: '愉悦',
-    slightly_pleasant: '略偏愉悦',
-    slightlyPleasant: '略偏愉悦',
-    HKStateOfMindValenceClassificationSlightlyPleasant: '略偏愉悦',
-    neutral: '平静',
-    Neutral: '平静',
-    HKStateOfMindValenceClassificationNeutral: '平静',
-    slightly_unpleasant: '略有低落',
-    slightlyUnpleasant: '略有低落',
-    HKStateOfMindValenceClassificationSlightlyUnpleasant: '略有低落',
-    unpleasant: '低落',
-    Unpleasant: '低落',
-    HKStateOfMindValenceClassificationUnpleasant: '低落',
-    very_unpleasant: '明显低落',
-    veryUnpleasant: '明显低落',
-    HKStateOfMindValenceClassificationVeryUnpleasant: '明显低落',
-  };
-  return value ? labels[value] || value : '暂无';
-}
-
-function formatStateOfMindLabel(value: string): string {
-  const labels: Record<string, string> = {
-    amazed: '惊叹',
-    amused: '愉快',
-    angry: '愤怒',
-    annoyed: '烦躁',
-    anxious: '焦虑感',
-    ashamed: '羞愧',
-    brave: '勇气',
-    calm: '平静感',
-    confident: '自信',
-    content: '满足感',
-    disappointed: '失望',
-    discouraged: '沮丧',
-    disgusted: '厌恶',
-    drained: '疲惫',
-    embarrassed: '尴尬',
-    excited: '兴奋',
-    frustrated: '挫败感',
-    grateful: '感恩',
-    guilty: '内疚',
-    happy: '开心',
-    hopeful: '期待感',
-    hopeless: '无望感',
-    indifferent: '无所谓',
-    irritated: '易怒',
-    jealous: '嫉妒',
-    joyful: '喜悦',
-    lonely: '孤独',
-    overwhelmed: '不堪重负',
-    passionate: '热情',
-    peaceful: '安宁',
-    proud: '自豪',
-    relieved: '如释重负',
-    sad: '难过',
-    satisfied: '满意',
-    scared: '害怕',
-    stressed: '压力感',
-    surprised: '惊讶',
-    worried: '担心',
-  };
-  return labels[value] || value;
-}
-
-function getStateOfMindSummary(dailyHealth: DailyHealthData | null): StateOfMindSummary | null {
-  const record = dailyHealth?.timeline?.find((item) => item.type === 'state_of_mind');
-  if (!record) return null;
-  return {
-    title: formatStateOfMindClassification(record.valenceClassification),
-    detail: record.labels?.length ? record.labels.map(formatStateOfMindLabel).join(' · ') : '已记录',
-  };
 }
 
 function formatSleepEntry(sleep: Record<string, unknown> | null): string {
@@ -545,42 +425,6 @@ function formatSleepEntry(sleep: Record<string, unknown> | null): string {
   return '';
 }
 
-function formatWeightEntry(weight: Record<string, unknown> | null, previousWeight: Record<string, unknown> | null): string {
-  const value = Number(weight?.qty ?? weight?.value);
-  if (!Number.isFinite(value) || value <= 0) return '';
-  const previousValue = Number(previousWeight?.qty ?? previousWeight?.value);
-  const change = Number.isFinite(previousValue) && previousValue > 0 ? (value - previousValue) * 2 : 0;
-  const changeText = change
-    ? `，较${String(previousWeight?.date || '').slice(0, 10) === getPreviousDateKey(String(weight?.date || '').slice(0, 10)) ? '昨日' : '上次'}${change > 0 ? '增加' : '减少'} ${formatNumber(Math.abs(change), 1)} 斤`
-    : '';
-  return `${formatNumber(value * 2, 1)} 斤${changeText}`;
-}
-
-function getHealthSummary(
-  dailyHealth: DailyHealthData | null,
-  timelineModel: TimelineModel,
-  sleep: Record<string, unknown> | null,
-  weight: Record<string, unknown> | null,
-  previousWeight: Record<string, unknown> | null,
-): HealthSummary {
-  const records = dailyHealth?.timeline || [];
-  const workouts = records.filter((record) => record.type === 'workout');
-  const workoutMinutes = workouts.reduce((total, record) => total + (Number(record.durationMinutes || 0) || 0), 0);
-  const steps = records.reduce((total, record) => total + (Number(record.steps || 0) || 0), 0);
-  const standMinutes = records
-    .filter((record) => record.type === 'stand')
-    .reduce((total, record) => total + (Number(record.durationMinutes || 0) || 0), 0);
-
-  return {
-    sleep: timelineModel.sleep?.detail || formatSleepEntry(sleep),
-    weight: formatWeightEntry(weight, previousWeight),
-    workouts: workouts.length,
-    workoutMinutes,
-    steps,
-    standMinutes,
-  };
-}
-
 function timeToMinute(value: unknown): number | null {
   if (!value) return null;
   const text = String(value);
@@ -596,16 +440,6 @@ function minuteToLabel(minute: number): string {
   const hour = Math.floor(minute / 60);
   const rest = minute % 60;
   return `${String(hour).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
-}
-
-function dateToUnixKey(date: string): string {
-  const [year, month, day] = date.split('-').map(Number);
-  return String(Date.UTC(year, month - 1, day) / 1000);
-}
-
-function dateToWereadTimeKey(date: string): string {
-  const [year, month, day] = date.split('-').map(Number);
-  return String(Date.UTC(year, month - 1, day + 1) / 1000);
 }
 
 function daysInYear(year: number): string[] {
@@ -753,14 +587,6 @@ function markdownToBlocks(markdown: string): React.ReactNode[] {
 function getMetricEntry(health: HealthData | null, metricName: string, date: string): Record<string, unknown> | null {
   const metric = health?.data?.healthMetrics?.metrics?.find((item) => item.name === metricName);
   return metric?.data?.find((item) => String(item.date || '').startsWith(date)) || null;
-}
-
-function getPreviousMetricEntry(health: HealthData | null, metricName: string, date: string): Record<string, unknown> | null {
-  const metric = health?.data?.healthMetrics?.metrics?.find((item) => item.name === metricName);
-  const entries = metric?.data
-    ?.filter((item) => String(item.date || '').slice(0, 10) < date)
-    .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')));
-  return entries?.[0] || null;
 }
 
 function recordTitle(record: DailyHealthTimelineRecord): string {
@@ -1034,42 +860,26 @@ function buildTimelineModel({
   return model;
 }
 
-function getDailyTokenUsage(usage: LlmUsage | null, date: string): number {
-  const daily = usage?.daily_token_usage;
-  if (!daily) return 0;
-  if (Array.isArray(daily)) {
-    const item = daily.find((entry) => entry.date === date);
-    return Number(item?.total_token ?? item?.token_count ?? 0) || 0;
-  }
-  return Number(daily[date] || 0) || 0;
-}
-
-function getDailyAssetSnapshot(assets: Array<AccountAssets | null>, date: string): {totalAssets: number; dailyChange: number} {
-  return assets.reduce((total, account) => {
-    const item = account?.portfolio?.history?.find((entry) => entry.fullDate === date);
-    return {
-      totalAssets: total.totalAssets + (Number(item?.totalAssets || 0) || 0),
-      dailyChange: total.dailyChange + (Number(item?.dailyChange || 0) || 0),
-    };
-  }, {totalAssets: 0, dailyChange: 0});
-}
-
 function ReflectionCalendar({
   year,
   dailyDates,
   analysisDates,
   selectedDate,
   onSelect,
+  compact = false,
+  onToggleCompact,
 }: {
   year: number;
   dailyDates: Set<string>;
   analysisDates: Set<string>;
   selectedDate: string;
   onSelect: (date: string) => void;
+  compact?: boolean;
+  onToggleCompact?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [hover, setHover] = useState<CalendarHover | null>(null);
-  const {grid, monthLabels, elapsedDays, futureDays, activeDays, completeDays, numWeeks} = useMemo(() => {
+  const {grid, monthLabels, elapsedDays, futureDays, elapsedPercent, activeDays, completeDays, numWeeks} = useMemo(() => {
     const days = daysInYear(year);
     const first = new Date(year, 0, 1);
     const today = formatDateKey(new Date());
@@ -1108,11 +918,26 @@ function ReflectionCalendar({
       monthLabels: labels,
       elapsedDays: elapsedCount,
       futureDays: futureCount,
+      elapsedPercent: (elapsedCount / days.length) * 100,
       activeDays: activeCount,
       completeDays: completeCount,
       numWeeks: weeks,
     };
   }, [analysisDates, dailyDates, year]);
+
+  if (compact) {
+    return (
+      <section className={styles.calendarSummary} aria-label={`${year} 年日历摘要`}>
+        <div>
+          <strong>{selectedDate ? formatChineseDate(selectedDate) : `${year}年`}</strong>
+          <span>今年已经过去 {formatPercent(elapsedPercent)} · {activeDays} 天有记录 · {completeDays} 天完整</span>
+        </div>
+        <button type="button" onClick={onToggleCompact}>
+          展开日历
+        </button>
+      </section>
+    );
+  }
 
   function handleEnter(event: React.MouseEvent<HTMLButtonElement>, cell: CalendarCell) {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -1196,7 +1021,13 @@ function ReflectionCalendar({
         </div>
       ) : null}
       <div className={styles.calendarFooter}>
-        <span>{elapsedDays} 天已过去 · {futureDays} 天未到来 · {activeDays} 天有记录 · {completeDays} 天完整</span>
+        <span className={styles.calendarProgress}>今年已经过去 {formatPercent(elapsedPercent)}</span>
+        <span className={styles.calendarMeta}>{elapsedDays} 天已过去 · {futureDays} 天未到来 · {activeDays} 天有记录 · {completeDays} 天完整</span>
+        {onToggleCompact ? (
+          <button type="button" className={styles.calendarCollapseButton} onClick={onToggleCompact}>
+            收起日历
+          </button>
+        ) : null}
         <div className={styles.calendarLegend}>
           <span>未来</span>
           <i className={styles.calendarCellFuture} />
@@ -1298,86 +1129,6 @@ function InsightList({items}: {items: AnalysisInsight[]}): React.ReactNode {
       {item.professional_suggestion ? <p className={styles.action}>{item.professional_suggestion}</p> : null}
     </article>
   ));
-}
-
-function DailyLetterhead({
-  date,
-  weather,
-  healthSummary,
-  readingSeconds,
-  aiTokens,
-  assetTotal,
-  assetChange,
-  stateOfMind,
-}: {
-  date: string;
-  weather: unknown;
-  healthSummary: HealthSummary;
-  readingSeconds: number;
-  aiTokens: number;
-  assetTotal: number;
-  assetChange: number;
-  stateOfMind: StateOfMindSummary | null;
-}): React.ReactNode {
-  if (!date) return null;
-  const weatherSummary = getWeatherSummary(weather);
-  const holiday = getHolidayLabel(date);
-  const dayContext = holiday === '工作日' || holiday === '周末' ? holiday : `${holiday}`;
-  const weatherText = weatherSummary.description !== '暂无天气' && weatherSummary.temperature !== '暂无'
-    ? `杭州${weatherSummary.description}，气温${weatherSummary.temperature}`
-    : '';
-  const assetChangeText = assetChange
-    ? `，比前一天${assetChange > 0 ? '多了' : '少了'} ${formatMoney(Math.abs(assetChange))}`
-    : '';
-  const moodText = stateOfMind
-    ? `心情整体${stateOfMind.title}${stateOfMind.detail ? `，夹杂着${stateOfMind.detail.replaceAll(' · ', '、')}` : ''}`
-    : '这一天没有留下心理状态记录';
-  const healthParts = [
-    healthSummary.sleep ? `睡眠 ${healthSummary.sleep}` : '',
-    healthSummary.weight ? `体重 ${healthSummary.weight}` : '',
-    healthSummary.workouts ? `运动 ${healthSummary.workouts} 次${healthSummary.workoutMinutes ? `，合计 ${formatDuration(healthSummary.workoutMinutes * 60)}` : ''}` : '',
-    healthSummary.standMinutes ? `站立 ${formatDuration(healthSummary.standMinutes * 60)}` : '',
-    healthSummary.steps ? `步数 ${formatNumber(healthSummary.steps)} 步` : '',
-  ].filter(Boolean);
-  const readingText = readingSeconds > 0 ? `当天读了${formatDuration(readingSeconds)}书` : '当天没有阅读记录';
-  const dateLine = `${formatChineseDate(date)}，${getWeekdayLabel(date)}，${dayContext}。${weatherText ? `${weatherText}。` : ''}`;
-  const notes = [
-    {
-      label: '健康方面',
-      tone: 'health',
-      text: `${healthParts.length ? healthParts.join('；') : '暂无睡眠、体重、运动或站立数据'}。${moodText}。`,
-    },
-    {
-      label: '事业方面',
-      tone: 'career',
-      text: `AI 使用量约 ${formatTokenMillions(aiTokens)}。`,
-    },
-    {
-      label: '财务方面',
-      tone: 'finance',
-      text: `资产总额为${formatMoney(assetTotal)}${assetChangeText}。`,
-    },
-    {
-      label: '人生方面',
-      tone: 'life',
-      text: `${readingText}。`,
-    },
-  ];
-
-  return (
-    <>
-      <p className={styles.dailyLetterhead}>{dateLine}</p>
-      <div className={styles.dailyNoteGrid}>
-        {notes.map((item) => (
-          <p key={item.label} className={`${styles.dailyNote} ${styles[`dailyNote_${item.tone}`]}`}>
-            <strong>{item.label}</strong>
-            {item.text}
-          </p>
-        ))}
-      </div>
-      <hr className={styles.dailyLetterheadDivider} />
-    </>
-  );
 }
 
 function TimelinePanel({model}: {model: TimelineModel}): React.ReactNode {
@@ -1579,39 +1330,13 @@ function DayTimeline({model}: {model: TimelineModel}): React.ReactNode {
 }
 
 function DailyDiary({
-  date,
-  weather,
   diary,
-  healthSummary,
-  readingSeconds,
-  aiTokens,
-  assetTotal,
-  assetChange,
-  stateOfMind,
 }: {
-  date: string;
-  weather: unknown;
   diary: string;
-  healthSummary: HealthSummary;
-  readingSeconds: number;
-  aiTokens: number;
-  assetTotal: number;
-  assetChange: number;
-  stateOfMind: StateOfMindSummary | null;
 }): React.ReactNode {
   return (
     <div className={styles.dailyDiary}>
       <div className={styles.markdown}>
-        <DailyLetterhead
-          date={date}
-          weather={weather}
-          healthSummary={healthSummary}
-          readingSeconds={readingSeconds}
-          aiTokens={aiTokens}
-          assetTotal={assetTotal}
-          assetChange={assetChange}
-          stateOfMind={stateOfMind}
-        />
         {diary ? markdownToBlocks(diary) : <p className={styles.muted}>暂无公开日记。</p>}
       </div>
     </div>
@@ -1714,49 +1439,322 @@ function DailyAnalysisReport({analysis}: {analysis: DailyAnalysis | null}): Reac
   );
 }
 
-function DailyContext({
+function PanelTitle({title, description}: {title: string; description: string}): React.ReactNode {
+  return (
+    <div>
+      <span>{title}</span>
+      <p>{description}</p>
+    </div>
+  );
+}
+
+function DataDomainTabs({
+  active,
+  onChange,
+}: {
+  active: DataDomain;
+  onChange: (domain: DataDomain) => void;
+}): React.ReactNode {
+  const domains: Array<{key: DataDomain; label: string}> = [
+    {key: 'health', label: '健康'},
+    {key: 'career', label: '事业'},
+    {key: 'finance', label: '财务'},
+    {key: 'life', label: '人生'},
+  ];
+
+  return (
+    <div className={styles.dataDomainTabs} role="tablist" aria-label="客观数据分类">
+      {domains.map((domain) => (
+        <button
+          key={domain.key}
+          type="button"
+          role="tab"
+          aria-selected={active === domain.key}
+          className={active === domain.key ? styles.dataDomainTabActive : ''}
+          onClick={() => onChange(domain.key)}
+        >
+          {domain.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DailyDetailTabs({
+  active,
+  onChange,
+}: {
+  active: DailyDetailTab;
+  onChange: (tab: DailyDetailTab) => void;
+}): React.ReactNode {
+  const tabs: Array<{key: DailyDetailTab; label: string}> = [
+    {key: 'diary', label: '日记'},
+    {key: 'timeline', label: '24小时轨迹'},
+    {key: 'analysis', label: 'AI分析'},
+  ];
+
+  return (
+    <div className={styles.dailyDetailTabs} role="tablist" aria-label="当日细节">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          type="button"
+          role="tab"
+          aria-selected={active === tab.key}
+          className={active === tab.key ? styles.dailyDetailTabActive : ''}
+          onClick={() => onChange(tab.key)}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DailyBasicInfo({date, weather}: {date: string; weather: unknown}): React.ReactNode {
+  if (!date) return null;
+  const weatherSummary = getWeatherSummary(weather);
+  const weatherDetails = [
+    weatherSummary.feelsLike,
+    weatherSummary.humidity,
+    weatherSummary.wind,
+    weatherSummary.precip,
+  ].filter(Boolean);
+
+  return (
+    <section className={styles.dailyBasicInfo}>
+      <div>
+        <span>{date}</span>
+        <strong>{formatChineseDate(date)}</strong>
+      </div>
+      <div className={styles.dailyBasicMeta}>
+        <span>{getWeekdayLabel(date)}</span>
+        <span>{getHolidayLabel(date)}</span>
+      </div>
+      <div className={styles.dailyWeather}>
+        <strong>{weatherSummary.area} · {weatherSummary.description}</strong>
+        <span>{weatherSummary.temperature}</span>
+        {weatherDetails.length ? <small>{weatherDetails.join(' · ')}</small> : null}
+      </div>
+    </section>
+  );
+}
+
+function ObjectiveTimeControls({
+  scope,
+  onChange,
+}: {
+  scope: ObjectiveTimeScope;
+  onChange: (scope: ObjectiveTimeScope) => void;
+}): React.ReactNode {
+  const years = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016];
+
+  return (
+    <div className={styles.objectiveTimeControls} aria-label="客观数据时间范围">
+      <div className={styles.objectiveTimeBar}>
+        {(['recent', 'year', 'all'] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            className={scope.mode === mode ? styles.objectiveTimeActive : ''}
+            onClick={() => {
+              if (mode === 'recent') onChange({mode, range: scope.mode === 'recent' ? scope.range : '30d'});
+              if (mode === 'year') onChange({mode, year: scope.mode === 'year' ? scope.year : new Date().getFullYear()});
+              if (mode === 'all') onChange({mode});
+            }}
+          >
+            {mode === 'recent' ? '近况' : mode === 'year' ? '年度' : '历史'}
+          </button>
+        ))}
+      </div>
+      <div className={`${styles.objectiveTimeBar} ${styles.objectiveTimeOptions}`}>
+        {scope.mode === 'recent' && (Object.keys(OBJECTIVE_RANGE_LABELS) as Array<'7d' | '30d' | '90d' | '1y'>).map((range) => (
+          <button
+            key={range}
+            type="button"
+            className={scope.range === range ? styles.objectiveTimeActive : ''}
+            onClick={() => onChange({mode: 'recent', range})}
+          >
+            {OBJECTIVE_RANGE_LABELS[range]}
+          </button>
+        ))}
+        {scope.mode === 'year' && years.map((year) => (
+          <button
+            key={year}
+            type="button"
+            className={scope.year === year ? styles.objectiveTimeActive : ''}
+            onClick={() => onChange({mode: 'year', year})}
+          >
+            {year}
+          </button>
+        ))}
+        {scope.mode === 'all' ? (
+          <button type="button" className={styles.objectiveTimeActive} onClick={() => onChange({mode: 'all'})}>
+            全部历史
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function HealthChartsPanel({
+  onDateSelect,
+  timeScope,
+  setTimeScope,
+}: {
+  onDateSelect: (date: string) => void;
+  timeScope: ObjectiveTimeScope;
+  setTimeScope: (scope: ObjectiveTimeScope) => void;
+}): React.ReactNode {
+  const sections = ['体重', '活动', '运动记录', '睡眠', '心血管', '用药', '步态质量', '环境 & 习惯', '心理状态'];
+  return (
+    <>
+      <HealthProvider
+        onDateSelect={onDateSelect}
+        scope={timeScope as HealthTimeScope}
+        setScope={(nextScope) => setTimeScope(nextScope as ObjectiveTimeScope)}
+      >
+        <div className={styles.healthChartsPanelHead}>
+          <PanelTitle title="健康数据" description="来自健康数据页的完整图表。" />
+        </div>
+        <div className={styles.healthChartsGrid}>
+          {sections.map((section) => (
+            <section key={section} className={styles.healthChartSection}>
+              <h3>{section}</h3>
+              <HealthSection name={section} />
+            </section>
+          ))}
+        </div>
+      </HealthProvider>
+    </>
+  );
+}
+
+function CareerDataPanel({onDateSelect, timeScope}: {onDateSelect: (date: string) => void; timeScope: ObjectiveTimeScope}): React.ReactNode {
+  return (
+    <>
+      <div className={styles.healthChartsPanelHead}>
+        <PanelTitle title="事业数据" description="当前以 AI 使用数据作为工作强度与工具结构信号。" />
+      </div>
+      <div className={styles.embeddedDashboard}>
+        <LLMUsageDashboard onDateSelect={onDateSelect} timeScope={timeScope} variant="stackedBar" />
+      </div>
+    </>
+  );
+}
+
+function FinanceDataPanel({onDateSelect, timeScope}: {onDateSelect: (date: string) => void; timeScope: ObjectiveTimeScope}): React.ReactNode {
+  return (
+    <>
+      <div className={styles.healthChartsPanelHead}>
+        <PanelTitle title="财务数据" description="指数账户、个股账户与港股打新数据。" />
+      </div>
+      <div className={styles.embeddedDashboardStack}>
+        <section className={styles.embeddedDashboardSection}>
+          <h3>指数账户</h3>
+          <AccountAssetsDashboard dataUrl="/data/account-assets/index.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
+        </section>
+        <section className={styles.embeddedDashboardSection}>
+          <h3>个股账户</h3>
+          <AccountAssetsDashboard dataUrl="/data/account-assets/stock.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
+        </section>
+        <section className={styles.embeddedDashboardSection}>
+          <h3>港股打新</h3>
+          <HKIPOCharts dataUrl="/data/hk-ipo/data.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
+        </section>
+      </div>
+    </>
+  );
+}
+
+function LifeDataPanel({onDateSelect, timeScope}: {onDateSelect: (date: string) => void; timeScope: ObjectiveTimeScope}): React.ReactNode {
+  return (
+    <>
+      <div className={styles.healthChartsPanelHead}>
+        <PanelTitle title="人生数据" description="当前以阅读数据作为长期输入与兴趣结构信号。" />
+      </div>
+      <div className={styles.embeddedDashboard}>
+        <ReadingDashboard onDateSelect={onDateSelect} timeScope={timeScope} variant="bar" />
+      </div>
+    </>
+  );
+}
+
+function ObjectiveDataPanel({onDateSelect}: {onDateSelect: (date: string) => void}): React.ReactNode {
+  const [activeDomain, setActiveDomain] = useState<DataDomain>('health');
+  const [timeScope, setTimeScope] = useState<ObjectiveTimeScope>({mode: 'recent', range: '7d'});
+
+  return (
+    <section className={styles.healthChartsPanel}>
+      <ObjectiveTimeControls scope={timeScope} onChange={setTimeScope} />
+      <DataDomainTabs active={activeDomain} onChange={setActiveDomain} />
+      {activeDomain === 'health' ? <HealthChartsPanel onDateSelect={onDateSelect} timeScope={timeScope} setTimeScope={setTimeScope} /> : null}
+      {activeDomain === 'career' ? <CareerDataPanel onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
+      {activeDomain === 'finance' ? <FinanceDataPanel onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
+      {activeDomain === 'life' ? <LifeDataPanel onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
+    </section>
+  );
+}
+
+function DailyDetailPanel({
   date,
   weather,
   diary,
   analysis,
   timelineModel,
-  healthSummary,
-  readingSeconds,
-  aiTokens,
-  assetTotal,
-  assetChange,
-  stateOfMind,
+  loading,
 }: {
   date: string;
   weather: unknown;
   diary: string;
   analysis: DailyAnalysis | null;
   timelineModel: TimelineModel;
-  healthSummary: HealthSummary;
-  readingSeconds: number;
-  aiTokens: number;
-  assetTotal: number;
-  assetChange: number;
-  stateOfMind: StateOfMindSummary | null;
+  loading: boolean;
+}): React.ReactNode {
+  const [activeTab, setActiveTab] = useState<DailyDetailTab>('diary');
+
+  return (
+    <section className={styles.dailyDetailPanel}>
+      <DailyBasicInfo date={date} weather={weather} />
+      <DailyDetailTabs active={activeTab} onChange={setActiveTab} />
+      {loading ? (
+        <section className={styles.dailyLoading}>正在加载当日数据...</section>
+      ) : (
+        <>
+          {activeTab === 'diary' ? <DailyDiary diary={diary} /> : null}
+          {activeTab === 'timeline' ? <TimelinePanel model={timelineModel} /> : null}
+          {activeTab === 'analysis' ? <DailyAnalysisReport analysis={analysis} /> : null}
+        </>
+      )}
+    </section>
+  );
+}
+
+function DailyContext({
+  date,
+  weather,
+  diary,
+  analysis,
+  timelineModel,
+  loading,
+  onDateSelect,
+}: {
+  date: string;
+  weather: unknown;
+  diary: string;
+  analysis: DailyAnalysis | null;
+  timelineModel: TimelineModel;
+  loading: boolean;
+  onDateSelect: (date: string) => void;
 }): React.ReactNode {
   return (
     <section className={styles.dailyContext}>
       <div className={styles.dailyContextLeft}>
-        <TimelinePanel model={timelineModel} />
+        <ObjectiveDataPanel onDateSelect={onDateSelect} />
       </div>
       <div className={styles.dailyContextRight}>
-        <DailyDiary
-          date={date}
-          weather={weather}
-          diary={diary}
-          healthSummary={healthSummary}
-          readingSeconds={readingSeconds}
-          aiTokens={aiTokens}
-          assetTotal={assetTotal}
-          assetChange={assetChange}
-          stateOfMind={stateOfMind}
-        />
-        <DailyAnalysisReport analysis={analysis} />
+        <DailyDetailPanel date={date} weather={weather} diary={diary} analysis={analysis} timelineModel={timelineModel} loading={loading} />
       </div>
     </section>
   );
@@ -1769,6 +1767,7 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
   const [analysisDates, setAnalysisDates] = useState<string[]>([]);
   const [selectedYear, setSelectedYear] = useState(initialYear);
   const [viewMode, setViewMode] = useState<'year' | 'life'>('year');
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [diary, setDiary] = useState('');
   const [analysis, setAnalysis] = useState<DailyAnalysis | null>(null);
@@ -1776,14 +1775,8 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
   const [drive, setDrive] = useState<DriveLog | null>(null);
   const [health, setHealth] = useState<HealthData | null>(null);
   const [dailyHealth, setDailyHealth] = useState<DailyHealthData | null>(null);
-  const [reading, setReading] = useState<ReadingData | null>(null);
-  const [readingYear, setReadingYear] = useState<ReadingYearData | null>(null);
-  const [openaiUsage, setOpenaiUsage] = useState<LlmUsage | null>(null);
-  const [minimaxUsage, setMinimaxUsage] = useState<LlmUsage | null>(null);
-  const [anthropicUsage, setAnthropicUsage] = useState<LlmUsage | null>(null);
-  const [indexAssets, setIndexAssets] = useState<AccountAssets | null>(null);
-  const [stockAssets, setStockAssets] = useState<AccountAssets | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dailyLoading, setDailyLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -1813,26 +1806,11 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
 
   useEffect(() => {
     if (!selectedDate) return;
+    let cancelled = false;
     const [selectedYearPart, selectedMonth, selectedDay] = selectedDate.split('-');
-    const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.set('date', selectedDate);
-    window.history.replaceState(null, '', nextUrl);
     setSelectedYear(Number(selectedYearPart));
 
-    setLoading(true);
-    setDiary('');
-    setAnalysis(null);
-    setWeather(null);
-    setDrive(null);
-    setHealth(null);
-    setDailyHealth(null);
-    setReading(null);
-    setReadingYear(null);
-    setOpenaiUsage(null);
-    setMinimaxUsage(null);
-    setAnthropicUsage(null);
-    setIndexAssets(null);
-    setStockAssets(null);
+    setDailyLoading(true);
     Promise.all([
       fetchText(`/data/daily/${dateToPath(selectedDate, 'md')}`),
       fetchJson<DailyAnalysis>(`/data/daily-analysis/${dateToPath(selectedDate, 'json')}`),
@@ -1840,13 +1818,6 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
       fetchJson<DriveLog>(`/data/drive/${selectedYearPart}/${selectedMonth}/${selectedDay}.json`),
       fetchJson<HealthData>(`/data/health/${selectedYearPart}/${selectedMonth}.json`),
       fetchJson<DailyHealthData>(`/data/health/${selectedYearPart}/${selectedMonth}/${selectedDay}.json`),
-      fetchJson<ReadingData>(`/data/reading/${selectedYearPart}/${selectedMonth}.json`),
-      fetchJson<ReadingYearData>(`/data/reading/${selectedYearPart}.json`),
-      fetchJson<LlmUsage>('/data/llm-usage/openai/usage_summary.json'),
-      fetchJson<LlmUsage>('/data/llm-usage/minimax/usage_summary.json'),
-      fetchJson<LlmUsage>('/data/llm-usage/anthropic/usage_summary.json'),
-      fetchJson<AccountAssets>('/data/account-assets/index.json'),
-      fetchJson<AccountAssets>('/data/account-assets/stock.json'),
     ])
       .then(([
         diaryText,
@@ -1855,29 +1826,21 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
         driveJson,
         healthJson,
         dailyHealthJson,
-        readingJson,
-        readingYearJson,
-        openaiJson,
-        minimaxJson,
-        anthropicJson,
-        indexAssetsJson,
-        stockAssetsJson,
       ]) => {
+        if (cancelled) return;
         setDiary(diaryText);
         setAnalysis(analysisJson);
         setWeather(weatherJson);
         setDrive(driveJson);
         setHealth(healthJson);
         setDailyHealth(dailyHealthJson);
-        setReading(readingJson);
-        setReadingYear(readingYearJson);
-        setOpenaiUsage(openaiJson);
-        setMinimaxUsage(minimaxJson);
-        setAnthropicUsage(anthropicJson);
-        setIndexAssets(indexAssetsJson);
-        setStockAssets(stockAssetsJson);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setDailyLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedDate]);
 
   const years = [2024, 2025, 2026];
@@ -1894,26 +1857,9 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
     [analysisDates, selectedYear],
   );
   const sleep = getMetricEntry(health, 'sleep_analysis', selectedDate);
-  const weight = getMetricEntry(health, 'weight_body_mass', selectedDate);
-  const previousWeight = getPreviousMetricEntry(health, 'weight_body_mass', selectedDate);
-  const readingSeconds =
-    readingYear?.daily?.[selectedDate]?.seconds
-    || reading?.readTimes?.[dateToWereadTimeKey(selectedDate)]
-    || reading?.readTimes?.[dateToUnixKey(selectedDate)]
-    || 0;
-  const aiTokens =
-    getDailyTokenUsage(openaiUsage, selectedDate) +
-    getDailyTokenUsage(minimaxUsage, selectedDate) +
-    getDailyTokenUsage(anthropicUsage, selectedDate);
-  const assetSnapshot = getDailyAssetSnapshot([indexAssets, stockAssets], selectedDate);
-  const stateOfMind = getStateOfMindSummary(dailyHealth);
   const timelineModel = useMemo(
     () => buildTimelineModel({sleep, dailyHealth, drive, weather}),
     [dailyHealth, drive, sleep, weather],
-  );
-  const healthSummary = useMemo(
-    () => getHealthSummary(dailyHealth, timelineModel, sleep, weight, previousWeight),
-    [dailyHealth, timelineModel, sleep, weight, previousWeight],
   );
 
   return (
@@ -1921,8 +1867,8 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
       <section className={styles.calendarShell}>
         <div className={styles.calendarTopline}>
           <div>
-            <span>{viewMode === 'life' ? 'Lifetime Calendar' : 'Year Calendar'}</span>
-            <h2>{viewMode === 'life' ? '一生' : selectedYear || new Date().getFullYear()}</h2>
+            <span>{viewMode === 'life' ? '人生日历' : '年度日历'}</span>
+            {viewMode === 'life' ? <h2>一生</h2> : null}
           </div>
           <div className={styles.yearSwitch}>
             {years.map((year) => {
@@ -1935,6 +1881,7 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
                   onClick={() => {
                     setViewMode('year');
                     setSelectedYear(year);
+                    setCalendarExpanded(false);
                     if (latest) setSelectedDate(latest);
                   }}
                 >
@@ -1945,7 +1892,10 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
             <button
               type="button"
               className={viewMode === 'life' ? styles.yearSelected : ''}
-              onClick={() => setViewMode('life')}
+              onClick={() => {
+                setViewMode('life');
+                setCalendarExpanded(true);
+              }}
             >
               人生
             </button>
@@ -1959,8 +1909,11 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
             dailyDates={dailyDateSet}
             analysisDates={analysisDateSet}
             selectedDate={selectedDate}
+            compact={!calendarExpanded}
+            onToggleCompact={() => setCalendarExpanded((value) => !value)}
             onSelect={(date) => {
               setSelectedDate(date);
+              setCalendarExpanded(false);
             }}
           />
         ) : (
@@ -1974,9 +1927,9 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
         </div>
       ) : (
         <>
-          {loading && selectedDate ? (
+          {loading && !selectedDate ? (
             <section className={styles.dailyLoading}>
-              正在加载 {formatChineseDate(selectedDate)} 的数据...
+              正在加载数据...
             </section>
           ) : (
             <DailyContext
@@ -1985,12 +1938,8 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
               diary={diary}
               analysis={analysis}
               timelineModel={timelineModel}
-              healthSummary={healthSummary}
-              readingSeconds={readingSeconds}
-              aiTokens={aiTokens}
-              assetTotal={assetSnapshot.totalAssets}
-              assetChange={assetSnapshot.dailyChange}
-              stateOfMind={stateOfMind}
+              loading={dailyLoading}
+              onDateSelect={setSelectedDate}
             />
           )}
 

@@ -66,6 +66,11 @@ type AccountAssetsPayload = {
   positionRows: PositionRow[];
 };
 
+type TimeScope =
+  | {mode: 'recent'; range: '7d' | '30d' | '90d' | '1y'}
+  | {mode: 'year'; year: number}
+  | {mode: 'all'};
+
 type Tone = 'gain' | 'loss' | 'neutral';
 
 type CellLine = {
@@ -230,7 +235,17 @@ function Skeleton() {
   );
 }
 
-function DashboardInner({dataUrl}: {dataUrl: string}) {
+function DashboardInner({
+  dataUrl,
+  onDateSelect,
+  timeScope,
+  compact = false,
+}: {
+  dataUrl: string;
+  onDateSelect?: (date: string) => void;
+  timeScope?: TimeScope;
+  compact?: boolean;
+}) {
   const [data, setData] = useState<AccountAssetsPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -264,20 +279,34 @@ function DashboardInner({dataUrl}: {dataUrl: string}) {
 
   return (
     <div className={styles.dashboard}>
-      <PortfolioCharts data={data.portfolio} />
-      <h2>资金</h2>
-      <FundTable rows={data.fundRows} />
-      <h2>持仓</h2>
-      <PositionTable rows={data.positionRows} />
-      {data.fetchedAt && <div className={styles.footer}>数据更新于 {data.fetchedAt}</div>}
+      <PortfolioCharts data={data.portfolio} onDateSelect={onDateSelect} timeScope={timeScope} compact={compact} />
+      {compact ? null : (
+        <>
+          <h2>资金</h2>
+          <FundTable rows={data.fundRows} />
+          <h2>持仓</h2>
+          <PositionTable rows={data.positionRows} />
+          {data.fetchedAt && <div className={styles.footer}>数据更新于 {data.fetchedAt}</div>}
+        </>
+      )}
     </div>
   );
 }
 
-export default function AccountAssetsDashboard({dataUrl}: {dataUrl: string}) {
+export default function AccountAssetsDashboard({
+  dataUrl,
+  onDateSelect,
+  timeScope,
+  compact,
+}: {
+  dataUrl: string;
+  onDateSelect?: (date: string) => void;
+  timeScope?: TimeScope;
+  compact?: boolean;
+}) {
   return (
     <BrowserOnly fallback={<div style={{minHeight: 620}} />}>
-      {() => <DashboardInner dataUrl={dataUrl} />}
+      {() => <DashboardInner dataUrl={dataUrl} onDateSelect={onDateSelect} timeScope={timeScope} compact={compact} />}
     </BrowserOnly>
   );
 }

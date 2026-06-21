@@ -1575,10 +1575,132 @@ function mergeDataByYear(all: Record<string, HealthData>, year: number, months: 
   return {...result, lastUpdated: latestDate} as HealthData;
 }
 
-function HealthProviderInner({children}: {children: React.ReactNode}) {
-  const [scope, setScope] = useState<TimeScope>({mode: 'recent', range: '7d'});
+function extractDateFromChartEvent(params: unknown): string | null {
+  const queue: unknown[] = [params];
+  const seen = new Set<unknown>();
+
+  while (queue.length) {
+    const value = queue.shift();
+    if (value === null || value === undefined || seen.has(value)) continue;
+    seen.add(value);
+
+    if (typeof value === 'string') {
+      const match = value.match(/\d{4}-\d{2}-\d{2}/);
+      if (match) return match[0];
+      continue;
+    }
+
+    if (typeof value === 'number') continue;
+
+    if (Array.isArray(value)) {
+      queue.push(...value);
+      continue;
+    }
+
+    if (typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      queue.push(record.axisValue, record.name, record.value, record.data);
+    }
+  }
+
+  return null;
+}
+
+function normalizeAxisList(axis: unknown): Array<Record<string, unknown>> {
+  if (!axis) return [];
+  return Array.isArray(axis) ? axis as Array<Record<string, unknown>> : [axis as Record<string, unknown>];
+}
+
+function extractDateFromChartOption(option: Record<string, unknown>, params: unknown): string | null {
+  const record = params && typeof params === 'object' ? params as Record<string, unknown> : {};
+  const dataIndex = Number(record.dataIndex);
+  if (!Number.isFinite(dataIndex) || dataIndex < 0) return null;
+
+  const axes = [
+    ...normalizeAxisList(option.xAxis),
+    ...normalizeAxisList(option.yAxis),
+  ];
+
+  for (const axis of axes) {
+    const data = axis.data;
+    if (!Array.isArray(data)) continue;
+    const value = data[dataIndex];
+    const date = extractDateFromChartEvent(value);
+    if (date) return date;
+  }
+
+  return null;
+}
+
+function pickAxisDate(option: Record<string, unknown>, axisKey: 'xAxis' | 'yAxis', axisIndex: number, rawIndex: unknown): string | null {
+  const index = Math.round(Number(rawIndex));
+  if (!Number.isFinite(index) || index < 0) return null;
+  const axis = normalizeAxisList(option[axisKey])[axisIndex];
+  const data = axis?.data;
+  if (!Array.isArray(data)) return null;
+  return extractDateFromChartEvent(data[index]);
+}
+
+type ChartLike = {
+  getOption: () => Record<string, unknown>;
+  getZr: () => {on: (event: string, handler: (params: unknown) => void) => void; off: (event: string, handler: (params: unknown) => void) => void};
+  convertFromPixel: (finder: Record<string, number>, value: [number, number]) => unknown;
+};
+
+const zrenderClickHandlers = new WeakMap<ChartLike, (params: unknown) => void>();
+
+function extractDateFromZrenderClick(chart: ChartLike, event: unknown): string | null {
+  const record = event && typeof event === 'object' ? event as Record<string, unknown> : {};
+  const offsetX = Number(record.offsetX);
+  const offsetY = Number(record.offsetY);
+  if (!Number.isFinite(offsetX) || !Number.isFinite(offsetY)) return null;
+
+  const option = chart.getOption();
+  const point: [number, number] = [offsetX, offsetY];
+  const xAxes = normalizeAxisList(option.xAxis);
+  const yAxes = normalizeAxisList(option.yAxis);
+
+  for (let seriesIndex = 0; seriesIndex < normalizeAxisList(option.series).length; seriesIndex++) {
+    const converted = chart.convertFromPixel({seriesIndex}, point);
+    if (Array.isArray(converted)) {
+      const xDate = pickAxisDate(option, 'xAxis', 0, converted[0]);
+      if (xDate) return xDate;
+      const yDate = pickAxisDate(option, 'yAxis', 0, converted[1]);
+      if (yDate) return yDate;
+    }
+  }
+
+  for (let axisIndex = 0; axisIndex < xAxes.length; axisIndex++) {
+    const converted = chart.convertFromPixel({xAxisIndex: axisIndex}, point);
+    const date = pickAxisDate(option, 'xAxis', axisIndex, Array.isArray(converted) ? converted[0] : converted);
+    if (date) return date;
+  }
+
+  for (let axisIndex = 0; axisIndex < yAxes.length; axisIndex++) {
+    const converted = chart.convertFromPixel({yAxisIndex: axisIndex}, point);
+    const date = pickAxisDate(option, 'yAxis', axisIndex, Array.isArray(converted) ? converted[1] : converted);
+    if (date) return date;
+  }
+
+  return null;
+}
+
+function HealthProviderInner({
+  children,
+  onDateSelect,
+  scope: controlledScope,
+  setScope: setControlledScope,
+}: {
+  children: React.ReactNode;
+  onDateSelect?: (date: string) => void;
+  scope?: TimeScope;
+  setScope?: (scope: TimeScope) => void;
+}) {
+  const [internalScope, setInternalScope] = useState<TimeScope>({mode: 'recent', range: '7d'});
   const [allData, setAllData] = useState<Record<string, HealthData>>({});
   const [loading, setLoading] = useState(true);
+  const scope = controlledScope ?? internalScope;
+  const setScope = setControlledScope ?? setInternalScope;
 
   useEffect(() => {
     let cancelled = false;
@@ -1657,7 +1779,7 @@ function HealthProviderInner({children}: {children: React.ReactNode}) {
     return filterByTimeRange(merged, RANGE_DAYS[scope.range]);
   }, [scope, allData]);
 
-  return <YearCtx.Provider value={{scope, setScope, data, loading, availableMonths: MONTH_MAP}}>{children}</YearCtx.Provider>;
+  return <YearCtx.Provider value={{scope, setScope, data, loading, availableMonths: MONTH_MAP, onDateSelect}}>{children}</YearCtx.Provider>;
 }
 
 // ── inner components ──────────────────────────────────────────────────────────
@@ -1847,6 +1969,60 @@ function FloatingBar() {
   );
 }
 
+function ScopeControlsInner() {
+  const {scope, setScope, availableMonths, loading} = useContext(YearCtx);
+  const years = [...new Set(Object.keys(availableMonths).map(Number))].sort((a, b) => b - a);
+
+  return (
+    <div className={styles.scopeControls} aria-label="健康数据时间范围">
+      <div className={styles.scopeBar}>
+        {(['recent', 'year', 'all'] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            className={`${styles.scopeBtn} ${scope.mode === mode ? styles.scopeBtnActive : ''}`}
+            onClick={() => {
+              if (mode === 'recent') setScope({mode, range: scope.mode === 'recent' ? scope.range : '30d'});
+              if (mode === 'year') setScope({mode, year: scope.mode === 'year' ? scope.year : (years[0] ?? new Date().getFullYear())});
+              if (mode === 'all') setScope({mode});
+            }}
+          >
+            {mode === 'recent' ? '近况' : mode === 'year' ? '年度' : '历史'}
+          </button>
+        ))}
+      </div>
+      <div className={`${styles.scopeBar} ${styles.scopeOptionBar}`}>
+        {scope.mode === 'recent' && (Object.keys(RANGE_DAYS) as RecentRange[]).map((range) => (
+          <button
+            key={range}
+            type="button"
+            className={`${styles.scopeBtn} ${scope.range === range ? styles.scopeBtnActive : ''}`}
+            onClick={() => setScope({mode: 'recent', range})}
+          >
+            {RANGE_LABELS[range]}
+          </button>
+        ))}
+        {scope.mode === 'year' && years.map((year) => (
+          <button
+            key={year}
+            type="button"
+            className={`${styles.scopeBtn} ${scope.mode === 'year' && scope.year === year ? styles.scopeBtnActive : ''}`}
+            onClick={() => setScope({mode: 'year', year})}
+          >
+            {year}
+          </button>
+        ))}
+        {scope.mode === 'all' && (
+          <button type="button" className={`${styles.scopeBtn} ${styles.scopeBtnActive}`} onClick={() => setScope({mode: 'all'})}>
+            全部历史
+          </button>
+        )}
+        {loading && <span className={styles.scopeLoading}>…</span>}
+      </div>
+    </div>
+  );
+}
+
 function StatsInner() {
   const {scope, data, availableMonths, loading} = useContext(YearCtx);
   const dashboard = computeDashboard(data);
@@ -1880,7 +2056,7 @@ function StatsInner() {
 }
 
 function SectionInner({name}: {name: string}) {
-  const {data, loading, scope, availableMonths} = useContext(YearCtx);
+  const {data, loading, scope, availableMonths, onDateSelect} = useContext(YearCtx);
   const {colorMode} = useColorMode();
   const isDark = colorMode === 'dark';
   const theme = isDark ? 'dark' : undefined;
@@ -1901,24 +2077,70 @@ function SectionInner({name}: {name: string}) {
   const sec = SECTIONS.find((s) => s.title === name);
   if (!sec) return null;
 
+  function bindChartClick(chart: ChartLike) {
+    const previous = zrenderClickHandlers.get(chart);
+    if (previous) chart.getZr().off('click', previous);
+    if (!onDateSelect) return;
+
+    const handler = (params: unknown) => {
+      const date = extractDateFromZrenderClick(chart, params);
+      if (date) onDateSelect(date);
+    };
+    zrenderClickHandlers.set(chart, handler);
+    chart.getZr().on('click', handler);
+  }
+
   return (
     <div className={styles.wrap}>
-      {sec.charts.map(({label, opt}: {label: string; opt: OptionFn}) => (
-        <div key={label} className={styles.section}>
-          <div className={styles.sectionTitle}>{label}</div>
-          <ReactECharts option={applyHealthChartStyle(addWeekends(addTodayLatestHighlight(opt(isDark, displayData, isMobile), isDark), isDark), isDark)} theme={theme} style={{height: chartHeight(label, isMobile)}} opts={opts} />
-        </div>
-      ))}
+      {sec.charts.map(({label, opt}: {label: string; opt: OptionFn}) => {
+        const option = applyHealthChartStyle(addWeekends(addTodayLatestHighlight(opt(isDark, displayData, isMobile), isDark), isDark), isDark) as Record<string, unknown>;
+        const chartEvents = onDateSelect
+          ? {
+              click: (params: unknown) => {
+                const date = extractDateFromChartEvent(params) || extractDateFromChartOption(option, params);
+                if (date) onDateSelect(date);
+              },
+            }
+          : undefined;
+
+        return (
+          <div key={label} className={styles.section}>
+            <div className={styles.sectionTitle}>{label}</div>
+            <ReactECharts
+              option={option}
+            theme={theme}
+            style={{height: chartHeight(label, isMobile)}}
+            opts={opts}
+            onEvents={chartEvents}
+            onChartReady={bindChartClick}
+          />
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 // ── exports ───────────────────────────────────────────────────────────────────
 
-export function HealthProvider({children}: {children: React.ReactNode}) {
+export function HealthProvider({
+  children,
+  onDateSelect,
+  scope,
+  setScope,
+}: {
+  children: React.ReactNode;
+  onDateSelect?: (date: string) => void;
+  scope?: TimeScope;
+  setScope?: (scope: TimeScope) => void;
+}) {
   return (
     <BrowserOnly fallback={<>{children}</>}>
-      {() => <HealthProviderInner>{children}</HealthProviderInner>}
+      {() => (
+        <HealthProviderInner onDateSelect={onDateSelect} scope={scope} setScope={setScope}>
+          {children}
+        </HealthProviderInner>
+      )}
     </BrowserOnly>
   );
 }
@@ -1927,6 +2149,14 @@ export function HealthStats() {
   return (
     <BrowserOnly fallback={<div style={{minHeight: 80}} />}>
       {() => <StatsInner />}
+    </BrowserOnly>
+  );
+}
+
+export function HealthScopeControls() {
+  return (
+    <BrowserOnly fallback={<div style={{minHeight: 36}} />}>
+      {() => <ScopeControlsInner />}
     </BrowserOnly>
   );
 }

@@ -360,6 +360,35 @@
   display: inline-block;
 }
 
+.stackedBarScroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.stackedBarChart {
+  display: block;
+}
+
+.stackedBarGroup {
+  cursor: pointer;
+}
+
+.stackedBarGroup rect {
+  transition: opacity 120ms ease;
+}
+
+.stackedBarGroup:hover rect {
+  opacity: 0.8;
+}
+
+.stackedBarLabel {
+  fill: var(--llm-label);
+  font-size: 10px;
+}
+
 .vendorBadge {
   display: inline-flex;
   align-items: baseline;

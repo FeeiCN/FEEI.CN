@@ -45,6 +45,7 @@ export type YearCtxType = {
   data: HealthData;
   loading: boolean;
   availableMonths: Record<number, number[]>;
+  onDateSelect?: (date: string) => void;
 };
 
 export const YearCtx = createContext<YearCtxType>({

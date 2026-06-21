@@ -18,12 +18,35 @@ import {
 } from './index-shared';
 import styles from './styles.module.css';
 
-function useReadingState() {
+type ObjectiveTimeScope =
+  | {mode: 'recent'; range: '7d' | '30d' | '90d' | '1y'}
+  | {mode: 'year'; year: number}
+  | {mode: 'all'};
+type DashboardVariant = 'full' | 'bar';
+const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
+
+function filterDailyByRecent(daily: Record<string, number>, range: keyof typeof RANGE_DAYS): Record<string, number> {
+  const latest = Object.keys(daily).sort().at(-1);
+  if (!latest) return {};
+  const cutoff = new Date(`${latest}T00:00:00`);
+  cutoff.setDate(cutoff.getDate() - RANGE_DAYS[range]);
+  const cutoffKey = cutoff.toISOString().slice(0, 10);
+  return Object.fromEntries(Object.entries(daily).filter(([date]) => date >= cutoffKey));
+}
+
+function toReadingScope(scope?: ObjectiveTimeScope): TimeScope {
+  if (!scope || scope.mode === 'all') return {mode: 'all'};
+  if (scope.mode === 'year') return {mode: 'year', year: scope.year};
+  return {mode: 'year', year: new Date().getFullYear()};
+}
+
+function useReadingState(externalScope?: ObjectiveTimeScope) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [dailyByDate, setDailyByDate] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [scope, setScope] = useState<TimeScope>(defaultScope());
+  const effectiveScope = useMemo(() => externalScope ? toReadingScope(externalScope) : scope, [externalScope, scope]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,14 +98,18 @@ function useReadingState() {
     if (!stats) {
       return {filteredDaily: {} as Record<string, number>, filteredLibrary: [] as LibraryBook[]};
     }
-    if (scope.mode === 'all') {
+    if (externalScope?.mode === 'recent') {
+      const filtered = filterDailyByRecent(dailyByDate, externalScope.range);
+      return {filteredDaily: filtered, filteredLibrary: stats.library};
+    }
+    if (effectiveScope.mode === 'all') {
       return {filteredDaily: dailyByDate, filteredLibrary: stats.library};
     }
     return {
-      filteredDaily: filterDailyByYear(dailyByDate, scope.year),
-      filteredLibrary: filterLibraryByYear(stats.library, scope.year),
+      filteredDaily: filterDailyByYear(dailyByDate, effectiveScope.year),
+      filteredLibrary: filterLibraryByYear(stats.library, effectiveScope.year),
     };
-  }, [stats, dailyByDate, scope]);
+  }, [stats, dailyByDate, externalScope, effectiveScope]);
 
   const filteredStats = useMemo<Stats | null>(() => {
     if (!stats) return null;
@@ -90,7 +117,7 @@ function useReadingState() {
   }, [stats, filteredDaily, filteredLibrary]);
 
   return {
-    scope,
+    scope: effectiveScope,
     setScope,
     stats,
     filteredStats,
@@ -103,8 +130,8 @@ function useReadingState() {
   };
 }
 
-function ReadingProviderInner({children}: {children: React.ReactNode}) {
-  const state = useReadingState();
+function ReadingProviderInner({children, timeScope}: {children: React.ReactNode; timeScope?: ObjectiveTimeScope}) {
+  const state = useReadingState(timeScope);
   const value = useMemo(
     () => ({
       scope: state.scope,
@@ -122,15 +149,62 @@ function ReadingProviderInner({children}: {children: React.ReactNode}) {
   return <ReadingCtx.Provider value={value}>{children}</ReadingCtx.Provider>;
 }
 
-export function ReadingProvider({children}: {children?: React.ReactNode}) {
+export function ReadingProvider({children, timeScope}: {children?: React.ReactNode; timeScope?: ObjectiveTimeScope}) {
   return (
     <BrowserOnly fallback={<>{children}</>}>
-      {() => <ReadingProviderInner>{children}</ReadingProviderInner>}
+      {() => <ReadingProviderInner timeScope={timeScope}>{children}</ReadingProviderInner>}
     </BrowserOnly>
   );
 }
 
-function DashboardInner() {
+function ReadingBarOnly({onDateSelect}: {onDateSelect?: (date: string) => void}) {
+  const {filteredDaily, loading} = useContext(ReadingCtx);
+  const entries = useMemo(() => {
+    return Object.entries(filteredDaily)
+      .map(([date, seconds]) => [date, Number(seconds || 0)] as [string, number])
+      .filter(([, seconds]) => seconds > 0)
+      .sort(([left], [right]) => left.localeCompare(right));
+  }, [filteredDaily]);
+  const max = Math.max(1, ...entries.map(([, seconds]) => seconds));
+  const chartHeight = 240;
+  const labelHeight = 32;
+  const width = Math.max(520, entries.length * 24);
+  const plotHeight = chartHeight - labelHeight - 12;
+  const gap = 8;
+  const barWidth = Math.max(8, Math.min(22, (width - gap * (entries.length + 1)) / Math.max(1, entries.length)));
+
+  if (loading && entries.length === 0) {
+    return <div className={styles.loading}>加载阅读数据…</div>;
+  }
+  if (!entries.length) {
+    return <div className={styles.emptyState}>当前时间范围暂无阅读时长数据</div>;
+  }
+
+  return (
+    <section className={styles.section}>
+      <div className={styles.readingBarScroll}>
+        <svg className={styles.readingBarChart} viewBox={`0 0 ${width} ${chartHeight}`} style={{width, height: chartHeight}} role="img">
+          {entries.map(([date, seconds], index) => {
+            const x = gap + index * (barWidth + gap);
+            const height = Math.max(1, (seconds / max) * plotHeight);
+            const y = plotHeight - height;
+            return (
+              <g key={date} className={styles.readingBarGroup} onClick={() => onDateSelect?.(date)}>
+                <title>{date} · 阅读 {formatDuration(seconds)}</title>
+                <rect x={x} y={y} width={barWidth} height={height} rx={2} />
+                <text x={x + barWidth / 2} y={plotHeight + 14} textAnchor="middle" className={styles.readingBarLabel}>
+                  {entries.length <= 35 || index % Math.ceil(entries.length / 18) === 0 ? date.slice(5) : ''}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </section>
+  );
+}
+
+function DashboardInner({onDateSelect}: {onDateSelect?: (date: string) => void}) {
   const {filteredStats, filteredLibrary, filteredDaily, scope, setScope, stats, error, loading} =
     useContext(ReadingCtx);
   const [search, setSearch] = useState<string>('');
@@ -220,6 +294,7 @@ function DashboardInner() {
         exportedAt={stats?.exportedAt}
         dateRange={filteredStats.dateRange ?? undefined}
         emptyHint="当前范围暂无阅读日历数据"
+        onDateSelect={onDateSelect}
       />
       <CurrentlyReading
         library={filteredStats.library}
@@ -341,12 +416,20 @@ function StatsSummary({totals}: {totals: Stats['totals']}) {
   );
 }
 
-export default function ReadingDashboard() {
+export default function ReadingDashboard({
+  onDateSelect,
+  timeScope,
+  variant = 'full',
+}: {
+  onDateSelect?: (date: string) => void;
+  timeScope?: ObjectiveTimeScope;
+  variant?: DashboardVariant;
+}) {
   return (
     <BrowserOnly fallback={<div style={{minHeight: 240}} />}>
       {() => (
-        <ReadingProvider>
-          <DashboardInner />
+        <ReadingProvider timeScope={timeScope}>
+          {variant === 'bar' ? <ReadingBarOnly onDateSelect={onDateSelect} /> : <DashboardInner onDateSelect={onDateSelect} />}
         </ReadingProvider>
       )}
     </BrowserOnly>

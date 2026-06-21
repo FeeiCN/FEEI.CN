@@ -41,6 +41,37 @@
   gap: 0.75rem;
 }
 
+.readingBarScroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.2rem;
+  scrollbar-width: thin;
+}
+
+.readingBarChart {
+  display: block;
+}
+
+.readingBarGroup {
+  cursor: pointer;
+}
+
+.readingBarGroup rect {
+  fill: var(--rd-accent);
+  opacity: 0.82;
+  transition: opacity 120ms ease;
+}
+
+.readingBarGroup:hover rect {
+  opacity: 1;
+}
+
+.readingBarLabel {
+  fill: var(--rd-fg-muted);
+  font-size: 10px;
+}
+
 .sectionHeader {
   display: flex;
   align-items: baseline;
@@ -723,6 +754,15 @@
   padding: 2rem 1rem;
   text-align: center;
   color: var(--rd-fg-muted);
+}
+
+.emptyState {
+  padding: 1.5rem 1rem;
+  border: 1px dashed var(--rd-border);
+  border-radius: var(--rd-radius);
+  color: var(--rd-fg-muted);
+  text-align: center;
+  font-size: 0.9rem;
 }
 
 .error {

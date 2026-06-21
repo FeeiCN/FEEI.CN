@@ -37,6 +37,7 @@ type ReadingHeatmapProps = {
   totals?: {activeDays?: number; totalReadSeconds?: number};
   exportedAt?: string;
   emptyHint?: string;
+  onDateSelect?: (date: string) => void;
 };
 
 function formatDuration(seconds: number): string {
@@ -212,14 +213,25 @@ function YearHeatmap({
   years,
   payload,
   palette,
+  onDateSelect,
 }: {
   years: number[];
   payload: DailyPayload;
   palette: Palette;
+  onDateSelect?: (date: string) => void;
 }) {
   const option = useMemo(() => makeOption(years, payload, palette), [years, payload, palette]);
   const totalHeight = CHART_TOP + years.length * YEAR_ROW_HEIGHT + CHART_BOTTOM;
   const showYearLabels = years.length > 1;
+  const onEvents = onDateSelect
+    ? {
+        click: (params: unknown) => {
+          const value = params && typeof params === 'object' ? (params as {value?: unknown}).value : null;
+          const date = Array.isArray(value) && typeof value[0] === 'string' ? value[0].slice(0, 10) : null;
+          if (date) onDateSelect(date);
+        },
+      }
+    : undefined;
   return (
     <div className={styles.chartInner} style={{height: totalHeight, width: CHART_WIDTH}}>
       {showYearLabels &&
@@ -238,6 +250,7 @@ function YearHeatmap({
         opts={{renderer: 'svg'}}
         notMerge
         lazyUpdate
+        onEvents={onEvents}
       />
     </div>
   );
@@ -257,11 +270,13 @@ function HeatmapStrip({
   palette,
   yearLabel,
   exportedAt,
+  onDateSelect,
 }: {
   daily: Record<string, {seconds?: number; count?: number; books?: string[]}>;
   palette: Palette;
   yearLabel: string;
   exportedAt?: string;
+  onDateSelect?: (date: string) => void;
 }) {
   const entries = useMemo<[string, number][]>(() => {
     return Object.entries(daily)
@@ -318,6 +333,7 @@ function HeatmapStrip({
             onMouseEnter={(e) => handleCellEnter(date, e)}
             onMouseMove={(e) => handleCellEnter(date, e)}
             onMouseLeave={handleCellLeave}
+            onClick={() => onDateSelect?.(date)}
           />
         ))}
         {hover ? (
@@ -440,7 +456,7 @@ function HeatmapInner(props: ReadingHeatmapProps) {
   const [fetched, setFetched] = useState<DailyPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [palette, setPalette] = useState<Palette>(isDark ? FALLBACK_DARK : FALLBACK_LIGHT);
-  const {daily: providedDaily, years: yearsProp, dateRange, totals, exportedAt, emptyHint} = props;
+  const {daily: providedDaily, years: yearsProp, dateRange, totals, exportedAt, emptyHint, onDateSelect} = props;
 
   useEffect(() => {
     if (providedDaily) return;
@@ -497,12 +513,13 @@ function HeatmapInner(props: ReadingHeatmapProps) {
           palette={palette}
           yearLabel={headerLabel}
           exportedAt={payload.exportedAt}
+          onDateSelect={onDateSelect}
         />
       )}
       {payload && hasData && !useStrip && (
         <>
           <div className={styles.scrollWrap}>
-            <YearHeatmap years={years} payload={payload} palette={palette} />
+            <YearHeatmap years={years} payload={payload} palette={palette} onDateSelect={onDateSelect} />
           </div>
           <div className={styles.footer}>
             <Legend palette={palette} />

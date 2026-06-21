@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
@@ -6,6 +6,7 @@ import styles from './styles.module.css';
 
 type HistoryPoint = {
   date: string;
+  fullDate?: string;
   totalAssets: number;
   securitiesValue: number;
   dailyChange: number;
@@ -23,6 +24,27 @@ type PortfolioData = {
   history: HistoryPoint[];
   holdings: Holding[];
 };
+
+type TimeScope =
+  | {mode: 'recent'; range: '7d' | '30d' | '90d' | '1y'}
+  | {mode: 'year'; year: number}
+  | {mode: 'all'};
+const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
+
+function getItemDate(item: {date: string; fullDate?: string}): string {
+  return item.fullDate || item.date;
+}
+
+function filterByScope<T extends {date: string; fullDate?: string}>(items: T[], scope?: TimeScope): T[] {
+  if (!scope || scope.mode === 'all') return items;
+  if (scope.mode === 'year') return items.filter((item) => getItemDate(item).startsWith(`${scope.year}-`));
+  const latest = items.map(getItemDate).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)).sort().at(-1);
+  if (!latest) return [];
+  const cutoff = new Date(`${latest}T00:00:00`);
+  cutoff.setDate(cutoff.getDate() - RANGE_DAYS[scope.range]);
+  const cutoffKey = cutoff.toISOString().slice(0, 10);
+  return items.filter((item) => getItemDate(item) >= cutoffKey);
+}
 
 function buildLineOption(data: PortfolioData, isDark: boolean, isMobile: boolean) {
   const axisColor = isDark ? '#475569' : '#cbd5e1';
@@ -94,6 +116,7 @@ function buildLineOption(data: PortfolioData, isDark: boolean, isMobile: boolean
         barMaxWidth: 8,
         data: data.history.map((h) => ({
           value: h.dailyChange,
+          date: getItemDate(h),
           itemStyle: {
             color: h.dailyChange >= 0 ? '#ef4444' : '#22c55e',
             borderRadius: [2, 2, 0, 0],
@@ -104,7 +127,7 @@ function buildLineOption(data: PortfolioData, isDark: boolean, isMobile: boolean
         name: '证券市值',
         type: 'line',
         yAxisIndex: 0,
-        data: data.history.map((h) => h.securitiesValue),
+        data: data.history.map((h) => ({value: h.securitiesValue, date: getItemDate(h)})),
         smooth: true,
         symbol: 'none',
         lineStyle: {width: 2, color: '#0891b2'},
@@ -113,7 +136,7 @@ function buildLineOption(data: PortfolioData, isDark: boolean, isMobile: boolean
         name: '总资产',
         type: 'line',
         yAxisIndex: 0,
-        data: data.history.map((h) => h.totalAssets),
+        data: data.history.map((h) => ({value: h.totalAssets, date: getItemDate(h)})),
         smooth: true,
         symbol: 'none',
         lineStyle: {width: 2.5, color: '#2563eb'},
@@ -269,7 +292,42 @@ function buildPieOption(data: PortfolioData, isDark: boolean, isMobile: boolean)
   };
 }
 
-function Charts({data}: {data: PortfolioData}) {
+function getDateFromChartParams(params: unknown): string | null {
+  const record = params && typeof params === 'object' ? params as Record<string, unknown> : {};
+  const data = record.data && typeof record.data === 'object' ? record.data as Record<string, unknown> : {};
+  const candidates = [data.date, data.fullDate, record.axisValue, record.name, record.value];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string') {
+      const match = candidate.match(/\d{4}-\d{2}-\d{2}/);
+      if (match) return match[0];
+    }
+    if (Array.isArray(candidate)) {
+      const date = candidate.find((item) => typeof item === 'string' && /\d{4}-\d{2}-\d{2}/.test(item));
+      if (typeof date === 'string') return date.slice(0, 10);
+    }
+  }
+  return null;
+}
+
+function getAxisLabelFromChartParams(params: unknown): string | null {
+  const record = params && typeof params === 'object' ? params as Record<string, unknown> : {};
+  for (const candidate of [record.axisValue, record.name]) {
+    if (typeof candidate === 'string' && candidate) return candidate;
+  }
+  return null;
+}
+
+function Charts({
+  data,
+  onDateSelect,
+  timeScope,
+  compact = false,
+}: {
+  data: PortfolioData;
+  onDateSelect?: (date: string) => void;
+  timeScope?: TimeScope;
+  compact?: boolean;
+}) {
   const {colorMode} = useColorMode();
   const isDark = colorMode === 'dark';
   const theme = isDark ? 'dark' : undefined;
@@ -280,18 +338,35 @@ function Charts({data}: {data: PortfolioData}) {
     window.addEventListener('resize', handle);
     return () => window.removeEventListener('resize', handle);
   }, []);
+  const scopedData = useMemo(
+    () => ({...data, history: filterByScope(data.history, timeScope)}),
+    [data, timeScope],
+  );
+
+  const dateEvents = onDateSelect
+    ? {
+        click: (params: unknown) => {
+          const date = getDateFromChartParams(params)
+            || scopedData.history.find((item) => item.date === getAxisLabelFromChartParams(params))?.fullDate;
+          if (date) onDateSelect(date);
+        },
+      }
+    : undefined;
 
   return (
     <div className={styles.wrap}>
       <div className={styles.section}>
         <div className={styles.sectionTitle}>资产走势</div>
         <ReactECharts
-          option={buildLineOption(data, isDark, isMobile)}
+          option={buildLineOption(scopedData, isDark, isMobile)}
           theme={theme}
           style={{height: 300}}
           opts={{renderer: 'svg'}}
+          onEvents={dateEvents}
         />
       </div>
+      {compact ? null : (
+        <>
       <div className={styles.section}>
         <div className={styles.sectionTitle}>持仓分布</div>
         <ReactECharts
@@ -321,14 +396,26 @@ function Charts({data}: {data: PortfolioData}) {
           })}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
 
-export default function PortfolioCharts({data}: {data: PortfolioData}) {
+export default function PortfolioCharts({
+  data,
+  onDateSelect,
+  timeScope,
+  compact,
+}: {
+  data: PortfolioData;
+  onDateSelect?: (date: string) => void;
+  timeScope?: TimeScope;
+  compact?: boolean;
+}) {
   return (
     <BrowserOnly fallback={<div style={{minHeight: 620}} />}>
-      {() => <Charts data={data} />}
+      {() => <Charts data={data} onDateSelect={onDateSelect} timeScope={timeScope} compact={compact} />}
     </BrowserOnly>
   );
 }

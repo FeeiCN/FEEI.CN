@@ -3,7 +3,8 @@ name: Strict site check
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 20 * * *'
+    # 北京时间 10:40，避开凌晨自动数据提交和 GitHub 整点拥堵。
+    - cron: '40 2 * * *'
 
 jobs:
   check:

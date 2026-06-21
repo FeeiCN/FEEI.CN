@@ -1,11 +1,11 @@
 name: Sync WeRead data
 
-# 每天北京时间 02:00（UTC 18:00）拉取微信读书数据并提交。
+# 每天北京时间 02:17（UTC 18:17）拉取微信读书数据并提交。
 # 凭证缺失静默跳过；token 失效（exit 2）显式失败便于看到通知。
 
 on:
   schedule:
-    - cron: '0 18 * * *'
+    - cron: '17 18 * * *'
   workflow_dispatch:
     inputs:
       full:

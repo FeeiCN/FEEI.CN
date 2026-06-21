@@ -1,6 +1,6 @@
 name: Sync WeRead highlights to issues
 
-# 每 3 小时把"最近 48h 内的微信读书划线"创建为 GitHub issue。
+# 每天 4 次把"最近 48h 内的微信读书划线"创建为 GitHub issue。
 # state 走 scripts/cache/(gitignore 排除),不去 commit。idempotent 依赖：
 #   1. 本地 bookmark_ids 集
 #   2. gh issue list --search "<bookmarkId>" 反查兜底
@@ -8,7 +8,8 @@ name: Sync WeRead highlights to issues
 
 on:
   schedule:
-    - cron: '0 */3 * * *'  # UTC 00/03/06/09/12/15/18/21
+    # 北京时间 04:17 / 10:17 / 16:17 / 22:17，减少 issue 和 deploy 噪音。
+    - cron: '17 2,8,14,20 * * *'
   workflow_dispatch:
     inputs:
       dry_run:

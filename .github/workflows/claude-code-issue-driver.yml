@@ -41,12 +41,25 @@ jobs:
     # 2. event 路径必须 sender == owner(挡 bot + 外部协作者)
     # 3. issue_comment 不能是 PR 评论(GH 把 PR 当 issue,容易误触)
     # 4. issue_comment 不能是带 marker 的评论(防 driver 自递归)
+    # 5. issue opened/edited/reopened 时跳过数据类 issue(URL/天气/行车/日记),
+    #    这些由 fetch/save workflow 处理，避免 driver 产生噪音。
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (
         github.event.sender.login == github.repository_owner
         && (github.event_name != 'issue_comment' || !github.event.issue.pull_request)
         && (github.event_name != 'issue_comment' || !startsWith(github.event.comment.body, '<!-- claude-driver:'))
+        && (
+          github.event_name != 'issues' ||
+          (
+            !startsWith(github.event.issue.title, 'http://') &&
+            !startsWith(github.event.issue.title, 'https://') &&
+            !contains(github.event.issue.title, '天气') &&
+            !contains(github.event.issue.title, '上车') &&
+            !contains(github.event.issue.title, '下车') &&
+            !contains(github.event.issue.title, '日记')
+          )
+        )
       )
 
     steps:

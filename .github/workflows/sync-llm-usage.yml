@@ -1,11 +1,11 @@
 name: Sync LLM usage
 
-# 每天北京时间 07:00（UTC 23:00）抓取 LLM token 消耗摘要并提交。
+# 每天北京时间 07:10（UTC 23:10）抓取 LLM token 消耗摘要并提交。
 # 凭证缺失或脚本失败不阻塞后续步骤，便于 credentials 还在补齐时静默重试。
 
 on:
   schedule:
-    - cron: '0 23 * * *'
+    - cron: '10 23 * * *'
   workflow_dispatch:
 
 concurrency:

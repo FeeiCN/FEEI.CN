@@ -1,0 +1,734 @@
+{
+  "exportedAt": "2026-06-21T13:44:22.522Z",
+  "date": "2026-05-06",
+  "dateRange": {
+    "start": "2026-05-06 00:00:00 +0800",
+    "end": "2026-05-06 23:59:59 +0800"
+  },
+  "summary": {
+    "rawRecords": {
+      "healthMetrics": 9362,
+      "workouts": 0,
+      "medications": 0,
+      "heartNotifications": 0,
+      "stateOfMind": 0,
+      "cycleTracking": 0,
+      "ecg": 0,
+      "symptoms": 0
+    },
+    "activeEnergy": {
+      "units": "kJ",
+      "totalKJ": 23.698,
+      "totalKcal": 5.664,
+      "omittedRawRecords": 2749,
+      "bucketMinutes": 5,
+      "segmentThresholdKJ": 5,
+      "segmentMergeGapMinutes": 10
+    },
+    "flightsClimbed": {
+      "units": "count",
+      "total": 10,
+      "omittedRawRecords": 264,
+      "bucketMinutes": 5,
+      "segmentThreshold": 0.5,
+      "segmentMergeGapMinutes": 5
+    },
+    "heartRate": {
+      "units": "count/min",
+      "avg": 67.5,
+      "min": 57,
+      "max": 80,
+      "omittedRawRecords": 22,
+      "bucketMinutes": 5
+    },
+    "physicalEffort": {
+      "units": "kcal/hr·kg",
+      "avg": 3.05,
+      "min": 1.1,
+      "max": 5,
+      "omittedRawRecords": 4,
+      "bucketMinutes": 5,
+      "segmentThresholdAvg": 5,
+      "segmentThresholdMax": 8,
+      "segmentMergeGapMinutes": 10
+    },
+    "movement": {
+      "steps": 2434.4,
+      "distanceKm": 1.7898,
+      "omittedRawRecords": 6304,
+      "bucketMinutes": 5,
+      "segmentThresholdSteps": 30,
+      "segmentThresholdDistanceKm": 0.02,
+      "segmentMergeGapMinutes": 5
+    },
+    "workouts": {
+      "count": 0,
+      "durationMinutes": 0,
+      "activeEnergyKJ": 0,
+      "distanceKm": 0,
+      "steps": 0
+    },
+    "stateOfMind": {
+      "count": 0
+    },
+    "medications": {
+      "count": 0
+    },
+    "heartNotifications": {
+      "count": 0
+    },
+    "cycleTracking": {
+      "count": 0
+    },
+    "ecg": {
+      "count": 0
+    },
+    "symptoms": {
+      "count": 0
+    }
+  },
+  "timeline": [
+    {
+      "type": "movement",
+      "start": "09:05",
+      "end": "09:15",
+      "durationMinutes": 10,
+      "steps": 399,
+      "distanceKm": 0.3079,
+      "bucketCount": 2
+    },
+    {
+      "type": "movement",
+      "start": "09:40",
+      "end": "09:50",
+      "durationMinutes": 10,
+      "steps": 458,
+      "distanceKm": 0.32,
+      "bucketCount": 2
+    },
+    {
+      "type": "stairs",
+      "start": "09:45",
+      "end": "09:50",
+      "durationMinutes": 5,
+      "flights": 4,
+      "bucketCount": 1
+    },
+    {
+      "type": "movement",
+      "start": "11:20",
+      "end": "11:30",
+      "durationMinutes": 10,
+      "steps": 298,
+      "distanceKm": 0.2321,
+      "bucketCount": 2
+    },
+    {
+      "type": "movement",
+      "start": "12:20",
+      "end": "12:25",
+      "durationMinutes": 5,
+      "steps": 55,
+      "distanceKm": 0.0327,
+      "bucketCount": 1
+    },
+    {
+      "type": "movement",
+      "start": "15:15",
+      "end": "15:25",
+      "durationMinutes": 10,
+      "steps": 143,
+      "distanceKm": 0.0914,
+      "bucketCount": 2
+    },
+    {
+      "type": "movement",
+      "start": "16:50",
+      "end": "16:55",
+      "durationMinutes": 5,
+      "steps": 45,
+      "distanceKm": 0.0275,
+      "bucketCount": 1
+    },
+    {
+      "type": "movement",
+      "start": "18:40",
+      "end": "18:50",
+      "durationMinutes": 10,
+      "steps": 433,
+      "distanceKm": 0.3104,
+      "bucketCount": 2
+    },
+    {
+      "type": "stairs",
+      "start": "19:15",
+      "end": "19:25",
+      "durationMinutes": 10,
+      "flights": 5,
+      "bucketCount": 2
+    },
+    {
+      "type": "movement",
+      "start": "19:15",
+      "end": "19:25",
+      "durationMinutes": 10,
+      "steps": 413,
+      "distanceKm": 0.3215,
+      "bucketCount": 2
+    },
+    {
+      "type": "stairs",
+      "start": "21:15",
+      "end": "21:20",
+      "durationMinutes": 5,
+      "flights": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "movement",
+      "start": "21:15",
+      "end": "21:20",
+      "durationMinutes": 5,
+      "steps": 50,
+      "distanceKm": 0.0388,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "23:15",
+      "end": "23:20",
+      "durationMinutes": 5,
+      "energyKJ": 5.099,
+      "energyKcal": 1.219,
+      "bucketCount": 1
+    }
+  ],
+  "series": {
+    "activeEnergy5m": {
+      "units": "kJ",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "22:40",
+          1.981
+        ],
+        [
+          "22:45",
+          2.973
+        ],
+        [
+          "22:50",
+          0.678
+        ],
+        [
+          "22:55",
+          0.694
+        ],
+        [
+          "23:00",
+          0.978
+        ],
+        [
+          "23:05",
+          0.299
+        ],
+        [
+          "23:10",
+          3.421
+        ],
+        [
+          "23:15",
+          5.099
+        ],
+        [
+          "23:20",
+          2.562
+        ],
+        [
+          "23:25",
+          1.243
+        ],
+        [
+          "23:30",
+          1.728
+        ],
+        [
+          "23:35",
+          1.924
+        ],
+        [
+          "23:40",
+          0.119
+        ]
+      ]
+    },
+    "flightsClimbed5m": {
+      "units": "count",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "09:45",
+          4
+        ],
+        [
+          "19:15",
+          2.385
+        ],
+        [
+          "19:20",
+          2.615
+        ],
+        [
+          "21:15",
+          1
+        ]
+      ]
+    },
+    "heartRate5m": {
+      "units": "count/min",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "22:40",
+          68.8,
+          67,
+          71
+        ],
+        [
+          "22:45",
+          71,
+          71,
+          71
+        ],
+        [
+          "22:50",
+          69,
+          69,
+          69
+        ],
+        [
+          "23:00",
+          68.5,
+          67,
+          70
+        ],
+        [
+          "23:05",
+          80,
+          80,
+          80
+        ],
+        [
+          "23:10",
+          79,
+          79,
+          79
+        ],
+        [
+          "23:15",
+          72,
+          72,
+          72
+        ],
+        [
+          "23:20",
+          69.2,
+          68.4,
+          70
+        ],
+        [
+          "23:25",
+          68,
+          68,
+          68
+        ],
+        [
+          "23:30",
+          66.5,
+          66,
+          67
+        ],
+        [
+          "23:40",
+          63.5,
+          63,
+          64
+        ],
+        [
+          "23:45",
+          57,
+          57,
+          57
+        ],
+        [
+          "23:50",
+          60,
+          59,
+          61
+        ],
+        [
+          "23:55",
+          59,
+          59,
+          59
+        ]
+      ]
+    },
+    "physicalEffort5m": {
+      "units": "kcal/hr·kg",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "22:40",
+          1.1,
+          1.1,
+          1.1
+        ],
+        [
+          "23:10",
+          3.1,
+          1.2,
+          5
+        ],
+        [
+          "23:15",
+          4.9,
+          4.9,
+          4.9
+        ]
+      ]
+    },
+    "movement5m": {
+      "units": [
+        "count",
+        "km"
+      ],
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "08:15",
+          7,
+          0.0057
+        ],
+        [
+          "09:05",
+          140,
+          0.1081
+        ],
+        [
+          "09:10",
+          259,
+          0.1998
+        ],
+        [
+          "09:40",
+          101.3,
+          0.0708
+        ],
+        [
+          "09:45",
+          356.7,
+          0.2493
+        ],
+        [
+          "11:20",
+          99.9,
+          0.0778
+        ],
+        [
+          "11:25",
+          198.1,
+          0.1543
+        ],
+        [
+          "11:40",
+          27,
+          0.0188
+        ],
+        [
+          "12:05",
+          23,
+          0.0173
+        ],
+        [
+          "12:20",
+          55,
+          0.0327
+        ],
+        [
+          "15:15",
+          64.9,
+          0.0414
+        ],
+        [
+          "15:20",
+          78.1,
+          0.05
+        ],
+        [
+          "16:50",
+          45,
+          0.0275
+        ],
+        [
+          "18:40",
+          278.1,
+          0.1994
+        ],
+        [
+          "18:45",
+          154.9,
+          0.111
+        ],
+        [
+          "19:15",
+          186,
+          0.1448
+        ],
+        [
+          "19:20",
+          227,
+          0.1767
+        ],
+        [
+          "19:30",
+          22,
+          0.0187
+        ],
+        [
+          "21:15",
+          50,
+          0.0388
+        ],
+        [
+          "22:40",
+          8,
+          0.0053
+        ],
+        [
+          "23:05",
+          15.3,
+          0.0123
+        ],
+        [
+          "23:10",
+          19.3,
+          0.0155
+        ],
+        [
+          "23:15",
+          10.9,
+          0.0085
+        ],
+        [
+          "23:40",
+          8,
+          0.0053
+        ]
+      ]
+    }
+  },
+  "data": {
+    "healthMetrics": {
+      "metrics": [
+        {
+          "name": "blood_oxygen_saturation",
+          "data": [
+            {
+              "start": "2026-05-06 22:42:48 +0800",
+              "end": "2026-05-06 22:42:48 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 92,
+              "date": "2026-05-06 22:42:48 +0800"
+            },
+            {
+              "start": "2026-05-06 23:19:51 +0800",
+              "end": "2026-05-06 23:19:51 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 97,
+              "date": "2026-05-06 23:19:51 +0800"
+            },
+            {
+              "start": "2026-05-06 23:49:52 +0800",
+              "end": "2026-05-06 23:49:52 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 96,
+              "date": "2026-05-06 23:49:52 +0800"
+            }
+          ],
+          "units": "%"
+        },
+        {
+          "name": "body_fat_percentage",
+          "data": [
+            {
+              "start": "2026-05-06 08:45:31 +0800",
+              "end": "2026-05-06 08:45:31 +0800",
+              "source": "Fitdays",
+              "qty": 19.700001180171967,
+              "date": "2026-05-06 08:45:31 +0800"
+            }
+          ],
+          "units": "%"
+        },
+        {
+          "units": "count",
+          "name": "body_mass_index",
+          "data": [
+            {
+              "start": "2026-05-06 08:45:31 +0800",
+              "end": "2026-05-06 08:45:31 +0800",
+              "source": "Fitdays",
+              "qty": 24,
+              "date": "2026-05-06 08:45:31 +0800"
+            }
+          ]
+        },
+        {
+          "units": "dBASPL",
+          "data": [
+            {
+              "date": "2026-05-06 22:40:25 +0800",
+              "end": "2026-05-06 23:10:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 52.15463532015987,
+              "start": "2026-05-06 22:40:25 +0800"
+            },
+            {
+              "date": "2026-05-06 23:10:23 +0800",
+              "end": "2026-05-06 23:40:18 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 52.333391387721086,
+              "start": "2026-05-06 23:10:23 +0800"
+            }
+          ],
+          "name": "environmental_audio_exposure"
+        },
+        {
+          "name": "resting_heart_rate",
+          "data": [
+            {
+              "start": "2026-05-06 22:41:14 +0800",
+              "end": "2026-05-06 23:58:41 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 66,
+              "date": "2026-05-06 22:41:14 +0800"
+            }
+          ],
+          "units": "count/min"
+        },
+        {
+          "name": "lean_body_mass",
+          "units": "kg",
+          "data": [
+            {
+              "start": "2026-05-06 08:45:31 +0800",
+              "end": "2026-05-06 08:45:31 +0800",
+              "source": "Fitdays",
+              "qty": 58.418251037597656,
+              "date": "2026-05-06 08:45:31 +0800"
+            }
+          ]
+        },
+        {
+          "name": "respiratory_rate",
+          "units": "count/min",
+          "data": [
+            {
+              "date": "2026-05-06 22:46:07 +0800",
+              "end": "2026-05-06 22:46:07 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 20.5,
+              "start": "2026-05-06 22:46:07 +0800"
+            },
+            {
+              "start": "2026-05-06 22:58:07 +0800",
+              "end": "2026-05-06 22:58:07 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 20,
+              "date": "2026-05-06 22:58:07 +0800"
+            },
+            {
+              "date": "2026-05-06 23:02:37 +0800",
+              "end": "2026-05-06 23:02:37 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "start": "2026-05-06 23:02:37 +0800"
+            },
+            {
+              "date": "2026-05-06 23:26:07 +0800",
+              "end": "2026-05-06 23:26:07 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 19,
+              "start": "2026-05-06 23:26:07 +0800"
+            },
+            {
+              "date": "2026-05-06 23:32:37 +0800",
+              "end": "2026-05-06 23:32:37 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 21,
+              "start": "2026-05-06 23:32:37 +0800"
+            },
+            {
+              "date": "2026-05-06 23:50:06 +0800",
+              "end": "2026-05-06 23:50:06 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 20.5,
+              "start": "2026-05-06 23:50:06 +0800"
+            },
+            {
+              "start": "2026-05-06 23:55:06 +0800",
+              "end": "2026-05-06 23:55:06 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 20,
+              "date": "2026-05-06 23:55:06 +0800"
+            }
+          ]
+        },
+        {
+          "name": "heart_rate_variability",
+          "units": "ms",
+          "data": [
+            {
+              "start": "2026-05-06 22:42:23 +0800",
+              "end": "2026-05-06 22:42:52 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 35.098252148779075,
+              "date": "2026-05-06 22:42:23 +0800"
+            },
+            {
+              "date": "2026-05-06 23:24:07 +0800",
+              "end": "2026-05-06 23:25:07 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 33.99329929620421,
+              "start": "2026-05-06 23:24:07 +0800"
+            }
+          ]
+        },
+        {
+          "units": "kg",
+          "data": [
+            {
+              "date": "2026-05-06 08:45:31 +0800",
+              "end": "2026-05-06 08:45:31 +0800",
+              "source": "Fitdays",
+              "qty": 72.75,
+              "start": "2026-05-06 08:45:31 +0800"
+            }
+          ],
+          "name": "weight_body_mass"
+        }
+      ]
+    },
+    "workouts": {
+      "workouts": []
+    },
+    "medications": {},
+    "heartNotifications": {},
+    "stateOfMind": {},
+    "cycleTracking": {},
+    "ecg": {},
+    "symptoms": {}
+  }
+}

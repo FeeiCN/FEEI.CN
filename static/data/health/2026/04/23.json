@@ -1,0 +1,5529 @@
+{
+  "exportedAt": "2026-06-21T14:07:10.896Z",
+  "date": "2026-04-23",
+  "dateRange": {
+    "start": "2026-04-23 00:00:00 +0800",
+    "end": "2026-04-23 23:59:59 +0800"
+  },
+  "summary": {
+    "rawRecords": {
+      "healthMetrics": 68955,
+      "workouts": 0,
+      "medications": 0,
+      "heartNotifications": 0,
+      "stateOfMind": 0,
+      "cycleTracking": 0,
+      "ecg": 0,
+      "symptoms": 0
+    },
+    "exerciseTime": {
+      "units": "min",
+      "totalMinutes": 18,
+      "omittedRawRecords": 1080,
+      "bucketMinutes": 5
+    },
+    "standTime": {
+      "units": "min",
+      "totalMinutes": 60,
+      "omittedRawRecords": 8700,
+      "bucketMinutes": 5,
+      "segmentThresholdMinutes": 1,
+      "segmentMergeGapMinutes": 0
+    },
+    "activeEnergy": {
+      "units": "kJ",
+      "totalKJ": 1335.637,
+      "totalKcal": 319.225,
+      "omittedRawRecords": 52259,
+      "bucketMinutes": 5,
+      "segmentThresholdKJ": 5,
+      "segmentMergeGapMinutes": 10
+    },
+    "handwashing": {
+      "units": "s",
+      "count": 5,
+      "totalSeconds": 94,
+      "completedCount": 2,
+      "omittedRawRecords": 5
+    },
+    "flightsClimbed": {
+      "units": "count",
+      "total": 19.932,
+      "omittedRawRecords": 323,
+      "bucketMinutes": 5,
+      "segmentThreshold": 0.5,
+      "segmentMergeGapMinutes": 5
+    },
+    "physicalEffort": {
+      "units": "kcal/hr·kg",
+      "avg": 4.16,
+      "min": 1,
+      "max": 19.3,
+      "omittedRawRecords": 168,
+      "bucketMinutes": 5,
+      "segmentThresholdAvg": 5,
+      "segmentThresholdMax": 8,
+      "segmentMergeGapMinutes": 10
+    },
+    "heartRate": {
+      "units": "count/min",
+      "avg": 81.6,
+      "min": 49,
+      "max": 152,
+      "omittedRawRecords": 429,
+      "bucketMinutes": 5
+    },
+    "walkingHeartRateAverage": {
+      "units": "count/min",
+      "count": 1,
+      "latest": 109,
+      "latestDate": "2026-04-23 00:03:18 +0800",
+      "avg": 109,
+      "min": 109,
+      "max": 109,
+      "omittedRawRecords": 1
+    },
+    "movement": {
+      "steps": 3066.3,
+      "distanceKm": 2.3778,
+      "omittedRawRecords": 5779,
+      "bucketMinutes": 5,
+      "segmentThresholdSteps": 30,
+      "segmentThresholdDistanceKm": 0.02,
+      "segmentMergeGapMinutes": 5
+    },
+    "workouts": {
+      "count": 0,
+      "durationMinutes": 0,
+      "activeEnergyKJ": 0,
+      "distanceKm": 0,
+      "steps": 0
+    },
+    "stateOfMind": {
+      "count": 0
+    },
+    "medications": {
+      "count": 0
+    },
+    "heartNotifications": {
+      "count": 0
+    },
+    "cycleTracking": {
+      "count": 0
+    },
+    "ecg": {
+      "count": 0
+    },
+    "symptoms": {
+      "count": 0
+    }
+  },
+  "timeline": [
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 00:00:41 +0800",
+      "end": "2026-04-23 00:07:41 +0800",
+      "durationMinutes": 7,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "deep",
+      "label": "深度",
+      "start": "2026-04-23 00:07:41 +0800",
+      "end": "2026-04-23 00:19:11 +0800",
+      "durationMinutes": 11.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "awake",
+      "label": "清醒",
+      "start": "2026-04-23 00:19:11 +0800",
+      "end": "2026-04-23 00:20:41 +0800",
+      "durationMinutes": 1.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 00:20:41 +0800",
+      "end": "2026-04-23 00:28:41 +0800",
+      "durationMinutes": 8,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "deep",
+      "label": "深度",
+      "start": "2026-04-23 00:28:41 +0800",
+      "end": "2026-04-23 00:40:40 +0800",
+      "durationMinutes": 12,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 00:40:40 +0800",
+      "end": "2026-04-23 00:52:40 +0800",
+      "durationMinutes": 12,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "rem",
+      "label": "快速动眼期",
+      "start": "2026-04-23 00:52:40 +0800",
+      "end": "2026-04-23 01:00:10 +0800",
+      "durationMinutes": 7.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 01:00:10 +0800",
+      "end": "2026-04-23 01:30:40 +0800",
+      "durationMinutes": 30.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "deep",
+      "label": "深度",
+      "start": "2026-04-23 01:30:40 +0800",
+      "end": "2026-04-23 01:34:40 +0800",
+      "durationMinutes": 4,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 01:34:40 +0800",
+      "end": "2026-04-23 01:48:40 +0800",
+      "durationMinutes": 14,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "deep",
+      "label": "深度",
+      "start": "2026-04-23 01:48:40 +0800",
+      "end": "2026-04-23 01:53:09 +0800",
+      "durationMinutes": 4.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 01:53:09 +0800",
+      "end": "2026-04-23 01:55:39 +0800",
+      "durationMinutes": 2.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "awake",
+      "label": "清醒",
+      "start": "2026-04-23 01:55:39 +0800",
+      "end": "2026-04-23 01:57:09 +0800",
+      "durationMinutes": 1.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 01:57:09 +0800",
+      "end": "2026-04-23 02:04:09 +0800",
+      "durationMinutes": 7,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "rem",
+      "label": "快速动眼期",
+      "start": "2026-04-23 02:04:09 +0800",
+      "end": "2026-04-23 02:44:39 +0800",
+      "durationMinutes": 40.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 02:44:39 +0800",
+      "end": "2026-04-23 03:14:08 +0800",
+      "durationMinutes": 29.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "deep",
+      "label": "深度",
+      "start": "2026-04-23 03:14:08 +0800",
+      "end": "2026-04-23 03:24:38 +0800",
+      "durationMinutes": 10.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 03:24:38 +0800",
+      "end": "2026-04-23 04:07:37 +0800",
+      "durationMinutes": 43,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "rem",
+      "label": "快速动眼期",
+      "start": "2026-04-23 04:07:37 +0800",
+      "end": "2026-04-23 04:46:07 +0800",
+      "durationMinutes": 38.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 04:46:07 +0800",
+      "end": "2026-04-23 06:02:05 +0800",
+      "durationMinutes": 76,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "rem",
+      "label": "快速动眼期",
+      "start": "2026-04-23 06:02:05 +0800",
+      "end": "2026-04-23 06:30:05 +0800",
+      "durationMinutes": 28,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "awake",
+      "label": "清醒",
+      "start": "2026-04-23 06:30:05 +0800",
+      "end": "2026-04-23 06:32:35 +0800",
+      "durationMinutes": 2.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 06:32:35 +0800",
+      "end": "2026-04-23 06:33:05 +0800",
+      "durationMinutes": 0.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "rem",
+      "label": "快速动眼期",
+      "start": "2026-04-23 06:33:05 +0800",
+      "end": "2026-04-23 06:44:05 +0800",
+      "durationMinutes": 11,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 06:44:05 +0800",
+      "end": "2026-04-23 07:50:04 +0800",
+      "durationMinutes": 66,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "rem",
+      "label": "快速动眼期",
+      "start": "2026-04-23 07:50:04 +0800",
+      "end": "2026-04-23 08:21:03 +0800",
+      "durationMinutes": 31,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "awake",
+      "label": "清醒",
+      "start": "2026-04-23 08:21:03 +0800",
+      "end": "2026-04-23 08:22:03 +0800",
+      "durationMinutes": 1,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-23 08:22:03 +0800",
+      "end": "2026-04-23 08:38:03 +0800",
+      "durationMinutes": 16,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "08:50",
+      "end": "09:10",
+      "durationMinutes": 20,
+      "energyKJ": 114.857,
+      "energyKcal": 27.451,
+      "bucketCount": 4
+    },
+    {
+      "type": "stand",
+      "start": "08:55",
+      "end": "09:10",
+      "durationMinutes": 8,
+      "bucketCount": 3
+    },
+    {
+      "type": "movement",
+      "start": "08:55",
+      "end": "09:10",
+      "durationMinutes": 15,
+      "steps": 517,
+      "distanceKm": 0.373,
+      "bucketCount": 3
+    },
+    {
+      "type": "handwashing",
+      "start": "2026-04-23 08:58:49 +0800",
+      "end": "2026-04-23 08:59:06 +0800",
+      "durationSeconds": 17,
+      "status": "未完成",
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "stand",
+      "start": "09:35",
+      "end": "09:40",
+      "durationMinutes": 2,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "09:35",
+      "end": "10:10",
+      "durationMinutes": 35,
+      "energyKJ": 58.964,
+      "energyKcal": 14.093,
+      "bucketCount": 7
+    },
+    {
+      "type": "movement",
+      "start": "09:35",
+      "end": "10:00",
+      "durationMinutes": 25,
+      "steps": 296.4,
+      "distanceKm": 0.204,
+      "bucketCount": 4
+    },
+    {
+      "type": "stand",
+      "start": "09:50",
+      "end": "10:00",
+      "durationMinutes": 3,
+      "bucketCount": 2
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "10:45",
+      "end": "12:00",
+      "durationMinutes": 75,
+      "energyKJ": 143.164,
+      "energyKcal": 34.217,
+      "bucketCount": 14
+    },
+    {
+      "type": "stand",
+      "start": "10:50",
+      "end": "11:00",
+      "durationMinutes": 4,
+      "bucketCount": 2
+    },
+    {
+      "type": "movement",
+      "start": "10:50",
+      "end": "11:00",
+      "durationMinutes": 10,
+      "steps": 273.6,
+      "distanceKm": 0.2028,
+      "bucketCount": 2
+    },
+    {
+      "type": "stairs",
+      "start": "10:55",
+      "end": "11:00",
+      "durationMinutes": 5,
+      "flights": 1.936,
+      "bucketCount": 1
+    },
+    {
+      "type": "effort_zone",
+      "level": "high",
+      "start": "10:55",
+      "end": "11:00",
+      "durationMinutes": 5,
+      "avg": 6.34,
+      "min": 1.4,
+      "max": 16.2
+    },
+    {
+      "type": "stand",
+      "start": "11:45",
+      "end": "11:50",
+      "durationMinutes": 2,
+      "bucketCount": 1
+    },
+    {
+      "type": "movement",
+      "start": "11:45",
+      "end": "11:50",
+      "durationMinutes": 5,
+      "steps": 131,
+      "distanceKm": 0.0856,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "13:25",
+      "end": "13:40",
+      "durationMinutes": 15,
+      "energyKJ": 30.602,
+      "energyKcal": 7.314,
+      "bucketCount": 3
+    },
+    {
+      "type": "movement",
+      "start": "13:25",
+      "end": "13:35",
+      "durationMinutes": 10,
+      "steps": 179.3,
+      "distanceKm": 0.1312,
+      "bucketCount": 2
+    },
+    {
+      "type": "handwashing",
+      "start": "2026-04-23 13:29:13 +0800",
+      "end": "2026-04-23 13:29:32 +0800",
+      "durationSeconds": 19,
+      "status": "未完成",
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "stand",
+      "start": "13:30",
+      "end": "13:35",
+      "durationMinutes": 2,
+      "bucketCount": 1
+    },
+    {
+      "type": "handwashing",
+      "start": "2026-04-23 13:32:40 +0800",
+      "end": "2026-04-23 13:32:56 +0800",
+      "durationSeconds": 16,
+      "status": "未完成",
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "stand",
+      "start": "14:50",
+      "end": "15:00",
+      "durationMinutes": 4,
+      "bucketCount": 2
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "14:50",
+      "end": "15:05",
+      "durationMinutes": 15,
+      "energyKJ": 64.548,
+      "energyKcal": 15.427,
+      "bucketCount": 3
+    },
+    {
+      "type": "movement",
+      "start": "14:50",
+      "end": "15:00",
+      "durationMinutes": 10,
+      "steps": 228.4,
+      "distanceKm": 0.1901,
+      "bucketCount": 2
+    },
+    {
+      "type": "stairs",
+      "start": "14:55",
+      "end": "15:00",
+      "durationMinutes": 5,
+      "flights": 2,
+      "bucketCount": 1
+    },
+    {
+      "type": "effort_zone",
+      "level": "high",
+      "start": "14:55",
+      "end": "15:00",
+      "durationMinutes": 5,
+      "avg": 4.42,
+      "min": 1.4,
+      "max": 8.2
+    },
+    {
+      "type": "handwashing",
+      "start": "2026-04-23 14:56:44 +0800",
+      "end": "2026-04-23 14:57:05 +0800",
+      "durationSeconds": 21,
+      "status": "已完成",
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "15:30",
+      "end": "16:35",
+      "durationMinutes": 65,
+      "energyKJ": 107.673,
+      "energyKcal": 25.734,
+      "bucketCount": 11
+    },
+    {
+      "type": "stand",
+      "start": "15:40",
+      "end": "15:50",
+      "durationMinutes": 2,
+      "bucketCount": 2
+    },
+    {
+      "type": "movement",
+      "start": "15:40",
+      "end": "15:45",
+      "durationMinutes": 5,
+      "steps": 106.3,
+      "distanceKm": 0.0774,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "15:55",
+      "end": "16:00",
+      "durationMinutes": 2,
+      "bucketCount": 1
+    },
+    {
+      "type": "stairs",
+      "start": "15:55",
+      "end": "16:00",
+      "durationMinutes": 5,
+      "flights": 1.726,
+      "bucketCount": 1
+    },
+    {
+      "type": "effort_zone",
+      "level": "high",
+      "start": "15:55",
+      "end": "16:00",
+      "durationMinutes": 5,
+      "avg": 5.63,
+      "min": 1.4,
+      "max": 11.9
+    },
+    {
+      "type": "movement",
+      "start": "15:55",
+      "end": "16:00",
+      "durationMinutes": 5,
+      "steps": 120.7,
+      "distanceKm": 0.089,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "17:35",
+      "end": "19:55",
+      "durationMinutes": 140,
+      "energyKJ": 348.572,
+      "energyKcal": 83.311,
+      "bucketCount": 25
+    },
+    {
+      "type": "stand",
+      "start": "17:55",
+      "end": "18:20",
+      "durationMinutes": 8,
+      "bucketCount": 5
+    },
+    {
+      "type": "movement",
+      "start": "17:55",
+      "end": "18:05",
+      "durationMinutes": 10,
+      "steps": 47.5,
+      "distanceKm": 0.0467,
+      "bucketCount": 2
+    },
+    {
+      "type": "handwashing",
+      "start": "2026-04-23 18:00:24 +0800",
+      "end": "2026-04-23 18:00:45 +0800",
+      "durationSeconds": 21,
+      "status": "已完成",
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "stand",
+      "start": "18:25",
+      "end": "18:50",
+      "durationMinutes": 16,
+      "bucketCount": 5
+    },
+    {
+      "type": "effort_zone",
+      "level": "high",
+      "start": "18:40",
+      "end": "18:50",
+      "durationMinutes": 10,
+      "avg": 6.72,
+      "min": 1.4,
+      "max": 19.3
+    },
+    {
+      "type": "movement",
+      "start": "18:40",
+      "end": "18:50",
+      "durationMinutes": 10,
+      "steps": 571.8,
+      "distanceKm": 0.5334,
+      "bucketCount": 2
+    },
+    {
+      "type": "stairs",
+      "start": "18:45",
+      "end": "18:50",
+      "durationMinutes": 5,
+      "flights": 7.2,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "20:10",
+      "end": "20:30",
+      "durationMinutes": 20,
+      "energyKJ": 23.123,
+      "energyKcal": 5.526,
+      "bucketCount": 4
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "20:45",
+      "end": "21:00",
+      "durationMinutes": 15,
+      "energyKJ": 23.498,
+      "energyKcal": 5.616,
+      "bucketCount": 3
+    },
+    {
+      "type": "stand",
+      "start": "20:50",
+      "end": "20:55",
+      "durationMinutes": 2,
+      "bucketCount": 1
+    },
+    {
+      "type": "movement",
+      "start": "20:50",
+      "end": "20:55",
+      "durationMinutes": 5,
+      "steps": 150.3,
+      "distanceKm": 0.1018,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "21:15",
+      "end": "21:25",
+      "durationMinutes": 4,
+      "bucketCount": 2
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "21:15",
+      "end": "21:45",
+      "durationMinutes": 30,
+      "energyKJ": 124.15,
+      "energyKcal": 29.673,
+      "bucketCount": 6
+    },
+    {
+      "type": "stairs",
+      "start": "21:15",
+      "end": "21:25",
+      "durationMinutes": 10,
+      "flights": 7.07,
+      "bucketCount": 2
+    },
+    {
+      "type": "effort_zone",
+      "level": "high",
+      "start": "21:15",
+      "end": "21:25",
+      "durationMinutes": 10,
+      "avg": 5.62,
+      "min": 1.3,
+      "max": 19.1
+    },
+    {
+      "type": "heart_rate_zone",
+      "level": "high",
+      "start": "21:15",
+      "end": "21:25",
+      "durationMinutes": 10,
+      "avg": 121.6,
+      "min": 102,
+      "max": 143
+    },
+    {
+      "type": "movement",
+      "start": "21:15",
+      "end": "21:25",
+      "durationMinutes": 10,
+      "steps": 380.1,
+      "distanceKm": 0.2965,
+      "bucketCount": 2
+    },
+    {
+      "type": "stand",
+      "start": "22:25",
+      "end": "22:30",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-22 23:26:12 +0800",
+      "end": "2026-04-22 23:36:11 +0800",
+      "durationMinutes": 10,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "awake",
+      "label": "清醒",
+      "start": "2026-04-22 23:36:11 +0800",
+      "end": "2026-04-22 23:43:11 +0800",
+      "durationMinutes": 7,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "core",
+      "label": "核心",
+      "start": "2026-04-22 23:43:11 +0800",
+      "end": "2026-04-22 23:56:41 +0800",
+      "durationMinutes": 13.5,
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "sleep",
+      "stage": "deep",
+      "label": "深度",
+      "start": "2026-04-22 23:56:41 +0800",
+      "end": "2026-04-23 00:00:41 +0800",
+      "durationMinutes": 4,
+      "source": "Feei的Apple Watch"
+    }
+  ],
+  "series": {
+    "exerciseTime5m": {
+      "units": "min",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "08:55",
+          1
+        ],
+        [
+          "09:05",
+          2
+        ],
+        [
+          "10:50",
+          1
+        ],
+        [
+          "10:55",
+          1
+        ],
+        [
+          "14:50",
+          1
+        ],
+        [
+          "14:55",
+          1
+        ],
+        [
+          "15:55",
+          2
+        ],
+        [
+          "18:40",
+          3
+        ],
+        [
+          "18:45",
+          2
+        ],
+        [
+          "21:15",
+          1
+        ],
+        [
+          "21:20",
+          3
+        ]
+      ]
+    },
+    "standTime5m": {
+      "units": "min",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "08:55",
+          3
+        ],
+        [
+          "09:00",
+          1
+        ],
+        [
+          "09:05",
+          4
+        ],
+        [
+          "09:35",
+          2
+        ],
+        [
+          "09:50",
+          1
+        ],
+        [
+          "09:55",
+          2
+        ],
+        [
+          "10:50",
+          3
+        ],
+        [
+          "10:55",
+          1
+        ],
+        [
+          "11:45",
+          2
+        ],
+        [
+          "13:30",
+          2
+        ],
+        [
+          "14:50",
+          1
+        ],
+        [
+          "14:55",
+          3
+        ],
+        [
+          "15:40",
+          1
+        ],
+        [
+          "15:45",
+          1
+        ],
+        [
+          "15:55",
+          2
+        ],
+        [
+          "17:55",
+          1
+        ],
+        [
+          "18:00",
+          1
+        ],
+        [
+          "18:05",
+          2
+        ],
+        [
+          "18:10",
+          1
+        ],
+        [
+          "18:15",
+          3
+        ],
+        [
+          "18:25",
+          3
+        ],
+        [
+          "18:30",
+          4
+        ],
+        [
+          "18:35",
+          2
+        ],
+        [
+          "18:40",
+          4
+        ],
+        [
+          "18:45",
+          3
+        ],
+        [
+          "20:50",
+          2
+        ],
+        [
+          "21:15",
+          1
+        ],
+        [
+          "21:20",
+          3
+        ],
+        [
+          "22:25",
+          1
+        ]
+      ]
+    },
+    "activeEnergy5m": {
+      "units": "kJ",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "00:00",
+          0.389
+        ],
+        [
+          "00:15",
+          0.831
+        ],
+        [
+          "00:20",
+          0.144
+        ],
+        [
+          "00:40",
+          0.791
+        ],
+        [
+          "00:55",
+          0.07
+        ],
+        [
+          "01:00",
+          1.117
+        ],
+        [
+          "01:05",
+          0.947
+        ],
+        [
+          "01:10",
+          0.322
+        ],
+        [
+          "01:20",
+          0.925
+        ],
+        [
+          "01:35",
+          0.337
+        ],
+        [
+          "01:40",
+          0.474
+        ],
+        [
+          "01:45",
+          0.315
+        ],
+        [
+          "01:50",
+          0.523
+        ],
+        [
+          "01:55",
+          1.377
+        ],
+        [
+          "02:00",
+          1.012
+        ],
+        [
+          "02:05",
+          0.657
+        ],
+        [
+          "02:10",
+          0.224
+        ],
+        [
+          "02:15",
+          0.378
+        ],
+        [
+          "02:20",
+          0.043
+        ],
+        [
+          "02:25",
+          0.334
+        ],
+        [
+          "02:30",
+          1.179
+        ],
+        [
+          "02:35",
+          0.177
+        ],
+        [
+          "02:45",
+          0.937
+        ],
+        [
+          "02:55",
+          2.054
+        ],
+        [
+          "03:20",
+          0.059
+        ],
+        [
+          "03:25",
+          1.041
+        ],
+        [
+          "03:30",
+          0.215
+        ],
+        [
+          "03:35",
+          0.715
+        ],
+        [
+          "03:40",
+          0.745
+        ],
+        [
+          "03:50",
+          0.281
+        ],
+        [
+          "03:55",
+          1.096
+        ],
+        [
+          "04:00",
+          0.719
+        ],
+        [
+          "04:25",
+          0.601
+        ],
+        [
+          "04:30",
+          0.646
+        ],
+        [
+          "04:35",
+          0.778
+        ],
+        [
+          "04:40",
+          0.255
+        ],
+        [
+          "04:45",
+          0.925
+        ],
+        [
+          "05:10",
+          0.297
+        ],
+        [
+          "05:15",
+          0.711
+        ],
+        [
+          "05:25",
+          0.251
+        ],
+        [
+          "05:30",
+          0.138
+        ],
+        [
+          "05:35",
+          0.651
+        ],
+        [
+          "05:40",
+          0.658
+        ],
+        [
+          "05:50",
+          0.823
+        ],
+        [
+          "05:55",
+          0.935
+        ],
+        [
+          "06:05",
+          0.402
+        ],
+        [
+          "06:10",
+          0.577
+        ],
+        [
+          "06:25",
+          0.611
+        ],
+        [
+          "06:30",
+          0.572
+        ],
+        [
+          "06:35",
+          0.632
+        ],
+        [
+          "06:40",
+          0.545
+        ],
+        [
+          "06:45",
+          0.402
+        ],
+        [
+          "07:00",
+          0.209
+        ],
+        [
+          "07:05",
+          0.385
+        ],
+        [
+          "07:30",
+          0.48
+        ],
+        [
+          "07:35",
+          0.376
+        ],
+        [
+          "07:40",
+          0.177
+        ],
+        [
+          "08:00",
+          0.536
+        ],
+        [
+          "08:20",
+          0.651
+        ],
+        [
+          "08:25",
+          0.761
+        ],
+        [
+          "08:30",
+          0.177
+        ],
+        [
+          "08:35",
+          3.128
+        ],
+        [
+          "08:40",
+          3.083
+        ],
+        [
+          "08:45",
+          1.192
+        ],
+        [
+          "08:50",
+          17.64
+        ],
+        [
+          "08:55",
+          18.234
+        ],
+        [
+          "09:00",
+          20.361
+        ],
+        [
+          "09:05",
+          58.622
+        ],
+        [
+          "09:10",
+          1.249
+        ],
+        [
+          "09:30",
+          1.37
+        ],
+        [
+          "09:35",
+          7.668
+        ],
+        [
+          "09:40",
+          5.681
+        ],
+        [
+          "09:45",
+          11.558
+        ],
+        [
+          "09:50",
+          12.592
+        ],
+        [
+          "09:55",
+          8.028
+        ],
+        [
+          "10:00",
+          7.731
+        ],
+        [
+          "10:05",
+          5.705
+        ],
+        [
+          "10:10",
+          3.217
+        ],
+        [
+          "10:15",
+          0.893
+        ],
+        [
+          "10:20",
+          4.561
+        ],
+        [
+          "10:25",
+          3.107
+        ],
+        [
+          "10:30",
+          2.22
+        ],
+        [
+          "10:35",
+          1.654
+        ],
+        [
+          "10:40",
+          2.929
+        ],
+        [
+          "10:45",
+          14.351
+        ],
+        [
+          "10:50",
+          14.351
+        ],
+        [
+          "10:55",
+          22.513
+        ],
+        [
+          "11:00",
+          18.339
+        ],
+        [
+          "11:05",
+          3.932
+        ],
+        [
+          "11:10",
+          5.545
+        ],
+        [
+          "11:15",
+          6.031
+        ],
+        [
+          "11:20",
+          6.152
+        ],
+        [
+          "11:25",
+          6.024
+        ],
+        [
+          "11:30",
+          5.931
+        ],
+        [
+          "11:35",
+          8.357
+        ],
+        [
+          "11:40",
+          11.314
+        ],
+        [
+          "11:45",
+          9.219
+        ],
+        [
+          "11:50",
+          7.75
+        ],
+        [
+          "11:55",
+          7.288
+        ],
+        [
+          "12:00",
+          4.482
+        ],
+        [
+          "12:05",
+          4.184
+        ],
+        [
+          "12:10",
+          1.692
+        ],
+        [
+          "12:15",
+          1.71
+        ],
+        [
+          "12:20",
+          0.322
+        ],
+        [
+          "12:25",
+          0.729
+        ],
+        [
+          "12:30",
+          0.863
+        ],
+        [
+          "12:35",
+          1.712
+        ],
+        [
+          "12:40",
+          0.977
+        ],
+        [
+          "12:45",
+          1.872
+        ],
+        [
+          "12:50",
+          2.397
+        ],
+        [
+          "12:55",
+          0.967
+        ],
+        [
+          "13:00",
+          1.372
+        ],
+        [
+          "13:05",
+          2.425
+        ],
+        [
+          "13:10",
+          3.29
+        ],
+        [
+          "13:15",
+          3.086
+        ],
+        [
+          "13:20",
+          2.91
+        ],
+        [
+          "13:25",
+          7.729
+        ],
+        [
+          "13:30",
+          13.589
+        ],
+        [
+          "13:35",
+          9.284
+        ],
+        [
+          "13:40",
+          3.971
+        ],
+        [
+          "13:45",
+          4.175
+        ],
+        [
+          "13:50",
+          4.489
+        ],
+        [
+          "13:55",
+          3.767
+        ],
+        [
+          "14:00",
+          3.522
+        ],
+        [
+          "14:05",
+          3.542
+        ],
+        [
+          "14:10",
+          3.841
+        ],
+        [
+          "14:15",
+          3.598
+        ],
+        [
+          "14:20",
+          2.583
+        ],
+        [
+          "14:25",
+          3.233
+        ],
+        [
+          "14:30",
+          1.986
+        ],
+        [
+          "14:35",
+          3.988
+        ],
+        [
+          "14:40",
+          3.526
+        ],
+        [
+          "14:45",
+          3.363
+        ],
+        [
+          "14:50",
+          11.266
+        ],
+        [
+          "14:55",
+          34.882
+        ],
+        [
+          "15:00",
+          18.4
+        ],
+        [
+          "15:05",
+          2.713
+        ],
+        [
+          "15:10",
+          3.485
+        ],
+        [
+          "15:15",
+          3.324
+        ],
+        [
+          "15:20",
+          3.421
+        ],
+        [
+          "15:25",
+          3.637
+        ],
+        [
+          "15:30",
+          5.555
+        ],
+        [
+          "15:35",
+          7.058
+        ],
+        [
+          "15:40",
+          13.492
+        ],
+        [
+          "15:45",
+          9.536
+        ],
+        [
+          "15:50",
+          19.854
+        ],
+        [
+          "15:55",
+          21.217
+        ],
+        [
+          "16:00",
+          4.697
+        ],
+        [
+          "16:05",
+          5.713
+        ],
+        [
+          "16:10",
+          6.918
+        ],
+        [
+          "16:15",
+          7.835
+        ],
+        [
+          "16:20",
+          5.479
+        ],
+        [
+          "16:25",
+          4.855
+        ],
+        [
+          "16:30",
+          5.015
+        ],
+        [
+          "16:35",
+          3.75
+        ],
+        [
+          "16:40",
+          1.769
+        ],
+        [
+          "16:45",
+          4.021
+        ],
+        [
+          "16:50",
+          4.08
+        ],
+        [
+          "16:55",
+          3.191
+        ],
+        [
+          "17:00",
+          4.251
+        ],
+        [
+          "17:05",
+          3.369
+        ],
+        [
+          "17:10",
+          1.64
+        ],
+        [
+          "17:15",
+          2.632
+        ],
+        [
+          "17:20",
+          3.937
+        ],
+        [
+          "17:25",
+          2.008
+        ],
+        [
+          "17:30",
+          3.545
+        ],
+        [
+          "17:35",
+          5.672
+        ],
+        [
+          "17:40",
+          4.903
+        ],
+        [
+          "17:45",
+          5.709
+        ],
+        [
+          "17:50",
+          6.734
+        ],
+        [
+          "17:55",
+          13.681
+        ],
+        [
+          "18:00",
+          13.451
+        ],
+        [
+          "18:05",
+          11.684
+        ],
+        [
+          "18:10",
+          12.231
+        ],
+        [
+          "18:15",
+          11.606
+        ],
+        [
+          "18:20",
+          10.573
+        ],
+        [
+          "18:25",
+          16.239
+        ],
+        [
+          "18:30",
+          13.981
+        ],
+        [
+          "18:35",
+          15.158
+        ],
+        [
+          "18:40",
+          54.782
+        ],
+        [
+          "18:45",
+          66.076
+        ],
+        [
+          "18:50",
+          24.3
+        ],
+        [
+          "18:55",
+          8.001
+        ],
+        [
+          "19:00",
+          7.316
+        ],
+        [
+          "19:05",
+          6.508
+        ],
+        [
+          "19:10",
+          6.274
+        ],
+        [
+          "19:15",
+          6.2
+        ],
+        [
+          "19:20",
+          5.835
+        ],
+        [
+          "19:25",
+          4.788
+        ],
+        [
+          "19:30",
+          6.103
+        ],
+        [
+          "19:35",
+          4.711
+        ],
+        [
+          "19:40",
+          6.561
+        ],
+        [
+          "19:45",
+          7.209
+        ],
+        [
+          "19:50",
+          6.687
+        ],
+        [
+          "19:55",
+          3.22
+        ],
+        [
+          "20:00",
+          2.81
+        ],
+        [
+          "20:05",
+          3.97
+        ],
+        [
+          "20:10",
+          5.233
+        ],
+        [
+          "20:15",
+          6.015
+        ],
+        [
+          "20:20",
+          6.37
+        ],
+        [
+          "20:25",
+          5.506
+        ],
+        [
+          "20:30",
+          2.881
+        ],
+        [
+          "20:35",
+          2.875
+        ],
+        [
+          "20:40",
+          3.273
+        ],
+        [
+          "20:45",
+          5.294
+        ],
+        [
+          "20:50",
+          8.218
+        ],
+        [
+          "20:55",
+          9.987
+        ],
+        [
+          "21:00",
+          0.993
+        ],
+        [
+          "21:05",
+          0.119
+        ],
+        [
+          "21:10",
+          0.086
+        ],
+        [
+          "21:15",
+          19.367
+        ],
+        [
+          "21:20",
+          63.098
+        ],
+        [
+          "21:25",
+          20.297
+        ],
+        [
+          "21:30",
+          11.126
+        ],
+        [
+          "21:35",
+          5.235
+        ],
+        [
+          "21:40",
+          5.027
+        ],
+        [
+          "21:45",
+          3.408
+        ],
+        [
+          "21:55",
+          3.439
+        ],
+        [
+          "22:00",
+          4.194
+        ],
+        [
+          "22:05",
+          1.539
+        ],
+        [
+          "22:10",
+          3.481
+        ],
+        [
+          "22:15",
+          3.188
+        ],
+        [
+          "22:20",
+          4.249
+        ],
+        [
+          "22:25",
+          4.651
+        ],
+        [
+          "22:30",
+          4.771
+        ],
+        [
+          "22:35",
+          2.822
+        ],
+        [
+          "22:40",
+          1.305
+        ],
+        [
+          "22:45",
+          1.068
+        ],
+        [
+          "22:50",
+          0.372
+        ],
+        [
+          "22:55",
+          0.849
+        ],
+        [
+          "23:00",
+          0.147
+        ],
+        [
+          "23:40",
+          2.227
+        ],
+        [
+          "23:45",
+          3.129
+        ]
+      ]
+    },
+    "flightsClimbed5m": {
+      "units": "count",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "10:55",
+          1.936
+        ],
+        [
+          "14:55",
+          2
+        ],
+        [
+          "15:55",
+          1.726
+        ],
+        [
+          "18:45",
+          7.2
+        ],
+        [
+          "21:15",
+          1.417
+        ],
+        [
+          "21:20",
+          5.653
+        ]
+      ]
+    },
+    "physicalEffort5m": {
+      "units": "kcal/hr·kg",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "00:15",
+          1,
+          1,
+          1
+        ],
+        [
+          "01:15",
+          1,
+          1,
+          1
+        ],
+        [
+          "02:15",
+          1,
+          1,
+          1
+        ],
+        [
+          "03:15",
+          1,
+          1,
+          1
+        ],
+        [
+          "04:15",
+          1,
+          1,
+          1
+        ],
+        [
+          "05:15",
+          1,
+          1,
+          1
+        ],
+        [
+          "06:15",
+          1,
+          1,
+          1
+        ],
+        [
+          "07:15",
+          1,
+          1,
+          1
+        ],
+        [
+          "08:15",
+          1.1,
+          1.1,
+          1.1
+        ],
+        [
+          "08:40",
+          3.05,
+          1.3,
+          4.8
+        ],
+        [
+          "08:55",
+          3.4,
+          1.6,
+          5.4
+        ],
+        [
+          "09:00",
+          3.55,
+          1.8,
+          5.7
+        ],
+        [
+          "09:05",
+          4.05,
+          1.6,
+          6.3
+        ],
+        [
+          "09:35",
+          3,
+          1.6,
+          4
+        ],
+        [
+          "09:40",
+          2.45,
+          1.2,
+          3.7
+        ],
+        [
+          "09:50",
+          4.02,
+          3.4,
+          4.7
+        ],
+        [
+          "09:55",
+          2.45,
+          1.3,
+          3.6
+        ],
+        [
+          "10:50",
+          3.27,
+          1.5,
+          5.2
+        ],
+        [
+          "10:55",
+          6.34,
+          1.4,
+          16.2
+        ],
+        [
+          "11:45",
+          3.74,
+          1.2,
+          5.5
+        ],
+        [
+          "12:45",
+          1.2,
+          1.2,
+          1.2
+        ],
+        [
+          "13:25",
+          3.45,
+          1.6,
+          5.3
+        ],
+        [
+          "13:30",
+          3.29,
+          1.2,
+          5.5
+        ],
+        [
+          "14:30",
+          1.3,
+          1.3,
+          1.3
+        ],
+        [
+          "14:50",
+          3.35,
+          3,
+          3.7
+        ],
+        [
+          "14:55",
+          4.42,
+          1.4,
+          8.2
+        ],
+        [
+          "15:40",
+          3.53,
+          1.3,
+          4.7
+        ],
+        [
+          "15:55",
+          5.63,
+          1.4,
+          11.9
+        ],
+        [
+          "16:15",
+          3,
+          1.2,
+          4.8
+        ],
+        [
+          "17:15",
+          1.3,
+          1.3,
+          1.3
+        ],
+        [
+          "17:55",
+          3.3,
+          1.5,
+          5.1
+        ],
+        [
+          "18:00",
+          3.55,
+          1.8,
+          5.3
+        ],
+        [
+          "18:35",
+          3.7,
+          3.7,
+          3.7
+        ],
+        [
+          "18:40",
+          4.66,
+          1.7,
+          10.4
+        ],
+        [
+          "18:45",
+          8.78,
+          1.4,
+          19.3
+        ],
+        [
+          "19:45",
+          1.3,
+          1.3,
+          1.3
+        ],
+        [
+          "20:45",
+          1.4,
+          1.4,
+          1.4
+        ],
+        [
+          "20:50",
+          3.13,
+          1.5,
+          4.2
+        ],
+        [
+          "21:15",
+          5.1,
+          3.2,
+          8.6
+        ],
+        [
+          "21:20",
+          6.14,
+          1.3,
+          19.1
+        ],
+        [
+          "22:20",
+          1.1,
+          1.1,
+          1.1
+        ]
+      ]
+    },
+    "heartRate5m": {
+      "units": "count/min",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "00:00",
+          61,
+          61,
+          61
+        ],
+        [
+          "00:05",
+          60,
+          60,
+          60
+        ],
+        [
+          "00:10",
+          58.5,
+          58,
+          59
+        ],
+        [
+          "00:15",
+          60,
+          60,
+          60
+        ],
+        [
+          "00:25",
+          63,
+          63,
+          63
+        ],
+        [
+          "00:30",
+          62.7,
+          62.4,
+          63
+        ],
+        [
+          "00:35",
+          63,
+          63,
+          63
+        ],
+        [
+          "00:40",
+          63,
+          62,
+          64
+        ],
+        [
+          "00:45",
+          66,
+          66,
+          66
+        ],
+        [
+          "00:50",
+          63,
+          63,
+          63
+        ],
+        [
+          "00:55",
+          66,
+          66,
+          66
+        ],
+        [
+          "01:05",
+          63,
+          63,
+          63
+        ],
+        [
+          "01:10",
+          60.5,
+          60,
+          61
+        ],
+        [
+          "01:15",
+          59,
+          59,
+          59
+        ],
+        [
+          "01:20",
+          59,
+          59,
+          59
+        ],
+        [
+          "01:25",
+          59,
+          59,
+          59
+        ],
+        [
+          "01:30",
+          59,
+          59,
+          59
+        ],
+        [
+          "01:35",
+          60,
+          60,
+          60
+        ],
+        [
+          "01:40",
+          58,
+          56,
+          60
+        ],
+        [
+          "01:45",
+          59,
+          59,
+          59
+        ],
+        [
+          "01:50",
+          60,
+          60,
+          60
+        ],
+        [
+          "02:00",
+          59.5,
+          59,
+          60
+        ],
+        [
+          "02:10",
+          56.5,
+          55,
+          58
+        ],
+        [
+          "02:15",
+          64,
+          64,
+          64
+        ],
+        [
+          "02:20",
+          60,
+          60,
+          60
+        ],
+        [
+          "02:25",
+          60,
+          60,
+          60
+        ],
+        [
+          "02:30",
+          56.7,
+          55,
+          58.5
+        ],
+        [
+          "02:35",
+          60,
+          60,
+          60
+        ],
+        [
+          "02:40",
+          60,
+          58,
+          62
+        ],
+        [
+          "02:50",
+          59.5,
+          59,
+          60
+        ],
+        [
+          "02:55",
+          58,
+          58,
+          58
+        ],
+        [
+          "03:00",
+          55,
+          55,
+          55
+        ],
+        [
+          "03:05",
+          54,
+          54,
+          54
+        ],
+        [
+          "03:10",
+          54,
+          54,
+          54
+        ],
+        [
+          "03:20",
+          53,
+          53,
+          53
+        ],
+        [
+          "03:25",
+          54,
+          54,
+          54
+        ],
+        [
+          "03:30",
+          54,
+          54,
+          54
+        ],
+        [
+          "03:35",
+          54,
+          54,
+          54
+        ],
+        [
+          "03:40",
+          54,
+          54,
+          54
+        ],
+        [
+          "03:45",
+          54,
+          54,
+          54
+        ],
+        [
+          "03:50",
+          55,
+          55,
+          55
+        ],
+        [
+          "03:55",
+          56,
+          54,
+          58
+        ],
+        [
+          "04:00",
+          55,
+          55,
+          55
+        ],
+        [
+          "04:05",
+          54,
+          54,
+          54
+        ],
+        [
+          "04:10",
+          52,
+          52,
+          52
+        ],
+        [
+          "04:15",
+          54,
+          54,
+          54
+        ],
+        [
+          "04:20",
+          54,
+          54,
+          54
+        ],
+        [
+          "04:25",
+          53,
+          53,
+          53
+        ],
+        [
+          "04:30",
+          53.9,
+          51,
+          56
+        ],
+        [
+          "04:40",
+          53,
+          53,
+          53
+        ],
+        [
+          "04:45",
+          59,
+          59,
+          59
+        ],
+        [
+          "04:50",
+          54,
+          54,
+          54
+        ],
+        [
+          "04:55",
+          53,
+          53,
+          53
+        ],
+        [
+          "05:00",
+          53,
+          52,
+          54
+        ],
+        [
+          "05:05",
+          52,
+          52,
+          52
+        ],
+        [
+          "05:10",
+          51,
+          51,
+          51
+        ],
+        [
+          "05:15",
+          49,
+          49,
+          49
+        ],
+        [
+          "05:20",
+          52,
+          52,
+          52
+        ],
+        [
+          "05:25",
+          52,
+          52,
+          52
+        ],
+        [
+          "05:30",
+          51.5,
+          51,
+          52
+        ],
+        [
+          "05:35",
+          52,
+          52,
+          52
+        ],
+        [
+          "05:40",
+          52,
+          52,
+          52
+        ],
+        [
+          "05:50",
+          53.5,
+          53,
+          54
+        ],
+        [
+          "05:55",
+          54,
+          54,
+          54
+        ],
+        [
+          "06:00",
+          51.5,
+          50,
+          53
+        ],
+        [
+          "06:05",
+          54,
+          54,
+          54
+        ],
+        [
+          "06:15",
+          52,
+          52,
+          52
+        ],
+        [
+          "06:20",
+          52,
+          52,
+          52
+        ],
+        [
+          "06:25",
+          58.5,
+          58,
+          59
+        ],
+        [
+          "06:30",
+          61.2,
+          59,
+          65.5
+        ],
+        [
+          "06:35",
+          55,
+          55,
+          55
+        ],
+        [
+          "06:45",
+          54,
+          54,
+          54
+        ],
+        [
+          "06:50",
+          54,
+          54,
+          54
+        ],
+        [
+          "06:55",
+          53,
+          53,
+          53
+        ],
+        [
+          "07:00",
+          55.5,
+          55,
+          56
+        ],
+        [
+          "07:05",
+          52,
+          52,
+          52
+        ],
+        [
+          "07:10",
+          54,
+          54,
+          54
+        ],
+        [
+          "07:15",
+          53,
+          53,
+          53
+        ],
+        [
+          "07:25",
+          54,
+          54,
+          54
+        ],
+        [
+          "07:30",
+          55,
+          55,
+          55
+        ],
+        [
+          "07:35",
+          56.5,
+          55,
+          58
+        ],
+        [
+          "07:40",
+          58,
+          58,
+          58
+        ],
+        [
+          "07:45",
+          59,
+          59,
+          59
+        ],
+        [
+          "07:50",
+          60,
+          60,
+          60
+        ],
+        [
+          "08:00",
+          58.5,
+          57,
+          60
+        ],
+        [
+          "08:05",
+          58,
+          58,
+          58
+        ],
+        [
+          "08:10",
+          55.5,
+          53,
+          58
+        ],
+        [
+          "08:15",
+          58,
+          58,
+          58
+        ],
+        [
+          "08:25",
+          59.5,
+          59,
+          60
+        ],
+        [
+          "08:30",
+          56.2,
+          55,
+          57.5
+        ],
+        [
+          "08:35",
+          58,
+          58,
+          58
+        ],
+        [
+          "08:40",
+          59,
+          59,
+          59
+        ],
+        [
+          "08:45",
+          79,
+          79,
+          79
+        ],
+        [
+          "08:50",
+          84,
+          84,
+          84
+        ],
+        [
+          "09:00",
+          93,
+          92,
+          94
+        ],
+        [
+          "09:05",
+          111.6,
+          93,
+          123
+        ],
+        [
+          "09:10",
+          81,
+          74,
+          92
+        ],
+        [
+          "09:15",
+          77,
+          77,
+          77
+        ],
+        [
+          "09:20",
+          78,
+          78,
+          78
+        ],
+        [
+          "09:25",
+          79,
+          79,
+          79
+        ],
+        [
+          "09:30",
+          79,
+          79,
+          79
+        ],
+        [
+          "09:35",
+          104,
+          92,
+          116
+        ],
+        [
+          "09:40",
+          71,
+          71,
+          71
+        ],
+        [
+          "09:50",
+          71,
+          69,
+          73
+        ],
+        [
+          "09:55",
+          95,
+          81,
+          109
+        ],
+        [
+          "10:00",
+          74,
+          74,
+          74
+        ],
+        [
+          "10:05",
+          73,
+          73,
+          73
+        ],
+        [
+          "10:15",
+          74,
+          74,
+          74
+        ],
+        [
+          "10:20",
+          72,
+          72,
+          72
+        ],
+        [
+          "10:25",
+          74,
+          74,
+          74
+        ],
+        [
+          "10:30",
+          73.8,
+          73.6,
+          74
+        ],
+        [
+          "10:35",
+          73,
+          73,
+          73
+        ],
+        [
+          "10:40",
+          73,
+          73,
+          73
+        ],
+        [
+          "10:45",
+          72,
+          72,
+          72
+        ],
+        [
+          "10:50",
+          98.5,
+          98,
+          99
+        ],
+        [
+          "10:55",
+          73,
+          73,
+          73
+        ],
+        [
+          "11:05",
+          78.5,
+          77,
+          80
+        ],
+        [
+          "11:10",
+          72,
+          72,
+          72
+        ],
+        [
+          "11:15",
+          71,
+          71,
+          71
+        ],
+        [
+          "11:20",
+          71,
+          71,
+          71
+        ],
+        [
+          "11:25",
+          71,
+          71,
+          71
+        ],
+        [
+          "11:30",
+          72,
+          72,
+          72
+        ],
+        [
+          "11:35",
+          68.5,
+          67,
+          70
+        ],
+        [
+          "11:40",
+          71,
+          71,
+          71
+        ],
+        [
+          "11:45",
+          83.5,
+          83,
+          84
+        ],
+        [
+          "11:50",
+          88,
+          88,
+          88
+        ],
+        [
+          "12:00",
+          82.5,
+          81,
+          84
+        ],
+        [
+          "12:05",
+          79,
+          79,
+          79
+        ],
+        [
+          "12:10",
+          80,
+          80,
+          80
+        ],
+        [
+          "12:15",
+          72,
+          72,
+          72
+        ],
+        [
+          "12:20",
+          73,
+          73,
+          73
+        ],
+        [
+          "12:25",
+          74,
+          74,
+          74
+        ],
+        [
+          "12:30",
+          75.9,
+          75.9,
+          75.9
+        ],
+        [
+          "12:35",
+          76,
+          76,
+          76
+        ],
+        [
+          "12:40",
+          72.5,
+          72,
+          73
+        ],
+        [
+          "12:50",
+          78,
+          78,
+          78
+        ],
+        [
+          "12:55",
+          79,
+          78,
+          80
+        ],
+        [
+          "13:00",
+          79,
+          79,
+          79
+        ],
+        [
+          "13:05",
+          78.5,
+          78,
+          79
+        ],
+        [
+          "13:10",
+          73,
+          73,
+          73
+        ],
+        [
+          "13:15",
+          85,
+          85,
+          85
+        ],
+        [
+          "13:20",
+          79,
+          79,
+          79
+        ],
+        [
+          "13:25",
+          79,
+          79,
+          79
+        ],
+        [
+          "13:35",
+          78,
+          76,
+          80
+        ],
+        [
+          "13:40",
+          74.5,
+          74,
+          75
+        ],
+        [
+          "13:50",
+          72.5,
+          72,
+          73
+        ],
+        [
+          "13:55",
+          73,
+          73,
+          73
+        ],
+        [
+          "14:05",
+          73,
+          73,
+          73
+        ],
+        [
+          "14:10",
+          74,
+          72,
+          76
+        ],
+        [
+          "14:15",
+          69,
+          69,
+          69
+        ],
+        [
+          "14:20",
+          70,
+          70,
+          70
+        ],
+        [
+          "14:25",
+          72,
+          72,
+          72
+        ],
+        [
+          "14:30",
+          71.9,
+          71.8,
+          72
+        ],
+        [
+          "14:35",
+          72,
+          72,
+          72
+        ],
+        [
+          "14:40",
+          72,
+          72,
+          72
+        ],
+        [
+          "14:45",
+          72.5,
+          72,
+          73
+        ],
+        [
+          "14:50",
+          74,
+          74,
+          74
+        ],
+        [
+          "14:55",
+          88.3,
+          80,
+          121
+        ],
+        [
+          "15:00",
+          79.5,
+          73,
+          86
+        ],
+        [
+          "15:05",
+          76,
+          76,
+          76
+        ],
+        [
+          "15:10",
+          75,
+          75,
+          75
+        ],
+        [
+          "15:15",
+          70,
+          70,
+          70
+        ],
+        [
+          "15:20",
+          72,
+          72,
+          72
+        ],
+        [
+          "15:25",
+          78,
+          78,
+          78
+        ],
+        [
+          "15:35",
+          73,
+          73,
+          73
+        ],
+        [
+          "15:40",
+          86,
+          71,
+          101
+        ],
+        [
+          "15:45",
+          80,
+          68,
+          92
+        ],
+        [
+          "15:50",
+          73,
+          73,
+          73
+        ],
+        [
+          "16:00",
+          72,
+          72,
+          72
+        ],
+        [
+          "16:05",
+          72,
+          72,
+          72
+        ],
+        [
+          "16:10",
+          74.5,
+          73,
+          76
+        ],
+        [
+          "16:15",
+          72,
+          72,
+          72
+        ],
+        [
+          "16:20",
+          73,
+          73,
+          73
+        ],
+        [
+          "16:30",
+          71,
+          71,
+          71
+        ],
+        [
+          "16:35",
+          70.9,
+          69.7,
+          72
+        ],
+        [
+          "16:40",
+          74,
+          74,
+          74
+        ],
+        [
+          "16:45",
+          74,
+          74,
+          74
+        ],
+        [
+          "16:50",
+          71,
+          71,
+          71
+        ],
+        [
+          "16:55",
+          73,
+          73,
+          73
+        ],
+        [
+          "17:00",
+          71,
+          71,
+          71
+        ],
+        [
+          "17:05",
+          70,
+          70,
+          70
+        ],
+        [
+          "17:10",
+          71,
+          71,
+          71
+        ],
+        [
+          "17:15",
+          73,
+          73,
+          73
+        ],
+        [
+          "17:20",
+          80,
+          80,
+          80
+        ],
+        [
+          "17:25",
+          73,
+          73,
+          73
+        ],
+        [
+          "17:35",
+          69.5,
+          69,
+          70
+        ],
+        [
+          "17:40",
+          71,
+          71,
+          71
+        ],
+        [
+          "17:45",
+          71,
+          71,
+          71
+        ],
+        [
+          "17:55",
+          68,
+          64,
+          72
+        ],
+        [
+          "18:00",
+          76,
+          76,
+          76
+        ],
+        [
+          "18:10",
+          78,
+          74,
+          82
+        ],
+        [
+          "18:20",
+          77.5,
+          72,
+          83
+        ],
+        [
+          "18:25",
+          82,
+          82,
+          82
+        ],
+        [
+          "18:35",
+          81.4,
+          80,
+          83
+        ],
+        [
+          "18:40",
+          110.1,
+          101,
+          115
+        ],
+        [
+          "18:45",
+          138.5,
+          113,
+          152
+        ],
+        [
+          "18:50",
+          103,
+          103,
+          103
+        ],
+        [
+          "18:55",
+          100,
+          100,
+          100
+        ],
+        [
+          "19:00",
+          99,
+          99,
+          99
+        ],
+        [
+          "19:05",
+          94,
+          94,
+          94
+        ],
+        [
+          "19:10",
+          94,
+          94,
+          94
+        ],
+        [
+          "19:15",
+          91,
+          91,
+          91
+        ],
+        [
+          "19:20",
+          92,
+          91,
+          93
+        ],
+        [
+          "19:30",
+          91.5,
+          90,
+          93
+        ],
+        [
+          "19:35",
+          91,
+          91,
+          91
+        ],
+        [
+          "19:45",
+          91.5,
+          90,
+          93
+        ],
+        [
+          "19:55",
+          93,
+          93,
+          93
+        ],
+        [
+          "20:00",
+          93,
+          93,
+          93
+        ],
+        [
+          "20:05",
+          98,
+          98,
+          98
+        ],
+        [
+          "20:10",
+          94,
+          94,
+          94
+        ],
+        [
+          "20:20",
+          90,
+          90,
+          90
+        ],
+        [
+          "20:25",
+          94,
+          94,
+          94
+        ],
+        [
+          "20:30",
+          85,
+          85,
+          85
+        ],
+        [
+          "20:35",
+          91.2,
+          91,
+          91.3
+        ],
+        [
+          "20:40",
+          91,
+          91,
+          91
+        ],
+        [
+          "20:45",
+          93,
+          93,
+          93
+        ],
+        [
+          "20:50",
+          109,
+          109,
+          109
+        ],
+        [
+          "20:55",
+          88,
+          87,
+          89
+        ],
+        [
+          "21:00",
+          92,
+          92,
+          92
+        ],
+        [
+          "21:10",
+          90,
+          90,
+          90
+        ],
+        [
+          "21:15",
+          121,
+          121,
+          121
+        ],
+        [
+          "21:20",
+          122.1,
+          102,
+          143
+        ],
+        [
+          "21:25",
+          95.5,
+          92,
+          99
+        ],
+        [
+          "21:30",
+          101,
+          101,
+          101
+        ],
+        [
+          "21:40",
+          91.5,
+          90,
+          93
+        ],
+        [
+          "21:45",
+          84,
+          84,
+          84
+        ],
+        [
+          "21:55",
+          85,
+          85,
+          85
+        ],
+        [
+          "22:05",
+          81.5,
+          80,
+          83
+        ],
+        [
+          "22:10",
+          83,
+          83,
+          83
+        ],
+        [
+          "22:20",
+          79.5,
+          79,
+          80
+        ],
+        [
+          "22:25",
+          80,
+          80,
+          80
+        ],
+        [
+          "22:30",
+          80.7,
+          80.7,
+          80.7
+        ],
+        [
+          "22:35",
+          79.5,
+          79,
+          80
+        ],
+        [
+          "22:40",
+          78.5,
+          78,
+          79
+        ],
+        [
+          "22:45",
+          71,
+          71,
+          71
+        ],
+        [
+          "22:50",
+          73,
+          73,
+          73
+        ],
+        [
+          "22:55",
+          79,
+          79,
+          79
+        ],
+        [
+          "23:05",
+          74,
+          72,
+          76
+        ],
+        [
+          "23:45",
+          72,
+          71,
+          73
+        ],
+        [
+          "23:50",
+          66,
+          66,
+          66
+        ],
+        [
+          "23:55",
+          64,
+          64,
+          64
+        ]
+      ]
+    },
+    "movement5m": {
+      "units": [
+        "count",
+        "km"
+      ],
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "05:25",
+          10,
+          0.0079
+        ],
+        [
+          "06:25",
+          16,
+          0.0126
+        ],
+        [
+          "08:40",
+          8,
+          0.0051
+        ],
+        [
+          "08:55",
+          63.1,
+          0.004
+        ],
+        [
+          "09:00",
+          221.9,
+          0.0897
+        ],
+        [
+          "09:05",
+          232,
+          0.2792
+        ],
+        [
+          "09:35",
+          95.2,
+          0.0631
+        ],
+        [
+          "09:40",
+          30.9,
+          0.0205
+        ],
+        [
+          "09:50",
+          121.7,
+          0.0856
+        ],
+        [
+          "09:55",
+          48.6,
+          0.0348
+        ],
+        [
+          "10:50",
+          214.6,
+          0.1587
+        ],
+        [
+          "10:55",
+          59,
+          0.0441
+        ],
+        [
+          "11:45",
+          131,
+          0.0856
+        ],
+        [
+          "13:25",
+          53.5,
+          0.0391
+        ],
+        [
+          "13:30",
+          125.8,
+          0.092
+        ],
+        [
+          "14:50",
+          48.4,
+          0.0477
+        ],
+        [
+          "14:55",
+          179.9,
+          0.1424
+        ],
+        [
+          "15:40",
+          106.3,
+          0.0774
+        ],
+        [
+          "15:55",
+          120.7,
+          0.089
+        ],
+        [
+          "17:55",
+          21.8,
+          0.0221
+        ],
+        [
+          "18:00",
+          25.7,
+          0.0246
+        ],
+        [
+          "18:35",
+          14.9,
+          0.0101
+        ],
+        [
+          "18:40",
+          414.2,
+          0.3803
+        ],
+        [
+          "18:45",
+          157.6,
+          0.1531
+        ],
+        [
+          "19:55",
+          11,
+          0.0087
+        ],
+        [
+          "20:50",
+          150.3,
+          0.1018
+        ],
+        [
+          "21:15",
+          124.1,
+          0.0917
+        ],
+        [
+          "21:20",
+          256.1,
+          0.2048
+        ],
+        [
+          "23:40",
+          4,
+          0.0021
+        ]
+      ]
+    }
+  },
+  "data": {
+    "healthMetrics": {
+      "metrics": [
+        {
+          "units": "count",
+          "data": [
+            {
+              "start": "2026-04-23 08:00:00 +0800",
+              "end": "2026-04-23 09:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "date": "2026-04-23 08:00:00 +0800"
+            },
+            {
+              "start": "2026-04-23 09:00:00 +0800",
+              "end": "2026-04-23 10:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "date": "2026-04-23 09:00:00 +0800"
+            },
+            {
+              "start": "2026-04-23 10:00:00 +0800",
+              "end": "2026-04-23 11:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "date": "2026-04-23 10:00:00 +0800"
+            },
+            {
+              "date": "2026-04-23 11:00:00 +0800",
+              "end": "2026-04-23 12:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "start": "2026-04-23 11:00:00 +0800"
+            },
+            {
+              "date": "2026-04-23 13:00:00 +0800",
+              "end": "2026-04-23 14:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "start": "2026-04-23 13:00:00 +0800"
+            },
+            {
+              "date": "2026-04-23 14:00:00 +0800",
+              "end": "2026-04-23 15:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "start": "2026-04-23 14:00:00 +0800"
+            },
+            {
+              "date": "2026-04-23 15:00:00 +0800",
+              "end": "2026-04-23 16:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "start": "2026-04-23 15:00:00 +0800"
+            },
+            {
+              "date": "2026-04-23 17:00:00 +0800",
+              "end": "2026-04-23 18:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "start": "2026-04-23 17:00:00 +0800"
+            },
+            {
+              "start": "2026-04-23 18:00:00 +0800",
+              "end": "2026-04-23 19:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "date": "2026-04-23 18:00:00 +0800"
+            },
+            {
+              "start": "2026-04-23 20:00:00 +0800",
+              "end": "2026-04-23 21:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "date": "2026-04-23 20:00:00 +0800"
+            },
+            {
+              "start": "2026-04-23 21:00:00 +0800",
+              "end": "2026-04-23 22:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "date": "2026-04-23 21:00:00 +0800"
+            },
+            {
+              "start": "2026-04-23 22:00:00 +0800",
+              "end": "2026-04-23 23:00:00 +0800",
+              "source": "",
+              "qty": 1,
+              "date": "2026-04-23 22:00:00 +0800"
+            }
+          ],
+          "name": "apple_stand_hour"
+        },
+        {
+          "name": "apple_sleeping_wrist_temperature",
+          "data": [
+            {
+              "date": "2026-04-23 00:00:00 +0800",
+              "end": "2026-04-23 08:30:01 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 35.63713455200195,
+              "start": "2026-04-23 00:00:00 +0800"
+            }
+          ],
+          "units": "degC"
+        },
+        {
+          "name": "blood_oxygen_saturation",
+          "data": [
+            {
+              "date": "2026-04-23 00:10:26 +0800",
+              "end": "2026-04-23 00:10:26 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 96,
+              "start": "2026-04-23 00:10:26 +0800"
+            },
+            {
+              "date": "2026-04-23 00:40:26 +0800",
+              "end": "2026-04-23 00:40:26 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 93,
+              "start": "2026-04-23 00:40:26 +0800"
+            },
+            {
+              "start": "2026-04-23 01:10:59 +0800",
+              "end": "2026-04-23 01:10:59 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 95,
+              "date": "2026-04-23 01:10:59 +0800"
+            },
+            {
+              "start": "2026-04-23 01:41:00 +0800",
+              "end": "2026-04-23 01:41:00 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 96,
+              "date": "2026-04-23 01:41:00 +0800"
+            },
+            {
+              "start": "2026-04-23 02:13:08 +0800",
+              "end": "2026-04-23 02:13:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 99,
+              "date": "2026-04-23 02:13:08 +0800"
+            },
+            {
+              "date": "2026-04-23 02:43:09 +0800",
+              "end": "2026-04-23 02:43:09 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 98,
+              "start": "2026-04-23 02:43:09 +0800"
+            },
+            {
+              "date": "2026-04-23 03:55:33 +0800",
+              "end": "2026-04-23 03:55:33 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 93,
+              "start": "2026-04-23 03:55:33 +0800"
+            },
+            {
+              "date": "2026-04-23 04:32:01 +0800",
+              "end": "2026-04-23 04:32:01 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 97,
+              "start": "2026-04-23 04:32:01 +0800"
+            },
+            {
+              "date": "2026-04-23 05:02:01 +0800",
+              "end": "2026-04-23 05:02:01 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 99,
+              "start": "2026-04-23 05:02:01 +0800"
+            },
+            {
+              "date": "2026-04-23 05:32:02 +0800",
+              "end": "2026-04-23 05:32:02 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 94,
+              "start": "2026-04-23 05:32:02 +0800"
+            },
+            {
+              "start": "2026-04-23 06:02:03 +0800",
+              "end": "2026-04-23 06:02:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 97,
+              "date": "2026-04-23 06:02:03 +0800"
+            },
+            {
+              "date": "2026-04-23 06:32:03 +0800",
+              "end": "2026-04-23 06:32:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 95,
+              "start": "2026-04-23 06:32:03 +0800"
+            },
+            {
+              "date": "2026-04-23 07:02:04 +0800",
+              "end": "2026-04-23 07:02:04 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 96,
+              "start": "2026-04-23 07:02:04 +0800"
+            },
+            {
+              "date": "2026-04-23 07:32:04 +0800",
+              "end": "2026-04-23 07:32:04 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 97,
+              "start": "2026-04-23 07:32:04 +0800"
+            },
+            {
+              "start": "2026-04-23 08:02:05 +0800",
+              "end": "2026-04-23 08:02:05 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 98,
+              "date": "2026-04-23 08:02:05 +0800"
+            },
+            {
+              "start": "2026-04-23 08:40:33 +0800",
+              "end": "2026-04-23 08:40:33 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 99,
+              "date": "2026-04-23 08:40:33 +0800"
+            },
+            {
+              "date": "2026-04-23 11:29:47 +0800",
+              "end": "2026-04-23 11:29:47 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 96,
+              "start": "2026-04-23 11:29:47 +0800"
+            },
+            {
+              "start": "2026-04-23 13:05:49 +0800",
+              "end": "2026-04-23 13:05:49 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 99,
+              "date": "2026-04-23 13:05:49 +0800"
+            },
+            {
+              "start": "2026-04-23 13:40:59 +0800",
+              "end": "2026-04-23 13:40:59 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 99,
+              "date": "2026-04-23 13:40:59 +0800"
+            },
+            {
+              "start": "2026-04-23 14:11:30 +0800",
+              "end": "2026-04-23 14:11:30 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 99,
+              "date": "2026-04-23 14:11:30 +0800"
+            },
+            {
+              "date": "2026-04-23 14:45:23 +0800",
+              "end": "2026-04-23 14:45:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 97,
+              "start": "2026-04-23 14:45:23 +0800"
+            },
+            {
+              "start": "2026-04-23 19:14:08 +0800",
+              "end": "2026-04-23 19:14:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 98,
+              "date": "2026-04-23 19:14:08 +0800"
+            },
+            {
+              "start": "2026-04-23 22:41:54 +0800",
+              "end": "2026-04-23 22:41:54 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 91,
+              "date": "2026-04-23 22:41:54 +0800"
+            },
+            {
+              "date": "2026-04-23 23:47:09 +0800",
+              "end": "2026-04-23 23:47:09 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 98,
+              "start": "2026-04-23 23:47:09 +0800"
+            }
+          ],
+          "units": "%"
+        },
+        {
+          "name": "body_mass_index",
+          "data": [
+            {
+              "start": "2026-04-23 08:55:15 +0800",
+              "end": "2026-04-23 08:55:15 +0800",
+              "source": "Fitdays",
+              "qty": 23.5,
+              "date": "2026-04-23 08:55:15 +0800"
+            }
+          ],
+          "units": "count"
+        },
+        {
+          "units": "%",
+          "data": [
+            {
+              "date": "2026-04-23 08:55:15 +0800",
+              "end": "2026-04-23 08:55:15 +0800",
+              "source": "Fitdays",
+              "qty": 19.299998879432678,
+              "start": "2026-04-23 08:55:15 +0800"
+            }
+          ],
+          "name": "body_fat_percentage"
+        },
+        {
+          "name": "environmental_audio_exposure",
+          "data": [
+            {
+              "start": "2026-04-23 00:18:48 +0800",
+              "end": "2026-04-23 00:48:48 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 39.17912559766532,
+              "date": "2026-04-23 00:18:48 +0800"
+            },
+            {
+              "start": "2026-04-23 00:48:48 +0800",
+              "end": "2026-04-23 01:18:43 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 49.063740301965304,
+              "date": "2026-04-23 00:48:48 +0800"
+            },
+            {
+              "date": "2026-04-23 01:18:43 +0800",
+              "end": "2026-04-23 01:48:38 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 39.605481017182356,
+              "start": "2026-04-23 01:18:43 +0800"
+            },
+            {
+              "start": "2026-04-23 01:48:38 +0800",
+              "end": "2026-04-23 02:18:33 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 37.24937484162597,
+              "date": "2026-04-23 01:48:38 +0800"
+            },
+            {
+              "date": "2026-04-23 02:18:33 +0800",
+              "end": "2026-04-23 02:48:33 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 50.35916017419517,
+              "start": "2026-04-23 02:18:33 +0800"
+            },
+            {
+              "start": "2026-04-23 02:48:33 +0800",
+              "end": "2026-04-23 03:18:28 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 39.38968822776543,
+              "date": "2026-04-23 02:48:33 +0800"
+            },
+            {
+              "start": "2026-04-23 03:18:28 +0800",
+              "end": "2026-04-23 03:48:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 36.07449107764428,
+              "date": "2026-04-23 03:18:28 +0800"
+            },
+            {
+              "date": "2026-04-23 03:48:23 +0800",
+              "end": "2026-04-23 04:18:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 42.42537698444926,
+              "start": "2026-04-23 03:48:23 +0800"
+            },
+            {
+              "date": "2026-04-23 04:18:23 +0800",
+              "end": "2026-04-23 04:48:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 62.73640255971219,
+              "start": "2026-04-23 04:18:23 +0800"
+            },
+            {
+              "start": "2026-04-23 04:48:23 +0800",
+              "end": "2026-04-23 05:18:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 41.06608359489967,
+              "date": "2026-04-23 04:48:23 +0800"
+            },
+            {
+              "date": "2026-04-23 05:18:23 +0800",
+              "end": "2026-04-23 05:48:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 46.54041233224333,
+              "start": "2026-04-23 05:18:23 +0800"
+            },
+            {
+              "start": "2026-04-23 05:48:23 +0800",
+              "end": "2026-04-23 06:18:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 50.76724796991773,
+              "date": "2026-04-23 05:48:23 +0800"
+            },
+            {
+              "date": "2026-04-23 06:18:23 +0800",
+              "end": "2026-04-23 06:48:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 48.71496429268139,
+              "start": "2026-04-23 06:18:23 +0800"
+            },
+            {
+              "start": "2026-04-23 06:48:23 +0800",
+              "end": "2026-04-23 07:18:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 46.18866777983037,
+              "date": "2026-04-23 06:48:23 +0800"
+            },
+            {
+              "date": "2026-04-23 07:18:23 +0800",
+              "end": "2026-04-23 07:48:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 45.51845479224406,
+              "start": "2026-04-23 07:18:23 +0800"
+            },
+            {
+              "start": "2026-04-23 07:48:23 +0800",
+              "end": "2026-04-23 08:18:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 34.64823026337627,
+              "date": "2026-04-23 07:48:23 +0800"
+            },
+            {
+              "start": "2026-04-23 08:17:38 +0800",
+              "end": "2026-04-23 08:47:38 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 59.215159419282756,
+              "date": "2026-04-23 08:17:38 +0800"
+            },
+            {
+              "start": "2026-04-23 08:18:23 +0800",
+              "end": "2026-04-23 08:22:43 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 34.088737059798675,
+              "date": "2026-04-23 08:18:23 +0800"
+            },
+            {
+              "date": "2026-04-23 08:47:38 +0800",
+              "end": "2026-04-23 09:17:33 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 71.40832489445847,
+              "start": "2026-04-23 08:47:38 +0800"
+            },
+            {
+              "start": "2026-04-23 09:17:33 +0800",
+              "end": "2026-04-23 09:47:28 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 61.46280251810623,
+              "date": "2026-04-23 09:17:33 +0800"
+            },
+            {
+              "date": "2026-04-23 09:47:28 +0800",
+              "end": "2026-04-23 10:17:23 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 63.2705092735348,
+              "start": "2026-04-23 09:47:28 +0800"
+            },
+            {
+              "start": "2026-04-23 10:17:23 +0800",
+              "end": "2026-04-23 10:47:18 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 70.28860881619762,
+              "date": "2026-04-23 10:17:23 +0800"
+            },
+            {
+              "date": "2026-04-23 10:47:18 +0800",
+              "end": "2026-04-23 11:17:13 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 66.9567280172764,
+              "start": "2026-04-23 10:47:18 +0800"
+            },
+            {
+              "date": "2026-04-23 11:17:13 +0800",
+              "end": "2026-04-23 11:47:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 62.323897129621635,
+              "start": "2026-04-23 11:17:13 +0800"
+            },
+            {
+              "date": "2026-04-23 11:47:08 +0800",
+              "end": "2026-04-23 12:17:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 53.1414179396415,
+              "start": "2026-04-23 11:47:08 +0800"
+            },
+            {
+              "date": "2026-04-23 12:17:03 +0800",
+              "end": "2026-04-23 12:47:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 49.38416042522735,
+              "start": "2026-04-23 12:17:03 +0800"
+            },
+            {
+              "start": "2026-04-23 12:47:03 +0800",
+              "end": "2026-04-23 13:17:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 50.8774124676401,
+              "date": "2026-04-23 12:47:03 +0800"
+            },
+            {
+              "date": "2026-04-23 13:17:03 +0800",
+              "end": "2026-04-23 13:47:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 63.17732386449648,
+              "start": "2026-04-23 13:17:03 +0800"
+            },
+            {
+              "date": "2026-04-23 13:47:03 +0800",
+              "end": "2026-04-23 14:17:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 51.42970644361809,
+              "start": "2026-04-23 13:47:03 +0800"
+            },
+            {
+              "date": "2026-04-23 14:17:03 +0800",
+              "end": "2026-04-23 14:47:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 54.40904519362631,
+              "start": "2026-04-23 14:17:03 +0800"
+            },
+            {
+              "start": "2026-04-23 14:47:03 +0800",
+              "end": "2026-04-23 15:17:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 67.33208128705158,
+              "date": "2026-04-23 14:47:03 +0800"
+            },
+            {
+              "start": "2026-04-23 15:17:03 +0800",
+              "end": "2026-04-23 15:47:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 64.43855280779898,
+              "date": "2026-04-23 15:17:03 +0800"
+            },
+            {
+              "start": "2026-04-23 15:47:03 +0800",
+              "end": "2026-04-23 16:17:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 60.88253307159516,
+              "date": "2026-04-23 15:47:03 +0800"
+            },
+            {
+              "start": "2026-04-23 16:17:03 +0800",
+              "end": "2026-04-23 16:47:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 60.43714605141786,
+              "date": "2026-04-23 16:17:03 +0800"
+            },
+            {
+              "date": "2026-04-23 16:47:03 +0800",
+              "end": "2026-04-23 17:17:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 62.40392114307147,
+              "start": "2026-04-23 16:47:03 +0800"
+            },
+            {
+              "start": "2026-04-23 17:17:03 +0800",
+              "end": "2026-04-23 17:47:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 58.75641328713726,
+              "date": "2026-04-23 17:17:03 +0800"
+            },
+            {
+              "start": "2026-04-23 17:47:03 +0800",
+              "end": "2026-04-23 18:17:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 65.48053342306017,
+              "date": "2026-04-23 17:47:03 +0800"
+            },
+            {
+              "start": "2026-04-23 18:17:03 +0800",
+              "end": "2026-04-23 18:46:58 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 67.30584235687971,
+              "date": "2026-04-23 18:17:03 +0800"
+            },
+            {
+              "start": "2026-04-23 18:46:58 +0800",
+              "end": "2026-04-23 19:16:58 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 56.334597041484685,
+              "date": "2026-04-23 18:46:58 +0800"
+            },
+            {
+              "start": "2026-04-23 19:16:58 +0800",
+              "end": "2026-04-23 19:46:53 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 57.333763118871715,
+              "date": "2026-04-23 19:16:58 +0800"
+            },
+            {
+              "date": "2026-04-23 19:46:53 +0800",
+              "end": "2026-04-23 20:16:53 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 55.75497609078116,
+              "start": "2026-04-23 19:46:53 +0800"
+            },
+            {
+              "date": "2026-04-23 20:16:53 +0800",
+              "end": "2026-04-23 20:26:28 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 58.02697111707144,
+              "start": "2026-04-23 20:16:53 +0800"
+            },
+            {
+              "date": "2026-04-23 20:24:08 +0800",
+              "end": "2026-04-23 20:54:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 62.18530819342458,
+              "start": "2026-04-23 20:24:08 +0800"
+            },
+            {
+              "date": "2026-04-23 20:54:08 +0800",
+              "end": "2026-04-23 21:24:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 61.887099533556366,
+              "start": "2026-04-23 20:54:08 +0800"
+            },
+            {
+              "date": "2026-04-23 21:24:08 +0800",
+              "end": "2026-04-23 21:54:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 62.39381034290154,
+              "start": "2026-04-23 21:24:08 +0800"
+            },
+            {
+              "start": "2026-04-23 21:54:03 +0800",
+              "end": "2026-04-23 22:24:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 56.2308722147855,
+              "date": "2026-04-23 21:54:03 +0800"
+            },
+            {
+              "start": "2026-04-23 22:24:03 +0800",
+              "end": "2026-04-23 22:53:58 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 44.06221980246994,
+              "date": "2026-04-23 22:24:03 +0800"
+            },
+            {
+              "start": "2026-04-23 22:53:58 +0800",
+              "end": "2026-04-23 23:10:18 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 52.184796351880856,
+              "date": "2026-04-23 22:53:58 +0800"
+            }
+          ],
+          "units": "dBASPL"
+        },
+        {
+          "units": "kg",
+          "data": [
+            {
+              "date": "2026-04-23 08:55:15 +0800",
+              "end": "2026-04-23 08:55:15 +0800",
+              "source": "Fitdays",
+              "qty": 57.297000885009766,
+              "start": "2026-04-23 08:55:15 +0800"
+            }
+          ],
+          "name": "lean_body_mass"
+        },
+        {
+          "name": "resting_heart_rate",
+          "units": "count/min",
+          "data": [
+            {
+              "start": "2026-04-23 00:03:18 +0800",
+              "end": "2026-04-23 23:57:28 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 70,
+              "date": "2026-04-23 00:03:18 +0800"
+            }
+          ]
+        },
+        {
+          "units": "ms",
+          "data": [
+            {
+              "start": "2026-04-23 00:31:17 +0800",
+              "end": "2026-04-23 00:32:16 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 34.750881026441064,
+              "date": "2026-04-23 00:31:17 +0800"
+            },
+            {
+              "date": "2026-04-23 02:31:15 +0800",
+              "end": "2026-04-23 02:32:14 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 49.93252072223367,
+              "start": "2026-04-23 02:31:15 +0800"
+            },
+            {
+              "start": "2026-04-23 04:31:54 +0800",
+              "end": "2026-04-23 04:32:52 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 98.088267971503,
+              "date": "2026-04-23 04:31:54 +0800"
+            },
+            {
+              "start": "2026-04-23 06:31:14 +0800",
+              "end": "2026-04-23 06:32:13 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 83.0751878920903,
+              "date": "2026-04-23 06:31:14 +0800"
+            },
+            {
+              "start": "2026-04-23 08:31:16 +0800",
+              "end": "2026-04-23 08:32:16 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 83.64855796891666,
+              "date": "2026-04-23 08:31:16 +0800"
+            },
+            {
+              "start": "2026-04-23 10:31:24 +0800",
+              "end": "2026-04-23 10:32:24 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 33.93535773125088,
+              "date": "2026-04-23 10:31:24 +0800"
+            },
+            {
+              "start": "2026-04-23 12:31:16 +0800",
+              "end": "2026-04-23 12:32:16 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 25.920826613417297,
+              "date": "2026-04-23 12:31:16 +0800"
+            },
+            {
+              "date": "2026-04-23 14:32:14 +0800",
+              "end": "2026-04-23 14:33:14 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 30.20764799756285,
+              "start": "2026-04-23 14:32:14 +0800"
+            },
+            {
+              "start": "2026-04-23 16:38:22 +0800",
+              "end": "2026-04-23 16:39:22 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 39.06212100587066,
+              "date": "2026-04-23 16:38:22 +0800"
+            },
+            {
+              "start": "2026-04-23 18:38:43 +0800",
+              "end": "2026-04-23 18:39:41 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 40.87169160263814,
+              "date": "2026-04-23 18:38:43 +0800"
+            },
+            {
+              "date": "2026-04-23 20:35:08 +0800",
+              "end": "2026-04-23 20:36:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 25.496164416060974,
+              "start": "2026-04-23 20:35:08 +0800"
+            },
+            {
+              "start": "2026-04-23 22:32:03 +0800",
+              "end": "2026-04-23 22:33:01 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 32.68362506127836,
+              "date": "2026-04-23 22:32:03 +0800"
+            }
+          ],
+          "name": "heart_rate_variability"
+        },
+        {
+          "name": "respiratory_rate",
+          "units": "count/min",
+          "data": [
+            {
+              "date": "2026-04-23 00:06:41 +0800",
+              "end": "2026-04-23 00:06:41 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 19,
+              "start": "2026-04-23 00:06:41 +0800"
+            },
+            {
+              "start": "2026-04-23 00:12:11 +0800",
+              "end": "2026-04-23 00:12:11 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 20,
+              "date": "2026-04-23 00:12:11 +0800"
+            },
+            {
+              "date": "2026-04-23 00:24:41 +0800",
+              "end": "2026-04-23 00:24:41 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 20,
+              "start": "2026-04-23 00:24:41 +0800"
+            },
+            {
+              "start": "2026-04-23 00:33:40 +0800",
+              "end": "2026-04-23 00:33:40 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18.5,
+              "date": "2026-04-23 00:33:40 +0800"
+            },
+            {
+              "date": "2026-04-23 00:45:10 +0800",
+              "end": "2026-04-23 00:45:10 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 19,
+              "start": "2026-04-23 00:45:10 +0800"
+            },
+            {
+              "start": "2026-04-23 00:56:40 +0800",
+              "end": "2026-04-23 00:56:40 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "date": "2026-04-23 00:56:40 +0800"
+            },
+            {
+              "date": "2026-04-23 01:06:10 +0800",
+              "end": "2026-04-23 01:06:10 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "start": "2026-04-23 01:06:10 +0800"
+            },
+            {
+              "date": "2026-04-23 01:17:10 +0800",
+              "end": "2026-04-23 01:17:10 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 19,
+              "start": "2026-04-23 01:17:10 +0800"
+            },
+            {
+              "start": "2026-04-23 01:25:40 +0800",
+              "end": "2026-04-23 01:25:40 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 19.5,
+              "date": "2026-04-23 01:25:40 +0800"
+            },
+            {
+              "start": "2026-04-23 01:31:10 +0800",
+              "end": "2026-04-23 01:31:10 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 19,
+              "date": "2026-04-23 01:31:10 +0800"
+            },
+            {
+              "start": "2026-04-23 01:40:10 +0800",
+              "end": "2026-04-23 01:40:10 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "date": "2026-04-23 01:40:10 +0800"
+            },
+            {
+              "start": "2026-04-23 01:51:39 +0800",
+              "end": "2026-04-23 01:51:39 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 19.5,
+              "date": "2026-04-23 01:51:39 +0800"
+            },
+            {
+              "start": "2026-04-23 02:01:39 +0800",
+              "end": "2026-04-23 02:01:39 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 14.5,
+              "date": "2026-04-23 02:01:39 +0800"
+            },
+            {
+              "start": "2026-04-23 02:13:39 +0800",
+              "end": "2026-04-23 02:13:39 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18.5,
+              "date": "2026-04-23 02:13:39 +0800"
+            },
+            {
+              "date": "2026-04-23 02:19:09 +0800",
+              "end": "2026-04-23 02:19:09 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 22.5,
+              "start": "2026-04-23 02:19:09 +0800"
+            },
+            {
+              "start": "2026-04-23 02:36:39 +0800",
+              "end": "2026-04-23 02:36:39 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17,
+              "date": "2026-04-23 02:36:39 +0800"
+            },
+            {
+              "start": "2026-04-23 02:48:09 +0800",
+              "end": "2026-04-23 02:48:09 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 20,
+              "date": "2026-04-23 02:48:09 +0800"
+            },
+            {
+              "start": "2026-04-23 02:56:08 +0800",
+              "end": "2026-04-23 02:56:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "date": "2026-04-23 02:56:08 +0800"
+            },
+            {
+              "date": "2026-04-23 03:07:08 +0800",
+              "end": "2026-04-23 03:07:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18.5,
+              "start": "2026-04-23 03:07:08 +0800"
+            },
+            {
+              "start": "2026-04-23 03:09:08 +0800",
+              "end": "2026-04-23 03:09:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18.5,
+              "date": "2026-04-23 03:09:08 +0800"
+            },
+            {
+              "start": "2026-04-23 03:22:08 +0800",
+              "end": "2026-04-23 03:22:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17.5,
+              "date": "2026-04-23 03:22:08 +0800"
+            },
+            {
+              "date": "2026-04-23 03:33:08 +0800",
+              "end": "2026-04-23 03:33:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "start": "2026-04-23 03:33:08 +0800"
+            },
+            {
+              "start": "2026-04-23 03:48:08 +0800",
+              "end": "2026-04-23 03:48:08 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "date": "2026-04-23 03:48:08 +0800"
+            },
+            {
+              "start": "2026-04-23 03:52:38 +0800",
+              "end": "2026-04-23 03:52:38 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18.5,
+              "date": "2026-04-23 03:52:38 +0800"
+            },
+            {
+              "start": "2026-04-23 04:00:37 +0800",
+              "end": "2026-04-23 04:00:37 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "date": "2026-04-23 04:00:37 +0800"
+            },
+            {
+              "start": "2026-04-23 04:13:07 +0800",
+              "end": "2026-04-23 04:13:07 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17.5,
+              "date": "2026-04-23 04:13:07 +0800"
+            },
+            {
+              "date": "2026-04-23 04:19:37 +0800",
+              "end": "2026-04-23 04:19:37 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17,
+              "start": "2026-04-23 04:19:37 +0800"
+            },
+            {
+              "start": "2026-04-23 04:35:07 +0800",
+              "end": "2026-04-23 04:35:07 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 21,
+              "date": "2026-04-23 04:35:07 +0800"
+            },
+            {
+              "start": "2026-04-23 04:45:37 +0800",
+              "end": "2026-04-23 04:45:37 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17.5,
+              "date": "2026-04-23 04:45:37 +0800"
+            },
+            {
+              "start": "2026-04-23 04:57:36 +0800",
+              "end": "2026-04-23 04:57:36 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17.5,
+              "date": "2026-04-23 04:57:36 +0800"
+            },
+            {
+              "date": "2026-04-23 05:04:06 +0800",
+              "end": "2026-04-23 05:04:06 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17,
+              "start": "2026-04-23 05:04:06 +0800"
+            },
+            {
+              "start": "2026-04-23 05:08:36 +0800",
+              "end": "2026-04-23 05:08:36 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18.5,
+              "date": "2026-04-23 05:08:36 +0800"
+            },
+            {
+              "date": "2026-04-23 05:27:36 +0800",
+              "end": "2026-04-23 05:27:36 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "start": "2026-04-23 05:27:36 +0800"
+            },
+            {
+              "start": "2026-04-23 05:34:06 +0800",
+              "end": "2026-04-23 05:34:06 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17,
+              "date": "2026-04-23 05:34:06 +0800"
+            },
+            {
+              "date": "2026-04-23 05:47:06 +0800",
+              "end": "2026-04-23 05:47:06 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 19.5,
+              "start": "2026-04-23 05:47:06 +0800"
+            },
+            {
+              "date": "2026-04-23 05:49:35 +0800",
+              "end": "2026-04-23 05:49:35 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17.5,
+              "start": "2026-04-23 05:49:35 +0800"
+            },
+            {
+              "date": "2026-04-23 06:05:05 +0800",
+              "end": "2026-04-23 06:05:05 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18.5,
+              "start": "2026-04-23 06:05:05 +0800"
+            },
+            {
+              "date": "2026-04-23 06:10:05 +0800",
+              "end": "2026-04-23 06:10:05 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17.5,
+              "start": "2026-04-23 06:10:05 +0800"
+            },
+            {
+              "date": "2026-04-23 06:21:35 +0800",
+              "end": "2026-04-23 06:21:35 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 22.5,
+              "start": "2026-04-23 06:21:35 +0800"
+            },
+            {
+              "start": "2026-04-23 06:30:35 +0800",
+              "end": "2026-04-23 06:30:35 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 20,
+              "date": "2026-04-23 06:30:35 +0800"
+            },
+            {
+              "start": "2026-04-23 06:47:05 +0800",
+              "end": "2026-04-23 06:47:05 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17.5,
+              "date": "2026-04-23 06:47:05 +0800"
+            },
+            {
+              "date": "2026-04-23 06:53:05 +0800",
+              "end": "2026-04-23 06:53:05 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "start": "2026-04-23 06:53:05 +0800"
+            },
+            {
+              "start": "2026-04-23 06:59:04 +0800",
+              "end": "2026-04-23 06:59:04 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "date": "2026-04-23 06:59:04 +0800"
+            },
+            {
+              "start": "2026-04-23 07:11:34 +0800",
+              "end": "2026-04-23 07:11:34 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "date": "2026-04-23 07:11:34 +0800"
+            },
+            {
+              "date": "2026-04-23 07:22:34 +0800",
+              "end": "2026-04-23 07:22:34 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18.5,
+              "start": "2026-04-23 07:22:34 +0800"
+            },
+            {
+              "date": "2026-04-23 07:31:04 +0800",
+              "end": "2026-04-23 07:31:04 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 20,
+              "start": "2026-04-23 07:31:04 +0800"
+            },
+            {
+              "start": "2026-04-23 07:47:34 +0800",
+              "end": "2026-04-23 07:47:34 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18.5,
+              "date": "2026-04-23 07:47:34 +0800"
+            },
+            {
+              "date": "2026-04-23 07:52:34 +0800",
+              "end": "2026-04-23 07:52:34 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "start": "2026-04-23 07:52:34 +0800"
+            },
+            {
+              "start": "2026-04-23 08:06:03 +0800",
+              "end": "2026-04-23 08:06:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17.5,
+              "date": "2026-04-23 08:06:03 +0800"
+            },
+            {
+              "start": "2026-04-23 08:18:03 +0800",
+              "end": "2026-04-23 08:18:03 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17.5,
+              "date": "2026-04-23 08:18:03 +0800"
+            },
+            {
+              "date": "2026-04-23 08:27:33 +0800",
+              "end": "2026-04-23 08:27:33 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 18,
+              "start": "2026-04-23 08:27:33 +0800"
+            },
+            {
+              "start": "2026-04-23 08:29:33 +0800",
+              "end": "2026-04-23 08:29:33 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 16.5,
+              "date": "2026-04-23 08:29:33 +0800"
+            },
+            {
+              "start": "2026-04-23 08:42:33 +0800",
+              "end": "2026-04-23 08:42:33 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 17,
+              "date": "2026-04-23 08:42:33 +0800"
+            },
+            {
+              "start": "2026-04-23 08:49:33 +0800",
+              "end": "2026-04-23 08:49:33 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 14.5,
+              "date": "2026-04-23 08:49:33 +0800"
+            },
+            {
+              "date": "2026-04-23 23:49:56 +0800",
+              "end": "2026-04-23 23:49:56 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 22,
+              "start": "2026-04-23 23:49:56 +0800"
+            },
+            {
+              "start": "2026-04-23 23:56:56 +0800",
+              "end": "2026-04-23 23:56:56 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 20,
+              "date": "2026-04-23 23:56:56 +0800"
+            }
+          ]
+        },
+        {
+          "name": "stair_speed_up",
+          "units": "m/s",
+          "data": [
+            {
+              "date": "2026-04-23 14:55:05 +0800",
+              "end": "2026-04-23 14:55:11 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.29336556792259216,
+              "start": "2026-04-23 14:55:05 +0800"
+            },
+            {
+              "start": "2026-04-23 14:55:13 +0800",
+              "end": "2026-04-23 14:55:20 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.26919347047805786,
+              "date": "2026-04-23 14:55:13 +0800"
+            },
+            {
+              "date": "2026-04-23 18:44:57 +0800",
+              "end": "2026-04-23 18:45:09 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.2617228031158447,
+              "start": "2026-04-23 18:44:57 +0800"
+            },
+            {
+              "start": "2026-04-23 21:21:52 +0800",
+              "end": "2026-04-23 21:21:59 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.4201657772064209,
+              "date": "2026-04-23 21:21:52 +0800"
+            }
+          ]
+        },
+        {
+          "units": "hr",
+          "name": "sleep_analysis",
+          "data": [
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-22 23:36:11 +0800",
+              "start": "2026-04-22 23:26:12 +0800",
+              "endDate": "2026-04-22 23:36:11 +0800",
+              "startDate": "2026-04-22 23:26:12 +0800",
+              "date": "2026-04-22 23:26:12 +0800",
+              "value": "核心",
+              "qty": 0.1666259984837638
+            },
+            {
+              "end": "2026-04-22 23:43:11 +0800",
+              "source": "Feei的Apple Watch",
+              "endDate": "2026-04-22 23:43:11 +0800",
+              "start": "2026-04-22 23:36:11 +0800",
+              "startDate": "2026-04-22 23:36:11 +0800",
+              "date": "2026-04-22 23:36:11 +0800",
+              "value": "清醒",
+              "qty": 0.11663835638099247
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-22 23:56:41 +0800",
+              "endDate": "2026-04-22 23:56:41 +0800",
+              "startDate": "2026-04-22 23:43:11 +0800",
+              "start": "2026-04-22 23:43:11 +0800",
+              "date": "2026-04-22 23:43:11 +0800",
+              "value": "核心",
+              "qty": 0.22493931707408693
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 00:00:41 +0800",
+              "start": "2026-04-22 23:56:41 +0800",
+              "startDate": "2026-04-22 23:56:41 +0800",
+              "endDate": "2026-04-23 00:00:41 +0800",
+              "date": "2026-04-22 23:56:41 +0800",
+              "value": "深度",
+              "qty": 0.06664872027105755
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 00:07:41 +0800",
+              "start": "2026-04-23 00:00:41 +0800",
+              "startDate": "2026-04-23 00:00:41 +0800",
+              "endDate": "2026-04-23 00:07:41 +0800",
+              "date": "2026-04-23 00:00:41 +0800",
+              "value": "核心",
+              "qty": 0.11663427223761877
+            },
+            {
+              "end": "2026-04-23 00:19:11 +0800",
+              "source": "Feei的Apple Watch",
+              "start": "2026-04-23 00:07:41 +0800",
+              "endDate": "2026-04-23 00:19:11 +0800",
+              "startDate": "2026-04-23 00:07:41 +0800",
+              "date": "2026-04-23 00:07:41 +0800",
+              "value": "深度",
+              "qty": 0.1916096129020055
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 00:20:41 +0800",
+              "endDate": "2026-04-23 00:20:41 +0800",
+              "startDate": "2026-04-23 00:19:11 +0800",
+              "start": "2026-04-23 00:19:11 +0800",
+              "date": "2026-04-23 00:19:11 +0800",
+              "value": "清醒",
+              "qty": 0.02499244901869032
+            },
+            {
+              "end": "2026-04-23 00:28:41 +0800",
+              "source": "Feei的Apple Watch",
+              "start": "2026-04-23 00:20:41 +0800",
+              "startDate": "2026-04-23 00:20:41 +0800",
+              "endDate": "2026-04-23 00:28:41 +0800",
+              "date": "2026-04-23 00:20:41 +0800",
+              "value": "核心",
+              "qty": 0.1332984741528829
+            },
+            {
+              "end": "2026-04-23 00:40:40 +0800",
+              "source": "Feei的Apple Watch",
+              "start": "2026-04-23 00:28:41 +0800",
+              "startDate": "2026-04-23 00:28:41 +0800",
+              "endDate": "2026-04-23 00:40:40 +0800",
+              "date": "2026-04-23 00:28:41 +0800",
+              "value": "深度",
+              "qty": 0.1999570236272282
+            },
+            {
+              "end": "2026-04-23 00:52:40 +0800",
+              "source": "Feei的Apple Watch",
+              "endDate": "2026-04-23 00:52:40 +0800",
+              "startDate": "2026-04-23 00:40:40 +0800",
+              "start": "2026-04-23 00:40:40 +0800",
+              "date": "2026-04-23 00:40:40 +0800",
+              "value": "核心",
+              "qty": 0.19996034221516715
+            },
+            {
+              "end": "2026-04-23 01:00:10 +0800",
+              "source": "Feei的Apple Watch",
+              "endDate": "2026-04-23 01:00:10 +0800",
+              "startDate": "2026-04-23 00:52:40 +0800",
+              "start": "2026-04-23 00:52:40 +0800",
+              "date": "2026-04-23 00:52:40 +0800",
+              "value": "快速动眼期",
+              "qty": 0.12497590720653534
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 01:30:40 +0800",
+              "endDate": "2026-04-23 01:30:40 +0800",
+              "start": "2026-04-23 01:00:10 +0800",
+              "startDate": "2026-04-23 01:00:10 +0800",
+              "date": "2026-04-23 01:00:10 +0800",
+              "value": "核心",
+              "qty": 0.5082292374968529
+            },
+            {
+              "end": "2026-04-23 01:34:40 +0800",
+              "source": "Feei的Apple Watch",
+              "endDate": "2026-04-23 01:34:40 +0800",
+              "startDate": "2026-04-23 01:30:40 +0800",
+              "start": "2026-04-23 01:30:40 +0800",
+              "date": "2026-04-23 01:30:40 +0800",
+              "value": "深度",
+              "qty": 0.06665259695715374
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 01:48:40 +0800",
+              "endDate": "2026-04-23 01:48:40 +0800",
+              "startDate": "2026-04-23 01:34:40 +0800",
+              "start": "2026-04-23 01:34:40 +0800",
+              "date": "2026-04-23 01:34:40 +0800",
+              "value": "核心",
+              "qty": 0.23328131443924374
+            },
+            {
+              "end": "2026-04-23 01:53:09 +0800",
+              "source": "Feei的Apple Watch",
+              "endDate": "2026-04-23 01:53:09 +0800",
+              "start": "2026-04-23 01:48:40 +0800",
+              "startDate": "2026-04-23 01:48:40 +0800",
+              "date": "2026-04-23 01:48:40 +0800",
+              "value": "深度",
+              "qty": 0.07498153779241774
+            },
+            {
+              "end": "2026-04-23 01:55:39 +0800",
+              "source": "Feei的Apple Watch",
+              "endDate": "2026-04-23 01:55:39 +0800",
+              "start": "2026-04-23 01:53:09 +0800",
+              "startDate": "2026-04-23 01:53:09 +0800",
+              "date": "2026-04-23 01:53:09 +0800",
+              "value": "核心",
+              "qty": 0.041655942764547135
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 01:57:09 +0800",
+              "start": "2026-04-23 01:55:39 +0800",
+              "startDate": "2026-04-23 01:55:39 +0800",
+              "endDate": "2026-04-23 01:57:09 +0800",
+              "date": "2026-04-23 01:55:39 +0800",
+              "value": "清醒",
+              "qty": 0.024993650284078385
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 02:04:09 +0800",
+              "start": "2026-04-23 01:57:09 +0800",
+              "endDate": "2026-04-23 02:04:09 +0800",
+              "startDate": "2026-04-23 01:57:09 +0800",
+              "date": "2026-04-23 01:57:09 +0800",
+              "value": "核心",
+              "qty": 0.11663763513167699
+            },
+            {
+              "end": "2026-04-23 02:44:39 +0800",
+              "source": "Feei的Apple Watch",
+              "endDate": "2026-04-23 02:44:39 +0800",
+              "startDate": "2026-04-23 02:04:09 +0800",
+              "start": "2026-04-23 02:04:09 +0800",
+              "date": "2026-04-23 02:04:09 +0800",
+              "value": "快速动眼期",
+              "qty": 0.6748205804162555
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 03:14:08 +0800",
+              "endDate": "2026-04-23 03:14:08 +0800",
+              "startDate": "2026-04-23 02:44:39 +0800",
+              "start": "2026-04-23 02:44:39 +0800",
+              "date": "2026-04-23 02:44:39 +0800",
+              "value": "核心",
+              "qty": 0.49153160638279386
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 03:24:38 +0800",
+              "endDate": "2026-04-23 03:24:38 +0800",
+              "startDate": "2026-04-23 03:14:08 +0800",
+              "start": "2026-04-23 03:14:08 +0800",
+              "date": "2026-04-23 03:14:08 +0800",
+              "value": "深度",
+              "qty": 0.17495690445105236
+            },
+            {
+              "end": "2026-04-23 04:07:37 +0800",
+              "source": "Feei的Apple Watch",
+              "endDate": "2026-04-23 04:07:37 +0800",
+              "startDate": "2026-04-23 03:24:38 +0800",
+              "start": "2026-04-23 03:24:38 +0800",
+              "date": "2026-04-23 03:24:38 +0800",
+              "value": "核心",
+              "qty": 0.7164697205689219
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 04:46:07 +0800",
+              "start": "2026-04-23 04:07:37 +0800",
+              "endDate": "2026-04-23 04:46:07 +0800",
+              "startDate": "2026-04-23 04:07:37 +0800",
+              "date": "2026-04-23 04:07:37 +0800",
+              "value": "快速动眼期",
+              "qty": 0.6414814336101214
+            },
+            {
+              "end": "2026-04-23 06:02:05 +0800",
+              "source": "Feei的Apple Watch",
+              "start": "2026-04-23 04:46:07 +0800",
+              "endDate": "2026-04-23 06:02:05 +0800",
+              "startDate": "2026-04-23 04:46:07 +0800",
+              "date": "2026-04-23 04:46:07 +0800",
+              "value": "核心",
+              "qty": 1.266304728190104
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 06:30:05 +0800",
+              "endDate": "2026-04-23 06:30:05 +0800",
+              "start": "2026-04-23 06:02:05 +0800",
+              "startDate": "2026-04-23 06:02:05 +0800",
+              "date": "2026-04-23 06:02:05 +0800",
+              "value": "快速动眼期",
+              "qty": 0.4665613483389219
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 06:32:35 +0800",
+              "endDate": "2026-04-23 06:32:35 +0800",
+              "startDate": "2026-04-23 06:30:05 +0800",
+              "start": "2026-04-23 06:30:05 +0800",
+              "date": "2026-04-23 06:30:05 +0800",
+              "value": "清醒",
+              "qty": 0.041656862364874946
+            },
+            {
+              "end": "2026-04-23 06:33:05 +0800",
+              "source": "Feei的Apple Watch",
+              "endDate": "2026-04-23 06:33:05 +0800",
+              "startDate": "2026-04-23 06:32:35 +0800",
+              "start": "2026-04-23 06:32:35 +0800",
+              "date": "2026-04-23 06:32:35 +0800",
+              "value": "核心",
+              "qty": 0.008331234852472941
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 06:44:05 +0800",
+              "start": "2026-04-23 06:33:05 +0800",
+              "startDate": "2026-04-23 06:33:05 +0800",
+              "endDate": "2026-04-23 06:44:05 +0800",
+              "date": "2026-04-23 06:33:05 +0800",
+              "value": "快速动眼期",
+              "qty": 0.1832851709591018
+            },
+            {
+              "end": "2026-04-23 07:50:04 +0800",
+              "source": "Feei的Apple Watch",
+              "endDate": "2026-04-23 07:50:04 +0800",
+              "startDate": "2026-04-23 06:44:05 +0800",
+              "start": "2026-04-23 06:44:05 +0800",
+              "date": "2026-04-23 06:44:05 +0800",
+              "value": "核心",
+              "qty": 1.099710407786899
+            },
+            {
+              "end": "2026-04-23 08:21:03 +0800",
+              "source": "Feei的Apple Watch",
+              "start": "2026-04-23 07:50:04 +0800",
+              "startDate": "2026-04-23 07:50:04 +0800",
+              "endDate": "2026-04-23 08:21:03 +0800",
+              "date": "2026-04-23 07:50:04 +0800",
+              "value": "快速动眼期",
+              "qty": 0.5165177623762025
+            },
+            {
+              "source": "Feei的Apple Watch",
+              "end": "2026-04-23 08:22:03 +0800",
+              "endDate": "2026-04-23 08:22:03 +0800",
+              "start": "2026-04-23 08:21:03 +0800",
+              "startDate": "2026-04-23 08:21:03 +0800",
+              "date": "2026-04-23 08:21:03 +0800",
+              "value": "清醒",
+              "qty": 0.0166618377632565
+            },
+            {
+              "end": "2026-04-23 08:38:03 +0800",
+              "source": "Feei的Apple Watch",
+              "endDate": "2026-04-23 08:38:03 +0800",
+              "startDate": "2026-04-23 08:22:03 +0800",
+              "start": "2026-04-23 08:22:03 +0800",
+              "date": "2026-04-23 08:22:03 +0800",
+              "value": "核心",
+              "qty": 0.26659147875176537
+            }
+          ]
+        },
+        {
+          "units": "m/s",
+          "data": [
+            {
+              "start": "2026-04-23 09:08:34 +0800",
+              "end": "2026-04-23 09:08:38 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.4061596095561981,
+              "date": "2026-04-23 09:08:34 +0800"
+            },
+            {
+              "start": "2026-04-23 09:08:40 +0800",
+              "end": "2026-04-23 09:08:44 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.45318421721458435,
+              "date": "2026-04-23 09:08:40 +0800"
+            },
+            {
+              "date": "2026-04-23 09:54:05 +0800",
+              "end": "2026-04-23 09:54:10 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.6164357662200928,
+              "start": "2026-04-23 09:54:05 +0800"
+            },
+            {
+              "date": "2026-04-23 09:54:12 +0800",
+              "end": "2026-04-23 09:54:15 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.5442016124725342,
+              "start": "2026-04-23 09:54:12 +0800"
+            },
+            {
+              "start": "2026-04-23 09:54:22 +0800",
+              "end": "2026-04-23 09:54:26 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.6013742089271545,
+              "date": "2026-04-23 09:54:22 +0800"
+            },
+            {
+              "start": "2026-04-23 11:46:24 +0800",
+              "end": "2026-04-23 11:46:28 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.4754256308078766,
+              "date": "2026-04-23 11:46:24 +0800"
+            },
+            {
+              "date": "2026-04-23 11:46:30 +0800",
+              "end": "2026-04-23 11:46:34 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.46826350688934326,
+              "start": "2026-04-23 11:46:30 +0800"
+            },
+            {
+              "date": "2026-04-23 15:43:49 +0800",
+              "end": "2026-04-23 15:43:54 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.4383346140384674,
+              "start": "2026-04-23 15:43:49 +0800"
+            },
+            {
+              "date": "2026-04-23 18:40:00 +0800",
+              "end": "2026-04-23 18:40:05 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.21384525299072266,
+              "start": "2026-04-23 18:40:00 +0800"
+            },
+            {
+              "start": "2026-04-23 18:40:07 +0800",
+              "end": "2026-04-23 18:40:14 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.28283628821372986,
+              "date": "2026-04-23 18:40:07 +0800"
+            },
+            {
+              "date": "2026-04-23 18:42:26 +0800",
+              "end": "2026-04-23 18:42:31 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.4920681416988373,
+              "start": "2026-04-23 18:42:26 +0800"
+            },
+            {
+              "date": "2026-04-23 18:42:33 +0800",
+              "end": "2026-04-23 18:42:36 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.5500956773757935,
+              "start": "2026-04-23 18:42:33 +0800"
+            },
+            {
+              "date": "2026-04-23 18:42:43 +0800",
+              "end": "2026-04-23 18:42:47 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.5990919470787048,
+              "start": "2026-04-23 18:42:43 +0800"
+            },
+            {
+              "date": "2026-04-23 18:42:49 +0800",
+              "end": "2026-04-23 18:42:53 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.5149084329605103,
+              "start": "2026-04-23 18:42:49 +0800"
+            },
+            {
+              "date": "2026-04-23 18:42:56 +0800",
+              "end": "2026-04-23 18:43:00 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.5517003536224365,
+              "start": "2026-04-23 18:42:56 +0800"
+            },
+            {
+              "date": "2026-04-23 18:43:03 +0800",
+              "end": "2026-04-23 18:43:07 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.47333401441574097,
+              "start": "2026-04-23 18:43:03 +0800"
+            },
+            {
+              "start": "2026-04-23 18:43:09 +0800",
+              "end": "2026-04-23 18:43:13 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 0.48046135902404785,
+              "date": "2026-04-23 18:43:09 +0800"
+            }
+          ],
+          "name": "stair_speed_down"
+        },
+        {
+          "units": "kg",
+          "data": [
+            {
+              "start": "2026-04-23 08:55:15 +0800",
+              "end": "2026-04-23 08:55:15 +0800",
+              "source": "Fitdays",
+              "qty": 71,
+              "date": "2026-04-23 08:55:15 +0800"
+            }
+          ],
+          "name": "weight_body_mass"
+        }
+      ]
+    },
+    "workouts": {
+      "workouts": []
+    },
+    "medications": {},
+    "heartNotifications": {},
+    "stateOfMind": {},
+    "cycleTracking": {},
+    "ecg": {},
+    "symptoms": {}
+  }
+}

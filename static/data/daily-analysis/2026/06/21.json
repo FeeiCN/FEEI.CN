@@ -1,0 +1,240 @@
+{
+  "top_signals": [
+    {
+      "area": "健康",
+      "summary": "2026-06-21 健康全量指标全为 null，当日无法形成恢复/负荷判断，必须降权",
+      "evidence": [
+        "today 12 项核心指标全部为 null",
+        "completeness 中 has_steps/has_sleep/has_weight/has_hrv 全部为 false",
+        "近 7 日基线完整（步数均值 5204、HRV 52.25、静息心率 66.4），但目标日无可比值"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "AI使用",
+      "summary": "三家厂商均无 6/21 当日 token 数据，工作流强度判断需保留到次日数据回填后再校准",
+      "evidence": [
+        "anthropic fetched_at 停在 6/11，6/21 当日 tokens 为 null",
+        "minimax 6/20 25,930,582 较 6/19 45,405,912 下降约 43%",
+        "openai 6/20 87,570,459 较 6/19 1,702,687 出现异常放大，6/21 全空"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "area": "Git",
+      "summary": "28 次 commit 中实质性提交集中在 dashboard 上线与自动化调度优化，今日工程推进主线是数据基础设施而非内容产出",
+      "evidence": [
+        "feat: add daily reflection dashboard（19:12 +08:00）",
+        "优化 GitHub Actions 调度（11:07 +08:00）",
+        "调整每日任务执行时间（10:40 +08:00）",
+        "更新健康数据日级导出 / 更新六月健康日数据导出（15:00 / 17:36）"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "health_insights": [
+    {
+      "expert_view": "恢复与负荷分析",
+      "summary": "今天最大的事实不是数据异常，而是健康数据全量缺失，恢复/负荷判断需要整体降权",
+      "positioning": "目标日所有 12 项核心指标均为 null，completeness 四个关键开关全为 false，相对 7 日基线完全无法定位",
+      "evidence": [
+        "steps/distance/active_energy/exercise_min/stand_hours 全为 null",
+        "sleep/resting_hr/hrv_sdnn/oxygen_saturation 全为 null",
+        "weight/body_fat_pct/bmi/lean_body_mass_kg 全为 null",
+        "近 7 日基线：步数 5204、HRV 52.25、静息心率 66.4、睡眠 7.25h，目标日无可比值"
+      ],
+      "means": "说明今天存在数据同步缺口，而不是健康行为出现极端异常",
+      "not_means": "不能据此得出'今天活动下降/恢复良好'等任何恢复或负荷结论，也不能把 baseline 当成目标日表现",
+      "uncertainty": "无法判断是夜间同步延迟、导出失败、还是真实数据未采集；exportedAt 已晚于 13:30，单纯时点切片解释力不足",
+      "professional_suggestion": "**明日动作**：明天 9:00 前在 /static/data/health/2026/06.json 验证 6/21 节点是否回填完成，若关键指标仍为 null，把今天的健康判断继续保持为'不可用'，不要在日报里强行写恢复或负荷结论"
+    }
+  ],
+  "reading_insights": [
+    {
+      "expert_view": "学习投入与阅读行为分析",
+      "summary": "当日阅读量在月度累计里仍是连续节点，但 6/21 的阅读切片本身不可定位，'0.856 相比前一日'只是弱提示",
+      "positioning": "today.read_seconds/read_minutes 为 null、baseline_7d/30d sample_size 均为 0，月度连续性（17 天阅读、8 本读过、12 条笔记）未被打断",
+      "evidence": [
+        "compare_to_previous_ratio 0.856（仅有比值，没有绝对秒数）",
+        "month_stats：6 月读过 8 本、读完 3 本、阅读 17 天、笔记 12 条",
+        "top_books 主力仍是《碌碌有为》43559s、《读书与写作》9885s"
+      ],
+      "means": "说明月度阅读节奏整体延续，主题仍在社会文化/文学带",
+      "not_means": "不能把 0.856 直接解释为'今天阅读明显下降'，因为缺今日秒数与 7 日/30 日均值",
+      "uncertainty": "无法判断 6/21 是单日降温、节奏稳定还是数据缺口；阅读与健康/AI 三个数据源同步偏弱，可能存在共性同步问题",
+      "professional_suggestion": "**明日动作**：明天上午先核对 reading 6 月文件中 6/21 节点是否落地，再决定是否把《碌碌有为》的连续深挖作为'继续加深'信号；若 6/21 read_seconds 仍未回填，今天阅读判断同样保持'不可用'"
+    }
+  ],
+  "finance_insights": [
+    {
+      "expert_view": "资产配置与风险暴露分析",
+      "summary": "今天总资产没有变化，但 HKD 集中持仓依然处于深度回撤区间，风险暴露结构没有被改写",
+      "positioning": "总资产 1,578,112.3 CNH（FeeiCN2 908,012.2 + FeeiCN 670,100.1）持平昨日；今日 P/L 字段全部 0，市场未对组合记账产生新冲击",
+      "evidence": [
+        "total_assets_delta 0.0、两账户 delta_contribution_ratio 均为 null",
+        "cash_ratio 0.056、market_value_ratio 0.931，仓位依然高配",
+        "HKD 汇总：FeeiCN2 -44.4%、FeeiCN -45.8%，对应市值 33,189.8 + 47,728.0 HKD",
+        "亏损主力：奥克斯电气两账户共 -52,496 HKD、小米集团-W -14,278 HKD"
+      ],
+      "means": "说明今天更像一个'没有新信息、但风险敞口原封不动'的持仓日，而不是回撤修复或趋势反转",
+      "not_means": "不能把 delta=0 解读为'风险已出清'，深度套牢仓位继续以市值计价存在；也不能用 USD 端的浮盈去对冲 HKD 端的浮亏",
+      "uncertainty": "无法从今天的市场数据中分辨 HKD 仓位是否在 6/22 出现回撤/反弹拐点；summary_rows 也没有今天的价格证据",
+      "professional_suggestion": "**明日动作**：明天只复盘 HKD 深度回撤仓位（奥克斯电气、小米集团-W）的买入逻辑是否仍然成立，不扩展新仓位假设；明确把'delta=0 不等于无风险'写进日报，避免把平静持仓日误读为安全日"
+    }
+  ],
+  "ai_insights": [
+    {
+      "expert_view": "AI 生产力与工作流强度分析",
+      "summary": "今天三家厂商都没有当日 token 数据，工作流强度判断需要整体降权，不能用 6/20 的数据外推到 6/21",
+      "positioning": "minimax/openai fetched_at 都停在 2026-06-21 07:59 BJT，且 vendors[].today_tokens 全部为 null；anthropic 自 6/11 起就处于断流",
+      "evidence": [
+        "minimax 6/20 25,930,582 较 6/19 45,405,912 下降约 43%",
+        "openai 6/20 87,570,459 较 6/19 1,702,687 出现异常放大",
+        "minimax 连续 13 天有数据、openai 仅 2 天，6/21 三家全部空白"
+      ],
+      "means": "说明 6/21 的工作流强度目前不能被任何一家厂商代表，更可能是同步延迟而非真实零调用",
+      "not_means": "不能把 6/21 的全 null 解释为'今天几乎没有 AI 任务'，也不能用 6/20 openai 的高用量推断今天产出，更不能把 token 数量直接等同于工作质量",
+      "uncertainty": "三家厂商是否覆盖同一任务、是否同一时段断流、是否因 GitHub Actions 调度被调整（10:40 / 11:07）导致 6/21 同步未跑，都需要数据回填后验证",
+      "professional_suggestion": "**明日动作**：明天上午先核对 minimax/openai 6/21 是否回填，若仍为空，今天 AI 结论保持'不可用'，等次日合并判断；不要在日报里写'今天 AI 工作强度下降'"
+    }
+  ],
+  "life_log_insights": [
+    {
+      "expert_view": "生活记录与主观体验分析",
+      "summary": "日记勾勒的是'布局舒服 + 家庭早餐 + 加班准备汇报'的混合工作日，节奏偏缓但有明显推进",
+      "positioning": "日记 6 段、505 字、4 张图，主线为工作舒适度、家庭饮食和晚上备材料；与 git 中 dashboard/调度提交在同一日形成主观-客观呼应",
+      "evidence": [
+        "第一段：'现在的布局工作确实舒服很多'（工作体感）",
+        "第二段：'早饭老妈住的豆巴，好吃'（家庭支持）",
+        "第三段：'下雨天的西瓜🍉，没太阳天那么好吃'（环境-饮食耦合）",
+        "第五段：'晚上准备了下明天的汇报材料'（明日推进）",
+        "第六段：'健康、事业、财务、人生四块的数据应该放在一起看'（元认知）"
+      ],
+      "means": "说明今天在生活节奏上是温和的，但在工作上完成了一次从'分散数据'到'四块一体'的认知升级",
+      "not_means": "不能把'舒服'理解为'今天任务轻松'，因为同时存在汇报材料准备和当日 dashboard 提交；也不能把'老妈做的豆巴'等同于家庭关系稳定，它只是一顿早餐",
+      "uncertainty": "日记没有提运动、睡眠、情绪波动，无法直接校验健康/AI 板块的'不可用'结论",
+      "professional_suggestion": "建议把日记中'四块数据放一起看'作为接下来 dashboard 内容编排的方向锚点，而不是单独的今日感慨；今晚的汇报准备是明天最值得观察的衔接事件"
+    }
+  ],
+  "environment_mobility_insights": [
+    {
+      "expert_view": "生活环境与出行节奏分析",
+      "summary": "天气以当前观测为准、行车数据完全缺失，无法形成完整的'环境-移动-活动'链条",
+      "positioning": "天气 23°C、湿度 83%、风速 17 km/h、降水 0 mm（东京 Takehiracho，03:30 PM 观测）；行车事件 0 条；日记中提到'下雨天'，与观测存在口径差",
+      "evidence": [
+        "weather.current 少云 / 23°C / 体感 25°C / 降水 0.0 mm / 风速 17 km/h",
+        "drive.event_count=0，源文件清单为空",
+        "日记第二段出现'下雨天的西瓜'字样",
+        "日记提到晚饭小龙虾，暗示至少有一次外出就餐，但行车未佐证"
+      ],
+      "means": "说明从天气观测看今天下午偏凉爽、湿度偏高、户外活动条件尚可；行车缺失意味着无法验证通勤/外出强度",
+      "not_means": "不能把日记中的'下雨天'与天气 0 mm 降水强行等同，可能是早晨或更早时段降雨，也可能是主观印象；不能在没有行车数据的情况下推断'今天没出门'",
+      "uncertainty": "天气 forecast 全为 null（仅有当前观测），无法判断全天天气曲线；行车缺失无法和日记里'晚饭小龙虾'这类外出就餐事件做交叉验证",
+      "professional_suggestion": "**继续观察**：明天核对 6/21 东京全天小时级天气降水和行车记录回填情况，确认日记中'下雨'是真实降雨还是主观修饰；行车数据恢复后，再回头补今天的'环境-移动'判断"
+    }
+  ],
+  "git_insights": [
+    {
+      "expert_view": "工程推进与知识沉淀分析",
+      "summary": "今天 28 次 commit 绝大多数是数据自动同步，实质性主线是 dashboard 上线和调度优化",
+      "positioning": "28 次 commit 中，'[auto]' 同步类超过 20 次，剩余 7-8 次手动提交集中在 dashboard / 调度 / 导出结构改造",
+      "evidence": [
+        "feat: add daily reflection dashboard（19:12 +08:00，核心手工提交）",
+        "优化 GitHub Actions 调度（11:07 +08:00）",
+        "调整每日任务执行时间（10:40 +08:00）",
+        "更新健康数据日级导出（15:00）/ 更新六月健康日数据导出（17:36）",
+        "生成每日健康详情数据（23:40 +08:00）"
+      ],
+      "means": "说明今天的工作推进本质是'把日报这套体系搭起来'，而不是业务内容产出；这是基础设施日，不是内容日",
+      "not_means": "不能用 28 次 commit 数等同于'今天工程产出高'，其中至少 20 次是机械同步；也不能把 dashboard 提交等同于'功能已完整'，提交只代表代码进入仓库",
+      "uncertainty": "无法从 commit 主题判断今天是否还伴随有非仓库内的写作或汇报内容产出；日报汇报材料是否也走 git 仓库未确认",
+      "professional_suggestion": "**明日动作**：明天汇报结束后，关注 commit 类型是否开始从 '[auto]' 转向手工提交的内容型 commit，验证 dashboard 上线是否带来推进类型的迁移；如果一周后仍以 [auto] 为主，需要把'内容产出'作为待补缺口列入下一周期观察"
+    }
+  ],
+  "cross_domain_insights": [
+    {
+      "summary": "健康 / AI / 阅读 三大数据源在 6/21 同步状态都偏弱，形成'数据未到齐'的共性事实",
+      "evidence": [
+        "健康全量 null、reading today null 且 baseline empty、AI 三家厂商 6/21 tokens 全空",
+        "日记与 git 都有产出（dashboard 提交、夜间汇报准备、布局工作顺畅）",
+        "这意味着今天的整体判断强度需要降一档，而不是各板块各写一段'今天数据未更新'"
+      ],
+      "uncertainty": "不排除三家数据源在 6/22 回填后能形成清晰的当日判断；今天的'不可用'可能只是同步延迟的连锁表现"
+    },
+    {
+      "summary": "日记中'四块数据放一起看'与 git 中 dashboard 提交在时间上呼应，是一次元层面的认知升级",
+      "evidence": [
+        "日记第六段提出四块数据应放一起看（状态/对比/趋势）",
+        "同日下午 19:12 提交 feat: add daily reflection dashboard",
+        "加上 11:07 / 10:40 的调度与执行时间调整，形成'展示层 + 调度层'同日改写"
+      ],
+      "uncertainty": "无法确定 dashboard 的实际展示效果是否就是日记所设想的样子，需要明日上线路径验证；'四块一体'目前还停留在概念阶段，缺真实跑通"
+    },
+    {
+      "summary": "日记提到'下雨天'与天气 0 mm 降水存在口径冲突，可能反映早晚天气差异或主观印象偏移",
+      "evidence": [
+        "日记第二段'下雨天的西瓜🍉，没太阳天那么好吃'",
+        "weather.current 观测 03:30 PM 少云、降水 0.0 mm",
+        "没有行车/活动数据可以佐证全天天气"
+      ],
+      "uncertainty": "必须拿到小时级天气与行车记录才能判断是真实降雨还是主观修饰；在数据补齐前不下'今天有雨'或'今天没雨'的结论"
+    }
+  ],
+  "data_status": [
+    {
+      "area": "健康",
+      "status": "切片",
+      "detail": "12 项指标全部为 null，completeness 四个开关全 false；夜间同步可能未完成，exportedAt 13:30 后未再出现 6/21 完整导出"
+    },
+    {
+      "area": "阅读",
+      "status": "切片",
+      "detail": "today.read_seconds/read_minutes 为 null，baseline_7d/30d sample_size=0；仅有 compare_to_previous_ratio=0.856 弱提示"
+    },
+    {
+      "area": "财务",
+      "status": "完整",
+      "detail": "目标日账户、市值、汇总行都齐备，但 total_assets_delta=0、todayPlVal 全 0，需警惕'无变化'并非'无风险'"
+    },
+    {
+      "area": "AI使用",
+      "status": "延迟",
+      "detail": "minimax/openai fetched_at 停在 6/21 07:59，anthropic 自 6/11 起断流；6/21 当日 token 数据三家全空"
+    },
+    {
+      "area": "天气",
+      "status": "切片",
+      "detail": "仅有当前观测 03:30 PM（少云/23°C/降水 0 mm），forecast 全为 null，无法还原全天曲线"
+    },
+    {
+      "area": "行车",
+      "status": "不可用",
+      "detail": "事件 0 条，源文件清单为空，6/21 移动轨迹缺失"
+    },
+    {
+      "area": "日记",
+      "status": "完整",
+      "detail": "505 字、6 段、4 图、4 链接，主线工作-家庭-饮食-汇报准备清晰"
+    },
+    {
+      "area": "Git",
+      "status": "完整",
+      "detail": "28 次 commit，主体为 [auto] 同步，manual 提交集中在 dashboard / 调度 / 导出结构"
+    }
+  ],
+  "follow_ups": [
+    "明日动作：明天 9:00 前在 /static/data/health/2026/06.json 验证 6/21 节点是否回填完成，若关键指标仍为 null，把今天的健康判断继续保持为'不可用'，不要在日报里强行写恢复或负荷结论",
+    "明日动作：明天只复盘 HKD 深度回撤仓位（奥克斯电气、小米集团-W）的买入逻辑是否仍然成立，不扩展新仓位假设；明确把'delta=0 不等于无风险'写进日报",
+    "明日动作：明天上午核对 minimax/openai 6/21 是否回填，reading 6/21 节点是否落地，三家同步都补齐后再合并判断今天的工作流强度；汇报结束后关注 commit 类型是否从 [auto] 迁移到手工内容型",
+    "继续观察：明天核对 6/21 东京小时级天气降水与行车记录回填情况，确认日记中'下雨天'是真实降雨还是主观印象；行车数据恢复后，回头补今天的'环境-移动'判断"
+  ],
+  "quality_self_check": {
+    "not_number_repetition": true,
+    "has_cross_domain": true,
+    "states_uncertainty": true,
+    "has_positioning": true,
+    "has_expert_judgment": true
+  },
+  "date": "2026-06-21",
+  "generatedAt": "2026-06-22T05:44:02.328356+00:00"
+}

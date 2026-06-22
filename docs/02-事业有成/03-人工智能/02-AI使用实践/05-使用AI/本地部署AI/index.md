@@ -15,6 +15,7 @@ description: 在本地机器上部署大语言模型的多种方案：Ollama、L
 | **LM Studio** | 桌面 GUI | 不喜欢终端、需要图形界面选模型 | 极低 |
 | **llama.cpp** | C++ 推理核心 | 想深入底层、极致性能优化 | 中高 |
 | **vLLM** | Python 推理服务 | 生产级部署、高并发服务 | 中高 |
+| **SGLang** | Python 推理服务 | 复杂推理服务、结构化输出、服务端工程 | 中高 |
 | **MLX / mlx-lm** | Apple 官方框架 | M1/M2/M3/M4 芯片极致性能 | 中 |
 | **llamafile** | 单可执行文件 | 跨平台分发、便携场景 | 低 |
 
@@ -96,6 +97,27 @@ vllm serve Qwen/Qwen2.5-7B-Instruct
 ```
 
 适合：自己部署一个 OpenAI 替代服务给团队用、Agent 后端需要高吞吐。代价是必须配 Python 环境、对小规模个人使用偏重。
+
+## MiniMax-M1
+
+[MiniMax 本地部署指南](https://platform.minimaxi.com/docs/guides/local-deploy) 的价值，是把同一个模型放进三类本地推理路径里：生产服务用 vLLM，复杂服务端推理用 SGLang，Apple Silicon 本地试用用 MLX。看这类厂商文档时，重点是判断自己的设备和场景落在哪一类。
+
+MiniMax-M1-80k 属于长上下文推理模型，本地部署时最大的约束通常是显存、内存、KV cache 和推理延迟。长上下文模型在短 prompt 下看起来能跑，不代表在真实长文档、Agent 多轮任务或批量并发下也可用。部署前要先决定目标：只是本机验证模型特性，还是要提供 OpenAI 兼容 API 给工具调用，还是要作为团队共享服务。
+
+三条路径可以这样理解：
+
+- **vLLM**：适合把模型变成团队可调用的 OpenAI 兼容服务，重点是吞吐、显存利用和并发请求。它适合 Linux + NVIDIA GPU 的服务器环境，不适合只想在个人电脑上随手试一下。
+- **SGLang**：适合服务端复杂推理和结构化调用场景。它更像推理应用框架，适合需要组合 prompt、约束输出、服务多个任务流的场景。
+- **MLX**：适合 Apple Silicon 上的本地试用和个人实验。它利用统一内存优势，能让 Mac 跑一些传统 GPU 显存放不下的量化模型，但延迟、吞吐和生态工具链仍要按个人实验看待。
+
+本地部署厂商模型时，应该先看四件事：
+
+- **权重格式**：是否有 Hugging Face 权重、量化版本、MLX 版本，是否需要 trust remote code。
+- **推理框架支持**：vLLM、SGLang、MLX 是否已经支持该模型结构和 tokenizer。
+- **上下文目标**：只跑短对话，还是要真的使用长上下文；后者对 KV cache 和内存压力完全不同。
+- **服务接口**：是否需要 OpenAI 兼容接口，是否要接入 Open WebUI、Cursor、Claude Code 或内部 Agent。
+
+这类指南最适合沉淀为选型依据。具体命令以官方文档为准，站内只保留稳定判断：个人快速试用优先 MLX / Ollama / LM Studio；生产服务优先 vLLM；复杂推理服务再考虑 SGLang；长上下文模型一定要按真实上下文长度测试，不要只用“能启动”判断可用。
 
 ## MLX
 

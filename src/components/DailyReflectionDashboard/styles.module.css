@@ -370,6 +370,41 @@
   box-shadow: 0 8px 22px rgba(10, 132, 255, 0.18);
 }
 
+.financeTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.2rem;
+  padding: 0.18rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-strong);
+}
+
+.financeTabs button {
+  min-width: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.34rem 0.5rem;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.financeTabs button:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.financeTabActive {
+  background: var(--accent) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 22px rgba(10, 132, 255, 0.18);
+}
+
 .objectiveTimeControls {
   position: sticky;
   top: 0;
@@ -499,6 +534,30 @@
   color: var(--text);
   font-size: 0.9rem;
   letter-spacing: -0.02em;
+}
+
+.financeEmptyPanel {
+  display: grid;
+  gap: 0.18rem;
+  min-height: 8rem;
+  align-content: center;
+  justify-items: center;
+  padding: 1.6rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  text-align: center;
+}
+
+.financeEmptyPanel strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.financeEmptyPanel p {
+  margin: 0;
+  font-size: 0.76rem;
 }
 
 .embeddedDashboard :global(.container),

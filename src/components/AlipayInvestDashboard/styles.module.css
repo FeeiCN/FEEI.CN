@@ -1,0 +1,145 @@
+.dashboard {
+  display: grid;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.metricCard {
+  min-width: 0;
+  padding: 0.62rem 0.72rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 8px;
+  background: var(--ifm-background-surface-color);
+}
+
+.metricCard span,
+.metaLine {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.72rem;
+}
+
+.metricCard strong {
+  display: block;
+  margin-top: 0.14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1rem;
+  letter-spacing: -0.03em;
+}
+
+.metaLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.trendSection,
+.chartGrid section {
+  min-width: 0;
+}
+
+.trendSection h4,
+.chartGrid h4 {
+  margin: 0 0 0.35rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.table th,
+.table td {
+  border: 1px solid var(--ifm-table-border-color);
+  padding: 0.4rem 0.48rem;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.table th {
+  background: var(--ifm-table-head-background);
+  font-weight: 700;
+}
+
+.table td:first-child {
+  min-width: 13rem;
+  white-space: normal;
+}
+
+.table td strong,
+.table td small {
+  display: block;
+}
+
+.table td small {
+  margin-top: 0.08rem;
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.68rem;
+}
+
+.gain {
+  color: #ef4444;
+}
+
+.loss {
+  color: #22c55e;
+}
+
+.neutral {
+  color: inherit;
+}
+
+.empty {
+  margin: 0.3rem 0;
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.86rem;
+}
+
+.skeleton {
+  height: 16rem;
+  border-radius: 8px;
+  background: var(--ifm-color-emphasis-100);
+}
+
+@media (max-width: 996px) {
+  .summaryGrid,
+  .chartGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .summaryGrid,
+  .chartGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .table {
+    font-size: 0.74rem;
+  }
+}

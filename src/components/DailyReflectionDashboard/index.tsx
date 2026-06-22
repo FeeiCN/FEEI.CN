@@ -1,5 +1,7 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import AccountAssetsDashboard from '@site/src/components/AccountAssetsDashboard';
+import AlipayInvestDashboard from '@site/src/components/AlipayInvestDashboard';
+import FinanceAssetsTrend from '@site/src/components/FinanceAssetsTrend';
 import {HealthProvider, HealthSection, type TimeScope as HealthTimeScope} from '@site/src/components/HealthCharts';
 import HKIPOCharts from '@site/src/components/HKIPOCharts';
 import LLMUsageDashboard from '@site/src/components/LLMUsageDashboard';
@@ -177,6 +179,7 @@ type CalendarHover = CalendarCell & {
 
 type DataDomain = 'health' | 'career' | 'finance' | 'life';
 type DailyDetailTab = 'diary' | 'timeline' | 'analysis';
+type FinanceTab = 'income' | 'expense' | 'investment';
 type ObjectiveTimeScope =
   | {mode: 'recent'; range: '7d' | '30d' | '90d' | '1y'}
   | {mode: 'year'; year: number}
@@ -1511,6 +1514,37 @@ function DailyDetailTabs({
   );
 }
 
+function FinanceTabs({
+  active,
+  onChange,
+}: {
+  active: FinanceTab;
+  onChange: (tab: FinanceTab) => void;
+}): React.ReactNode {
+  const tabs: Array<{key: FinanceTab; label: string}> = [
+    {key: 'income', label: '收入'},
+    {key: 'expense', label: '支出'},
+    {key: 'investment', label: '投资'},
+  ];
+
+  return (
+    <div className={styles.financeTabs} role="tablist" aria-label="财务数据分类">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          type="button"
+          role="tab"
+          aria-selected={active === tab.key}
+          className={active === tab.key ? styles.financeTabActive : ''}
+          onClick={() => onChange(tab.key)}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function DailyBasicInfo({date, weather}: {date: string; weather: unknown}): React.ReactNode {
   if (!date) return null;
   const weatherSummary = getWeatherSummary(weather);
@@ -1644,26 +1678,59 @@ function CareerDataPanel({onDateSelect, timeScope}: {onDateSelect: (date: string
   );
 }
 
-function FinanceDataPanel({onDateSelect, timeScope}: {onDateSelect: (date: string) => void; timeScope: ObjectiveTimeScope}): React.ReactNode {
+function FinanceDataPanel({
+  date,
+  onDateSelect,
+  timeScope,
+}: {
+  date: string;
+  onDateSelect: (date: string) => void;
+  timeScope: ObjectiveTimeScope;
+}): React.ReactNode {
+  const [activeTab, setActiveTab] = useState<FinanceTab>('investment');
+
   return (
     <>
       <div className={styles.healthChartsPanelHead}>
-        <PanelTitle title="财务数据" description="指数账户、个股账户与港股打新数据。" />
+        <PanelTitle title="财务数据" description="指数账户、个股账户、支付宝持仓与港股打新数据。" />
       </div>
-      <div className={styles.embeddedDashboardStack}>
-        <section className={styles.embeddedDashboardSection}>
-          <h3>指数账户</h3>
-          <AccountAssetsDashboard dataUrl="/data/account-assets/index.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
-        </section>
-        <section className={styles.embeddedDashboardSection}>
-          <h3>个股账户</h3>
-          <AccountAssetsDashboard dataUrl="/data/account-assets/stock.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
-        </section>
-        <section className={styles.embeddedDashboardSection}>
-          <h3>港股打新</h3>
-          <HKIPOCharts dataUrl="/data/hk-ipo/data.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
-        </section>
-      </div>
+      <FinanceTabs active={activeTab} onChange={setActiveTab} />
+      {activeTab === 'income' ? (
+        <div className={styles.financeEmptyPanel}>
+          <strong>收入数据</strong>
+          <p>暂未接入收入流水数据。</p>
+        </div>
+      ) : null}
+      {activeTab === 'expense' ? (
+        <div className={styles.financeEmptyPanel}>
+          <strong>支出数据</strong>
+          <p>暂未接入支出流水数据。</p>
+        </div>
+      ) : null}
+      {activeTab === 'investment' ? (
+        <div className={styles.embeddedDashboardStack}>
+          <section className={styles.embeddedDashboardSection}>
+            <h3>总资产趋势</h3>
+            <FinanceAssetsTrend onDateSelect={onDateSelect} timeScope={timeScope} />
+          </section>
+          <section className={styles.embeddedDashboardSection}>
+            <h3>支付宝持仓</h3>
+            <AlipayInvestDashboard date={date} />
+          </section>
+          <section className={styles.embeddedDashboardSection}>
+            <h3>指数账户</h3>
+            <AccountAssetsDashboard dataUrl="/data/account-assets/index.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
+          </section>
+          <section className={styles.embeddedDashboardSection}>
+            <h3>个股账户</h3>
+            <AccountAssetsDashboard dataUrl="/data/account-assets/stock.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
+          </section>
+          <section className={styles.embeddedDashboardSection}>
+            <h3>港股打新</h3>
+            <HKIPOCharts dataUrl="/data/hk-ipo/data.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -1681,7 +1748,13 @@ function LifeDataPanel({onDateSelect, timeScope}: {onDateSelect: (date: string) 
   );
 }
 
-function ObjectiveDataPanel({onDateSelect}: {onDateSelect: (date: string) => void}): React.ReactNode {
+function ObjectiveDataPanel({
+  selectedDate,
+  onDateSelect,
+}: {
+  selectedDate: string;
+  onDateSelect: (date: string) => void;
+}): React.ReactNode {
   const [activeDomain, setActiveDomain] = useState<DataDomain>('health');
   const [timeScope, setTimeScope] = useState<ObjectiveTimeScope>({mode: 'recent', range: '7d'});
 
@@ -1691,7 +1764,7 @@ function ObjectiveDataPanel({onDateSelect}: {onDateSelect: (date: string) => voi
       <DataDomainTabs active={activeDomain} onChange={setActiveDomain} />
       {activeDomain === 'health' ? <HealthChartsPanel onDateSelect={onDateSelect} timeScope={timeScope} setTimeScope={setTimeScope} /> : null}
       {activeDomain === 'career' ? <CareerDataPanel onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
-      {activeDomain === 'finance' ? <FinanceDataPanel onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
+      {activeDomain === 'finance' ? <FinanceDataPanel date={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
       {activeDomain === 'life' ? <LifeDataPanel onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
     </section>
   );
@@ -1751,7 +1824,7 @@ function DailyContext({
   return (
     <section className={styles.dailyContext}>
       <div className={styles.dailyContextLeft}>
-        <ObjectiveDataPanel onDateSelect={onDateSelect} />
+        <ObjectiveDataPanel selectedDate={date} onDateSelect={onDateSelect} />
       </div>
       <div className={styles.dailyContextRight}>
         <DailyDetailPanel date={date} weather={weather} diary={diary} analysis={analysis} timelineModel={timelineModel} loading={loading} />

@@ -1,0 +1,228 @@
+{
+  "date": "2026-06-23",
+  "generatedAt": "2026-06-24T04:49:14.070242+00:00",
+  "top_signals": [
+    {
+      "area": "跨板块",
+      "summary": "健康数据完全缺失、AI 用量同步延迟 2-3 天，叠加 38 个 Git 提交几乎全部来自自动数据管道，目标日的恢复/负荷/工作强度判断都需要降权。",
+      "evidence": [
+        "health.today 所有指标为 null，completeness 全 false",
+        "anthropic 数据为空，MiniMax/OpenAI 最近一次 fetch 为 2026-06-21",
+        "38 个 Git 提交中绝大多数为 [auto] 健康/读书/投资数据同步"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "财务",
+      "summary": "总资产下跌 8,408.2 CNH 中 87.6% 来自 FeeiCN 账户，亏损本质是 HKD 单股集中度风险（奥克斯电气 -27,608、小米 -53.2% 浮亏），不是市场普跌。",
+      "evidence": [
+        "FeeiCN totalAssetsDelta -7,364.3（占比 87.6%），FeeiCN2 仅 -1,043.9",
+        "FeeiCN2 HKD 汇总 unrealizedPl -27,900.7，FeeiCN HKD 汇总 unrealizedPl -43,062.0",
+        "现金占比 5.7%，权益占比 93%，集中度本就偏高"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "日记",
+      "summary": "目标日是典型的高负荷工作日叠加跨城出行：上午管理周会分享 AI for Security，下午去上海参加金发奖第二轮答辩，晚上处理中转站边际问题，但健康与 AI 用量数据无法验证其真实负荷。",
+      "evidence": [
+        "日记 6 段，覆盖管理周会、上海答辩、中转站运维",
+        "行车只有 1 段杭州本地行程，跨城高铁/上海移动未覆盖",
+        "天气指向东京 Kabukicho，与实际所在杭州/上海不一致"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "health_insights": [
+    {
+      "expert_view": "恢复与负荷分析",
+      "summary": "当前最大事实不是异常，而是 2026-06-23 健康数据未回填，所有指标均为 null，当日健康判断需要直接降权。",
+      "positioning": "在 7 日基线有效的前提下（HRV 均值 45.41、静息心率 69.67、睡眠均值 7.27 小时），目标日数据为 0，无法做相对位置判断。",
+      "evidence": [
+        "today.steps/distance/sleep/weight/hrv 全部为 null",
+        "completeness.has_steps/has_sleep/has_weight/has_hrv 均为 false",
+        "baseline_7d sample_size 仅为 3-4，说明近 7 日样本本身偏稀"
+      ],
+      "means": "数据切片/导出延迟，目标日无法形成恢复或负荷结论。",
+      "not_means": "不能解读为 6/23 当天完全没有步数、睡眠或心率数据。",
+      "uncertainty": "近 7 日样本只有 3-4 天有效，基线本身置信度也偏低；需要 6/23 上午补导出一版再做判断。",
+      "professional_suggestion": "**明日动作**：明天上午重导出 6/23 健康数据，先确认它是不是切片，再决定是否提高判断强度；同时留意近 7 日样本稀薄问题，争取让健康数据采集保持连续。"
+    }
+  ],
+  "reading_insights": [
+    {
+      "expert_view": "学习投入与阅读行为分析",
+      "summary": "目标日阅读秒数为 null，无法判断当日投入结构，但月度结构显示主题过度集中在社会文化（《碌碌有为》单本 43,559 秒）。",
+      "positioning": "本月已读 9 本、读完 3 本、阅读 19 天、笔记 12 条；连续性尚可，但输入主题显著偏单。",
+      "evidence": [
+        "today.read_seconds/read_minutes 为 null",
+        "compare_to_previous_ratio 0.91（口径与 null 冲突，暂不可信）",
+        "category_mix 中社会文化 43,559 秒、文学 16,540 秒，科学技术仅 496 秒"
+      ],
+      "means": "月度阅读结构偏向人文历史类，技术类输入明显不足。",
+      "not_means": "不能据此判断今天没读；也不能仅凭月度比例推断 6/23 的状态。",
+      "uncertainty": "目标日数据缺失，0.91 比例与 null 同时出现，需要核对阅读接口是否同步。",
+      "professional_suggestion": "**明日动作**：确认 6/23 阅读数据是否同步；若 6/24 仍未回填，则在月度总结里降权 6/23 单日，并安排明天在社会文化/科学技术之间做一次主题切换。"
+    }
+  ],
+  "finance_insights": [
+    {
+      "expert_view": "资产配置与风险暴露分析",
+      "summary": "这更像一次集中持仓风险的延续释放，而不是市场普跌；FeeiCN 账户承担了 87.6% 的下跌，HKD 单股是主要拖累。",
+      "positioning": "总资产 1,570,147.5 CNH，单日 -8,408.2（-0.53%），现金占比 5.7% 处于历史偏低区间，权益占比 93% 偏高。",
+      "evidence": [
+        "FeeiCN2 totalAssetsDelta -1,043.9，FeeiCN totalAssetsDelta -7,364.3（贡献 87.6%）",
+        "largest_losers 中奥克斯电气 HKD -27,608（-46.6%）、小米 -15,454（-53.2%）、Gitlab -3,232.4、纳指100ETF -5,228.6",
+        "largest_winners 中 VGT +20%、INTC +529.5%（低成本基数）、VOO +13.8%、ILMN +81.8%、NVDA +16%，美股科技依然正贡献"
+      ],
+      "means": "HKD 单股回撤仍是主要风险源；美股科技仓位仍提供正收益对冲。",
+      "not_means": "不能直接判断是 HKD 趋势恶化还是一次性波动；也不能据此做减仓决策。",
+      "uncertainty": "FeeiCN 账户 USD 汇总当日 -1,870.1 与 FeeiCN2 USD 汇总 -3,289.5 同时出现，而 HKD 汇总 todayPlVal=0，拖累主要由美股科技回调传导，需要进一步拆解。",
+      "professional_suggestion": "**明日动作**：明天只复盘 HKD 深度回撤仓位（奥克斯电气、小米）的入场逻辑和继续持有的依据，不扩展新仓位假设；同时核对 FeeiCN 与 FeeiCN2 之间 USD 汇总的当日 -1,870.1 与 -3,289.5 是不是由同一批美股科技下跌传导。"
+    }
+  ],
+  "ai_insights": [
+    {
+      "expert_view": "AI 生产力与工作流强度分析",
+      "summary": "当前最大事实不是 AI 用量下降，而是 Anthropic 全空、MiniMax/OpenAI 最近一次 fetch 停在 6/21，目标日工作强度无法量化。",
+      "positioning": "MiniMax 累计 13 天连续、累计 1.39B tokens，OpenAI 2 天连续、累计 89.27M tokens；近 7 日基线 MiniMax 67.06M、OpenAI 44.64M，但今日均缺失。",
+      "evidence": [
+        "anthropic today_tokens null 且 recent_days 为空",
+        "MiniMax fetched_at 2026-06-21，OpenAI fetched_at 2026-06-21，滞后 2 天",
+        "日记同时提到 AI for Security 分享与中转站运维，应该有可观测的 AI 工具痕迹"
+      ],
+      "means": "近 7 日确实存在高强度 AI 工作（MiniMax 单日曾达 103M tokens），但今日数据缺口导致无法证伪/证实工作强度。",
+      "not_means": "不能解读为今天没用 AI；也不能解读为今天 AI 任务多。",
+      "uncertainty": "Anthropic 长期为空，可能不是缺失而是该供应商没有接进来，需要确认。",
+      "professional_suggestion": "**明日动作**：先确认 Anthropic 是否真的未接入，再重新触发 MiniMax/OpenAI 的 6/22 与 6/23 用量同步；若 6/24 仍无新数据，则在 AI 判断里继续以“同步延迟”覆盖，不要外推到工作强度变化。"
+    }
+  ],
+  "life_log_insights": [
+    {
+      "expert_view": "生活记录与主观体验分析",
+      "summary": "日记呈现一个高密度工作 + 跨城出行的日子，重点不是情绪好坏，而是上下文切换频次高、傍晚开始处理中转站边际问题容易把疲劳推到夜深。",
+      "evidence": [
+        "上午管理周会分享 AI for Security / Security for AI，得到较好反响",
+        "下午赴上海参加金发奖第二轮答辩",
+        "晚上持续处理中转站问题，指出“用户量大起来就需要解决边际问题”"
+      ],
+      "means": "这是一个多上下文切换日，且夜晚还在承担产品/工程责任。",
+      "not_means": "不能直接判定今天身体疲劳或情绪不佳。",
+      "uncertainty": "日记没写回程时间和入睡时间，无法从日记侧验证恢复窗口。",
+      "professional_suggestion": "**明日动作**：今天跨城出行的回程时间如果在 22:00 之后，明早 9:00 前不开新任务，只做日历回复和健康导出；如果 22:00 前回到杭州，则按正常节奏推进中转站第二天的事项。"
+    }
+  ],
+  "environment_mobility_insights": [
+    {
+      "expert_view": "生活环境与出行节奏分析",
+      "summary": "行车只覆盖了上午一段杭州本地行程，下午去上海的高铁/上海本地移动缺失；天气 API 当前指向东京 Kabukicho，与实际所在杭州/上海不一致，只能作为背景。",
+      "evidence": [
+        "drive.events 3 条：09:14 精英托育附近上车、09:53 西湖区西溪路辅路下车，单段 38 分钟",
+        "weather.area.name=Kabukicho, region=Tokyo, country=Japan",
+        "weather.current.temp_c=19, humidity=88%, precip 0.0mm"
+      ],
+      "means": "上午有明确通勤/接送切片；天气不能解释今天的户外活动，因为城市配置错位。",
+      "not_means": "不能把当日天气当作杭州/上海天气解释健康或效率。",
+      "uncertainty": "下午到上海的高铁/上海移动未在行车数据中出现，可能由其他出行方式产生。",
+      "professional_suggestion": "**明日动作**：修正天气 API 的城市配置为杭州/上海（按当天实际所在地切换），并把下午到上海的高铁/上海移动补进 6/23 的行车数据。"
+    }
+  ],
+  "git_insights": [
+    {
+      "expert_view": "工程推进与知识沉淀分析",
+      "summary": "38 个 Git 提交几乎全部来自自动数据管道，看不到任何非自动化的代码或文本内容提交；今天的“工作”主要发生在仓库之外。",
+      "evidence": [
+        "commit_count=38，其中 30+ 个为 [auto] 健康数据按小时同步",
+        "其余为保存天气/行车数据、生成 6/22 三省吾身分析、读书划线/数据/投资数据/港股打新数据同步",
+        "日记提到中转站运维、答辩等关键工作，但仓库里没有对应文本/代码提交"
+      ],
+      "means": "今天的工程推进主要体现在数据管线运转，而非新增功能或文档沉淀。",
+      "not_means": "不能把 38 个 commit 直接等同于今天的产出质量。",
+      "uncertainty": "中转站的边际问题是否已经落到代码/PR/文档里，仅凭 commit 列表无法判断。",
+      "professional_suggestion": "**明日动作**：在中转站问题收敛后，把今天识别的边际问题写一条 100 字以内的复盘进仓库 docs/，把“工作”从数据管道外溢到可追溯的内容资产。"
+    }
+  ],
+  "cross_domain_insights": [
+    {
+      "summary": "日记是高负荷日（管理周会 + 上海答辩 + 夜间中转站），但健康数据完全缺失，无法验证恢复状态——健康判断必须降权到“无数据”。",
+      "evidence": [
+        "日记 6 段覆盖高密度工作",
+        "健康 6/23 全部 null"
+      ],
+      "uncertainty": "如果 6/24 早上补导出后显示 HRV 显著低于 45，则今天的高负荷假说可以升级为“恢复不足”；如果补不出，则只能继续按缺失处理。"
+    },
+    {
+      "summary": "AI 用量数据滞后 2-3 天，与日记里 AI for Security 分享、中转站运维等 AI 高强度场景对不上；这削弱了“今天工作强度高”这一推断的证据基础。",
+      "evidence": [
+        "Anthropic 全空，MiniMax/OpenAI 停在 6/21",
+        "日记同时包含 AI 分享与 AI 工具链讨论"
+      ],
+      "uncertainty": "如果 6/24 同步后 MiniMax 出现 >80M 的单日数据，则高强度判断成立；否则只能保持“待验证”。"
+    },
+    {
+      "summary": "行车只覆盖上午一段杭州本地行程，但日记记录了下午跨城到上海、晚间处理中转站，移动切片严重不完整；这意味着今天“移动相关”的所有解释都需要补数据。",
+      "evidence": [
+        "drive.event_count=3，单段 38 分钟",
+        "日记显示下午到上海答辩并入住洲际"
+      ],
+      "uncertainty": "高铁和上海本地移动未入库，不确定是 API 抓取失败还是数据源未覆盖。"
+    }
+  ],
+  "data_status": [
+    {
+      "area": "健康",
+      "status": "不可用",
+      "detail": "2026-06-23 所有指标为 null，completeness 全 false；需要重新导出"
+    },
+    {
+      "area": "阅读",
+      "status": "切片",
+      "detail": "目标日 read_seconds/read_minutes 为 null，但月度结构完整；0.91 比例口径与 null 冲突，需要核对"
+    },
+    {
+      "area": "财务",
+      "status": "完整",
+      "detail": "fetched_at 2026-06-24T06:00:05，目标日数据齐全"
+    },
+    {
+      "area": "AI使用",
+      "status": "延迟",
+      "detail": "Anthropic 全空；MiniMax/OpenAI 最近 fetch 为 2026-06-21，滞后 2 天"
+    },
+    {
+      "area": "天气",
+      "status": "不可用",
+      "detail": "API 指向东京 Kabukicho，与实际所在杭州/上海不一致"
+    },
+    {
+      "area": "行车",
+      "status": "切片",
+      "detail": "只覆盖上午杭州本地一段，下午到上海的高铁/上海移动未入库"
+    },
+    {
+      "area": "日记",
+      "status": "完整",
+      "detail": "2026-06-23.md 683 字、6 段、4 图、4 链接，已读取"
+    },
+    {
+      "area": "Git",
+      "status": "完整",
+      "detail": "38 个 commit 全部获取，时间窗 2026-06-23 00:00–24:00 +0800"
+    }
+  ],
+  "follow_ups": [
+    "**明日动作**：明天上午重导出 6/23 健康数据，先确认它是不是切片，再决定是否提高判断强度。",
+    "**明日动作**：明天只复盘 HKD 深度回撤仓位（奥克斯电气、小米）的入场逻辑和继续持有的依据，不扩展新仓位假设。",
+    "**明日动作**：确认 Anthropic / MiniMax / OpenAI 用量同步是否健康，特别是 Anthropic 一直为空。",
+    "**明日动作**：修正天气 API 的城市配置为杭州/上海（按当天实际所在地切换），并把 6/23 下午到上海的高铁/上海移动补进行车数据。",
+    "**明日动作**：如果今晚回杭在 22:00 之后，明早 9:00 前不开新任务，只做日历回复和健康导出。",
+    "**明日动作**：在中转站边际问题收敛后，把今天的复盘写一条 100 字以内的复盘进仓库 docs/，让“工作”从数据管道外溢到可追溯的内容资产。"
+  ],
+  "quality_self_check": {
+    "not_number_repetition": true,
+    "has_cross_domain": true,
+    "states_uncertainty": true,
+    "has_positioning": true,
+    "has_expert_judgment": true
+  }
+}

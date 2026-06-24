@@ -71,7 +71,7 @@ VENDOR_CONFIG: dict[str, dict[str, Any]] = {
         },
     },
     "openai": {
-        "url": "https://ai.feei.cn/api/v1/usage/stats",
+        "url": "https://ai.feei.cn/api/v1/admin/usage/stats",
         "auth_env": "OPENAI_ADMIN_KEY",
         "auth_header": "x-api-key: {}",
         "accept": JSON_ACCEPT,
@@ -439,6 +439,7 @@ def main() -> int:
     requested = set(args.vendor) if args.vendor else None
     refreshed: list[str] = []
     written_paths: list[Path] = []
+    failed: list[tuple[str, Exception]] = []
     for vendor in VENDOR_CONFIG:
         if requested and vendor not in requested:
             continue
@@ -446,14 +447,31 @@ def main() -> int:
         if not os.environ.get(cfg["auth_env"]):
             print(f"[skip] {vendor} 未设置 {cfg['auth_env']}", file=sys.stderr)
             continue
-        written_paths.append(refresh_vendor(vendor))
-        refreshed.append(vendor)
+        try:
+            written_paths.append(refresh_vendor(vendor))
+            refreshed.append(vendor)
+        except Exception as error:
+            failed.append((vendor, error))
+            print(f"[error] {vendor} 刷新失败: {error}", file=sys.stderr)
+            continue
 
     if not refreshed:
         print("[warn] 没有 vendor 被刷新", file=sys.stderr)
+        if failed:
+            print(
+                "[warn] failed vendors: "
+                + ", ".join(vendor for vendor, _ in failed),
+                file=sys.stderr,
+            )
         return 1
 
     print(f"[info] refreshed vendors: {', '.join(refreshed)}", file=sys.stderr)
+    if failed:
+        print(
+            "[warn] skipped failed vendors: "
+            + ", ".join(vendor for vendor, _ in failed),
+            file=sys.stderr,
+        )
     git_commit_and_push_target_repo(
         written_paths,
         repo_root=REPO_ROOT,

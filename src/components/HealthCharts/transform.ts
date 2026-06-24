@@ -358,7 +358,7 @@ export function filterByTimeRange(D: HealthData, days: number): HealthData {
   const ref = D.steps.length ? D.steps : D.rhr.length ? D.rhr : null;
   const latestDate = ref ? ref[ref.length - 1][0] : new Date().toISOString().slice(0, 10);
   const cutoff = new Date(latestDate);
-  cutoff.setDate(cutoff.getDate() - days);
+  cutoff.setDate(cutoff.getDate() - days + 1);
   const cs = cutoff.toISOString().slice(0, 10);
   const f = (arr: [string, number][]): [string, number][] => arr.filter(([d]) => d >= cs);
   return {

@@ -42,6 +42,10 @@ function xCat(c: CC, data: [string, number][], interval?: number) {
   };
 }
 
+function xAxisFromDates(c: CC, dates: string[], interval?: number) {
+  return xCat(c, dates.map((date) => [date, 0] as [string, number]), interval);
+}
+
 function formatMonthDayWeekday(value: string | number) {
   const raw = typeof value === 'number' ? new Date(value).toISOString().slice(0, 10) : value;
   if (!raw || raw.length < 10) return raw?.toString() ?? '';
@@ -101,6 +105,52 @@ function rolling7(data: [string, number][]): number[] {
     const w = data.slice(Math.max(0, i - 6), i + 1);
     return Math.round(w.reduce((s, [, v]) => s + v, 0) / w.length);
   });
+}
+
+function dateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function parseDate(date: string): Date {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function buildDateRange(start: string, end: string): string[] {
+  const result: string[] = [];
+  const cursor = parseDate(start);
+  const endDate = parseDate(end);
+  while (cursor <= endDate) {
+    result.push(dateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return result;
+}
+
+function collectHealthDates(data: HealthData): string[] {
+  return Object.keys(data)
+    .filter((key) => key !== 'lastUpdated')
+    .flatMap((key) => (data[key as keyof HealthData] as unknown[])
+      .map((entry) => Array.isArray(entry) && typeof entry[0] === 'string' ? entry[0] : null)
+      .filter((date): date is string => Boolean(date)),
+    )
+    .sort();
+}
+
+function getScopeAxisDates(scope: TimeScope, data: HealthData): string[] {
+  if (scope.mode === 'year') {
+    return buildDateRange(`${scope.year}-01-01`, `${scope.year}-12-31`);
+  }
+  if (scope.mode === 'recent') {
+    const end = dateKey(new Date());
+    const start = parseDate(end);
+    start.setDate(start.getDate() - RANGE_DAYS[scope.range] + 1);
+    return buildDateRange(dateKey(start), end);
+  }
+
+  const allDates = collectHealthDates(data);
+  if (!allDates.length) return [];
+  return buildDateRange(allDates[0], allDates.at(-1)!);
 }
 
 // Auto x-axis for sparse series (vo2, mindful, etc.) — adapts to multi-year data
@@ -308,48 +358,24 @@ function standOpt(isDark: boolean, D: HealthData, isMobile = false) {
 function sleepOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   const dates = D.sleep.map(([d]) => d);
-  const isDense = D.sleep.length > 35;
-  if (isDense) {
-    return {
-      ...base(isDark),
-      grid: chartGrid(16),
-      tooltip: {
-        trigger: 'axis',
-        formatter: (p: {seriesName: string; value: number; axisValue: string}[]) =>
-          `${p[0]?.axisValue ?? ''}<br/>${p.map((x) => `${x.seriesName}：${Number(x.value).toFixed(1)}h`).join('<br/>')}`,
-      },
-      legend: topLegend(c, ['总睡眠', '深睡', 'REM', '清醒']),
-      xAxis: xCat(c, D.sleep.map(([d]) => [d, 0] as [string, number])),
-      yAxis: yVal(c, {unit: 'h', max: 12, fmt: (v) => `${v}h`}),
-      series: [
-        {
-          name: '总睡眠', type: 'bar', barMaxWidth: 6,
-          data: D.sleep.map(([, total]) => ({value: total, itemStyle: {color: total >= 7 && total <= 9 ? '#22c55e' : total >= 6 ? '#f59e0b' : '#ef4444', borderRadius: [2, 2, 0, 0]}})),
-        },
-        {...smoothLine('深睡', D.sleep.map((x) => x[2]), '#16a34a'), connectNulls: true},
-        {...smoothLine('REM', D.sleep.map((x) => x[3]), '#db2777'), connectNulls: true},
-        {...smoothLine('清醒', D.sleep.map((x) => x[5]), '#fb923c'), connectNulls: true},
-      ],
-    };
-  }
   return {
     ...base(isDark),
     grid: chartGrid(16, 42),
     tooltip: {
       trigger: 'axis', axisPointer: {type: 'shadow'},
-      formatter: (p: {seriesName: string; value: number; axisValue: string}[]) => {
+      formatter: (p: {seriesName: string; value: number | null; axisValue: string}[]) => {
         const total = p.reduce((s, x) => s + (x.value || 0), 0);
-        return `${p[0]?.axisValue ?? ''}<br/>合计：${total.toFixed(1)}h<br/>${p.filter(x => x.value > 0).map(x => `${x.seriesName}：${x.value.toFixed(1)}h`).join('<br/>')}`;
+        return `${p[0]?.axisValue ?? ''}<br/>合计：${total.toFixed(1)}h<br/>${p.filter(x => Number(x.value) > 0).map(x => `${x.seriesName}：${Number(x.value).toFixed(1)}h`).join('<br/>')}`;
       },
     },
     legend: topLegend(c, ['深睡', 'REM', '浅睡', '清醒']),
-    xAxis: {type: 'value', axisLabel: {color: c.label, fontSize: 10, formatter: (v: number) => `${v}h`}, splitLine: {lineStyle: {color: c.split}}, max: 12},
-    yAxis: {type: 'category', data: dates, inverse: true, axisTick: {show: false}, axisLine: {lineStyle: {color: c.axis}}, axisLabel: {color: c.label, fontSize: 10, interval: 0, formatter: formatMonthDayWeekday}},
+    xAxis: xAxisFromDates(c, dates),
+    yAxis: yVal(c, {unit: 'h', max: 12, fmt: (v) => `${v}h`}),
     series: [
-      {name: '深睡', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[2]), itemStyle: {color: '#16a34a', borderRadius: [2, 0, 0, 2]}},
+      {name: '深睡', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[2]), itemStyle: {color: '#16a34a', borderRadius: [2, 2, 0, 0]}},
       {name: 'REM', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[3]), itemStyle: {color: '#db2777'}},
       {name: '浅睡', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[4]), itemStyle: {color: '#14b8a6'}},
-      {name: '清醒', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[5]), itemStyle: {color: '#fb923c', borderRadius: [0, 2, 2, 0]}},
+      {name: '清醒', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[5]), itemStyle: {color: '#fb923c'}},
     ],
   };
 }
@@ -388,7 +414,7 @@ function heartOpt(isDark: boolean, D: HealthData, isMobile = false) {
               data: D.hr_notifications.map(([date]) => {
                 const idx = dates.indexOf(date);
                 const val = (a as (number|null)[])[idx];
-                return idx >= 0 && val != null ? {name: '心率预警', coord: [idx, val], itemStyle: {color: '#ef4444'}, label: {show: false}} : null;
+                return idx >= 0 && val != null ? {name: '心率预警', coord: [date, val], itemStyle: {color: '#ef4444'}, label: {show: false}} : null;
               }).filter(Boolean),
             },
           },
@@ -1004,6 +1030,7 @@ function translateList(str: string, map: Record<string, string>) {
 function stateOfMindOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   const clsList = ['very_pleasant','pleasant','slightly_pleasant','neutral','slightly_unpleasant','unpleasant','very_unpleasant'];
+  const dates = [...new Set(D.state_of_mind.map(([date]) => date))].sort();
   return {
     backgroundColor: 'transparent',
     grid: chartGrid(16, 44, 28, 30),
@@ -1015,7 +1042,8 @@ function stateOfMindOpt(isDark: boolean, D: HealthData) {
       },
     },
     xAxis: {
-      type: 'time',
+      type: 'category',
+      data: dates,
       axisLabel: {color: c.label, fontSize: 10, formatter: formatMonthDayWeekday},
       axisLine: {lineStyle: {color: c.axis}}, splitLine: {lineStyle: {color: c.split}},
     },
@@ -1154,6 +1182,58 @@ function addWeekends(option: object, isDark: boolean): object {
     return {...opt, series: [ghostLine(areas, dates.length), ...series]};
   }
   return {...opt, series: [...series, ghostLine(areas, dates.length)]};
+}
+
+function addSelectedDateHighlight(option: object, selectedDate: string | undefined, isDark: boolean): object {
+  if (!selectedDate) return option;
+  const opt = option as Record<string, unknown>;
+  const series = opt.series as Record<string, unknown>[] | undefined;
+  if (!series?.length) return option;
+  const xAxisRaw = opt.xAxis as Record<string, unknown> | Record<string, unknown>[] | undefined;
+  const xObj = Array.isArray(xAxisRaw) ? xAxisRaw[0] : xAxisRaw;
+  const selectedColor = isDark ? 'rgba(100,210,255,0.18)' : 'rgba(10,132,255,0.13)';
+  const lineColor = isDark ? 'rgba(100,210,255,0.82)' : 'rgba(10,132,255,0.72)';
+  const markArea = (data: unknown[]) => ({
+    silent: true,
+    label: {show: false},
+    itemStyle: {color: selectedColor, borderColor: lineColor, borderWidth: 1},
+    data,
+  });
+  const ghost = (data: unknown[], pointCount = 0) => ({
+    type: 'line',
+    data: Array.from({length: pointCount}, () => 0),
+    markArea: markArea(data),
+    silent: true,
+    symbol: 'none',
+    lineStyle: {opacity: 0},
+    tooltip: {show: false},
+    xAxisIndex: 0,
+    yAxisIndex: 0,
+    z: 0,
+    animation: false,
+  });
+
+  if (opt.calendar) {
+    return option;
+  }
+
+  if (xObj?.type === 'time') {
+    const start = new Date(`${selectedDate}T00:00:00`).getTime();
+    const end = new Date(`${selectedDate}T23:59:59`).getTime();
+    return {...opt, series: [ghost([[{xAxis: start}, {xAxis: end}]]), ...series]};
+  }
+
+  if (xObj?.type === 'category' && Array.isArray(xObj.data)) {
+    const dates = xObj.data as string[];
+    const first = dates.findIndex((date) => String(date).slice(0, 10) === selectedDate);
+    if (first < 0) return option;
+    let last = first;
+    while (last + 1 < dates.length && String(dates[last + 1]).slice(0, 10) === selectedDate) last += 1;
+    const end = last > first ? last : Math.min(first + 1, dates.length - 1);
+    return {...opt, series: [ghost([[{xAxis: first}, {xAxis: end}]], dates.length), ...series]};
+  }
+
+  return option;
 }
 
 // ── today latest-point highlighting ──────────────────────────────────────────
@@ -1485,6 +1565,85 @@ function applyHealthChartStyle(option: object, isDark: boolean): object {
   };
 }
 
+function isDateString(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function remapIndexedSeriesData(data: unknown[], oldDates: string[], axisDates: string[]): unknown[] {
+  const oldIndex = new Map(oldDates.map((date, index) => [date, index]));
+  return axisDates.map((date) => {
+    const index = oldIndex.get(date);
+    return index === undefined ? null : data[index];
+  });
+}
+
+function embeddedDate(raw: unknown): string | null {
+  const value = raw && typeof raw === 'object' && 'value' in raw ? (raw as {value?: unknown}).value : raw;
+  return Array.isArray(value) && isDateString(value[0]) ? value[0] : null;
+}
+
+function remapEmbeddedDateSeriesData(data: unknown[], axisDates: string[]): unknown[] {
+  const grouped = new Map<string, unknown[]>();
+  for (const item of data) {
+    const date = embeddedDate(item);
+    if (!date) continue;
+    const items = grouped.get(date) ?? [];
+    items.push(item);
+    grouped.set(date, items);
+  }
+  return axisDates.flatMap((date) => grouped.get(date) ?? []);
+}
+
+function alignDateCategoryAxes(option: object, axisDates: string[]): object {
+  if (!axisDates.length) return option;
+  const opt = option as Record<string, unknown>;
+  const xAxes = normalizeAxisList(opt.xAxis);
+  if (!xAxes.length) return option;
+
+  let changed = false;
+  const nextAxes = xAxes.map((axis) => {
+    const data = axis.data;
+    if (axis.type !== 'category' || !Array.isArray(data) || !data.every(isDateString)) return axis;
+    const oldDates = data as string[];
+    if (oldDates.length === axisDates.length && oldDates.every((date, index) => date === axisDates[index])) return axis;
+    changed = true;
+    return {...axis, data: axisDates, __oldDates: oldDates};
+  });
+  if (!changed) return option;
+
+  const firstChangedAxis = nextAxes.find((axis) => Array.isArray(axis.__oldDates)) as (Record<string, unknown> & {__oldDates?: string[]}) | undefined;
+  const oldDates = firstChangedAxis?.__oldDates;
+  const cleanAxes = nextAxes.map(({__oldDates, ...axis}) => axis);
+  const series = Array.isArray(opt.series) && oldDates
+    ? opt.series.map((raw) => {
+        const item = asRecord(raw);
+        const data = item.data;
+        if (!Array.isArray(data)) return raw;
+        if (data.some((entry) => embeddedDate(entry))) return {...item, data: remapEmbeddedDateSeriesData(data, axisDates)};
+        if (data.length !== oldDates.length) return raw;
+        return {...item, data: remapIndexedSeriesData(data, oldDates, axisDates)};
+      })
+    : opt.series;
+
+  return {
+    ...opt,
+    xAxis: Array.isArray(opt.xAxis) ? cleanAxes : cleanAxes[0],
+    series,
+  };
+}
+
+function alignCalendarRange(option: object, axisDates: string[]): object {
+  if (axisDates.length < 2) return option;
+  const opt = option as Record<string, unknown>;
+  if (!opt.calendar) return option;
+  const calendars = Array.isArray(opt.calendar) ? opt.calendar : [opt.calendar];
+  const nextCalendars = calendars.map((raw) => {
+    const calendar = asRecord(raw);
+    return {...calendar, range: [axisDates[0], axisDates.at(-1)!]};
+  });
+  return {...opt, calendar: Array.isArray(opt.calendar) ? nextCalendars : nextCalendars[0]};
+}
+
 // ── layout ───────────────────────────────────────────────────────────────────
 
 function chartHeight(label: string, isMobile: boolean) {
@@ -1543,6 +1702,26 @@ const SECTIONS = [
 ];
 
 type OptionFn = (isDark: boolean, D: HealthData, isMobile?: boolean) => object;
+
+function slugifyChartLabel(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^\p{Letter}\p{Number}]+/gu, '-')
+    .replace(/^-|-$/g, '');
+}
+
+export function healthChartAnchorId(label: string): string {
+  return `health-chart-${slugifyChartLabel(label)}`;
+}
+
+export const HEALTH_CHART_NAV = SECTIONS.map((section) => ({
+  title: section.title,
+  charts: section.charts.map((chart) => ({
+    label: chart.label,
+    id: healthChartAnchorId(chart.label),
+  })),
+}));
 
 // ── year / data context ───────────────────────────────────────────────────────
 
@@ -1688,11 +1867,13 @@ function extractDateFromZrenderClick(chart: ChartLike, event: unknown): string |
 function HealthProviderInner({
   children,
   onDateSelect,
+  selectedDate,
   scope: controlledScope,
   setScope: setControlledScope,
 }: {
   children: React.ReactNode;
   onDateSelect?: (date: string) => void;
+  selectedDate?: string;
   scope?: TimeScope;
   setScope?: (scope: TimeScope) => void;
 }) {
@@ -1778,8 +1959,9 @@ function HealthProviderInner({
     const merged = mergeDataByYear(allData, currentYear, currentMonths);
     return filterByTimeRange(merged, RANGE_DAYS[scope.range]);
   }, [scope, allData]);
+  const axisDates = useMemo(() => getScopeAxisDates(scope, data), [scope, data]);
 
-  return <YearCtx.Provider value={{scope, setScope, data, loading, availableMonths: MONTH_MAP, onDateSelect}}>{children}</YearCtx.Provider>;
+  return <YearCtx.Provider value={{scope, setScope, data, axisDates, loading, availableMonths: MONTH_MAP, onDateSelect, selectedDate}}>{children}</YearCtx.Provider>;
 }
 
 // ── inner components ──────────────────────────────────────────────────────────
@@ -2056,7 +2238,7 @@ function StatsInner() {
 }
 
 function SectionInner({name}: {name: string}) {
-  const {data, loading, scope, availableMonths, onDateSelect} = useContext(YearCtx);
+  const {data, axisDates, loading, scope, availableMonths, onDateSelect, selectedDate} = useContext(YearCtx);
   const {colorMode} = useColorMode();
   const isDark = colorMode === 'dark';
   const theme = isDark ? 'dark' : undefined;
@@ -2093,7 +2275,8 @@ function SectionInner({name}: {name: string}) {
   return (
     <div className={styles.wrap}>
       {sec.charts.map(({label, opt}: {label: string; opt: OptionFn}) => {
-        const option = applyHealthChartStyle(addWeekends(addTodayLatestHighlight(opt(isDark, displayData, isMobile), isDark), isDark), isDark) as Record<string, unknown>;
+        const rawOption = alignCalendarRange(alignDateCategoryAxes(opt(isDark, displayData, isMobile), axisDates), axisDates);
+        const option = applyHealthChartStyle(addSelectedDateHighlight(addWeekends(addTodayLatestHighlight(rawOption, isDark), isDark), selectedDate, isDark), isDark) as Record<string, unknown>;
         const chartEvents = onDateSelect
           ? {
               click: (params: unknown) => {
@@ -2104,7 +2287,7 @@ function SectionInner({name}: {name: string}) {
           : undefined;
 
         return (
-          <div key={label} className={styles.section}>
+          <div key={label} id={healthChartAnchorId(label)} className={styles.section}>
             <div className={styles.sectionTitle}>{label}</div>
             <ReactECharts
               option={option}
@@ -2126,18 +2309,20 @@ function SectionInner({name}: {name: string}) {
 export function HealthProvider({
   children,
   onDateSelect,
+  selectedDate,
   scope,
   setScope,
 }: {
   children: React.ReactNode;
   onDateSelect?: (date: string) => void;
+  selectedDate?: string;
   scope?: TimeScope;
   setScope?: (scope: TimeScope) => void;
 }) {
   return (
     <BrowserOnly fallback={<>{children}</>}>
       {() => (
-        <HealthProviderInner onDateSelect={onDateSelect} scope={scope} setScope={setScope}>
+        <HealthProviderInner onDateSelect={onDateSelect} selectedDate={selectedDate} scope={scope} setScope={setScope}>
           {children}
         </HealthProviderInner>
       )}

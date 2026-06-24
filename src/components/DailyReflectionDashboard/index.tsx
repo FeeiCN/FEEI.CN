@@ -2,7 +2,7 @@ import React, {useEffect, useMemo, useRef, useState} from 'react';
 import AccountAssetsDashboard from '@site/src/components/AccountAssetsDashboard';
 import AlipayInvestDashboard from '@site/src/components/AlipayInvestDashboard';
 import FinanceAssetsTrend from '@site/src/components/FinanceAssetsTrend';
-import {HealthProvider, HealthSection, type TimeScope as HealthTimeScope} from '@site/src/components/HealthCharts';
+import {HEALTH_CHART_NAV, HealthProvider, HealthSection, type TimeScope as HealthTimeScope} from '@site/src/components/HealthCharts';
 import HKIPOCharts from '@site/src/components/HKIPOCharts';
 import LLMUsageDashboard from '@site/src/components/LLMUsageDashboard';
 import ReadingDashboard from '@site/src/components/ReadingDashboard';
@@ -109,6 +109,23 @@ type DailyHealthData = {
 
 type DriveLog = Record<string, {action?: string; address?: string}>;
 
+type LLMSummaryPayload = {
+  fetchedAt?: string;
+  daily_token_usage?: Record<string, number>;
+};
+
+type ReadingYearPayload = {
+  year?: string;
+  daily?: Record<string, {seconds?: number; books?: string[]}>;
+};
+
+type ObjectivePoint = {
+  date: string;
+  value: number;
+  secondary?: number;
+  tertiary?: number;
+};
+
 type WeatherSummary = {
   description: string;
   temperature: string;
@@ -186,6 +203,12 @@ type ObjectiveTimeScope =
   | {mode: 'all'};
 
 const OBJECTIVE_RANGE_LABELS: Record<string, string> = {'7d': '7天', '30d': '30天', '90d': '90天', '1y': '近1年'};
+const RANGE_DAYS: Record<'7d' | '30d' | '90d' | '1y', number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
+const LLM_VENDOR_CONFIGS = [
+  {id: 'minimax', label: 'MiniMax', path: '/data/llm-usage/minimax/usage_summary.json'},
+  {id: 'openai', label: 'OpenAI', path: '/data/llm-usage/openai/usage_summary.json'},
+  {id: 'anthropic', label: 'Anthropic', path: '/data/llm-usage/anthropic/usage_summary.json'},
+];
 
 const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
@@ -266,6 +289,150 @@ function diffDays(start: string, end: string): number {
 function formatPercent(value: number): string {
   if (!Number.isFinite(value)) return '0%';
   return `${formatNumber(value, 1)}%`;
+}
+
+function getYearProgress(date: string): number {
+  const current = parseDateKey(date);
+  const start = new Date(current.getFullYear(), 0, 1);
+  const end = new Date(current.getFullYear(), 11, 31);
+  const elapsed = diffDays(formatDateKey(start), date) + 1;
+  const total = diffDays(formatDateKey(start), formatDateKey(end)) + 1;
+  return (elapsed / total) * 100;
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function dateRange(start: string, end: string): string[] {
+  const output: string[] = [];
+  for (let cursor = parseDateKey(start); formatDateKey(cursor) <= end; cursor = addDays(cursor, 1)) {
+    output.push(formatDateKey(cursor));
+  }
+  return output;
+}
+
+function getScopeDates(scope: ObjectiveTimeScope, availableDates: string[] = []): string[] {
+  const today = formatDateKey(new Date());
+  if (scope.mode === 'recent') {
+    const days = RANGE_DAYS[scope.range];
+    return dateRange(formatDateKey(addDays(parseDateKey(today), -(days - 1))), today);
+  }
+  if (scope.mode === 'year') {
+    return dateRange(`${scope.year}-01-01`, `${scope.year}-12-31`);
+  }
+  const sorted = availableDates.filter(Boolean).sort();
+  if (sorted.length) return sorted;
+  return dateRange(formatDateKey(addDays(parseDateKey(today), -29)), today);
+}
+
+function scopeLabel(scope: ObjectiveTimeScope): string {
+  if (scope.mode === 'recent') return OBJECTIVE_RANGE_LABELS[scope.range];
+  if (scope.mode === 'year') return `${scope.year}年`;
+  return '全部历史';
+}
+
+function formatCompactNumber(value: number, maximumFractionDigits = 1): string {
+  if (!Number.isFinite(value)) return '0';
+  if (Math.abs(value) >= 1_000_000_000) return `${formatNumber(value / 1_000_000_000, maximumFractionDigits)}B`;
+  if (Math.abs(value) >= 1_000_000) return `${formatNumber(value / 1_000_000, maximumFractionDigits)}M`;
+  if (Math.abs(value) >= 1_000) return `${formatNumber(value / 1_000, maximumFractionDigits)}K`;
+  return formatNumber(value, maximumFractionDigits);
+}
+
+function formatHoursFromSeconds(seconds: number): string {
+  if (!seconds) return '0h';
+  const hours = seconds / 3600;
+  if (hours < 1) return `${Math.round(seconds / 60)}m`;
+  return `${formatNumber(hours, hours >= 10 ? 0 : 1)}h`;
+}
+
+function extractFirstNumber(text: string, patterns: RegExp[]): number | null {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      const value = Number(match[1].replace(/,/g, ''));
+      if (Number.isFinite(value)) return value;
+    }
+  }
+  return null;
+}
+
+function parseChineseCount(value: string | undefined): number | null {
+  if (!value) return null;
+  const numeric = Number(value.replace(/,/g, ''));
+  if (Number.isFinite(numeric)) return numeric;
+  const map: Record<string, number> = {
+    一: 1,
+    二: 2,
+    两: 2,
+    三: 3,
+    四: 4,
+    五: 5,
+    六: 6,
+    七: 7,
+    八: 8,
+    九: 9,
+    十: 10,
+  };
+  return map[value] ?? null;
+}
+
+function extractFirstCount(text: string, patterns: RegExp[]): number | null {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    const value = parseChineseCount(match?.[1]);
+    if (value !== null) return value;
+  }
+  return null;
+}
+
+function parseGitCounts(analysis: DailyAnalysis | null): {total: number; auto: number; manual: number} {
+  const text = [
+    ...(analysis?.git_insights || []).flatMap((item) => [
+      item.summary,
+      item.positioning,
+      ...(item.evidence || []),
+      item.professional_suggestion,
+    ]),
+    ...(analysis?.data_status || []).filter((item) => item.area === 'Git').map((item) => item.detail),
+  ].filter(Boolean).join(' ');
+
+  const total = extractFirstNumber(text, [
+    /commit_count\s*=\s*(\d+)/i,
+    /(\d+)\s*个\s*commit/i,
+    /(\d+)\s*次\s*commit/i,
+    /目标日共\s*(\d+)/,
+  ]) || 0;
+  const auto = extractFirstNumber(text, [
+    /自动化\s*commit\s*占比\s*≈?\s*(\d+)\s*\/\s*(\d+)/,
+    /其中\s*(\d+)\+?\s*个为\s*\[auto\]/i,
+    /\[auto\][^，。；;]*(?:超过|约)\s*(\d+)/i,
+    /(\d+)\s*条\s*\[auto\]/i,
+  ]);
+  const manual = extractFirstCount(text, [
+    /剩余\s*(\d+)[-–]\d+\s*次手动/,
+    /剩余\s*(\d+)\s*次手动/,
+    /真正的人工推进只有[^。；;]*?(\d+|一|二|两|三|四|五|六|七|八|九|十)\s*条/,
+    /人工\s*commit[^。；;]*?(\d+|一|二|两|三|四|五|六|七|八|九|十)\s*条/,
+  ]);
+  const inferredAuto = auto ?? (manual !== null && total ? Math.max(0, total - manual) : 0);
+  const inferredManual = manual ?? (total ? Math.max(0, total - inferredAuto) : 0);
+  return {total, auto: inferredAuto, manual: inferredManual};
+}
+
+function getAnalysisCompleteness(analysis: DailyAnalysis | null): number {
+  if (!analysis) return 0;
+  return [
+    analysis.health_insights?.length,
+    analysis.reading_insights?.length,
+    analysis.finance_insights?.length,
+    analysis.ai_insights?.length,
+    analysis.life_log_insights?.length,
+    analysis.git_insights?.length,
+  ].filter((value) => Number(value || 0) > 0).length;
 }
 
 function getWeekdayLabel(date: string): string {
@@ -393,6 +560,14 @@ function getWeatherSummary(weather: unknown): WeatherSummary {
     precip: precip ? `雨量 ${precip} mm` : '',
     area: area ? String(area) : '未知地点',
   };
+}
+
+function getWeatherKind(description: string): 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'foggy' {
+  if (/雪|冰雹|雪粒/.test(description)) return 'snowy';
+  if (/雨|阵雨|雷暴/.test(description)) return 'rainy';
+  if (/雾/.test(description)) return 'foggy';
+  if (/阴|云/.test(description)) return 'cloudy';
+  return 'sunny';
 }
 
 function formatNumber(value: unknown, maximumFractionDigits = 0): string {
@@ -534,6 +709,24 @@ function normalizeImageSrc(src: string): string {
   return `/data/daily/assets/${src.replace(/^\.?\//, '')}`;
 }
 
+function DiaryImageView({image}: {image: DiaryImage}): React.ReactNode {
+  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+
+  return (
+    <span className={`${styles.diaryImageFrame} ${status === 'loaded' ? styles.diaryImageFrameLoaded : ''} ${status === 'error' ? styles.diaryImageFrameError : ''}`}>
+      {status === 'loading' ? <span className={styles.diaryImageSkeleton} aria-hidden="true" /> : null}
+      {status === 'error' ? <span className={styles.diaryImageError}>图片加载失败</span> : null}
+      <img
+        src={normalizeImageSrc(image.src)}
+        alt={image.alt}
+        loading="lazy"
+        onLoad={() => setStatus('loaded')}
+        onError={() => setStatus('error')}
+      />
+    </span>
+  );
+}
+
 type DiaryImage = {
   src: string;
   alt: string;
@@ -543,7 +736,7 @@ function renderDiaryImages(images: DiaryImage[], key: string): React.ReactNode {
   return (
     <div key={key} className={`${styles.diaryImages} ${images.length === 1 ? styles.diaryImagesSingle : styles.diaryImagesGrid}`}>
       {images.map((image) => (
-        <img key={image.src} src={normalizeImageSrc(image.src)} alt={image.alt} loading="lazy" />
+        <DiaryImageView key={image.src} image={image} />
       ))}
     </div>
   );
@@ -1470,15 +1663,6 @@ function DailyAnalysisReport({analysis}: {analysis: DailyAnalysis | null}): Reac
   );
 }
 
-function PanelTitle({title, description}: {title: string; description: string}): React.ReactNode {
-  return (
-    <div>
-      <span>{title}</span>
-      <p>{description}</p>
-    </div>
-  );
-}
-
 function DataDomainTabs({
   active,
   onChange,
@@ -1494,19 +1678,22 @@ function DataDomainTabs({
   ];
 
   return (
-    <div className={styles.dataDomainTabs} role="tablist" aria-label="客观数据分类">
-      {domains.map((domain) => (
-        <button
-          key={domain.key}
-          type="button"
-          role="tab"
-          aria-selected={active === domain.key}
-          className={active === domain.key ? styles.dataDomainTabActive : ''}
-          onClick={() => onChange(domain.key)}
-        >
-          {domain.label}
-        </button>
-      ))}
+    <div className={styles.filterTier}>
+      <span className={styles.filterTierLabel}>领域</span>
+      <div className={styles.dataDomainTabs} role="tablist" aria-label="客观数据分类">
+        {domains.map((domain) => (
+          <button
+            key={domain.key}
+            type="button"
+            role="tab"
+            aria-selected={active === domain.key}
+            className={active === domain.key ? styles.dataDomainTabActive : ''}
+            onClick={() => onChange(domain.key)}
+          >
+            {domain.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1573,30 +1760,243 @@ function FinanceTabs({
   );
 }
 
+function HealthChartSubtabs(): React.ReactNode {
+  const handleClick = (id: string) => {
+    const target = document.getElementById(id);
+    const scroller = target?.closest(`.${styles.healthChartsPanel}`);
+    if (!target || !(scroller instanceof HTMLElement)) return;
+    scroller.scrollTo({
+      top: target.offsetTop - scroller.offsetTop - 8,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <nav className={styles.healthChartSubtabs} aria-label="健康图表跳转">
+      {HEALTH_CHART_NAV.flatMap((section) => section.charts).map((chart) => (
+        <button key={chart.id} type="button" onClick={() => handleClick(chart.id)}>
+          {chart.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function DomainSubtabs({items}: {items: Array<{id: string; label: string}>}): React.ReactNode {
+  const handleClick = (id: string) => {
+    const target = document.getElementById(id);
+    const scroller = target?.closest(`.${styles.healthChartsPanel}`);
+    if (!target || !(scroller instanceof HTMLElement)) return;
+    scroller.scrollTo({
+      top: target.offsetTop - scroller.offsetTop - 8,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <nav className={styles.healthChartSubtabs} aria-label="图表跳转">
+      {items.map((item) => (
+        <button key={item.id} type="button" onClick={() => handleClick(item.id)}>
+          {item.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function ObjectiveStatGrid({items}: {items: Array<{value: React.ReactNode; label: string; tone?: 'accent' | 'green' | 'orange'}>}): React.ReactNode {
+  return (
+    <div className={styles.objectiveStatGrid}>
+      {items.map((item) => (
+        <div key={item.label} className={`${styles.objectiveStatCard} ${item.tone ? styles[`objectiveStatCard_${item.tone}`] : ''}`}>
+          <strong>{item.value}</strong>
+          <span>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ObjectiveBarLineChart({
+  points,
+  valueLabel,
+  secondaryLabel,
+  tertiaryLabel,
+  formatValue = (value) => formatCompactNumber(value, 0),
+  selectedDate,
+  onDateSelect,
+}: {
+  points: ObjectivePoint[];
+  valueLabel: string;
+  secondaryLabel?: string;
+  tertiaryLabel?: string;
+  formatValue?: (value: number) => string;
+  selectedDate?: string;
+  onDateSelect: (date: string) => void;
+}): React.ReactNode {
+  const chartHeight = 238;
+  const labelHeight = 30;
+  const plotHeight = chartHeight - labelHeight - 16;
+  const width = Math.max(520, points.length * 24);
+  const gap = points.length > 120 ? 3 : 7;
+  const barWidth = Math.max(3, Math.min(18, (width - gap * (points.length + 1)) / Math.max(1, points.length)));
+  const groupedBarWidth = tertiaryLabel ? Math.max(2, (barWidth - 2) / 3) : barWidth;
+  const showSecondaryLine = Boolean(secondaryLabel && !tertiaryLabel);
+  const maxValue = Math.max(1, ...points.flatMap((point) => [point.value, tertiaryLabel ? point.tertiary || 0 : 0, !showSecondaryLine ? point.secondary || 0 : 0]));
+  const maxSecondary = Math.max(1, ...points.map((point) => point.secondary || 0));
+  const yForValue = (value: number) => plotHeight - (Math.max(0, value) / maxValue) * plotHeight;
+  const yForSecondary = (value: number) => plotHeight - (Math.max(0, value) / maxSecondary) * plotHeight;
+  const linePoints = points
+    .map((point, index) => {
+      const x = gap + index * (barWidth + gap) + barWidth / 2;
+      return `${x},${yForSecondary(point.secondary || 0)}`;
+    })
+    .join(' ');
+  const selectedIndex = selectedDate ? points.findIndex((point) => point.date === selectedDate) : -1;
+  const selectedX = selectedIndex >= 0 ? gap + selectedIndex * (barWidth + gap) : null;
+
+  if (!points.length) {
+    return <div className={styles.financeEmptyPanel}>当前时间范围暂无数据</div>;
+  }
+
+  return (
+    <div className={styles.objectiveChartScroll}>
+      <svg className={styles.objectiveChart} viewBox={`0 0 ${width} ${chartHeight}`} style={{width, height: chartHeight}} role="img">
+        {selectedX !== null ? (
+          <g className={styles.objectiveSelectedDate}>
+            <rect x={Math.max(0, selectedX - gap / 2)} y={0} width={barWidth + gap} height={plotHeight} rx={5} />
+            <line x1={selectedX + barWidth / 2} x2={selectedX + barWidth / 2} y1={0} y2={plotHeight + 18} />
+            <text x={selectedX + barWidth / 2} y={plotHeight + 28} textAnchor="middle">
+              {selectedDate?.slice(5)}
+            </text>
+          </g>
+        ) : null}
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
+          <g key={ratio}>
+            <line x1={0} x2={width} y1={ratio * plotHeight} y2={ratio * plotHeight} className={styles.objectiveGridLine} />
+            <text x={0} y={Math.max(10, ratio * plotHeight - 3)} className={styles.objectiveAxisLabel}>
+              {formatValue(maxValue * (1 - ratio))}
+            </text>
+          </g>
+        ))}
+        {points.map((point, index) => {
+          const x = gap + index * (barWidth + gap);
+          const barHeight = Math.max(point.value ? 1 : 0, (point.value / maxValue) * plotHeight);
+          const secondaryHeight = Math.max(point.secondary ? 1 : 0, ((point.secondary || 0) / maxValue) * plotHeight);
+          const tertiaryHeight = Math.max(point.tertiary ? 1 : 0, ((point.tertiary || 0) / maxValue) * plotHeight);
+          const showLabel = points.length <= 35 || index % Math.ceil(points.length / 18) === 0;
+          return (
+            <g key={point.date} className={styles.objectiveChartPoint} onClick={() => onDateSelect(point.date)}>
+              <title>
+                {[`${point.date}`, `${valueLabel}: ${formatValue(point.value)}`, secondaryLabel && `${secondaryLabel}: ${formatValue(point.secondary || 0)}`, tertiaryLabel && `${tertiaryLabel}: ${formatValue(point.tertiary || 0)}`].filter(Boolean).join(' · ')}
+              </title>
+              <rect x={Math.max(0, x - gap / 2)} y={0} width={barWidth + gap} height={plotHeight + labelHeight} rx={5} className={styles.objectiveHoverBand} />
+              {tertiaryLabel ? (
+                <rect x={x + groupedBarWidth * 2 + 2} y={plotHeight - tertiaryHeight} width={groupedBarWidth} height={tertiaryHeight} rx={2} className={styles.objectiveBarTertiary} />
+              ) : null}
+              {secondaryLabel && !showSecondaryLine ? (
+                <rect x={x + (tertiaryLabel ? groupedBarWidth + 1 : 0)} y={plotHeight - secondaryHeight} width={groupedBarWidth} height={secondaryHeight} rx={2} className={styles.objectiveBarSecondary} />
+              ) : null}
+              <rect x={x} y={plotHeight - barHeight} width={groupedBarWidth} height={barHeight} rx={2} className={styles.objectiveBarPrimary} />
+              <text x={x + barWidth / 2} y={plotHeight + 14} textAnchor="middle" className={styles.objectiveXAxisLabel}>
+                {showLabel ? point.date.slice(5) : ''}
+              </text>
+            </g>
+          );
+        })}
+        {showSecondaryLine ? (
+          <>
+            <polyline points={linePoints} className={styles.objectiveLine} />
+            {points.map((point, index) => {
+              const x = gap + index * (barWidth + gap) + barWidth / 2;
+              return <circle key={`${point.date}-line`} cx={x} cy={yForSecondary(point.secondary || 0)} r={2.4} className={styles.objectiveLineDot} />;
+            })}
+          </>
+        ) : null}
+      </svg>
+    </div>
+  );
+}
+
+function ObjectiveChartCard({
+  id,
+  title,
+  meta,
+  children,
+  legend,
+}: {
+  id: string;
+  title: string;
+  meta?: string;
+  children: React.ReactNode;
+  legend?: Array<{label: string; className: string}>;
+}): React.ReactNode {
+  return (
+    <section id={id} className={styles.objectiveChartCard}>
+      <div className={styles.objectiveChartHead}>
+        <div>
+          <h3>{title}</h3>
+          {meta ? <span>{meta}</span> : null}
+        </div>
+        {legend?.length ? (
+          <div className={styles.objectiveLegend}>
+            {legend.map((item) => (
+              <span key={item.label}>
+                <i className={item.className} />
+                {item.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 function DailyBasicInfo({date, weather}: {date: string; weather: unknown}): React.ReactNode {
   if (!date) return null;
   const weatherSummary = getWeatherSummary(weather);
-  const weatherDetails = [
-    weatherSummary.feelsLike,
-    weatherSummary.humidity,
-    weatherSummary.wind,
-    weatherSummary.precip,
-  ].filter(Boolean);
+  const yearProgress = getYearProgress(date);
+  const weatherKind = getWeatherKind(weatherSummary.description);
+  const weatherMetrics = [
+    ['体感', weatherSummary.feelsLike.replace(/^体感\s*/, '')],
+    ['湿度', weatherSummary.humidity.replace(/^湿度\s*/, '')],
+    ['风速', weatherSummary.wind.replace(/^最大风速\s*/, '')],
+    ['降水', weatherSummary.precip.replace(/^降水\s*/, '')],
+  ].filter(([, value]) => Boolean(value));
 
   return (
     <section className={styles.dailyBasicInfo}>
-      <div>
-        <span>{date}</span>
+      <div className={styles.dailyDateBlock}>
         <strong>{formatChineseDate(date)}</strong>
+        <div className={styles.dailyBasicMeta}>
+          <span>{date}</span>
+          <span>{getWeekdayLabel(date)}</span>
+          <span>{getHolidayLabel(date)}</span>
+        </div>
+        <div className={styles.dailyYearProgress}>
+          <span>今年已经过去 {formatPercent(yearProgress)}</span>
+          <i><b style={{width: `${yearProgress}%`}} /></i>
+        </div>
       </div>
-      <div className={styles.dailyBasicMeta}>
-        <span>{getWeekdayLabel(date)}</span>
-        <span>{getHolidayLabel(date)}</span>
-      </div>
-      <div className={styles.dailyWeather}>
-        <strong>{weatherSummary.area} · {weatherSummary.description}</strong>
-        <span>{weatherSummary.temperature}</span>
-        {weatherDetails.length ? <small>{weatherDetails.join(' · ')}</small> : null}
+      <div className={`${styles.dailyWeather} ${styles[`dailyWeather_${weatherKind}`]}`}>
+        <div className={styles.weatherIcon} aria-hidden="true">
+          <span />
+          <i />
+        </div>
+        <div className={styles.weatherMain}>
+          <strong>{weatherSummary.area} · {weatherSummary.description}</strong>
+          <span>{weatherSummary.temperature}</span>
+        </div>
+        <div className={styles.weatherMetrics}>
+          {weatherMetrics.map(([label, value]) => (
+            <small key={label}>
+              <em>{label}</em>
+              <b>{value}</b>
+            </small>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -1613,77 +2013,83 @@ function ObjectiveTimeControls({
 
   return (
     <div className={styles.objectiveTimeControls} aria-label="客观数据时间范围">
-      <div className={styles.objectiveTimeBar}>
-        {(['recent', 'year', 'all'] as const).map((mode) => (
-          <button
-            key={mode}
-            type="button"
-            className={scope.mode === mode ? styles.objectiveTimeActive : ''}
-            onClick={() => {
-              if (mode === 'recent') onChange({mode, range: scope.mode === 'recent' ? scope.range : '30d'});
-              if (mode === 'year') onChange({mode, year: scope.mode === 'year' ? scope.year : new Date().getFullYear()});
-              if (mode === 'all') onChange({mode});
-            }}
-          >
-            {mode === 'recent' ? '近况' : mode === 'year' ? '年度' : '历史'}
-          </button>
-        ))}
+      <div className={styles.filterTier}>
+        <span className={styles.filterTierLabel}>时间</span>
+        <div className={styles.objectiveTimeBar}>
+          {(['recent', 'year', 'all'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              className={scope.mode === mode ? styles.objectiveTimeActive : ''}
+              onClick={() => {
+                if (mode === 'recent') onChange({mode, range: scope.mode === 'recent' ? scope.range : '30d'});
+                if (mode === 'year') onChange({mode, year: scope.mode === 'year' ? scope.year : new Date().getFullYear()});
+                if (mode === 'all') onChange({mode});
+              }}
+            >
+              {mode === 'recent' ? '近况' : mode === 'year' ? '年度' : '历史'}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className={`${styles.objectiveTimeBar} ${styles.objectiveTimeOptions}`}>
-        {scope.mode === 'recent' && (Object.keys(OBJECTIVE_RANGE_LABELS) as Array<'7d' | '30d' | '90d' | '1y'>).map((range) => (
-          <button
-            key={range}
-            type="button"
-            className={scope.range === range ? styles.objectiveTimeActive : ''}
-            onClick={() => onChange({mode: 'recent', range})}
-          >
-            {OBJECTIVE_RANGE_LABELS[range]}
-          </button>
-        ))}
-        {scope.mode === 'year' && years.map((year) => (
-          <button
-            key={year}
-            type="button"
-            className={scope.year === year ? styles.objectiveTimeActive : ''}
-            onClick={() => onChange({mode: 'year', year})}
-          >
-            {year}
-          </button>
-        ))}
-        {scope.mode === 'all' ? (
-          <button type="button" className={styles.objectiveTimeActive} onClick={() => onChange({mode: 'all'})}>
-            全部历史
-          </button>
-        ) : null}
+      <div className={styles.filterTier}>
+        <span className={styles.filterTierLabel}>范围</span>
+        <div className={`${styles.objectiveTimeBar} ${styles.objectiveTimeOptions}`}>
+          {scope.mode === 'recent' && (Object.keys(OBJECTIVE_RANGE_LABELS) as Array<'7d' | '30d' | '90d' | '1y'>).map((range) => (
+            <button
+              key={range}
+              type="button"
+              className={scope.range === range ? styles.objectiveTimeActive : ''}
+              onClick={() => onChange({mode: 'recent', range})}
+            >
+              {OBJECTIVE_RANGE_LABELS[range]}
+            </button>
+          ))}
+          {scope.mode === 'year' && years.map((year) => (
+            <button
+              key={year}
+              type="button"
+              className={scope.year === year ? styles.objectiveTimeActive : ''}
+              onClick={() => onChange({mode: 'year', year})}
+            >
+              {year}
+            </button>
+          ))}
+          {scope.mode === 'all' ? (
+            <button type="button" className={styles.objectiveTimeActive} onClick={() => onChange({mode: 'all'})}>
+              全部历史
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );
 }
 
 function HealthChartsPanel({
+  selectedDate,
   onDateSelect,
   timeScope,
   setTimeScope,
 }: {
+  selectedDate: string;
   onDateSelect: (date: string) => void;
   timeScope: ObjectiveTimeScope;
   setTimeScope: (scope: ObjectiveTimeScope) => void;
 }): React.ReactNode {
-  const sections = ['体重', '活动', '运动记录', '睡眠', '心血管', '用药', '步态质量', '环境 & 习惯', '心理状态'];
+  const sections = HEALTH_CHART_NAV.map((section) => section.title);
   return (
     <>
       <HealthProvider
         onDateSelect={onDateSelect}
+        selectedDate={selectedDate}
         scope={timeScope as HealthTimeScope}
         setScope={(nextScope) => setTimeScope(nextScope as ObjectiveTimeScope)}
       >
-        <div className={styles.healthChartsPanelHead}>
-          <PanelTitle title="健康数据" description="来自健康数据页的完整图表。" />
-        </div>
+        <HealthChartSubtabs />
         <div className={styles.healthChartsGrid}>
           {sections.map((section) => (
             <section key={section} className={styles.healthChartSection}>
-              <h3>{section}</h3>
               <HealthSection name={section} />
             </section>
           ))}
@@ -1693,14 +2099,165 @@ function HealthChartsPanel({
   );
 }
 
-function CareerDataPanel({onDateSelect, timeScope}: {onDateSelect: (date: string) => void; timeScope: ObjectiveTimeScope}): React.ReactNode {
+const CAREER_CHART_NAV = [
+  {id: 'career-ai-tokens', label: 'AI 使用'},
+  {id: 'career-platforms', label: '平台结构'},
+  {id: 'career-git', label: 'Git 推进'},
+];
+
+const LIFE_CHART_NAV = [
+  {id: 'life-reading-time', label: '阅读时长'},
+  {id: 'life-rhythm', label: '生活节奏'},
+  {id: 'life-calendar', label: '人生进度'},
+];
+
+function SelectedDateDock({date}: {date: string}): React.ReactNode {
+  if (!date) return null;
+  return (
+    <div className={styles.selectedDateDock} aria-label="当前右侧详情日期">
+      <span>{getWeekdayLabel(date)} · {getHolidayLabel(date)}</span>
+      <strong>{formatChineseDate(date)}</strong>
+      <small>{date}</small>
+    </div>
+  );
+}
+
+function CareerDataPanel({
+  selectedDate,
+  onDateSelect,
+  timeScope,
+}: {
+  selectedDate: string;
+  onDateSelect: (date: string) => void;
+  timeScope: ObjectiveTimeScope;
+}): React.ReactNode {
+  const [llmPayloads, setLlmPayloads] = useState<Array<{id: string; label: string; payload: LLMSummaryPayload}>>([]);
+  const [analyses, setAnalyses] = useState<Record<string, DailyAnalysis>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      const [llmLoaded, manifest] = await Promise.all([
+        Promise.all(LLM_VENDOR_CONFIGS.map(async (vendor) => {
+          const payload = await fetchJson<LLMSummaryPayload>(vendor.path);
+          return payload ? {id: vendor.id, label: vendor.label, payload} : null;
+        })),
+        fetchJson<Manifest>('/data/daily-analysis/index.json'),
+      ]);
+      const dates = manifest?.dates || [];
+      const analysisList = await Promise.all(dates.map(async (date) => {
+        const analysis = await fetchJson<DailyAnalysis>(`/data/daily-analysis/${dateToPath(date, 'json')}`);
+        return analysis ? [date, analysis] as const : null;
+      }));
+      if (cancelled) return;
+      setLlmPayloads(llmLoaded.filter((item): item is {id: string; label: string; payload: LLMSummaryPayload} => Boolean(item)));
+      setAnalyses(Object.fromEntries(analysisList.filter((item): item is readonly [string, DailyAnalysis] => Boolean(item))));
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const allDates = useMemo(() => {
+    const dates = new Set<string>(Object.keys(analyses));
+    llmPayloads.forEach((vendor) => Object.keys(vendor.payload.daily_token_usage || {}).forEach((date) => dates.add(date)));
+    return [...dates].sort();
+  }, [analyses, llmPayloads]);
+  const axisDates = useMemo(() => getScopeDates(timeScope, allDates), [allDates, timeScope]);
+  const tokenPoints = useMemo<ObjectivePoint[]>(() => axisDates.map((date) => ({
+    date,
+    value: llmPayloads.reduce((sum, vendor) => sum + Number(vendor.payload.daily_token_usage?.[date] || 0), 0),
+    secondary: parseGitCounts(analyses[date]).manual,
+  })), [analyses, axisDates, llmPayloads]);
+  const platformPoints = useMemo<ObjectivePoint[]>(() => axisDates.map((date) => {
+    const [minimax, openai, anthropic] = LLM_VENDOR_CONFIGS.map((vendor) =>
+      Number(llmPayloads.find((item) => item.id === vendor.id)?.payload.daily_token_usage?.[date] || 0));
+    return {date, value: minimax, secondary: openai, tertiary: anthropic};
+  }), [axisDates, llmPayloads]);
+  const gitPoints = useMemo<ObjectivePoint[]>(() => axisDates.map((date) => {
+    const counts = parseGitCounts(analyses[date]);
+    return {date, value: counts.auto, secondary: counts.manual, tertiary: counts.total};
+  }), [analyses, axisDates]);
+  const totalTokens = tokenPoints.reduce((sum, point) => sum + point.value, 0);
+  const activeAiDays = tokenPoints.filter((point) => point.value > 0).length;
+  const manualCommits = gitPoints.reduce((sum, point) => sum + Number(point.secondary || 0), 0);
+  const totalCommits = gitPoints.reduce((sum, point) => sum + Number(point.tertiary || 0), 0);
+
   return (
     <>
-      <div className={styles.healthChartsPanelHead}>
-        <PanelTitle title="事业数据" description="当前以 AI 使用数据作为工作强度与工具结构信号。" />
-      </div>
-      <div className={styles.embeddedDashboard}>
-        <LLMUsageDashboard onDateSelect={onDateSelect} timeScope={timeScope} variant="stackedBar" />
+      <DomainSubtabs items={CAREER_CHART_NAV} />
+      <div className={styles.objectiveChartStack}>
+        <ObjectiveStatGrid
+          items={[
+            {value: formatCompactNumber(totalTokens, 1), label: `${scopeLabel(timeScope)} AI token`, tone: 'accent'},
+            {value: activeAiDays, label: 'AI 活跃天数', tone: 'green'},
+            {value: manualCommits, label: '人工推进提交', tone: 'orange'},
+            {value: totalCommits ? `${formatNumber((manualCommits / totalCommits) * 100, 0)}%` : '0%', label: '人工提交占比'},
+          ]}
+        />
+        <ObjectiveChartCard
+          id="career-ai-tokens"
+          title="AI 使用强度"
+          meta={loading ? '加载中' : `${scopeLabel(timeScope)} · 柱为 token，线为人工提交`}
+          legend={[
+            {label: 'Token', className: styles.legendPrimary},
+            {label: '人工提交', className: styles.legendLine},
+          ]}
+        >
+          <ObjectiveBarLineChart
+            points={tokenPoints}
+            valueLabel="Token"
+            secondaryLabel="人工提交"
+            formatValue={(value) => formatCompactNumber(value, 1)}
+            selectedDate={selectedDate}
+            onDateSelect={onDateSelect}
+          />
+        </ObjectiveChartCard>
+        <ObjectiveChartCard
+          id="career-platforms"
+          title="平台结构"
+          meta="MiniMax / OpenAI / Anthropic 的日使用分布"
+          legend={[
+            {label: 'MiniMax', className: styles.legendPrimary},
+            {label: 'OpenAI', className: styles.legendLine},
+            {label: 'Anthropic', className: styles.legendTertiary},
+          ]}
+        >
+          <ObjectiveBarLineChart
+            points={platformPoints}
+            valueLabel="MiniMax"
+            secondaryLabel="OpenAI"
+            tertiaryLabel="Anthropic"
+            formatValue={(value) => formatCompactNumber(value, 1)}
+            selectedDate={selectedDate}
+            onDateSelect={onDateSelect}
+          />
+        </ObjectiveChartCard>
+        <ObjectiveChartCard
+          id="career-git"
+          title="Git 推进结构"
+          meta="从每日 AI 分析中抽取 commit 总量、自动同步与人工推进"
+          legend={[
+            {label: '自动同步', className: styles.legendPrimary},
+            {label: '人工推进', className: styles.legendLine},
+            {label: '总提交', className: styles.legendTertiary},
+          ]}
+        >
+          <ObjectiveBarLineChart
+            points={gitPoints}
+            valueLabel="自动同步"
+            secondaryLabel="人工推进"
+            tertiaryLabel="总提交"
+            selectedDate={selectedDate}
+            onDateSelect={onDateSelect}
+          />
+        </ObjectiveChartCard>
+        <div className={styles.embeddedDashboard}>
+          <LLMUsageDashboard onDateSelect={onDateSelect} timeScope={timeScope} variant="stackedBar" />
+        </div>
       </div>
     </>
   );
@@ -1719,9 +2276,6 @@ function FinanceDataPanel({
 
   return (
     <>
-      <div className={styles.healthChartsPanelHead}>
-        <PanelTitle title="财务数据" description="指数账户、个股账户、支付宝持仓与港股打新数据。" />
-      </div>
       <FinanceTabs active={activeTab} onChange={setActiveTab} />
       {activeTab === 'income' ? (
         <div className={styles.financeEmptyPanel}>
@@ -1763,14 +2317,125 @@ function FinanceDataPanel({
   );
 }
 
-function LifeDataPanel({onDateSelect, timeScope}: {onDateSelect: (date: string) => void; timeScope: ObjectiveTimeScope}): React.ReactNode {
+function LifeDataPanel({
+  selectedDate,
+  onDateSelect,
+  timeScope,
+}: {
+  selectedDate: string;
+  onDateSelect: (date: string) => void;
+  timeScope: ObjectiveTimeScope;
+}): React.ReactNode {
+  const [readingDaily, setReadingDaily] = useState<Record<string, number>>({});
+  const [dailyDates, setDailyDates] = useState<string[]>([]);
+  const [analysisDates, setAnalysisDates] = useState<string[]>([]);
+  const [analyses, setAnalyses] = useState<Record<string, DailyAnalysis>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      const [readingIndex, dailyManifest, analysisManifest] = await Promise.all([
+        fetchJson<{activeYears?: string[]; exportedAt?: string}>('/data/reading/index.json'),
+        fetchJson<Manifest>('/data/daily/index.json'),
+        fetchJson<Manifest>('/data/daily-analysis/index.json'),
+      ]);
+      const readingYears = await Promise.all((readingIndex?.activeYears || []).map(async (year) =>
+        fetchJson<ReadingYearPayload>(`/data/reading/${year}.json`)));
+      const mergedReading: Record<string, number> = {};
+      readingYears.forEach((yearData) => {
+        Object.entries(yearData?.daily || {}).forEach(([date, value]) => {
+          mergedReading[date] = (mergedReading[date] || 0) + Number(value.seconds || 0);
+        });
+      });
+      const dates = analysisManifest?.dates || [];
+      const analysisList = await Promise.all(dates.map(async (date) => {
+        const analysis = await fetchJson<DailyAnalysis>(`/data/daily-analysis/${dateToPath(date, 'json')}`);
+        return analysis ? [date, analysis] as const : null;
+      }));
+      if (cancelled) return;
+      setReadingDaily(mergedReading);
+      setDailyDates(dailyManifest?.dates || []);
+      setAnalysisDates(dates);
+      setAnalyses(Object.fromEntries(analysisList.filter((item): item is readonly [string, DailyAnalysis] => Boolean(item))));
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const allDates = useMemo(() => [...new Set([...Object.keys(readingDaily), ...dailyDates, ...analysisDates])].sort(), [analysisDates, dailyDates, readingDaily]);
+  const axisDates = useMemo(() => getScopeDates(timeScope, allDates), [allDates, timeScope]);
+  const readingPoints = useMemo<ObjectivePoint[]>(() => axisDates.map((date) => ({
+    date,
+    value: Number(readingDaily[date] || 0),
+    secondary: dailyDates.includes(date) ? 1 : 0,
+  })), [axisDates, dailyDates, readingDaily]);
+  const rhythmPoints = useMemo<ObjectivePoint[]>(() => axisDates.map((date) => ({
+    date,
+    value: dailyDates.includes(date) ? 1 : 0,
+    secondary: analysisDates.includes(date) ? getAnalysisCompleteness(analyses[date]) : 0,
+  })), [analyses, analysisDates, axisDates, dailyDates]);
+  const totalReadSeconds = readingPoints.reduce((sum, point) => sum + point.value, 0);
+  const readingDays = readingPoints.filter((point) => point.value > 0).length;
+  const diaryDays = rhythmPoints.filter((point) => point.value > 0).length;
+  const analysisDays = rhythmPoints.filter((point) => Number(point.secondary || 0) > 0).length;
+
   return (
     <>
-      <div className={styles.healthChartsPanelHead}>
-        <PanelTitle title="人生数据" description="当前以阅读数据作为长期输入与兴趣结构信号。" />
-      </div>
-      <div className={styles.embeddedDashboard}>
-        <ReadingDashboard onDateSelect={onDateSelect} timeScope={timeScope} variant="bar" />
+      <DomainSubtabs items={LIFE_CHART_NAV} />
+      <div className={styles.objectiveChartStack}>
+        <ObjectiveStatGrid
+          items={[
+            {value: formatHoursFromSeconds(totalReadSeconds), label: `${scopeLabel(timeScope)} 阅读时长`, tone: 'accent'},
+            {value: readingDays, label: '阅读天数', tone: 'green'},
+            {value: diaryDays, label: '公开日记天数', tone: 'orange'},
+            {value: analysisDays, label: 'AI 分析天数'},
+          ]}
+        />
+        <ObjectiveChartCard
+          id="life-reading-time"
+          title="阅读投入"
+          meta={loading ? '加载中' : '柱为阅读时长，线为公开日记是否存在'}
+          legend={[
+            {label: '阅读时长', className: styles.legendPrimary},
+            {label: '日记', className: styles.legendLine},
+          ]}
+        >
+          <ObjectiveBarLineChart
+            points={readingPoints}
+            valueLabel="阅读"
+            secondaryLabel="日记"
+            formatValue={formatHoursFromSeconds}
+            selectedDate={selectedDate}
+            onDateSelect={onDateSelect}
+          />
+        </ObjectiveChartCard>
+        <ObjectiveChartCard
+          id="life-rhythm"
+          title="生活记录节奏"
+          meta="日记与 AI 分析完整度，用来观察输入、记录、复盘是否闭环"
+          legend={[
+            {label: '日记', className: styles.legendPrimary},
+            {label: '分析完整度', className: styles.legendLine},
+          ]}
+        >
+          <ObjectiveBarLineChart
+            points={rhythmPoints}
+            valueLabel="日记"
+            secondaryLabel="分析完整度"
+            selectedDate={selectedDate}
+            onDateSelect={onDateSelect}
+          />
+        </ObjectiveChartCard>
+        <ObjectiveChartCard id="life-calendar" title="人生进度" meta="长期尺度下看当前时间位置">
+          <LifeCalendar />
+        </ObjectiveChartCard>
+        <div className={styles.embeddedDashboard}>
+          <ReadingDashboard onDateSelect={onDateSelect} timeScope={timeScope} variant="bar" />
+        </div>
       </div>
     </>
   );
@@ -1790,10 +2455,11 @@ function ObjectiveDataPanel({
     <section className={styles.healthChartsPanel}>
       <ObjectiveTimeControls scope={timeScope} onChange={setTimeScope} />
       <DataDomainTabs active={activeDomain} onChange={setActiveDomain} />
-      {activeDomain === 'health' ? <HealthChartsPanel onDateSelect={onDateSelect} timeScope={timeScope} setTimeScope={setTimeScope} /> : null}
-      {activeDomain === 'career' ? <CareerDataPanel onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
+      <SelectedDateDock date={selectedDate} />
+      {activeDomain === 'health' ? <HealthChartsPanel selectedDate={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} setTimeScope={setTimeScope} /> : null}
+      {activeDomain === 'career' ? <CareerDataPanel selectedDate={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
       {activeDomain === 'finance' ? <FinanceDataPanel date={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
-      {activeDomain === 'life' ? <LifeDataPanel onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
+      {activeDomain === 'life' ? <LifeDataPanel selectedDate={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
     </section>
   );
 }
@@ -1819,15 +2485,17 @@ function DailyDetailPanel({
     <section className={styles.dailyDetailPanel}>
       <DailyBasicInfo date={date} weather={weather} />
       <DailyDetailTabs active={activeTab} onChange={setActiveTab} />
-      {loading ? (
-        <section className={styles.dailyLoading}>正在加载当日数据...</section>
-      ) : (
-        <>
-          {activeTab === 'diary' ? <DailyDiary diary={diary} /> : null}
-          {activeTab === 'timeline' ? <TimelinePanel model={timelineModel} /> : null}
-          {activeTab === 'analysis' ? <DailyAnalysisReport analysis={analysis} /> : null}
-        </>
-      )}
+      <div className={styles.dailyDetailBody}>
+        {loading ? (
+          <section className={styles.dailyLoading}>正在加载当日数据...</section>
+        ) : (
+          <>
+            {activeTab === 'diary' ? <DailyDiary diary={diary} /> : null}
+            {activeTab === 'timeline' ? <TimelinePanel model={timelineModel} /> : null}
+            {activeTab === 'analysis' ? <DailyAnalysisReport analysis={analysis} /> : null}
+          </>
+        )}
+      </div>
     </section>
   );
 }
@@ -1962,65 +2630,64 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
     () => buildTimelineModel({sleep, dailyHealth, drive, weather}),
     [dailyHealth, drive, sleep, weather],
   );
+  const handleSelectYear = (year: number, latest?: string) => {
+    setViewMode('year');
+    setSelectedYear(year);
+    setCalendarExpanded(false);
+    if (latest) setSelectedDate(latest);
+  };
+  const handleSelectLife = () => {
+    setViewMode('life');
+    setCalendarExpanded(true);
+  };
 
   return (
     <div className={styles.page}>
-      <section className={styles.calendarShell}>
-        <div className={styles.calendarTopline}>
-          <div>
-            <span>{viewMode === 'life' ? '人生日历' : '年度日历'}</span>
-            {viewMode === 'life' ? <h2>一生</h2> : null}
+      {(viewMode === 'life' || calendarExpanded) ? (
+        <section className={styles.calendarShell}>
+          <div className={styles.calendarTopline}>
+            <div>
+              <span>{viewMode === 'life' ? '人生日历' : '年度日历'}</span>
+              {viewMode === 'life' ? <h2>一生</h2> : null}
+            </div>
+            <div className={styles.yearSwitch}>
+              {years.map((year) => {
+                const latest = allDates.filter((date) => date.startsWith(`${year}-`)).at(-1);
+                return (
+                  <button
+                    key={year}
+                    type="button"
+                    className={viewMode === 'year' && year === selectedYear ? styles.yearSelected : ''}
+                    onClick={() => handleSelectYear(year, latest)}
+                  >
+                    {year}
+                  </button>
+                );
+              })}
+              <button type="button" className={viewMode === 'life' ? styles.yearSelected : ''} onClick={handleSelectLife}>
+                人生
+              </button>
+            </div>
           </div>
-          <div className={styles.yearSwitch}>
-            {years.map((year) => {
-              const latest = allDates.filter((date) => date.startsWith(`${year}-`)).at(-1);
-              return (
-                <button
-                  key={year}
-                  type="button"
-                  className={viewMode === 'year' && year === selectedYear ? styles.yearSelected : ''}
-                  onClick={() => {
-                    setViewMode('year');
-                    setSelectedYear(year);
-                    setCalendarExpanded(false);
-                    if (latest) setSelectedDate(latest);
-                  }}
-                >
-                  {year}
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              className={viewMode === 'life' ? styles.yearSelected : ''}
-              onClick={() => {
-                setViewMode('life');
-                setCalendarExpanded(true);
+          {viewMode === 'life' ? (
+            <LifeCalendar />
+          ) : selectedYear ? (
+            <ReflectionCalendar
+              year={selectedYear}
+              dailyDates={dailyDateSet}
+              analysisDates={analysisDateSet}
+              selectedDate={selectedDate}
+              onToggleCompact={() => setCalendarExpanded((value) => !value)}
+              onSelect={(date) => {
+                setSelectedDate(date);
+                setCalendarExpanded(false);
               }}
-            >
-              人生
-            </button>
-          </div>
-        </div>
-        {viewMode === 'life' ? (
-          <LifeCalendar />
-        ) : selectedYear ? (
-          <ReflectionCalendar
-            year={selectedYear}
-            dailyDates={dailyDateSet}
-            analysisDates={analysisDateSet}
-            selectedDate={selectedDate}
-            compact={!calendarExpanded}
-            onToggleCompact={() => setCalendarExpanded((value) => !value)}
-            onSelect={(date) => {
-              setSelectedDate(date);
-              setCalendarExpanded(false);
-            }}
-          />
-        ) : (
-          <p className={styles.muted}>正在加载日历...</p>
-        )}
-      </section>
+            />
+          ) : (
+            <p className={styles.muted}>正在加载日历...</p>
+          )}
+        </section>
+      ) : null}
 
       {viewMode === 'life' ? (
         <div ref={contentRef} className={styles.lifeContent}>

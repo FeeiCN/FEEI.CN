@@ -1,6 +1,6 @@
 .wrap {
   width: 100%;
-  margin: 0.5rem 0 1.5rem;
+  margin: 0.2rem 0 0.75rem;
 }
 
 
@@ -283,10 +283,24 @@
 }
 
 .section {
+  scroll-margin-top: 12rem;
   background: var(--ifm-card-background-color, #f8fafc);
   border: 1px solid var(--ifm-color-emphasis-200, #e2e8f0);
   border-radius: 10px;
-  padding: 1rem;
+  padding: 0.72rem 0.78rem 0.62rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.section:hover {
+  border-color: color-mix(in srgb, var(--ifm-color-primary) 34%, var(--ifm-color-emphasis-200, #e2e8f0));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--ifm-color-primary) 5%, transparent), transparent 58%),
+    var(--ifm-card-background-color, #f8fafc);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+[data-theme='dark'] .section:hover {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
 }
 
 .section canvas,
@@ -313,7 +327,7 @@
   color: #94a3b8;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.22rem;
 }
 
 

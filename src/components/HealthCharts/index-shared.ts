@@ -43,11 +43,13 @@ export type YearCtxType = {
   scope: TimeScope;
   setScope: (scope: TimeScope) => void;
   data: HealthData;
+  axisDates: string[];
   loading: boolean;
   availableMonths: Record<number, number[]>;
   onDateSelect?: (date: string) => void;
+  selectedDate?: string;
 };
 
 export const YearCtx = createContext<YearCtxType>({
-  scope: {mode: 'recent', range: '7d'}, setScope: () => {}, data: EMPTY, loading: true, availableMonths: {},
+  scope: {mode: 'recent', range: '7d'}, setScope: () => {}, data: EMPTY, axisDates: [], loading: true, availableMonths: {},
 });

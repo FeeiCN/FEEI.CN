@@ -73,7 +73,7 @@ VENDOR_CONFIG: dict[str, dict[str, Any]] = {
     "openai": {
         "url": "https://ai.feei.cn/api/v1/usage/stats",
         "auth_env": "OPENAI_ADMIN_KEY",
-        "auth_header": "Authorization: Bearer {}",
+        "auth_header": "x-api-key: {}",
         "accept": JSON_ACCEPT,
         "custom_fetcher": "feeiai_usage_stats",
         "sync_days": 30,
@@ -150,7 +150,7 @@ def fetch_feeiai_usage_stats(vendor: str, cfg: dict[str, Any], auth: str) -> dic
     end_date = datetime.now(tz=BEIJING_TZ).date()
     start_date = end_date - timedelta(days=max(sync_days - 1, 0))
     headers = {
-        "Authorization": f"Bearer {auth}",
+        "x-api-key": auth,
         "User-Agent": USER_AGENT,
         "Accept": cfg.get("accept", JSON_ACCEPT),
     }

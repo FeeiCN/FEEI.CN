@@ -12,7 +12,7 @@ function collectMarkdownFiles(dirPath: string): string[] {
     const fullPath = path.join(dirPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...collectMarkdownFiles(fullPath));
-    } else if (entry.isFile() && /\.mdx?$/.test(entry.name)) {
+    } else if (entry.isFile() && /\.md$/.test(entry.name)) {
       files.push(fullPath);
     }
   }

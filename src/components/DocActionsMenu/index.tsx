@@ -50,6 +50,7 @@ export default function DocActionsMenu(): ReactNode {
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const markdownMap = usePluginData('copy-markdown-plugin') as MarkdownMap | undefined;
+  const canCopyMarkdown = metadata.source.endsWith('.md');
 
   const pageUrl = `${siteConfig.url}${metadata.permalink}`;
   const aiQuery = encodeURIComponent(`Read ${pageUrl} and answer questions about the content.`);
@@ -67,6 +68,10 @@ export default function DocActionsMenu(): ReactNode {
   }, [open]);
 
   async function handleCopy() {
+    if (!canCopyMarkdown) {
+      return;
+    }
+
     const key = metadata.source.replace('@site/docs', '');
     const text = markdownMap?.[key];
     setOpen(false);
@@ -88,24 +93,32 @@ export default function DocActionsMenu(): ReactNode {
   const TriggerIcon = copyState === 'copied' ? IconCopied : IconCopy;
   const triggerLabel = copyState === 'copied' ? '已复制' : copyState === 'error' ? '失败' : '复制Markdown';
 
+  if (metadata.source.endsWith('.mdx')) {
+    return null;
+  }
+
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
       {/* Split-pill: left clicks copy directly, right clicks open dropdown */}
       <div className={styles.trigger} data-state={copyState}>
-        <button
-          className={styles.triggerMain}
-          onClick={handleCopy}
-          aria-label="复制 Markdown 原文"
-          data-state={copyState}
-        >
-          {TriggerIcon && (
-            <span className={styles.triggerIcon}>
-              <TriggerIcon size={ICON_SIZE} disableHover />
-            </span>
-          )}
-          <span className={styles.triggerText}>{triggerLabel}</span>
-        </button>
-        <span className={styles.triggerSep} aria-hidden="true" />
+        {canCopyMarkdown && (
+          <>
+            <button
+              className={styles.triggerMain}
+              onClick={handleCopy}
+              aria-label="复制 Markdown 原文"
+              data-state={copyState}
+            >
+              {TriggerIcon && (
+                <span className={styles.triggerIcon}>
+                  <TriggerIcon size={ICON_SIZE} disableHover />
+                </span>
+              )}
+              <span className={styles.triggerText}>{triggerLabel}</span>
+            </button>
+            <span className={styles.triggerSep} aria-hidden="true" />
+          </>
+        )}
         <button
           className={styles.triggerChevron}
           onClick={() => setOpen(o => !o)}

@@ -9,11 +9,16 @@ type MarkdownMap = Record<string, string>;
 export default function CopyMarkdownButton(): ReactNode {
   const {metadata} = useDoc();
   const [state, setState] = useState<CopyState>('idle');
+  const canCopyMarkdown = metadata.source.endsWith('.md');
 
   // Plugin global data: source key → raw markdown content
   const markdownMap = usePluginData('copy-markdown-plugin') as MarkdownMap | undefined;
 
   async function handleCopy() {
+    if (!canCopyMarkdown) {
+      return;
+    }
+
     // metadata.source is "@site/docs/path/to/file.md"
     const key = metadata.source.replace('@site/docs', '');
     const text = markdownMap?.[key];
@@ -35,6 +40,10 @@ export default function CopyMarkdownButton(): ReactNode {
   }
 
   const label = state === 'copied' ? '已复制' : state === 'error' ? '失败' : '复制';
+
+  if (!canCopyMarkdown) {
+    return null;
+  }
 
   return (
     <button

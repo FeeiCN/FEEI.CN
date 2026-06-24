@@ -534,29 +534,57 @@ function normalizeImageSrc(src: string): string {
   return `/data/daily/assets/${src.replace(/^\.?\//, '')}`;
 }
 
-function renderImageTokens(block: string, index: number): React.ReactNode | null {
-  const markdownImages = [...block.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)];
-  if (markdownImages.length) {
-    return (
-      <div key={index} className={`${styles.diaryImages} ${markdownImages.length === 1 ? styles.diaryImagesSingle : styles.diaryImagesGrid}`}>
-        {markdownImages.map((match) => (
-          <img key={match[2]} src={normalizeImageSrc(match[2])} alt={match[1] || '日记图片'} loading="lazy" />
-        ))}
-      </div>
-    );
+type DiaryImage = {
+  src: string;
+  alt: string;
+};
+
+function renderDiaryImages(images: DiaryImage[], key: string): React.ReactNode {
+  return (
+    <div key={key} className={`${styles.diaryImages} ${images.length === 1 ? styles.diaryImagesSingle : styles.diaryImagesGrid}`}>
+      {images.map((image) => (
+        <img key={image.src} src={normalizeImageSrc(image.src)} alt={image.alt} loading="lazy" />
+      ))}
+    </div>
+  );
+}
+
+function renderMixedImageBlock(block: string, index: number): React.ReactNode[] | null {
+  const imagePattern = /!\[([^\]]*)\]\(([^)]+)\)|!([^\s!]+\.(?:png|jpe?g|webp|gif))/gi;
+  const nodes: React.ReactNode[] = [];
+  const pendingImages: DiaryImage[] = [];
+  let lastIndex = 0;
+  let matched = false;
+
+  const flushImages = () => {
+    if (!pendingImages.length) return;
+    nodes.push(renderDiaryImages([...pendingImages], `${index}-images-${nodes.length}`));
+    pendingImages.length = 0;
+  };
+
+  const flushText = (text: string) => {
+    const content = text.trim();
+    if (!content) return;
+    flushImages();
+    nodes.push(<p key={`${index}-text-${nodes.length}`}>{renderInlineMarkdown(content)}</p>);
+  };
+
+  for (const match of block.matchAll(imagePattern)) {
+    matched = true;
+    flushText(block.slice(lastIndex, match.index));
+    const src = match[2] || match[3];
+    if (!src) continue;
+    pendingImages.push({
+      src,
+      alt: match[1] || match[3] || '日记图片',
+    });
+    lastIndex = (match.index || 0) + match[0].length;
   }
 
-  const bareImages = [...block.matchAll(/!([^\s!]+\.(?:png|jpe?g|webp|gif))/gi)];
-  if (bareImages.length) {
-    return (
-      <div key={index} className={`${styles.diaryImages} ${bareImages.length === 1 ? styles.diaryImagesSingle : styles.diaryImagesGrid}`}>
-        {bareImages.map((match) => (
-          <img key={match[1]} src={normalizeImageSrc(match[1])} alt={match[1]} loading="lazy" />
-        ))}
-      </div>
-    );
-  }
-  return null;
+  if (!matched) return null;
+  flushText(block.slice(lastIndex));
+  flushImages();
+  return nodes;
 }
 
 function markdownToBlocks(markdown: string): React.ReactNode[] {
@@ -571,7 +599,7 @@ function markdownToBlocks(markdown: string): React.ReactNode[] {
       if (block.startsWith('## ')) {
         return <h4 key={index}>{renderInlineMarkdown(block.replace(/^##\s+/, ''))}</h4>;
       }
-      const imageBlock = renderImageTokens(block, index);
+      const imageBlock = renderMixedImageBlock(block, index);
       if (imageBlock) return imageBlock;
       if (/^-\s+/m.test(block)) {
         return (

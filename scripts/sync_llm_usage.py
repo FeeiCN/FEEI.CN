@@ -77,6 +77,7 @@ VENDOR_CONFIG: dict[str, dict[str, Any]] = {
         "accept": JSON_ACCEPT,
         "custom_fetcher": "feeiai_usage_stats",
         "sync_days": 30,
+        "user_id": "1",
     },
 }
 
@@ -147,6 +148,7 @@ def fetch_feeiai_usage_stats(vendor: str, cfg: dict[str, Any], auth: str) -> dic
     separately so local history can keep date->tokens maps.
     """
     sync_days = int(os.environ.get("OPENAI_SYNC_DAYS") or cfg.get("sync_days") or 30)
+    user_id = os.environ.get("OPENAI_USER_ID") or cfg.get("user_id")
     end_date = datetime.now(tz=BEIJING_TZ).date()
     start_date = end_date - timedelta(days=max(sync_days - 1, 0))
     headers = {
@@ -166,6 +168,7 @@ def fetch_feeiai_usage_stats(vendor: str, cfg: dict[str, Any], auth: str) -> dic
         date_key = day.isoformat()
         query = urlencode(
             {
+                "user_id": user_id,
                 "start_date": date_key,
                 "end_date": date_key,
                 "timezone": "Asia/Shanghai",

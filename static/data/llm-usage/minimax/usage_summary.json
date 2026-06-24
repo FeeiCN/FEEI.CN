@@ -1,9 +1,9 @@
 {
   "vendor": "minimax",
-  "fetchedAt": "2026-06-21 07:58:58",
-  "total_days": 13,
-  "total_token_consumed": "1.39B",
-  "usage_ranking_percent": 8.302504131251018,
+  "fetchedAt": "2026-06-25 00:22:45",
+  "total_days": 17,
+  "total_token_consumed": "1.40B",
+  "usage_ranking_percent": 8.319759261214143,
   "most_active_day": {
     "date": "2026-06-10",
     "token_count": "203.88M",
@@ -12,8 +12,8 @@
     "music_count": "0",
     "voice_character_count": "0"
   },
-  "active_days": 13,
-  "current_consecutive_days": 13,
+  "active_days": 17,
+  "current_consecutive_days": 17,
   "daily_token_usage": {
     "2026-06-08": 90993082,
     "2026-06-09": 165014375,
@@ -27,49 +27,13 @@
     "2026-06-17": 103481783,
     "2026-06-18": 103481783,
     "2026-06-19": 45405912,
-    "2026-06-20": 25930582
+    "2026-06-20": 25930582,
+    "2026-06-21": 1481617,
+    "2026-06-22": 336642,
+    "2026-06-23": 282155,
+    "2026-06-24": 144722
   },
   "date_model_usage": [
-    {
-      "date": "2026-01-04",
-      "models": [],
-      "total_input_token": 0,
-      "total_cache_read_token": 0,
-      "total_cache_create_token": 0,
-      "total_output_token": 0,
-      "total_token": 0,
-      "cache_hit_percent": "0%"
-    },
-    {
-      "date": "2026-01-05",
-      "models": [],
-      "total_input_token": 0,
-      "total_cache_read_token": 0,
-      "total_cache_create_token": 0,
-      "total_output_token": 0,
-      "total_token": 0,
-      "cache_hit_percent": "0%"
-    },
-    {
-      "date": "2026-01-06",
-      "models": [],
-      "total_input_token": 0,
-      "total_cache_read_token": 0,
-      "total_cache_create_token": 0,
-      "total_output_token": 0,
-      "total_token": 0,
-      "cache_hit_percent": "0%"
-    },
-    {
-      "date": "2026-01-07",
-      "models": [],
-      "total_input_token": 0,
-      "total_cache_read_token": 0,
-      "total_cache_create_token": 0,
-      "total_output_token": 0,
-      "total_token": 0,
-      "cache_hit_percent": "0%"
-    },
     {
       "date": "2026-01-08",
       "models": [],
@@ -1974,12 +1938,92 @@
       "total_output_token": 135984,
       "total_token": 1481617,
       "cache_hit_percent": "26.97%"
+    },
+    {
+      "date": "2026-06-21",
+      "models": [
+        {
+          "model": "MiniMax-M3-512k",
+          "input_token": 287126,
+          "cache_read_token": 40154,
+          "cache_create_token": 0,
+          "output_token": 49516,
+          "total_token": 376796,
+          "cache_hit_percent": "13.98%"
+        }
+      ],
+      "total_input_token": 287126,
+      "total_cache_read_token": 40154,
+      "total_cache_create_token": 0,
+      "total_output_token": 49516,
+      "total_token": 336642,
+      "cache_hit_percent": "13.98%"
+    },
+    {
+      "date": "2026-06-22",
+      "models": [
+        {
+          "model": "MiniMax-M3-512k",
+          "input_token": 220096,
+          "cache_read_token": 1352,
+          "cache_create_token": 0,
+          "output_token": 62059,
+          "total_token": 283507,
+          "cache_hit_percent": "0.61%"
+        }
+      ],
+      "total_input_token": 220096,
+      "total_cache_read_token": 1352,
+      "total_cache_create_token": 0,
+      "total_output_token": 62059,
+      "total_token": 282155,
+      "cache_hit_percent": "0.61%"
+    },
+    {
+      "date": "2026-06-23",
+      "models": [
+        {
+          "model": "MiniMax-M3-512k",
+          "input_token": 128942,
+          "cache_read_token": 23943,
+          "cache_create_token": 0,
+          "output_token": 15780,
+          "total_token": 168665,
+          "cache_hit_percent": "18.57%"
+        }
+      ],
+      "total_input_token": 128942,
+      "total_cache_read_token": 23943,
+      "total_cache_create_token": 0,
+      "total_output_token": 15780,
+      "total_token": 144722,
+      "cache_hit_percent": "18.57%"
+    },
+    {
+      "date": "2026-06-24",
+      "models": [
+        {
+          "model": "MiniMax-M3-512k",
+          "input_token": 34415,
+          "cache_read_token": 228,
+          "cache_create_token": 0,
+          "output_token": 10454,
+          "total_token": 45097,
+          "cache_hit_percent": "0.66%"
+        }
+      ],
+      "total_input_token": 34415,
+      "total_cache_read_token": 228,
+      "total_cache_create_token": 0,
+      "total_output_token": 10454,
+      "total_token": 44869,
+      "cache_hit_percent": "0.66%"
     }
   ],
-  "last_update_time": "06-21 07:00",
+  "last_update_time": "06-25 00:00",
   "base_resp": {
     "status_code": 0,
     "status_msg": "success"
   },
-  "daily_avg_token_consumed": "107.28M"
+  "daily_avg_token_consumed": "82.17M"
 }

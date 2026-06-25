@@ -268,18 +268,14 @@ async function main() {
       }
     }
 
-    const dailyResult = await exportDailyCompactFiles(client, {
+    const dailyFiles = await exportDailyCompactFiles(client, {
       startDate,
       endDate,
       targetRoot,
       exportedAt,
-      skipExisting: !args.date && !args.overwriteDaily,
     });
 
-    console.log(`Exported ${dailyResult.written.length} daily compact health files`);
-    if (dailyResult.skipped.length > 0) {
-      console.log(`Skipped ${dailyResult.skipped.length} existing daily compact health files`);
-    }
+    console.log(`Exported ${dailyFiles.length} daily compact health files`);
   } finally {
     await client.close();
   }
@@ -538,20 +534,10 @@ async function collectMappingRecords(client, mapping, options) {
 }
 
 async function exportDailyCompactFiles(client, options) {
-  const written = [];
-  const skipped = [];
-  const today = formatLocalDate(new Date());
+  const dailyFiles = [];
 
   for (const day of enumerateDates(options.startDate, options.endDate)) {
     const [year, month, date] = day.split('-');
-    const dailyDir = path.join(options.targetRoot, year, month);
-    const dailyFile = path.join(dailyDir, `${date}.json`);
-
-    if (options.skipExisting && day !== today && fs.existsSync(dailyFile)) {
-      skipped.push(dailyFile);
-      continue;
-    }
-
     const dailyStart = `${day} 00:00:00 ${timeZoneOffset}`;
     const dailyEnd = `${day} 23:59:59 ${timeZoneOffset}`;
     const data = {};
@@ -608,12 +594,14 @@ async function exportDailyCompactFiles(client, options) {
       dailyData.errors = errors;
     }
 
+    const dailyDir = path.join(options.targetRoot, year, month);
+    const dailyFile = path.join(dailyDir, `${date}.json`);
     fs.mkdirSync(dailyDir, {recursive: true});
     fs.writeFileSync(dailyFile, `${JSON.stringify(dailyData, null, 2)}\n`);
-    written.push(dailyFile);
+    dailyFiles.push(dailyFile);
   }
 
-  return {written, skipped};
+  return dailyFiles;
 }
 
 function buildDailyCompactData(data) {
@@ -1783,11 +1771,6 @@ function parseArgs(argv) {
       continue;
     }
 
-    if (arg === '--overwrite-daily') {
-      parsed.overwriteDaily = true;
-      continue;
-    }
-
     if (arg === '--year' || arg === '--month' || arg === '--date' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
       const value = argv[index + 1];
 
@@ -1814,7 +1797,6 @@ Options:
   --month <YYYY-MM>          Export specific month.
   --date <YYYY-MM-DD>        Export only one daily compact file without writing month summary.
   --end-date <YYYY-MM-DD>    End date. Defaults to today for current year/month.
-  --overwrite-daily          Rewrite existing daily compact files in month/year mode.
   --target <dir>             Output directory. Defaults to static/data/health.
   --mcp-server <file>        health_auto_export MCP server path.
   --timeout <ms>             Per-tool timeout. Defaults to 86400000.

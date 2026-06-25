@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defaultTargetRoot = path.join(repoRoot, 'static', 'data', 'health');
-const defaultMcpServerPath = '/Users/feei/Projects/health-auto-export-mcp-server/dist/server.js';
+const defaultMcpServerPath = path.join(repoRoot, 'scripts', 'health_auto_export_mcp_server.mjs');
 const timeZone = 'Asia/Shanghai';
 const timeZoneOffset = '+0800';
 const activeEnergyBucketMinutes = 5;
@@ -547,7 +547,12 @@ async function exportDailyCompactFiles(client, options) {
     const dailyDir = path.join(options.targetRoot, year, month);
     const dailyFile = path.join(dailyDir, `${date}.json`);
 
-    if (options.skipExisting && day !== today && fs.existsSync(dailyFile)) {
+    if (
+      options.skipExisting
+      && day !== today
+      && fs.existsSync(dailyFile)
+      && !isEmptyDailyHealthFile(dailyFile)
+    ) {
       skipped.push(dailyFile);
       continue;
     }
@@ -614,6 +619,19 @@ async function exportDailyCompactFiles(client, options) {
   }
 
   return {written, skipped};
+}
+
+function isEmptyDailyHealthFile(file) {
+  try {
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const rawRecords = data.summary?.rawRecords ?? {};
+    const rawTotal = Object.values(rawRecords)
+      .reduce((sum, value) => sum + (Number(value) || 0), 0);
+    const timelineCount = Array.isArray(data.timeline) ? data.timeline.length : 0;
+    return rawTotal === 0 && timelineCount === 0;
+  } catch {
+    return true;
+  }
 }
 
 function buildDailyCompactData(data) {

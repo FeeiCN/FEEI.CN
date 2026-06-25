@@ -96,6 +96,9 @@ jobs:
       - name: Run selected tasks
         env:
           TASKS: ${{ steps.tasks.outputs.tasks }}
+          HAE_HOST: ${{ vars.HAE_HOST }}
+          HAE_PORT: ${{ vars.HAE_PORT }}
+          HAE_TIMEOUT: ${{ vars.HAE_TIMEOUT }}
         run: |
           /usr/bin/python3 <<'PY'
           import fcntl
@@ -109,9 +112,18 @@ jobs:
               "hk-ipo": (["/usr/bin/python3", "scripts/hk_ipo.py"], "FEEI.CN-hk-ipo.log"),
               "health": (["/opt/homebrew/bin/node", "scripts/sync_health_data.mjs"], "FEEI.CN-sync-health.log"),
           }
+          required_env = {
+              "health": ["HAE_HOST", "HAE_PORT"],
+          }
           tasks = os.environ["TASKS"].split()
           log_dir = Path.home() / "Library" / "Logs"
           log_dir.mkdir(parents=True, exist_ok=True)
+
+          for task in tasks:
+              missing = [name for name in required_env.get(task, []) if not os.environ.get(name)]
+              if missing:
+                  print(f"::error::{task} 缺少 GitHub Variables: {', '.join(missing)}")
+                  sys.exit(1)
 
           with open("/tmp/FEEI.CN-data-sync.lock", "w", encoding="utf-8") as lock:
               print("Waiting for FEEI.CN data sync lock...")

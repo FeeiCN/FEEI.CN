@@ -16,9 +16,9 @@
 import argparse
 import json
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
+import subprocess
 import sys
 
 from futu import *
@@ -76,6 +76,7 @@ ACCOUNT_JSON_TARGETS = {
     "FeeiCN2": STATIC_ACCOUNT_ASSETS_DIR / "index.json",
     "FeeiCN": STATIC_ACCOUNT_ASSETS_DIR / "stock.json",
 }
+CHILD_JSON_PREFIX = "__ACCOUNT_ASSETS_JSON__="
 
 
 def log(message):
@@ -799,10 +800,22 @@ def build_parser():
         action="store_true",
         help="兼容旧参数：不写入 static/data/account-assets JSON，仅输出到终端",
     )
+    parser.add_argument(
+        "--port-timeout",
+        type=int,
+        default=90,
+        help="单个 OpenD 端口查询超时秒数，默认 90",
+    )
+    parser.add_argument(
+        "--query-port",
+        type=int,
+        default=0,
+        help=argparse.SUPPRESS,
+    )
     return parser
 
 
-def query_port(args, port):
+def collect_port_data(args, port):
     label = PORT_LABELS.get(port, str(port))
     log(f"[{label}] 连接 OpenD port={port} ...")
     trd_ctx = OpenSecTradeContext(
@@ -813,10 +826,16 @@ def query_port(args, port):
     )
 
     try:
+        if hasattr(trd_ctx, "set_sync_query_connect_timeout"):
+            trd_ctx.set_sync_query_connect_timeout(args.port_timeout)
+        if hasattr(trd_ctx, "_query_timeout"):
+            trd_ctx._query_timeout = args.port_timeout
+
         log(f"[{label}] 获取账户列表 ...")
         ret, acc_list = trd_ctx.get_acc_list()
         if ret != RET_OK:
             fail(f"get_acc_list error: {acc_list}")
+        log(f"[{label}] 账户列表已获取")
 
         selected_account = resolve_account(acc_list, args.env, args.acc_id)
         selected_acc_id = int(selected_account["acc_id"])
@@ -831,6 +850,7 @@ def query_port(args, port):
         )
         if ret != RET_OK:
             fail(f"accinfo_query error: {funds}")
+        log(f"[{label}] 资金已获取")
 
         log(f"[{label}] 查询持仓 ...")
         ret, positions = trd_ctx.position_list_query(
@@ -841,32 +861,120 @@ def query_port(args, port):
         )
         if ret != RET_OK:
             fail(f"position_list_query error: {positions}")
+        log(f"[{label}] 持仓已获取")
 
         account_list_records = dataframe_to_records(acc_list)
         fund_records = dataframe_to_records(funds)
         position_records = dataframe_to_records(positions)
-        previous_snapshot = load_previous_snapshot(selected_account, port)
-        t2_snapshot = load_t2_snapshot(selected_account, port)
-        saved_snapshot_path = None
-        if not args.no_save_snapshot:
-            saved_snapshot_path = save_snapshot(selected_account, port, fund_records, position_records)
-            log(f"[{label}] 快照已保存")
-        all_snapshots = load_all_snapshots(selected_account, port)
         log(f"[{label}] 完成")
         return {
             "port": port,
-            "account_label": PORT_LABELS.get(port, str(port)),
+            "account_label": label,
             "account_list": account_list_records,
             "selected_account": selected_account,
             "funds": fund_records,
             "positions": position_records,
-            "previous_snapshot": previous_snapshot,
-            "t2_snapshot": t2_snapshot,
-            "all_snapshots": all_snapshots,
-            "saved_snapshot_path": saved_snapshot_path,
         }
     finally:
         trd_ctx.close()
+
+
+def query_port(args, port):
+    result = collect_port_data(args, port)
+    return attach_snapshot_data(args, result)
+
+
+def attach_snapshot_data(args, result):
+    port = result["port"]
+    selected_account = result["selected_account"]
+    fund_records = result["funds"]
+    position_records = result["positions"]
+    previous_snapshot = load_previous_snapshot(selected_account, port)
+    t2_snapshot = load_t2_snapshot(selected_account, port)
+    saved_snapshot_path = None
+    if not args.no_save_snapshot:
+        saved_snapshot_path = save_snapshot(selected_account, port, fund_records, position_records)
+        log(f"[{result['account_label']}] 快照已保存")
+    all_snapshots = load_all_snapshots(selected_account, port)
+    return {
+        **result,
+        "previous_snapshot": previous_snapshot,
+        "t2_snapshot": t2_snapshot,
+        "all_snapshots": all_snapshots,
+        "saved_snapshot_path": saved_snapshot_path,
+    }
+
+
+def run_query_port_child(args):
+    result = collect_port_data(args, args.query_port)
+    print(CHILD_JSON_PREFIX + json.dumps(result, ensure_ascii=False), flush=True)
+
+
+def query_port_in_subprocess(args, port):
+    child_args = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "--query-port",
+        str(port),
+        "--host",
+        args.host,
+        "--ports",
+        str(port),
+        "--market",
+        args.market,
+        "--env",
+        args.env,
+        "--security-firm",
+        args.security_firm,
+        "--currency",
+        args.currency,
+        "--position-market",
+        args.position_market,
+        "--port-timeout",
+        str(args.port_timeout),
+        "--no-save-snapshot",
+        "--no-write-feeicn",
+    ]
+    if args.acc_id:
+        child_args.extend(["--acc-id", str(args.acc_id)])
+    if args.refresh_cache:
+        child_args.append("--refresh-cache")
+
+    log(f"[{PORT_LABELS.get(port, str(port))}] 启动子进程查询，timeout={args.port_timeout}s")
+    try:
+        completed = subprocess.run(
+            child_args,
+            cwd=FEEICN_REPO_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=args.port_timeout + 10,
+        )
+    except subprocess.TimeoutExpired as exc:
+        if exc.stdout:
+            print(exc.stdout, end="")
+        if exc.stderr:
+            print(exc.stderr, end="", file=sys.stderr)
+        fail(f"[{PORT_LABELS.get(port, str(port))}] 查询超过 {args.port_timeout + 10} 秒，已终止")
+
+    if completed.stdout:
+        for line in completed.stdout.splitlines():
+            if not line.startswith(CHILD_JSON_PREFIX):
+                print(line)
+    if completed.stderr:
+        print(completed.stderr, end="", file=sys.stderr)
+
+    if completed.returncode != 0:
+        fail(f"[{PORT_LABELS.get(port, str(port))}] 子进程查询失败，exit={completed.returncode}")
+
+    payload_line = next(
+        (line for line in completed.stdout.splitlines() if line.startswith(CHILD_JSON_PREFIX)),
+        None,
+    )
+    if not payload_line:
+        fail(f"[{PORT_LABELS.get(port, str(port))}] 子进程未返回查询结果")
+
+    return json.loads(payload_line[len(CHILD_JSON_PREFIX):])
 
 
 def parse_ports(ports_text):
@@ -883,16 +991,20 @@ def main():
     args = build_parser().parse_args()
     silence_futu_console_logs()
 
+    if args.query_port:
+        run_query_port_child(args)
+        return
+
     if not args.no_write_feeicn:
         git_pull_target_repo(FEEICN_REPO_ROOT)
 
     ports = parse_ports(args.ports)
-    log(f"并行查询 {len(ports)} 个账户: ports={ports}")
-    port_results = [None] * len(ports)
-    with ThreadPoolExecutor(max_workers=len(ports)) as executor:
-        futures = {executor.submit(query_port, args, port): i for i, port in enumerate(ports)}
-        for future in as_completed(futures):
-            port_results[futures[future]] = future.result()
+    log(f"查询 {len(ports)} 个账户: ports={ports}")
+    raw_results = []
+    for port in ports:
+        raw_results.append(query_port_in_subprocess(args, port))
+
+    port_results = [attach_snapshot_data(args, result) for result in raw_results]
 
     log("渲染 Markdown ...")
     markdown_text = render_markdown(port_results)

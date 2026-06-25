@@ -25,13 +25,30 @@ type ObjectiveTimeScope =
 type DashboardVariant = 'full' | 'bar';
 const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
 
+function formatDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dateRange(start: string, end: string): string[] {
+  const out: string[] = [];
+  const cursor = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T00:00:00`);
+  while (cursor <= endDate) {
+    out.push(formatDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
+}
+
 function filterDailyByRecent(daily: Record<string, number>, range: keyof typeof RANGE_DAYS): Record<string, number> {
-  const latest = Object.keys(daily).sort().at(-1);
-  if (!latest) return {};
-  const cutoff = new Date(`${latest}T00:00:00`);
-  cutoff.setDate(cutoff.getDate() - RANGE_DAYS[range]);
-  const cutoffKey = cutoff.toISOString().slice(0, 10);
-  return Object.fromEntries(Object.entries(daily).filter(([date]) => date >= cutoffKey));
+  const end = formatDateKey(new Date());
+  const cutoff = new Date(`${end}T00:00:00`);
+  cutoff.setDate(cutoff.getDate() - RANGE_DAYS[range] + 1);
+  const cutoffKey = formatDateKey(cutoff);
+  return Object.fromEntries(dateRange(cutoffKey, end).map((date) => [date, daily[date] || 0]));
 }
 
 function toReadingScope(scope?: ObjectiveTimeScope): TimeScope {
@@ -162,7 +179,6 @@ function ReadingBarOnly({onDateSelect}: {onDateSelect?: (date: string) => void})
   const entries = useMemo(() => {
     return Object.entries(filteredDaily)
       .map(([date, seconds]) => [date, Number(seconds || 0)] as [string, number])
-      .filter(([, seconds]) => seconds > 0)
       .sort(([left], [right]) => left.localeCompare(right));
   }, [filteredDaily]);
   const max = Math.max(1, ...entries.map(([, seconds]) => seconds));

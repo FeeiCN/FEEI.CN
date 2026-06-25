@@ -1438,14 +1438,22 @@ function mapSeries(series: unknown) {
   const normalize = (raw: unknown) => {
     const obj = asRecord(raw);
     const type = obj.type;
+    const decorative = isDecorativeSeries(obj);
     const markLine = asRecord(obj.markLine);
     const markPoint = asRecord(obj.markPoint);
     const itemStyle = asRecord(obj.itemStyle);
     const explicitColor = objectColor(obj);
     return {
       ...obj,
+      ...(decorative ? {
+        name: obj.name ?? '__decorative__',
+        legendHoverLink: false,
+        silent: true,
+        emphasis: {disabled: true},
+        endLabel: {show: false},
+      } : {}),
       ...(explicitColor ? {itemStyle: {color: explicitColor, ...itemStyle}} : {}),
-      ...(type === 'line' ? {
+      ...(type === 'line' && !decorative ? {
         symbol: obj.symbol ?? 'none',
         lineStyle: {width: 1.75, ...asRecord(obj.lineStyle)},
         endLabel: {
@@ -1479,7 +1487,7 @@ function mapSeries(series: unknown) {
           silent: markPoint.silent ?? true,
         },
       } : {}),
-      emphasis: {focus: 'series', ...asRecord(obj.emphasis)},
+      emphasis: decorative ? {disabled: true} : {focus: 'series', ...asRecord(obj.emphasis)},
     };
   };
   return Array.isArray(series) ? series.map(normalize) : series;
@@ -1523,6 +1531,12 @@ function orderLegendBySeriesTotal(legend: Record<string, unknown>, series: unkno
     ...legend,
     data: [...legend.data].sort((a, b) => (totals.get(legendName(b) ?? '') ?? -1) - (totals.get(legendName(a) ?? '') ?? -1)),
   };
+}
+
+function isDecorativeSeries(series: Record<string, unknown>): boolean {
+  const tooltip = asRecord(series.tooltip);
+  const lineStyle = asRecord(series.lineStyle);
+  return series.silent === true && tooltip.show === false && lineStyle.opacity === 0;
 }
 
 function applyHealthChartStyle(option: object, isDark: boolean): object {

@@ -17,6 +17,30 @@
   padding-top: 0.2rem;
 }
 
+.dashboardHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, max-content);
+  gap: 1rem;
+  align-items: center;
+  padding-right: clamp(0rem, 2vw, 1.4rem);
+  margin-bottom: 0.68rem;
+}
+
+.dashboardHeaderText {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.dashboardHeader h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(1.8rem, 4vw, 2.75rem);
+  font-weight: 860;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
 [data-theme='dark'] .page {
   --surface: rgba(28, 28, 30, 0.72);
   --surface-strong: rgba(28, 28, 30, 0.94);
@@ -93,11 +117,120 @@
   min-width: 0;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
-  border-left: 3px solid var(--accent);
   border-radius: 22px;
   background: var(--surface);
   box-shadow: 0 14px 40px rgba(15, 23, 42, 0.045);
   backdrop-filter: blur(18px);
+}
+
+.dailyYearHeatmap {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+  padding: 0.58rem 0.72rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 70%),
+    var(--surface-strong);
+}
+
+.dailyYearHeatmapHead {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.dailyYearHeatmapHead strong {
+  flex: 0 0 auto;
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 840;
+  letter-spacing: -0.02em;
+}
+
+.dailyYearHeatmapProgress {
+  display: grid;
+  justify-self: end;
+  gap: 0.18rem;
+  width: min(100%, 23rem);
+  min-width: 0;
+}
+
+.dailyYearHeatmapProgress span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 660;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.dailyYearHeatmapProgress i {
+  display: block;
+  overflow: hidden;
+  height: 0.24rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 9%, var(--soft));
+}
+
+.dailyYearHeatmapProgress b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 58%, #22c55e));
+}
+
+.dailyYearHeatmapChart {
+  height: 104px;
+}
+
+.dailyYearHeatmapLegendDiary {
+  background: var(--accent);
+}
+
+.dailyYearHeatmapLegendPastEmpty {
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+}
+
+.dailyYearHeatmapLegendFuture {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--muted) 11%, transparent) 0,
+      color-mix(in srgb, var(--muted) 11%, transparent) 2px,
+      transparent 2px,
+      transparent 4px
+    ),
+    color-mix(in srgb, var(--muted) 6%, transparent);
+}
+
+.dailyYearHeatmapLegend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.28rem 0.55rem;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 680;
+}
+
+.dailyYearHeatmapLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  white-space: nowrap;
+}
+
+.dailyYearHeatmapLegend i {
+  display: inline-block;
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 2px;
 }
 
 .dailyBasicInfo {
@@ -164,13 +297,14 @@
 .dailyYearProgress {
   display: grid;
   gap: 0.22rem;
-  max-width: 18rem;
+  max-width: 24rem;
 }
 
 .dailyYearProgress span {
   color: var(--muted);
   font-size: 0.7rem;
   font-weight: 680;
+  line-height: 1.35;
 }
 
 .dailyYearProgress i {
@@ -460,9 +594,9 @@
 
 .healthChartsPanel {
   display: grid;
-  gap: 0.58rem;
+  gap: 0.5rem;
   margin-top: 0.2rem;
-  padding: 0.9rem 1rem 1rem;
+  padding: 0.78rem 0.9rem 1rem;
   box-shadow: 0 12px 36px rgba(15, 23, 42, 0.035);
   backdrop-filter: blur(18px);
   max-height: 46rem;
@@ -487,9 +621,6 @@
 }
 
 .dataDomainTabs {
-  position: sticky;
-  top: 5.1rem;
-  z-index: 5;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.2rem;
@@ -497,6 +628,17 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
+  backdrop-filter: blur(18px);
+}
+
+.dataDomainTier {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 0.1rem 0 0.36rem;
+  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(to bottom, var(--surface) 76%, color-mix(in srgb, var(--surface) 72%, transparent));
   backdrop-filter: blur(18px);
 }
 
@@ -561,54 +703,59 @@
 }
 
 .objectiveTimeControls {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  display: grid;
-  gap: 0.35rem;
-  padding: 0.12rem 0 0.42rem;
-  border-bottom: 1px solid var(--line);
-  background:
-    linear-gradient(to bottom, var(--surface) 74%, color-mix(in srgb, var(--surface) 70%, transparent));
-  backdrop-filter: blur(18px);
-}
-
-.objectiveTimeBar {
   display: inline-flex;
   align-items: center;
-  gap: 0.18rem;
+  gap: 0.16rem;
+  min-width: 0;
   max-width: 100%;
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 0.18rem;
+  justify-self: end;
+  padding: 0.16rem;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--surface-strong);
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(18px);
 }
 
-.objectiveTimeBar::-webkit-scrollbar {
+.objectiveTimeControls::-webkit-scrollbar {
   display: none;
 }
 
+.objectiveTimeModes,
 .objectiveTimeOptions {
-  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.12rem;
+  flex: 0 0 auto;
 }
 
-.objectiveTimeBar button {
+.objectiveTimeDivider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 1rem;
+  margin: 0 0.08rem;
+  background: var(--line);
+}
+
+.objectiveTimeModes button,
+.objectiveTimeOptions button {
   flex: 0 0 auto;
   border: 0;
   border-radius: 999px;
-  padding: 0.3rem 0.64rem;
+  padding: 0.28rem 0.58rem;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
   font: inherit;
-  font-size: 0.74rem;
-  font-weight: 720;
+  font-size: 0.7rem;
+  font-weight: 740;
   white-space: nowrap;
 }
 
-.objectiveTimeBar button:hover {
+.objectiveTimeModes button:hover,
+.objectiveTimeOptions button:hover {
   color: var(--accent);
   background: var(--accent-soft);
 }
@@ -620,7 +767,7 @@
 
 .healthChartSubtabs {
   position: sticky;
-  top: 6.7rem;
+  top: 3.2rem;
   z-index: 4;
   display: flex;
   align-items: center;
@@ -663,83 +810,6 @@
 .healthChartsGrid {
   display: grid;
   gap: 0.7rem;
-}
-
-.selectedDateDock {
-  position: sticky;
-  top: 8.7rem;
-  z-index: 5;
-  isolation: isolate;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.05rem 0.55rem;
-  align-items: center;
-  min-width: 0;
-  margin: -0.08rem 0 0.05rem;
-  padding: 0.5rem 0.62rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--line));
-  border-left: 4px solid var(--accent);
-  border-radius: 14px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 15%, transparent), transparent 70%),
-    var(--surface-strong);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
-}
-
-.selectedDateDock::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: -0.4rem;
-  width: 0.42rem;
-  height: 0.42rem;
-  border: 2px solid var(--surface-strong);
-  border-radius: 999px;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-  transform: translate(-50%, -50%);
-}
-
-.selectedDateDock::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: calc(-2rem - 3px);
-  width: calc(2rem + 3px);
-  height: 2px;
-  background: var(--accent);
-}
-
-.selectedDateDock span {
-  grid-column: 1 / 2;
-  color: var(--accent);
-  font-size: 0.64rem;
-  font-weight: 820;
-  letter-spacing: 0.08em;
-}
-
-.selectedDateDock strong {
-  grid-column: 1 / 2;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 0.82rem;
-  letter-spacing: -0.02em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.selectedDateDock small {
-  grid-column: 2 / 3;
-  grid-row: 1 / span 2;
-  align-self: center;
-  padding: 0.22rem 0.42rem;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.66rem;
-  font-weight: 780;
-  font-variant-numeric: tabular-nums;
 }
 
 .healthChartSection {
@@ -906,6 +976,10 @@
 
 .legendPrimary {
   background: var(--accent);
+}
+
+.legendSecondary {
+  background: #34c759;
 }
 
 .legendLine {
@@ -2358,20 +2432,21 @@
     gap: 0.45rem;
   }
 
-  .selectedDateDock::after,
-  .selectedDateDock::before {
-    display: none;
-  }
-
-  .selectedDateDock {
-    position: static;
+  .dashboardHeader {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
 
-  .selectedDateDock small {
-    grid-column: 1;
-    grid-row: auto;
+  .objectiveTimeControls {
     justify-self: start;
+  }
+
+  .dataDomainTier {
+    top: 0;
+  }
+
+  .healthChartSubtabs {
+    top: 3.2rem;
   }
 
   .dailyBasicInfo {

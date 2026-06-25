@@ -98,6 +98,26 @@ const MONTH_LABELS = [
 ];
 const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
 
+function dateRange(start: string, end: string): string[] {
+  const out: string[] = [];
+  const cursor = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T00:00:00`);
+  while (cursor <= endDate) {
+    out.push(formatDate(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
+}
+
+function scopeDateKeys(scope?: TimeScope): string[] | null {
+  if (!scope || scope.mode === 'all') return null;
+  if (scope.mode === 'year') return dateRange(`${scope.year}-01-01`, `${scope.year}-12-31`);
+  const end = formatDate(new Date());
+  const start = new Date(`${end}T00:00:00`);
+  start.setDate(start.getDate() - RANGE_DAYS[scope.range] + 1);
+  return dateRange(formatDate(start), end);
+}
+
 function filterDateRecord<T>(record: Record<string, T>, scope?: TimeScope): Record<string, T> {
   if (!scope || scope.mode === 'all') return record;
   const entries = Object.entries(record);
@@ -105,13 +125,11 @@ function filterDateRecord<T>(record: Record<string, T>, scope?: TimeScope): Reco
     const prefix = `${scope.year}-`;
     return Object.fromEntries(entries.filter(([date]) => date.startsWith(prefix)));
   }
-  const dates = entries.map(([date]) => date).sort();
-  const latest = dates.at(-1);
-  if (!latest) return {};
-  const cutoff = new Date(`${latest}T00:00:00`);
-  cutoff.setDate(cutoff.getDate() - RANGE_DAYS[scope.range]);
+  const end = formatDate(new Date());
+  const cutoff = new Date(`${end}T00:00:00`);
+  cutoff.setDate(cutoff.getDate() - RANGE_DAYS[scope.range] + 1);
   const cutoffKey = formatDate(cutoff);
-  return Object.fromEntries(entries.filter(([date]) => date >= cutoffKey));
+  return Object.fromEntries(entries.filter(([date]) => date >= cutoffKey && date <= end));
 }
 
 function getDayRow(date: Date): number {
@@ -601,8 +619,8 @@ function StackedBarChart({
     }));
   }, [vendors, timeScope]);
   const dates = useMemo(() => {
-    return [...new Set(vendorDaily.flatMap((vendor) => Object.keys(vendor.daily)))].sort();
-  }, [vendorDaily]);
+    return scopeDateKeys(timeScope) ?? [...new Set(vendorDaily.flatMap((vendor) => Object.keys(vendor.daily)))].sort();
+  }, [timeScope, vendorDaily]);
   const totals = useMemo(() => {
     return dates.map((date) => vendorDaily.reduce((sum, vendor) => sum + Number(vendor.daily[date] || 0), 0));
   }, [dates, vendorDaily]);

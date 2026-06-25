@@ -1,11 +1,12 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import AccountAssetsDashboard from '@site/src/components/AccountAssetsDashboard';
 import AlipayInvestDashboard from '@site/src/components/AlipayInvestDashboard';
+import BrowserOnly from '@docusaurus/BrowserOnly';
 import FinanceAssetsTrend from '@site/src/components/FinanceAssetsTrend';
 import {HEALTH_CHART_NAV, HealthProvider, HealthSection, type TimeScope as HealthTimeScope} from '@site/src/components/HealthCharts';
 import HKIPOCharts from '@site/src/components/HKIPOCharts';
-import LLMUsageDashboard from '@site/src/components/LLMUsageDashboard';
-import ReadingDashboard from '@site/src/components/ReadingDashboard';
+import ReactECharts from 'echarts-for-react';
+import {useColorMode} from '@docusaurus/theme-common';
 import styles from './styles.module.css';
 
 type DailyReflectionDashboardProps = {
@@ -124,6 +125,13 @@ type ObjectivePoint = {
   value: number;
   secondary?: number;
   tertiary?: number;
+};
+
+type TokenStackPoint = {
+  date: string;
+  minimax: number;
+  openai: number;
+  anthropic: number;
 };
 
 type WeatherSummary = {
@@ -298,6 +306,16 @@ function getYearProgress(date: string): number {
   const elapsed = diffDays(formatDateKey(start), date) + 1;
   const total = diffDays(formatDateKey(start), formatDateKey(end)) + 1;
   return (elapsed / total) * 100;
+}
+
+function getLifeProgress(date: string): {progress: number; livedDays: number; remainingDays: number} {
+  const totalDays = diffDays(LIFE_START_DATE, LIFE_END_DATE) + 1;
+  const livedDays = Math.min(totalDays, Math.max(0, diffDays(LIFE_START_DATE, date) + 1));
+  return {
+    progress: (livedDays / totalDays) * 100,
+    livedDays,
+    remainingDays: Math.max(0, totalDays - livedDays),
+  };
 }
 
 function addDays(date: Date, days: number): Date {
@@ -1678,7 +1696,7 @@ function DataDomainTabs({
   ];
 
   return (
-    <div className={styles.filterTier}>
+    <div className={`${styles.filterTier} ${styles.dataDomainTier}`}>
       <span className={styles.filterTierLabel}>领域</span>
       <div className={styles.dataDomainTabs} role="tablist" aria-label="客观数据分类">
         {domains.map((domain) => (
@@ -1918,6 +1936,99 @@ function ObjectiveBarLineChart({
   );
 }
 
+function TokenStackedBarChart({
+  points,
+  selectedDate,
+  onDateSelect,
+}: {
+  points: TokenStackPoint[];
+  selectedDate?: string;
+  onDateSelect: (date: string) => void;
+}): React.ReactNode {
+  const chartHeight = 238;
+  const labelHeight = 30;
+  const plotHeight = chartHeight - labelHeight - 16;
+  const width = Math.max(520, points.length * 24);
+  const gap = points.length > 120 ? 3 : 7;
+  const barWidth = Math.max(5, Math.min(18, (width - gap * (points.length + 1)) / Math.max(1, points.length)));
+  const totals = points.map((point) => point.minimax + point.openai + point.anthropic);
+  const maxValue = Math.max(1, ...totals);
+  const selectedIndex = selectedDate ? points.findIndex((point) => point.date === selectedDate) : -1;
+  const selectedX = selectedIndex >= 0 ? gap + selectedIndex * (barWidth + gap) : null;
+
+  if (!points.length) {
+    return <div className={styles.financeEmptyPanel}>当前时间范围暂无数据</div>;
+  }
+
+  return (
+    <div className={styles.objectiveChartScroll}>
+      <svg className={styles.objectiveChart} viewBox={`0 0 ${width} ${chartHeight}`} style={{width, height: chartHeight}} role="img">
+        {selectedX !== null ? (
+          <g className={styles.objectiveSelectedDate}>
+            <rect x={Math.max(0, selectedX - gap / 2)} y={0} width={barWidth + gap} height={plotHeight} rx={5} />
+            <line x1={selectedX + barWidth / 2} x2={selectedX + barWidth / 2} y1={0} y2={plotHeight + 18} />
+            <text x={selectedX + barWidth / 2} y={plotHeight + 28} textAnchor="middle">
+              {selectedDate?.slice(5)}
+            </text>
+          </g>
+        ) : null}
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
+          <g key={ratio}>
+            <line x1={0} x2={width} y1={ratio * plotHeight} y2={ratio * plotHeight} className={styles.objectiveGridLine} />
+            <text x={0} y={Math.max(10, ratio * plotHeight - 3)} className={styles.objectiveAxisLabel}>
+              {formatCompactNumber(maxValue * (1 - ratio), 1)}
+            </text>
+          </g>
+        ))}
+        {points.map((point, index) => {
+          const x = gap + index * (barWidth + gap);
+          const total = point.minimax + point.openai + point.anthropic;
+          let y = plotHeight;
+          const showLabel = points.length <= 35 || index % Math.ceil(points.length / 18) === 0;
+          const segments = [
+            {key: 'minimax', label: 'MiniMax', value: point.minimax, className: styles.objectiveBarPrimary},
+            {key: 'openai', label: 'OpenAI', value: point.openai, className: styles.objectiveBarSecondary},
+            {key: 'anthropic', label: 'Anthropic', value: point.anthropic, className: styles.objectiveBarTertiary},
+          ];
+          return (
+            <g key={point.date} className={styles.objectiveChartPoint} onClick={() => onDateSelect(point.date)}>
+              <title>
+                {[
+                  point.date,
+                  `总量: ${formatCompactNumber(total, 1)}`,
+                  `MiniMax: ${formatCompactNumber(point.minimax, 1)}`,
+                  `OpenAI: ${formatCompactNumber(point.openai, 1)}`,
+                  `Anthropic: ${formatCompactNumber(point.anthropic, 1)}`,
+                ].join(' · ')}
+              </title>
+              <rect x={Math.max(0, x - gap / 2)} y={0} width={barWidth + gap} height={plotHeight + labelHeight} rx={5} className={styles.objectiveHoverBand} />
+              {segments.map((segment) => {
+                if (segment.value <= 0) return null;
+                const height = Math.max(1, (segment.value / maxValue) * plotHeight);
+                y -= height;
+                return (
+                  <rect
+                    key={segment.key}
+                    x={x}
+                    y={y}
+                    width={barWidth}
+                    height={height}
+                    rx={2}
+                    className={segment.className}
+                  />
+                );
+              })}
+              <text x={x + barWidth / 2} y={plotHeight + 14} textAnchor="middle" className={styles.objectiveXAxisLabel}>
+                {showLabel ? point.date.slice(5) : ''}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 function ObjectiveChartCard({
   id,
   title,
@@ -1957,8 +2068,9 @@ function ObjectiveChartCard({
 function DailyBasicInfo({date, weather}: {date: string; weather: unknown}): React.ReactNode {
   if (!date) return null;
   const weatherSummary = getWeatherSummary(weather);
-  const yearProgress = getYearProgress(date);
   const weatherKind = getWeatherKind(weatherSummary.description);
+  const weekdayLabel = getWeekdayLabel(date).replace(/^星期/, '周');
+  const holidayLabel = getHolidayLabel(date);
   const weatherMetrics = [
     ['体感', weatherSummary.feelsLike.replace(/^体感\s*/, '')],
     ['湿度', weatherSummary.humidity.replace(/^湿度\s*/, '')],
@@ -1969,16 +2081,7 @@ function DailyBasicInfo({date, weather}: {date: string; weather: unknown}): Reac
   return (
     <section className={styles.dailyBasicInfo}>
       <div className={styles.dailyDateBlock}>
-        <strong>{formatChineseDate(date)}</strong>
-        <div className={styles.dailyBasicMeta}>
-          <span>{date}</span>
-          <span>{getWeekdayLabel(date)}</span>
-          <span>{getHolidayLabel(date)}</span>
-        </div>
-        <div className={styles.dailyYearProgress}>
-          <span>今年已经过去 {formatPercent(yearProgress)}</span>
-          <i><b style={{width: `${yearProgress}%`}} /></i>
-        </div>
+        <strong>{formatChineseDate(date)}（{weekdayLabel}，{holidayLabel}）</strong>
       </div>
       <div className={`${styles.dailyWeather} ${styles[`dailyWeather_${weatherKind}`]}`}>
         <div className={styles.weatherIcon} aria-hidden="true">
@@ -2002,6 +2105,167 @@ function DailyBasicInfo({date, weather}: {date: string; weather: unknown}): Reac
   );
 }
 
+function DailyYearHeatmap({
+  year,
+  selectedDate,
+  dailyDates,
+  onDateSelect,
+}: {
+  year: number;
+  selectedDate: string;
+  dailyDates: Set<string>;
+  onDateSelect: (date: string) => void;
+}): React.ReactNode {
+  const {colorMode} = useColorMode();
+  const isDark = colorMode === 'dark';
+  const today = formatDateKey(new Date());
+  const yearProgress = getYearProgress(selectedDate);
+  const lifeProgress = getLifeProgress(selectedDate);
+  const diaryColor = isDark ? '#64d2ff' : '#0a84ff';
+  const pastEmptyColor = isDark ? 'rgba(148, 163, 184, 0.24)' : 'rgba(100, 116, 139, 0.18)';
+  const futureColor = isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(100, 116, 139, 0.08)';
+  const mutedLabelColor = isDark ? 'rgba(226, 232, 240, 0.68)' : 'rgba(51, 65, 85, 0.62)';
+  const {values, diaryDays, elapsedDays, futureDays} = useMemo(() => {
+    const days = daysInYear(year);
+    const today = formatDateKey(new Date());
+    let diaryCount = 0;
+    let elapsedCount = 0;
+    let futureCount = 0;
+    const data = days.map((date) => {
+      const hasDaily = dailyDates.has(date);
+      const isElapsed = date <= today;
+      if (hasDaily) diaryCount += 1;
+      if (isElapsed) elapsedCount += 1;
+      else futureCount += 1;
+      const day = Number(date.slice(8, 10));
+      const month = Number(date.slice(5, 7));
+      const lastDayOfMonth = new Date(year, month, 0).getDate();
+      const isSelected = date === selectedDate;
+      const isToday = date === today;
+      const shouldShowDayNumber = isElapsed && (isSelected || isToday || day === 1 || day === 15 || day === lastDayOfMonth);
+      return {
+        value: [date, hasDaily ? 2 : isElapsed ? 1 : 0],
+        itemStyle: !hasDaily && !isElapsed ? {
+          decal: {
+            symbol: 'rect',
+            dashArrayX: [1, 0],
+            dashArrayY: [1, 7],
+            rotation: Math.PI / 4,
+            color: isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(100, 116, 139, 0.08)',
+          },
+        } : undefined,
+        label: shouldShowDayNumber ? {
+          show: true,
+          formatter: String(day),
+          color: isSelected || isToday ? hasDaily ? '#ffffff' : diaryColor : hasDaily ? '#ffffff' : mutedLabelColor,
+          fontSize: isSelected || isToday ? 7 : 6,
+          fontWeight: isSelected || isToday ? 900 : 760,
+          textBorderColor: hasDaily ? (isDark ? 'rgba(2, 6, 23, 0.32)' : 'rgba(10, 132, 255, 0.36)') : 'transparent',
+          textBorderWidth: hasDaily ? 1.2 : 0,
+        } : undefined,
+        disabled: !isElapsed,
+      };
+    });
+
+    return {values: data, diaryDays: diaryCount, elapsedDays: elapsedCount, futureDays: futureCount};
+  }, [dailyDates, diaryColor, isDark, mutedLabelColor, selectedDate, year]);
+  const option = useMemo(() => ({
+    backgroundColor: 'transparent',
+    visualMap: {
+      type: 'piecewise',
+      show: false,
+      dimension: 1,
+      pieces: [
+        {value: 2, label: '有日记', color: diaryColor},
+        {value: 1, label: '过去无日记', color: pastEmptyColor},
+        {value: 0, label: '未来', color: futureColor},
+      ],
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: (params: {value?: [string, number]}) => {
+        const date = params.value?.[0] || '';
+        const state = dailyDates.has(date) ? '有日记' : date > today ? '未来' : '无日记';
+        return `<b>${formatChineseDate(date)}</b><br/>${state}`;
+      },
+    },
+    calendar: {
+      top: 18,
+      left: 28,
+      right: 8,
+      bottom: 2,
+      range: `${year}`,
+      cellSize: ['auto', 10],
+      splitLine: {lineStyle: {color: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(100, 116, 139, 0.12)', width: 0.7}},
+      itemStyle: {borderWidth: 0.5, borderColor: isDark ? 'rgba(148, 163, 184, 0.16)' : 'rgba(100, 116, 139, 0.16)'},
+      yearLabel: {show: false},
+      monthLabel: {color: isDark ? '#94a3b8' : '#64748b', fontSize: 8, margin: 4, nameMap: MONTH_LABELS.map((label) => label.replace('月', ''))},
+      dayLabel: {color: isDark ? '#94a3b8' : '#64748b', fontSize: 8, firstDay: 1, nameMap: ['日', '一', '二', '三', '四', '五', '六']},
+    },
+    series: [{
+      type: 'heatmap',
+      coordinateSystem: 'calendar',
+      data: values,
+      label: {
+        show: false,
+      },
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 6,
+          shadowColor: isDark ? 'rgba(100, 210, 255, 0.3)' : 'rgba(10, 132, 255, 0.25)',
+        },
+      },
+      markPoint: selectedDate ? {
+        symbol: 'roundRect',
+        symbolSize: 10,
+        itemStyle: {color: 'transparent', borderColor: isDark ? '#64d2ff' : '#0a84ff', borderWidth: 2},
+        data: [{coord: [selectedDate]}],
+        label: {show: false},
+        silent: true,
+      } : undefined,
+    }],
+  }), [dailyDates, diaryColor, futureColor, isDark, pastEmptyColor, selectedDate, today, values, year]);
+  const onEvents = {
+    click: (params: {value?: [string, number]; data?: {disabled?: boolean}}) => {
+      const date = params.value?.[0];
+      if (date && !params.data?.disabled) onDateSelect(date);
+    },
+  };
+
+  return (
+    <section className={styles.dailyYearHeatmap} aria-label={`${year} 年日记热力图`}>
+      <div className={styles.dailyYearHeatmapHead}>
+        <strong>{year} 年日记</strong>
+        <div className={styles.dailyYearHeatmapProgress}>
+          <span>
+            今年已过去 {formatPercent(yearProgress)} · 人生已过去 {formatPercent(lifeProgress.progress)}
+            （过去 {formatNumber(lifeProgress.livedDays)} 天 / 还剩 {formatNumber(lifeProgress.remainingDays)} 天）
+          </span>
+          <i><b style={{width: `${yearProgress}%`}} /></i>
+        </div>
+      </div>
+      <BrowserOnly fallback={<div className={styles.dailyYearHeatmapChart} />}>
+        {() => (
+          <ReactECharts
+            option={option}
+            style={{height: 104, width: '100%'}}
+            opts={{renderer: 'svg'}}
+            notMerge
+            lazyUpdate
+            onEvents={onEvents}
+          />
+        )}
+      </BrowserOnly>
+      <div className={styles.dailyYearHeatmapLegend}>
+        <span>{diaryDays} 天有日记 · {elapsedDays - diaryDays} 天过去无日记 · {futureDays} 天未到来</span>
+        <span><i className={styles.dailyYearHeatmapLegendDiary} />有日记</span>
+        <span><i className={styles.dailyYearHeatmapLegendPastEmpty} />过去无日记</span>
+        <span><i className={styles.dailyYearHeatmapLegendFuture} />未来</span>
+      </div>
+    </section>
+  );
+}
+
 function ObjectiveTimeControls({
   scope,
   onChange,
@@ -2013,29 +2277,26 @@ function ObjectiveTimeControls({
 
   return (
     <div className={styles.objectiveTimeControls} aria-label="客观数据时间范围">
-      <div className={styles.filterTier}>
-        <span className={styles.filterTierLabel}>时间</span>
-        <div className={styles.objectiveTimeBar}>
-          {(['recent', 'year', 'all'] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className={scope.mode === mode ? styles.objectiveTimeActive : ''}
-              onClick={() => {
-                if (mode === 'recent') onChange({mode, range: scope.mode === 'recent' ? scope.range : '30d'});
-                if (mode === 'year') onChange({mode, year: scope.mode === 'year' ? scope.year : new Date().getFullYear()});
-                if (mode === 'all') onChange({mode});
-              }}
-            >
-              {mode === 'recent' ? '近况' : mode === 'year' ? '年度' : '历史'}
-            </button>
-          ))}
-        </div>
+      <div className={styles.objectiveTimeModes}>
+        {(['recent', 'year', 'all'] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            className={scope.mode === mode ? styles.objectiveTimeActive : ''}
+            onClick={() => {
+              if (mode === 'recent') onChange({mode, range: scope.mode === 'recent' ? scope.range : '7d'});
+              if (mode === 'year') onChange({mode, year: scope.mode === 'year' ? scope.year : new Date().getFullYear()});
+              if (mode === 'all') onChange({mode});
+            }}
+          >
+            {mode === 'recent' ? '近况' : mode === 'year' ? '年度' : '历史'}
+          </button>
+        ))}
       </div>
-      <div className={styles.filterTier}>
-        <span className={styles.filterTierLabel}>范围</span>
-        <div className={`${styles.objectiveTimeBar} ${styles.objectiveTimeOptions}`}>
-          {scope.mode === 'recent' && (Object.keys(OBJECTIVE_RANGE_LABELS) as Array<'7d' | '30d' | '90d' | '1y'>).map((range) => (
+      {scope.mode !== 'all' ? <span className={styles.objectiveTimeDivider} aria-hidden="true" /> : null}
+      {scope.mode === 'recent' ? (
+        <div className={styles.objectiveTimeOptions}>
+          {(Object.keys(OBJECTIVE_RANGE_LABELS) as Array<'7d' | '30d' | '90d' | '1y'>).map((range) => (
             <button
               key={range}
               type="button"
@@ -2045,7 +2306,11 @@ function ObjectiveTimeControls({
               {OBJECTIVE_RANGE_LABELS[range]}
             </button>
           ))}
-          {scope.mode === 'year' && years.map((year) => (
+        </div>
+      ) : null}
+      {scope.mode === 'year' ? (
+        <div className={styles.objectiveTimeOptions}>
+          {years.map((year) => (
             <button
               key={year}
               type="button"
@@ -2055,13 +2320,8 @@ function ObjectiveTimeControls({
               {year}
             </button>
           ))}
-          {scope.mode === 'all' ? (
-            <button type="button" className={styles.objectiveTimeActive} onClick={() => onChange({mode: 'all'})}>
-              全部历史
-            </button>
-          ) : null}
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -2101,26 +2361,13 @@ function HealthChartsPanel({
 
 const CAREER_CHART_NAV = [
   {id: 'career-ai-tokens', label: 'AI 使用'},
-  {id: 'career-platforms', label: '平台结构'},
   {id: 'career-git', label: 'Git 推进'},
 ];
 
 const LIFE_CHART_NAV = [
   {id: 'life-reading-time', label: '阅读时长'},
   {id: 'life-rhythm', label: '生活节奏'},
-  {id: 'life-calendar', label: '人生进度'},
 ];
-
-function SelectedDateDock({date}: {date: string}): React.ReactNode {
-  if (!date) return null;
-  return (
-    <div className={styles.selectedDateDock} aria-label="当前右侧详情日期">
-      <span>{getWeekdayLabel(date)} · {getHolidayLabel(date)}</span>
-      <strong>{formatChineseDate(date)}</strong>
-      <small>{date}</small>
-    </div>
-  );
-}
 
 function CareerDataPanel({
   selectedDate,
@@ -2167,22 +2414,22 @@ function CareerDataPanel({
     return [...dates].sort();
   }, [analyses, llmPayloads]);
   const axisDates = useMemo(() => getScopeDates(timeScope, allDates), [allDates, timeScope]);
-  const tokenPoints = useMemo<ObjectivePoint[]>(() => axisDates.map((date) => ({
-    date,
-    value: llmPayloads.reduce((sum, vendor) => sum + Number(vendor.payload.daily_token_usage?.[date] || 0), 0),
-    secondary: parseGitCounts(analyses[date]).manual,
-  })), [analyses, axisDates, llmPayloads]);
-  const platformPoints = useMemo<ObjectivePoint[]>(() => axisDates.map((date) => {
+  const tokenPoints = useMemo<TokenStackPoint[]>(() => axisDates.map((date) => {
     const [minimax, openai, anthropic] = LLM_VENDOR_CONFIGS.map((vendor) =>
       Number(llmPayloads.find((item) => item.id === vendor.id)?.payload.daily_token_usage?.[date] || 0));
-    return {date, value: minimax, secondary: openai, tertiary: anthropic};
+    return {
+      date,
+      minimax,
+      openai,
+      anthropic,
+    };
   }), [axisDates, llmPayloads]);
   const gitPoints = useMemo<ObjectivePoint[]>(() => axisDates.map((date) => {
     const counts = parseGitCounts(analyses[date]);
     return {date, value: counts.auto, secondary: counts.manual, tertiary: counts.total};
   }), [analyses, axisDates]);
-  const totalTokens = tokenPoints.reduce((sum, point) => sum + point.value, 0);
-  const activeAiDays = tokenPoints.filter((point) => point.value > 0).length;
+  const totalTokens = tokenPoints.reduce((sum, point) => sum + point.minimax + point.openai + point.anthropic, 0);
+  const activeAiDays = tokenPoints.filter((point) => point.minimax + point.openai + point.anthropic > 0).length;
   const manualCommits = gitPoints.reduce((sum, point) => sum + Number(point.secondary || 0), 0);
   const totalCommits = gitPoints.reduce((sum, point) => sum + Number(point.tertiary || 0), 0);
 
@@ -2201,37 +2448,15 @@ function CareerDataPanel({
         <ObjectiveChartCard
           id="career-ai-tokens"
           title="AI 使用强度"
-          meta={loading ? '加载中' : `${scopeLabel(timeScope)} · 柱为 token，线为人工提交`}
-          legend={[
-            {label: 'Token', className: styles.legendPrimary},
-            {label: '人工提交', className: styles.legendLine},
-          ]}
-        >
-          <ObjectiveBarLineChart
-            points={tokenPoints}
-            valueLabel="Token"
-            secondaryLabel="人工提交"
-            formatValue={(value) => formatCompactNumber(value, 1)}
-            selectedDate={selectedDate}
-            onDateSelect={onDateSelect}
-          />
-        </ObjectiveChartCard>
-        <ObjectiveChartCard
-          id="career-platforms"
-          title="平台结构"
-          meta="MiniMax / OpenAI / Anthropic 的日使用分布"
+          meta={loading ? '加载中' : `${scopeLabel(timeScope)} · 平台 token 堆叠`}
           legend={[
             {label: 'MiniMax', className: styles.legendPrimary},
-            {label: 'OpenAI', className: styles.legendLine},
+            {label: 'OpenAI', className: styles.legendSecondary},
             {label: 'Anthropic', className: styles.legendTertiary},
           ]}
         >
-          <ObjectiveBarLineChart
-            points={platformPoints}
-            valueLabel="MiniMax"
-            secondaryLabel="OpenAI"
-            tertiaryLabel="Anthropic"
-            formatValue={(value) => formatCompactNumber(value, 1)}
+          <TokenStackedBarChart
+            points={tokenPoints}
             selectedDate={selectedDate}
             onDateSelect={onDateSelect}
           />
@@ -2255,9 +2480,6 @@ function CareerDataPanel({
             onDateSelect={onDateSelect}
           />
         </ObjectiveChartCard>
-        <div className={styles.embeddedDashboard}>
-          <LLMUsageDashboard onDateSelect={onDateSelect} timeScope={timeScope} variant="stackedBar" />
-        </div>
       </div>
     </>
   );
@@ -2430,12 +2652,6 @@ function LifeDataPanel({
             onDateSelect={onDateSelect}
           />
         </ObjectiveChartCard>
-        <ObjectiveChartCard id="life-calendar" title="人生进度" meta="长期尺度下看当前时间位置">
-          <LifeCalendar />
-        </ObjectiveChartCard>
-        <div className={styles.embeddedDashboard}>
-          <ReadingDashboard onDateSelect={onDateSelect} timeScope={timeScope} variant="bar" />
-        </div>
       </div>
     </>
   );
@@ -2444,18 +2660,19 @@ function LifeDataPanel({
 function ObjectiveDataPanel({
   selectedDate,
   onDateSelect,
+  timeScope,
+  setTimeScope,
 }: {
   selectedDate: string;
   onDateSelect: (date: string) => void;
+  timeScope: ObjectiveTimeScope;
+  setTimeScope: (scope: ObjectiveTimeScope) => void;
 }): React.ReactNode {
   const [activeDomain, setActiveDomain] = useState<DataDomain>('health');
-  const [timeScope, setTimeScope] = useState<ObjectiveTimeScope>({mode: 'recent', range: '7d'});
 
   return (
     <section className={styles.healthChartsPanel}>
-      <ObjectiveTimeControls scope={timeScope} onChange={setTimeScope} />
       <DataDomainTabs active={activeDomain} onChange={setActiveDomain} />
-      <SelectedDateDock date={selectedDate} />
       {activeDomain === 'health' ? <HealthChartsPanel selectedDate={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} setTimeScope={setTimeScope} /> : null}
       {activeDomain === 'career' ? <CareerDataPanel selectedDate={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
       {activeDomain === 'finance' ? <FinanceDataPanel date={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
@@ -2466,23 +2683,30 @@ function ObjectiveDataPanel({
 
 function DailyDetailPanel({
   date,
+  year,
+  dailyDates,
   weather,
   diary,
   analysis,
   timelineModel,
   loading,
+  onDateSelect,
 }: {
   date: string;
+  year: number;
+  dailyDates: Set<string>;
   weather: unknown;
   diary: string;
   analysis: DailyAnalysis | null;
   timelineModel: TimelineModel;
   loading: boolean;
+  onDateSelect: (date: string) => void;
 }): React.ReactNode {
   const [activeTab, setActiveTab] = useState<DailyDetailTab>('diary');
 
   return (
     <section className={styles.dailyDetailPanel}>
+      <DailyYearHeatmap year={year} selectedDate={date} dailyDates={dailyDates} onDateSelect={onDateSelect} />
       <DailyBasicInfo date={date} weather={weather} />
       <DailyDetailTabs active={activeTab} onChange={setActiveTab} />
       <div className={styles.dailyDetailBody}>
@@ -2508,6 +2732,10 @@ function DailyContext({
   timelineModel,
   loading,
   onDateSelect,
+  timeScope,
+  setTimeScope,
+  year,
+  dailyDates,
 }: {
   date: string;
   weather: unknown;
@@ -2516,14 +2744,28 @@ function DailyContext({
   timelineModel: TimelineModel;
   loading: boolean;
   onDateSelect: (date: string) => void;
+  timeScope: ObjectiveTimeScope;
+  setTimeScope: (scope: ObjectiveTimeScope) => void;
+  year: number;
+  dailyDates: Set<string>;
 }): React.ReactNode {
   return (
     <section className={styles.dailyContext}>
       <div className={styles.dailyContextLeft}>
-        <ObjectiveDataPanel selectedDate={date} onDateSelect={onDateSelect} />
+        <ObjectiveDataPanel selectedDate={date} onDateSelect={onDateSelect} timeScope={timeScope} setTimeScope={setTimeScope} />
       </div>
       <div className={styles.dailyContextRight}>
-        <DailyDetailPanel date={date} weather={weather} diary={diary} analysis={analysis} timelineModel={timelineModel} loading={loading} />
+        <DailyDetailPanel
+          date={date}
+          year={year}
+          dailyDates={dailyDates}
+          weather={weather}
+          diary={diary}
+          analysis={analysis}
+          timelineModel={timelineModel}
+          loading={loading}
+          onDateSelect={onDateSelect}
+        />
       </div>
     </section>
   );
@@ -2546,6 +2788,7 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
   const [dailyHealth, setDailyHealth] = useState<DailyHealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [dailyLoading, setDailyLoading] = useState(false);
+  const [timeScope, setTimeScope] = useState<ObjectiveTimeScope>({mode: 'recent', range: '7d'});
 
   useEffect(() => {
     let mounted = true;
@@ -2643,6 +2886,13 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
 
   return (
     <div className={styles.page}>
+      <header className={styles.dashboardHeader}>
+        <div className={styles.dashboardHeaderText}>
+          <h1>三省吾身</h1>
+        </div>
+        <ObjectiveTimeControls scope={timeScope} onChange={setTimeScope} />
+      </header>
+
       {(viewMode === 'life' || calendarExpanded) ? (
         <section className={styles.calendarShell}>
           <div className={styles.calendarTopline}>
@@ -2708,6 +2958,10 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
               timelineModel={timelineModel}
               loading={dailyLoading}
               onDateSelect={setSelectedDate}
+              timeScope={timeScope}
+              setTimeScope={setTimeScope}
+              year={selectedYear || new Date().getFullYear()}
+              dailyDates={dailyDateSet}
             />
           )}
 

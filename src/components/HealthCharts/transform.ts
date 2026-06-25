@@ -78,6 +78,13 @@ function r(v: number, d = 2) {
   return Math.round(v * 10 ** d) / 10 ** d;
 }
 
+function localDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function series(metrics: RawMetric[], name: string, conv?: (v: number) => number): [string, number][] {
   const m = metrics.find((x) => x.name === name);
   if (!m) return [];
@@ -355,12 +362,11 @@ export function computeDashboard(D: HealthData): DashCard[] {
 }
 
 export function filterByTimeRange(D: HealthData, days: number): HealthData {
-  const ref = D.steps.length ? D.steps : D.rhr.length ? D.rhr : null;
-  const latestDate = ref ? ref[ref.length - 1][0] : new Date().toISOString().slice(0, 10);
-  const cutoff = new Date(latestDate);
+  const latestDate = localDateKey(new Date());
+  const cutoff = new Date(`${latestDate}T00:00:00`);
   cutoff.setDate(cutoff.getDate() - days + 1);
-  const cs = cutoff.toISOString().slice(0, 10);
-  const f = (arr: [string, number][]): [string, number][] => arr.filter(([d]) => d >= cs);
+  const cs = localDateKey(cutoff);
+  const f = (arr: [string, number][]): [string, number][] => arr.filter(([d]) => d >= cs && d <= latestDate);
   return {
     steps: f(D.steps), distance: f(D.distance), exercise: f(D.exercise),
     energy_active: f(D.energy_active), energy_basal: f(D.energy_basal),
@@ -376,12 +382,12 @@ export function filterByTimeRange(D: HealthData, days: number): HealthData {
     audio_hp: f(D.audio_hp), daylight: f(D.daylight), mindful: f(D.mindful),
     handwash: f(D.handwash), physical_effort: f(D.physical_effort),
     cardio_recovery: f(D.cardio_recovery), vo2: f(D.vo2),
-    workouts: D.workouts.filter(([d]) => d >= cs),
-    nah_daily: D.nah_daily.filter(([d]) => d >= cs),
-    bns_daily: D.bns_daily.filter(([d]) => d >= cs),
-    med_monthly: D.med_monthly.filter(([d]) => d >= cs),
-    state_of_mind: D.state_of_mind.filter(([d]) => d >= cs),
-    hr_notifications: D.hr_notifications.filter(([d]) => d >= cs),
+    workouts: D.workouts.filter(([d]) => d >= cs && d <= latestDate),
+    nah_daily: D.nah_daily.filter(([d]) => d >= cs && d <= latestDate),
+    bns_daily: D.bns_daily.filter(([d]) => d >= cs && d <= latestDate),
+    med_monthly: D.med_monthly.filter(([d]) => d >= cs && d <= latestDate),
+    state_of_mind: D.state_of_mind.filter(([d]) => d >= cs && d <= latestDate),
+    hr_notifications: D.hr_notifications.filter(([d]) => d >= cs && d <= latestDate),
     lastUpdated: D.lastUpdated,
   };
 }

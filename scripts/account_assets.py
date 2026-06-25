@@ -65,9 +65,9 @@ FUNDS_CURRENCY_MAP = {
 }
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-SNAPSHOT_DIR = SCRIPT_DIR / "snapshots"
 FEEICN_REPO_ROOT = SCRIPT_DIR.parent
 STATIC_ACCOUNT_ASSETS_DIR = FEEICN_REPO_ROOT / "static/data/account-assets"
+SNAPSHOT_DIR = STATIC_ACCOUNT_ASSETS_DIR / "snapshots"
 PORT_LABELS = {
     11111: "FeeiCN",
     11112: "FeeiCN2",
@@ -329,6 +329,7 @@ def save_snapshot(selected_account, port, funds, positions):
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    return path
 
 
 def first_record(records):
@@ -846,8 +847,9 @@ def query_port(args, port):
         position_records = dataframe_to_records(positions)
         previous_snapshot = load_previous_snapshot(selected_account, port)
         t2_snapshot = load_t2_snapshot(selected_account, port)
+        saved_snapshot_path = None
         if not args.no_save_snapshot:
-            save_snapshot(selected_account, port, fund_records, position_records)
+            saved_snapshot_path = save_snapshot(selected_account, port, fund_records, position_records)
             log(f"[{label}] 快照已保存")
         all_snapshots = load_all_snapshots(selected_account, port)
         log(f"[{label}] 完成")
@@ -861,6 +863,7 @@ def query_port(args, port):
             "previous_snapshot": previous_snapshot,
             "t2_snapshot": t2_snapshot,
             "all_snapshots": all_snapshots,
+            "saved_snapshot_path": saved_snapshot_path,
         }
     finally:
         trd_ctx.close()
@@ -897,6 +900,11 @@ def main():
     if not args.no_write_feeicn:
         log("写入 static/data/account-assets JSON ...")
         updated_paths = write_static_json_outputs(port_results)
+        updated_paths.extend(
+            result["saved_snapshot_path"]
+            for result in port_results
+            if result.get("saved_snapshot_path")
+        )
         git_commit_and_push_target_repo(
             updated_paths,
             repo_root=FEEICN_REPO_ROOT,

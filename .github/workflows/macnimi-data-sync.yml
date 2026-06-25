@@ -1,0 +1,141 @@
+name: Macnimi data sync
+
+# 使用本机 self-hosted runner（label: macnimi）替代原 crontab：
+# - 北京时间每天 06:00 更新账户资产数据（UTC 22:00）
+# - 北京时间每天 06:10 更新港股打新数据（UTC 22:10）
+# - 每小时 30 分同步健康数据
+
+on:
+  schedule:
+    - cron: '0 22 * * *'
+    - cron: '10 22 * * *'
+    - cron: '30 * * * *'
+  workflow_dispatch:
+    inputs:
+      task:
+        description: '需要运行的任务'
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - account-assets
+          - hk-ipo
+          - health
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync data
+    runs-on: [self-hosted, macnimi]
+    timeout-minutes: 150
+    env:
+      TZ: Asia/Shanghai
+
+    steps:
+      - name: Check push token
+        env:
+          WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+        run: |
+          if [ -z "${WORKFLOW_TRIGGER_PAT:-}" ]; then
+            echo "::error::WORKFLOW_TRIGGER_PAT 未配置"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Prepare runner
+        run: |
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+          echo "/usr/local/bin" >> "$GITHUB_PATH"
+          git config user.name "FeeiCN[bot]"
+          git config user.email "feei@feei.cn"
+          if git rev-parse --verify "origin/${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            git checkout -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}"
+          fi
+
+      - name: Resolve tasks
+        id: tasks
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          INPUT_TASK: ${{ github.event.inputs.task }}
+        run: |
+          if [ "${EVENT_NAME}" = "schedule" ]; then
+            case "${EVENT_SCHEDULE}" in
+              "0 22 * * *") tasks="account-assets" ;;
+              "10 22 * * *") tasks="hk-ipo" ;;
+              "30 * * * *") tasks="health" ;;
+              *)
+                echo "::error::未知 schedule: ${EVENT_SCHEDULE}"
+                exit 1
+                ;;
+            esac
+          else
+            case "${INPUT_TASK:-all}" in
+              all) tasks="account-assets hk-ipo health" ;;
+              account-assets|hk-ipo|health) tasks="${INPUT_TASK}" ;;
+              *)
+                echo "::error::未知 task: ${INPUT_TASK}"
+                exit 1
+                ;;
+            esac
+          fi
+
+          echo "tasks=${tasks}" >> "$GITHUB_OUTPUT"
+          echo "Resolved tasks: ${tasks}"
+
+      - name: Run selected tasks
+        env:
+          TASKS: ${{ steps.tasks.outputs.tasks }}
+        run: |
+          /usr/bin/python3 <<'PY'
+          import fcntl
+          import os
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          commands = {
+              "account-assets": (["/usr/bin/python3", "scripts/account_assets.py"], "FEEI.CN-account-assets.log"),
+              "hk-ipo": (["/usr/bin/python3", "scripts/hk_ipo.py"], "FEEI.CN-hk-ipo.log"),
+              "health": (["/opt/homebrew/bin/node", "scripts/sync_health_data.mjs"], "FEEI.CN-sync-health.log"),
+          }
+          tasks = os.environ["TASKS"].split()
+          log_dir = Path.home() / "Library" / "Logs"
+          log_dir.mkdir(parents=True, exist_ok=True)
+
+          with open("/tmp/FEEI.CN-data-sync.lock", "w", encoding="utf-8") as lock:
+              print("Waiting for FEEI.CN data sync lock...")
+              fcntl.flock(lock, fcntl.LOCK_EX)
+              print("Acquired FEEI.CN data sync lock.")
+
+              for task in tasks:
+                  command, log_name = commands[task]
+                  log_path = log_dir / log_name
+                  print(f"Running {task}: {' '.join(command)}")
+                  with log_path.open("a", encoding="utf-8") as log_file:
+                      process = subprocess.Popen(
+                          command,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          text=True,
+                          encoding="utf-8",
+                          errors="replace",
+                      )
+                      assert process.stdout is not None
+                      for line in process.stdout:
+                          print(line, end="")
+                          log_file.write(line)
+                      status = process.wait()
+                  if status != 0:
+                      sys.exit(status)
+          PY

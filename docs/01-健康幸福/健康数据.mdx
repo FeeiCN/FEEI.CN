@@ -12,19 +12,31 @@ import {HealthProvider, HealthStats, HealthSection, HealthAnalysis} from '@site/
 
 <HealthProvider>
 
+# 健康数据
+
 > 数据来源：Apple Watch + Fitdays 体脂秤。
 
 <HealthStats />
 
+健康数据的价值不在于制造更多数字，而在于发现趋势和行为链路。单日数据只适合作为提醒，连续趋势才适合用来判断：最近是在恢复、维持，还是偏离轨道。
+
+这套仪表盘只回答三个问题：
+
+- 哪些指标正在变好或变坏。
+- 哪些行为最可能驱动这些变化。
+- 下一步最小调整是什么。
+
 ## 体重
 
-体脂秤记录每日清晨空腹体重，关注长期趋势而非单日波动。体重秤同时输出肌肉量、体脂率、内脏脂肪等级和基础代谢——这些数据构成代谢健康的基础读数。
+体脂秤记录每日清晨空腹体重，关注长期趋势而非单日波动。体重秤同时输出肌肉量、体脂率、内脏脂肪等级和基础代谢，这些数据构成代谢健康的基础读数。
+
+体重数据的用法是看方向：连续上升、连续下降、平台期、异常波动，分别对应不同问题。真正要避免的是把一天的水分变化误读成脂肪变化。
 
 <HealthSection name="体重" />
 
 ## 活动
 
-活动记录来自手环每日步数、活动消耗和站立小时数。目标是维持基本活动量，避免连续数日活动量断崖式下滑。
+活动记录来自手环每日步数、活动消耗和站立小时数。目标是维持基本活动量，避免连续多日活动量断崖式下滑。
 
 <HealthSection name="活动" />
 
@@ -38,11 +50,15 @@ import {HealthProvider, HealthStats, HealthSection, HealthAnalysis} from '@site/
 
 睡眠数据包括就寝时间、睡眠时长、深睡比例、夜醒次数和心率变异性。睡眠是整个健康系统的稳定器，长期趋势比单晚数据重要。
 
+可穿戴设备对睡眠阶段的判断只能作为参考。更可靠的用法是看就寝时间、总睡眠时长、夜醒频率和醒来后的主观状态是否同向变化。
+
 <HealthSection name="睡眠" />
 
 ## 心血管
 
 静息心率、血压、心率变异性是心血管健康的核心读数。静息心率长期下降通常是心肺能力提升的信号；心率变异性下降则提示压力或恢复不足。
+
+血压要靠规范测量和长期记录判断，不适合只凭偶然一次读数下结论。出现持续异常时，数据只负责提醒，后续判断交给医生。
 
 <HealthSection name="心血管" />
 
@@ -72,8 +88,14 @@ import {HealthProvider, HealthStats, HealthSection, HealthAnalysis} from '@site/
 
 ## 关联分析
 
-跨维度的关联分析是数据仪表盘最关键的部分。识别"晚睡 → 次日体重上涨""运动日 → 睡眠质量提升""夜宵 → 静息心率上升"这类行为—结果链路，才能让数据真正驱动行动调整。
+跨维度的关联分析是数据仪表盘的核心。识别"晚睡 → 次日体重上涨""运动日 → 睡眠质量提升""夜宵 → 静息心率上升"这类行为—结果链路，才能让数据真正驱动行动调整。
 
 <HealthAnalysis />
+
+## 参考材料
+
+- [CDC: Measuring Your Blood Pressure](https://www.cdc.gov/high-blood-pressure/measure/index.html)
+- [CDC: Adult Activity](https://www.cdc.gov/physical-activity-basics/guidelines/adults.html)
+- [CDC: About Healthy Weight and Growth](https://www.cdc.gov/healthy-weight-growth/about/index.html)
 
 </HealthProvider>

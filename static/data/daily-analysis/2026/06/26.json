@@ -1,0 +1,237 @@
+{
+  "date": "2026-06-26",
+  "generatedAt": "2026-06-27T04:35:47.809112+00:00",
+  "top_signals": [
+    {
+      "area": "健康",
+      "summary": "目标日健康数据全部为空，判断降权为'切片/不可用'，与跨城出行场景一致。",
+      "evidence": [
+        "目标日 steps/HRV/睡眠/体重/静息心率 全部为 null",
+        "基线 7d 可用：日均步数 2605、睡眠 7.39h、HRV 41.55、RHR 71.71",
+        "健康文件 exportedAt 2026-06-26T23:42:54，已覆盖目标日但全字段为空"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "AI使用",
+      "summary": "目标日 AI 用量出现'断崖式回落'，MiniMax 仅 4.5 万 tokens，OpenAI 也只剩 545 万，相对近 7 日分别只有 0.4% 与 7.9%，更像当日高强度工作没有延续，而非长期降温。",
+      "evidence": [
+        "MiniMax 7d 均值 10.5M，目标日 45,224，比值 0.004",
+        "OpenAI 7d 均值 69.4M，目标日 5,457,853，比值 0.079",
+        "MiniMax 6/19 曾冲高 45M，6/26 跌至 4.5 万，6/20–6/22 连续高位后一路回落",
+        "连续记录 MiniMax 19 天、OpenAI 8 天，链路未断"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "财务",
+      "summary": "当日总资产 -25,241 CNH，下跌主要来自两只 HKD 个股的结构性回撤（奥克斯电气 -26,180、小米 -16,174），不是市场普跌，更不是现金变化。",
+      "evidence": [
+        "FeeiCN -14,488.9、FeeiCN2 -10,752.4，两账号同步下跌",
+        "奥克斯电气 HKD -44.2% 浮亏、单一仓位市值 33,048 HKD",
+        "小米集团-W HKD -55.7% 浮亏、单一仓位市值 12,852 HKD",
+        "资讯科技 ETF-Vanguard 单日 +9,853 USD 浮盈但未抵销 HKD 端亏损",
+        "现金 89,044.9、占比 5.8%，无新增交易"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "health_insights": [
+    {
+      "expert_view": "恢复与负荷分析",
+      "summary": "目标日健康数据全字段为空，处于'切片/不可用'状态，健康判断必须降权；结合日记的跨城出行（3:30 起床、银川–阿勒泰航线、长程飞行+转机），当天更可能处于睡眠剥夺与节律紊乱，而不是主动休息。",
+      "positioning": "相对近 7 日基线，目标日数据缺失，无法做相对位置判断；基线 7d 显示日均步数 2,605、睡眠 7.39h、HRV 41.55、RHR 71.71，处于'步数偏低、睡眠尚可、HRV 中性偏低'的混合状态，本身也不是健康余裕。",
+      "evidence": [
+        "today 字段 steps/distance/active_energy/exercise_min/stand_hours/weight/body_fat/bmi/resting_hr/walking_hr/hrv_sdnn/oxygen_saturation/lean_body_mass/sleep 全部 null",
+        "baseline_7d：steps avg 2,605（中位 1,691、max 5,785）；sleep avg 7.39h；HRV avg 41.55；RHR avg 71.71；weight avg 73.42kg",
+        "diary：3:30 起床、4 点到公司、5 点机场、10 点到银川、下午 2 点才到阿勒泰，'从没感觉到这么困过'",
+        "completeness.has_steps/has_sleep/has_weight/has_hrv 全部为 false"
+      ],
+      "means": "说明目标日恢复与负荷无法量化，不能据此推断'今天没运动'或'今天睡得不错'。",
+      "not_means": "不能据此得出'健康稳定'或'当日低负荷'的结论，更不能把基线 7d 当成目标日数据使用。",
+      "uncertainty": "是设备未佩戴/未同步，还是数据在途，需 6/27 健康数据再导出后判断；当前不应给出健康方向判断强度。",
+      "professional_suggestion": "**明日动作**：6/27 上午重导出 6/26 健康数据，若仍为切片则把当日健康判断固定为'不可用'，并把 6/26 标为节律紊乱日；6/27 当晚在落地后做 1 次 30 分钟低强度散步 + 23:00 前关灯，帮助回稳睡眠节律。"
+    }
+  ],
+  "reading_insights": [
+    {
+      "expert_view": "学习投入与阅读行为分析",
+      "summary": "目标日阅读绝对量为 0/缺失，'对比前一日 0.78' 只说明相对降温，没有绝对值意味着无法判断'主题迁移'还是'彻底断更'；结合 6 月已读 10 本、笔记 12 条、连续阅读 21 天的节奏，当日更像被出行打断的一次偶发掉线，而不是阅读投入塌方。",
+      "positioning": "相对前一日比例 0.78，相对 7d/30d 基线无数据；月度仍处'社会文化主导、文学次之、个人成长补充'的稳定结构。",
+      "evidence": [
+        "today.read_seconds/read_minutes 为 null，vs_7d_avg_ratio / vs_30d_avg_ratio 为 null",
+        "baseline_7d.sample_size = 0，baseline_30d.sample_size = 0",
+        "month_stats：读过 10 本、读完 3 本、阅读 21 天、笔记 12 条",
+        "top_books：《碌碌有为》43,559s 单日最长、《万事法则》10,757s、《读书与写作》9,885s（笔记最多）",
+        "category_mix：社会文化 43,559s、文学 16,540s、个人成长 13,254s、漫画 2,422s、科学技术 496s",
+        "diary 显示 6/26 为跨城出行+飞行+转机，物理上不适合阅读投入"
+      ],
+      "means": "说明 6/26 阅读降温与跨城出行时间结构强相关，可以解释为'被打断'而不是'动机丧失'。",
+      "not_means": "不能据此说明'今天阅读效率低'或'投入结构出问题'，更不能反推阅读体系失效。",
+      "uncertainty": "7d/30d 基线为 0，是数据回填问题还是新统计窗口问题未明；月度《碌碌有为》单日时长是历史峰值还是单日巧合也需在 7 月观察。",
+      "professional_suggestion": "**明日动作**：6/27 在阿勒泰酒店睡前优先续读《读书与写作》或《碌碌有为》30 分钟，并补 1 条笔记，用以验证'出行即断更'假设是否成立；若再断一日，把节奏降级为'恢复优先'。"
+    }
+  ],
+  "finance_insights": [
+    {
+      "expert_view": "资产配置与风险暴露分析",
+      "summary": "当日 -25,241 CNH 的下跌不是市场普跌，而是 HKD 端两只高回撤个股（奥克斯电气、小米）的结构性问题叠加，现金未动、无新增交易，资产配置的核心风险是 HKD 仓位集中度过高且单股回撤深度持续扩大。",
+      "positioning": "总资产 1,525,604.4 CNH，现金占比 5.8%、市值占比 92.8%，本身已经接近'满仓'；HKD 端两账号合计浮亏 -68,845 HKD，US 端资讯科技 ETF +9,853 USD、VOO +2,376 USD、英伟达 +1,013 USD 仍处盈利区，但难以对冲 HKD 端结构损失。",
+      "evidence": [
+        "total_assets_delta -25,241.3，FeeiCN -14,488.9（贡献 57.4%）、FeeiCN2 -10,752.4（贡献 42.6%）",
+        "largest_losers：奥克斯电气 -26,180 HKD（-44.2%，dilutedCost 17.4 → 现价 9.7）、小米 -16,174 HKD（-55.7%，cost 48.4 → 21.4）、纳指 100 ETF -5,441 USD（-28%）",
+        "largest_winners：资讯科技 ETF-Vanguard +9,853 USD、英特尔 +5,323 USD、标普 500 ETF +2,376 USD、Illumina +1,998 USD、英伟达 +1,013 USD",
+        "summary_rows：FeeiCN2 汇总 USD +6,785.9 / HKD -26,491.6；FeeiCN 汇总 USD +20.0 / HKD -42,354.0",
+        "todayBuyVal/todaySellVal 全部为 0，无当日交易",
+        "奥克斯电气在两个账号 summary 各出现一次，最大亏损行也各出现一次，需要后续确认是否同一标的跨账号重复统计"
+      ],
+      "means": "说明当前财务风险主要来自 HKD 单一标的深度回撤，且风险暴露与成本基线（dilutedCost 17.4 / 48.4）严重偏离，回撤修复需要标的本身回到较高价位或时间换空间。",
+      "not_means": "不能据此得出'应该止损/补仓'的买卖判断，也不能把当日下跌写成'趋势性熊市'——同日 US 端 ETF 仍处盈利区。",
+      "uncertainty": "奥克斯电气是否真的在两个账号各持 3,400 股（重复统计）还是数据源聚合问题，需要 6/27 用 stock.json 原始仓位核对；港股 IPO 与个股之间是否有关联也需要单独验证。",
+      "professional_suggestion": "**明日动作**：6/27 落地后只做一次'风险盘点'，把奥克斯电气和小米两只标的的 cost/现价/目标位写在固定卡片上，**不**扩展新仓位假设；同步把 HKD 仓位占比、单一标的占比写到月报口径，避免被单日数字诱导。"
+    }
+  ],
+  "ai_insights": [
+    {
+      "expert_view": "AI 生产力与工作流强度分析",
+      "summary": "目标日 AI 用量出现'断崖式回落'，但这是'当日没有延续高强度任务'，不是工具失效或工作流塌方；连续记录 MiniMax 19 天、OpenAI 8 天说明调用链未断，缓存命中与模型结构没有异常信号。",
+      "positioning": "MiniMax 6/19–6/22 连续四天高位（45M→25.9M→1.48M→336K），6/23–6/26 持续回落（282K→144K→111K→45K）；OpenAI 6/24–6/25 高位（69.2M→71.7M），6/26 跌至 5.46M，6/19 也有 1.7M 的低位，整体呈现'脉冲式使用 + 间隔回落'的形态。",
+      "evidence": [
+        "MiniMax today 45,224 tokens，7d avg 10,527,553，比值 0.004",
+        "OpenAI today 5,457,853 tokens，7d avg 69,393,502，比值 0.079",
+        "MiniMax top_models_today：MiniMax-M3-512k，input 36,417 / output 8,807 / cache hit 0.70%",
+        "MiniMax 连续 19 天、OpenAI 连续 8 天",
+        "Anthropic fetched_at 2026-06-11、today_tokens null、current_consecutive_days 0，长期未恢复有效数据"
+      ],
+      "means": "说明 6/26 没有进入需要重度 LLM 协作的任务（出行 + 身体疲劳 + 短时间窗），AI 使用强度是'任务驱动'而不是'工作流失灵'。",
+      "not_means": "不能据此推断'工作产出低'，更不能把 AI 用量当成当日 KPI；Anthropic 长期不可用不是'今天没使用 Anthropic'，是数据源未恢复。",
+      "uncertainty": "OpenAI 与 MiniMax 回落是否同步（同一组任务被切走）还是各自独立（不同任务被延期），需要 6/27 用量回稳后判断；MiniMax top_models_today 输出 token 8,807 显著高于前几日，疑似与日报生成相关。",
+      "professional_suggestion": "**明日动作**：6/27 上午先打开 AI 工作流检查 Anthropic 数据源是否需要补同步；当日不再追加'今天要把 token 用回去'这种 KPI 化动作，让强度跟着真实任务走。"
+    }
+  ],
+  "life_log_insights": [
+    {
+      "expert_view": "生活记录与主观体验分析",
+      "summary": "日记主线是 6/26 凌晨 3:30 被叫起、5 点机场、10 点银川、下午 2 点到阿勒泰的长程跨城出行，主观体验是'异常困倦'，关键观点'样本一多、流程一多，就一定会出现犯错概率'。",
+      "evidence": [
+        "diary.preview_paragraphs：'早上 3:30 喊起来'、'4 点到公司'、'5 点机场'、'10 点到银川'、'下午 2 点到阿勒泰'、'从没感觉到这么困过'",
+        "diary.full_text 9 段、353 字符、2 张图、2 个链接，无外链敏感信息",
+        "当日主线是公司outing/团队出行",
+        "核心引述：'样本一多、流程一多，就一定会出现犯错概率'"
+      ],
+      "means": "说明 6/26 的生活重心是'移动 + 团队事务'，主观负荷集中在睡眠剥夺与流程切换，而不是情绪波动或家庭冲突。",
+      "not_means": "不能把'困'写成长期疲劳，也不能把一句流程性观察当成长期方法论；日记不构成对其他板块的因果归因。",
+      "uncertainty": "日记未提及晚餐、酒店、家庭与孩子，信息覆盖不足；2 张图未在 JSON 中解码，无法判断内容。",
+      "professional_suggestion": "6/27 抵达当晚补一段 100 字以内的恢复日记（睡眠时长、户外时长、孩子视频/通话），避免出行日记只留下'交通'切片。"
+    }
+  ],
+  "environment_mobility_insights": [
+    {
+      "expert_view": "生活环境与出行节奏分析",
+      "summary": "天气源标注为 Tokyo，目标是阿勒泰/银川一带，存在数据源错配；按 diary 推断的真实位置处于小阵雨 + 中雨 + 高湿度区间，且飞行/转机占用大块时间，户外活动条件受限。",
+      "evidence": [
+        "weather.area.name = Tokyo / region Tokyo / country Japan，与 diary 中 银川–阿勒泰 不符",
+        "current.description = 小阵雨、temp 22°C、feels_like 25°C、humidity 100%、precip 0.5mm",
+        "forecast：min 20 / max 26 / avg 23 / sun_hour 12.8 / uv 6；18:00 中雨概率高、21:00 中雨 6mm",
+        "drive.missing = true，无行车/打车记录",
+        "diary：5 点机场、10 点银川、14 点阿勒泰，主导是飞行+转机"
+      ],
+      "means": "说明 6/26 出行环境整体潮湿、有降雨，户外长距离移动概率低，与'diary 中没提户外运动'相互支持。",
+      "not_means": "不能把天气直接归因为'今天状态差'，更不能把 Tokyo 天气当银川/阿勒泰的天气使用；不能在没有行车数据的情况下推断市内移动节奏。",
+      "uncertainty": "weather 数据源似乎错位，需要在 6/27 校对位置参数；drive 整条数据缺失，本日无法做城市内移动判断。",
+      "professional_suggestion": "6/27 校对天气抓取位置到 阿勒泰；同时补一次 drive 数据导出，让'出行日'具备天气+移动双视角。"
+    }
+  ],
+  "git_insights": [
+    {
+      "expert_view": "工程推进与知识沉淀分析",
+      "summary": "6/26 共 18 次 commit，全部是数据流水（健康 8 次、微信读书 3 次、投资/港股打新/LLM 各 1 次、天气 1 次、每日三省 1 次），没有任何正文产出、文档、代码或决策记录 commit，本质是数据管线在跑、个人输出在停。",
+      "evidence": [
+        "commit_count 18，subjects 全部以 [auto] 开头",
+        "健康数据 commit 至少 8 次（00:40、03:23、05:11、06:55、09:36、14:35、18:35、21:28、23:41），节奏极密",
+        "非健康类：[auto] 更新微信读书划线 ×3、[auto] 更新投资数据、[auto] 更新港股打新数据、[auto] 更新 LLM 使用数据、保存天气数据 (#327)、[auto] 生成每日三省吾身分析 2026-06-25",
+        "无 docs/、source/、config 类或带 # PR 的实质内容提交"
+      ],
+      "means": "说明 6/26 仓库侧的'可观察推进'只有自动化数据回流，个人的写作/工程产出没有发生 commit 级动作；这也与当日跨城出行 + AI 用量断崖相一致。",
+      "not_means": "不能把 18 次 commit 直接写成'今天工作很忙'，更不能把 commit 数当成产出指标；健康数据 8 次 commit 也只说明数据源高频同步，不等于'健康表现好'。",
+      "uncertainty": "是否存在未通过 git 记录的本地草稿（笔记/文档草稿/手机写作）无法判断；['auto] 生成每日三省吾身分析 2026-06-25' 实际 commit 时间是 6/26 04:52，这是 6/25 的日报回填。",
+      "professional_suggestion": "6/27 出行结束当晚，至少产出 1 条非 auto 的 commit（哪怕只是把 6/26 出行感受写进 docs/.../日记或回顾页），恢复'commit 里能看见自己'的节奏。"
+    }
+  ],
+  "cross_domain_insights": [
+    {
+      "summary": "健康数据全空、AI 用量断崖、阅读绝对量为零、Git 全是 auto，本质上都是同一个原因——跨城出行打破了常规工作/恢复节律；不需要把这些板块各自解释为'健康变差/工作变差/阅读变差'。",
+      "evidence": [
+        "diary 显示 3:30 起床、14:00 才到阿勒泰，物理时间窗被移动挤压",
+        "健康 today 全 null、Reading today 全 null、AI 7d 比例 0.004–0.079、Git 全部 [auto]",
+        "天气 18:00/21:00 出现中雨，与'diary 未提户外运动'一致"
+      ],
+      "uncertainty": "是否所有缺值都只是'出行切走了时间和数据'，还是其中夹杂了'设备遗忘/未充电'等额外因素，需要 6/27 数据回填验证。"
+    },
+    {
+      "summary": "财务 HKD 端 -68,845 HKD 的回撤与'今天出行/不在工作状态'叠加，是最容易让人产生'要不要操作'冲动的时刻；当日应明确不做交易决策，只做风险盘点。",
+      "evidence": [
+        "HKD 汇总 FeeiCN2 -26,491.6 / FeeiCN -42,354.0",
+        "现金 89,044.9、占比 5.8%，无新增交易空间紧张",
+        "AI 用量与 Git 强度都低，决策环境本身就处在疲劳/移动状态"
+      ],
+      "uncertainty": "奥克斯电气在两账号 summary 各出现一次，需要 6/27 用 stock.json 原始仓位核对是否重复统计。"
+    }
+  ],
+  "data_status": [
+    {
+      "area": "健康",
+      "status": "不可用",
+      "detail": "目标日全部字段为 null；最近一次健康文件 exportedAt 2026-06-26T23:42:54，已覆盖目标日但全字段为空，判断降权为不可用。"
+    },
+    {
+      "area": "阅读",
+      "status": "切片",
+      "detail": "目标日 read_seconds/read_minutes 为 null，7d/30d 基线 sample_size = 0；可参考的只有月度统计与前一日比例 0.78。"
+    },
+    {
+      "area": "财务",
+      "status": "完整",
+      "detail": "两个账号 index.json + stock.json 均在 2026-06-27T07:14:51 拉取，覆盖目标日且含逐仓 summary。"
+    },
+    {
+      "area": "AI使用",
+      "status": "切片",
+      "detail": "MiniMax、OpenAI 链路完整且含 6/26 数值；Anthropic fetched_at 2026-06-11，6/26 无任何数据，长期不可用。"
+    },
+    {
+      "area": "天气",
+      "status": "切片",
+      "detail": "weather 文件存在但 area 标 Tokyo，与 diary 中 银川–阿勒泰 不符，存在数据源错配。"
+    },
+    {
+      "area": "行车",
+      "status": "不可用",
+      "detail": "drive.missing = true，无任何当日行车事件。"
+    },
+    {
+      "area": "日记",
+      "status": "完整",
+      "detail": "static/data/daily/2026/06/26.md 存在，353 字符、9 段、2 图、2 链接。"
+    },
+    {
+      "area": "Git",
+      "status": "完整",
+      "detail": "共 18 次 commit，时间窗 6/26 00:00–6/27 00:00 (+0800) 全部为 [auto] 数据更新与 1 次日报回填。"
+    }
+  ],
+  "follow_ups": [
+    "**明日动作**：6/27 上午重导出 6/26 健康数据，若仍为切片则把当日健康判断固定为'不可用'，并在 23:00 前关灯恢复节律。",
+    "**明日动作**：6/27 落地后只对奥克斯电气和小米做一次'风险盘点'（cost/现价/目标位），不扩展新仓位假设，也不做交易决策。",
+    "**明日动作**：6/27 当晚补 30 分钟阅读 + 1 条笔记，用以验证'出行即断更'假设是否成立；若再断一日把节奏降级为'恢复优先'。",
+    "**明日动作**：6/27 校对天气抓取位置到 阿勒泰，并补一次 drive 数据导出，让出行日具备天气+移动双视角。",
+    "**明日动作**：6/27 出行结束当晚至少产出 1 条非 auto 的 commit（把 6/26 出行感受写进日记/回顾页），恢复'commit 里能看见自己'的节奏。"
+  ],
+  "quality_self_check": {
+    "not_number_repetition": true,
+    "has_cross_domain": true,
+    "states_uncertainty": true,
+    "has_positioning": true,
+    "has_expert_judgment": true
+  }
+}

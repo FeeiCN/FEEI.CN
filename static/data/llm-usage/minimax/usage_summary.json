@@ -1,9 +1,9 @@
 {
   "vendor": "minimax",
-  "fetchedAt": "2026-06-28 08:12:43",
-  "total_days": 20,
+  "fetchedAt": "2026-06-29 08:18:01",
+  "total_days": 21,
   "total_token_consumed": "1.40B",
-  "usage_ranking_percent": 8.365276005605873,
+  "usage_ranking_percent": 8.371003956227971,
   "most_active_day": {
     "date": "2026-06-10",
     "token_count": "203.88M",
@@ -12,8 +12,8 @@
     "music_count": "0",
     "voice_character_count": "0"
   },
-  "active_days": 20,
-  "current_consecutive_days": 20,
+  "active_days": 21,
+  "current_consecutive_days": 21,
   "daily_token_usage": {
     "2026-06-08": 90993082,
     "2026-06-09": 165014375,
@@ -34,19 +34,10 @@
     "2026-06-24": 144722,
     "2026-06-25": 111246,
     "2026-06-26": 45224,
-    "2026-06-27": 135863
+    "2026-06-27": 135863,
+    "2026-06-28": 115595
   },
   "date_model_usage": [
-    {
-      "date": "2026-01-12",
-      "models": [],
-      "total_input_token": 0,
-      "total_cache_read_token": 0,
-      "total_cache_create_token": 0,
-      "total_output_token": 0,
-      "total_token": 0,
-      "cache_hit_percent": "0%"
-    },
     {
       "date": "2026-01-13",
       "models": [],
@@ -2044,6 +2035,26 @@
     },
     {
       "date": "2026-06-28",
+      "models": [
+        {
+          "model": "MiniMax-M3-512k",
+          "input_token": 94477,
+          "cache_read_token": 512,
+          "cache_create_token": 0,
+          "output_token": 21118,
+          "total_token": 116107,
+          "cache_hit_percent": "0.54%"
+        }
+      ],
+      "total_input_token": 94477,
+      "total_cache_read_token": 512,
+      "total_cache_create_token": 0,
+      "total_output_token": 21118,
+      "total_token": 115595,
+      "cache_hit_percent": "0.54%"
+    },
+    {
+      "date": "2026-06-29",
       "models": [],
       "total_input_token": 0,
       "total_cache_read_token": 0,
@@ -2053,10 +2064,10 @@
       "cache_hit_percent": "0%"
     }
   ],
-  "last_update_time": "06-28 08:00",
+  "last_update_time": "06-29 08:00",
   "base_resp": {
     "status_code": 0,
     "status_msg": "success"
   },
-  "daily_avg_token_consumed": "69.86M"
+  "daily_avg_token_consumed": "66.54M"
 }

@@ -1,0 +1,257 @@
+{
+  "date": "2026-06-28",
+  "generatedAt": "2026-06-29T05:13:34.946283+00:00",
+  "top_signals": [
+    {
+      "area": "跨板块",
+      "summary": "当天健康、阅读、日记、天气、行车五项数据全部缺位，能下判断的事实层被压缩到财务、AI 用量与 Git 三块，结论强度需要整体降权。",
+      "evidence": [
+        "health.today 所有字段为 null",
+        "reading.today.read_seconds 为 null",
+        "daily_diary.missing=true",
+        "weather.missing=true",
+        "drive.missing=true"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "财务",
+      "summary": "总资产 +586.6 CNH 看起来几乎不动，但 FeeiCN2 单账户 -788.7 与 FeeiCN 单账户 +1,375.3 形成相互抵消，掩盖了 HKD 集中持仓的结构性浮亏。",
+      "evidence": [
+        "total_assets_delta=586.6",
+        "FeeiCN2 delta_contribution_ratio=-1.345",
+        "FeeiCN delta_contribution_ratio=2.345",
+        "奥克斯电气两账户合计浮亏 -52,360 HKD",
+        "小米集团-W 浮亏 -16,174 HKD"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "AI使用",
+      "summary": "OpenAI 当日 1.28M tokens，仅为近 7 日均值的 2.2%；MiniMax 当日 115k tokens，为近 7 日均值的 31.9%，工作流强度明显从高强度基线回落。",
+      "evidence": [
+        "openai.today_vs_7d_avg_ratio=0.022",
+        "minimax.today_vs_7d_avg_ratio=0.319",
+        "openai 连续天数 10、minimax 连续天数 21",
+        "anthropic fetched_at 仍停留在 2026-06-11"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "health_insights": [
+    {
+      "expert_view": "恢复与负荷分析",
+      "summary": "今天所有当日健康指标都为空，不能给出恢复或负荷方向判断；当前最大的事实不是异常，而是数据未完整回填，健康判断必须降权。",
+      "positioning": "无法与近 7 日基线做当日相对定位，只能暂时回退到基线描述：近 7 日睡眠均值 7.63h、静息心率 74.2 bpm、HRV 40.96 ms、体重 73.55 kg、BMI 24.3，步数均值仅 3,213、活动能量 1,131 kJ、运动时长 15.2 分钟，基线本身已显示活动量偏低。",
+      "evidence": [
+        "completeness.has_steps=false、has_sleep=false、has_weight=false、has_hrv=false",
+        "baseline_7d.steps.avg_7d=3213.79",
+        "baseline_7d.exercise_min.avg_7d=15.2",
+        "baseline_7d.hrv_sdnn.avg_7d=40.96"
+      ],
+      "means": "说明 6/28 当日健康判断无法形成",
+      "not_means": "不能用近 7 日基线反推 6/28 的恢复或负荷状态",
+      "uncertainty": "不知道是数据切片未回填、健康源同步失败，还是设备当日未佩戴",
+      "professional_suggestion": "**明日动作**：明天上午先确认 2026/06.json 是否补回 6/28 的步数、睡眠、HRV 与体重，确认是切片还是同步失败，再决定是否提高健康判断强度。"
+    }
+  ],
+  "reading_insights": [
+    {
+      "expert_view": "学习投入与阅读行为分析",
+      "summary": "当日阅读时长为空，无法判断今日是深挖一本书、碎片浏览还是节奏降温，只能暂时把判断降级到月度结构。",
+      "positioning": "目标日缺失相对位置；月度层面，本月已读 11 本、读完 3 本、阅读 22 天、笔记 14 条，主题集中于社会文化（《碌碌有为》43,559 秒，约占本月可追踪时长主导），辅以个人成长与文学，全年累计 1,044 个有效阅读日、读完 117 本。",
+      "evidence": [
+        "reading.today.read_seconds=null",
+        "reading.baseline_7d.sample_size=0",
+        "month_stats[0]=读过 11 本",
+        "top_books[0].title=碌碌有为 43,559 秒",
+        "category_mix[0]=社会文化 43,559 秒"
+      ],
+      "means": "说明月度阅读连续性总体未断",
+      "not_means": "不能用月度数据反推 6/28 当日是否在阅读、读了哪本、投入多少",
+      "uncertainty": "当日是否为阅读休息日、是否在另一本书上但未记录、是否阅读源当日同步延迟，三种解释当前无法区分",
+      "professional_suggestion": "**明日动作**：明天在阅读面板先确认 6/28 是否只是没读书的休息日，若有阅读则补回时长与书目。"
+    }
+  ],
+  "finance_insights": [
+    {
+      "expert_view": "资产配置与风险暴露分析",
+      "summary": "这更像一次账户内部对冲后的微涨，而不是趋势改善；总资产 +586.6 背后是 HKD 集中浮亏与 USD 浮盈的相互抵消，结构性集中度风险并未缓解。",
+      "positioning": "总市值 1,412,901.8 CNH、市值占比 92.8%、现金占比 5.9%，处于高仓位、低现金的状态；FeeiCN2 下跌 -788.7、FeeiCN 上涨 +1,375.3，贡献度比 -1.345 vs +2.345 几乎完全反向。HKD 汇总两账户合计浮亏约 -68,846 HKD，集中压在奥克斯电气（两账户各 -26,180 HKD）与小米集团-W（-16,174 HKD），单一 HKD 个股的浮亏比例 -44.2% 与 -55.7% 显著高于组合均值。USD 侧赢家集中在科技 ETF 与 Intel、Illumina、AAPL，输家为 QQQ（-28.0%）与 Gitlab（-30.6%）。",
+      "evidence": [
+        "total_assets_delta=586.6、cash_ratio=0.059、market_value_ratio=0.928",
+        "largest_losers[0..1] 奥克斯电气 -44.2%/-26,180 HKD 在两账户同时出现",
+        "largest_losers[2] 小米集团-W -55.7%/-16,174 HKD",
+        "summary_rows FeeiCN2 HKD plVal -26,491.6、FeeiCN HKD plVal -42,354",
+        "largest_winners[0] VGT +17.0%、[1] Intel +508.4%",
+        "todayBuyVal 与 todaySellVal 均为 0，无当日成交"
+      ],
+      "means": "说明今日的账面平稳来自 USD 浮盈与 HKD 浮亏的对冲",
+      "not_means": "不能据此判断组合风险已经下降，也不能把 +586 写成“今天市场对我是温和的”",
+      "uncertainty": "不知道奥克斯电气与小米是否已被纳入长期持有逻辑；不知道 USD 端 VGT/QQQ/Intel 的权重是否已过度集中",
+      "professional_suggestion": "**明日动作**：明天只复盘 HKD 深度回撤仓位（奥克斯电气、小米）的成本结构与单股敞口比例，不扩展新仓位假设，也不调整 USD 既有赢家。"
+    }
+  ],
+  "ai_insights": [
+    {
+      "expert_view": "AI 生产力与工作流强度分析",
+      "summary": "OpenAI 与 MiniMax 用量同步回落更像是工作流强度从高基线主动降温，而不是同步异常；Anthropic 长期无当日数据意味着该通道不能再当作当日信号。",
+      "positioning": "OpenAI 当日 1,282,851 tokens，仅为近 7 日均值的 2.2%；MiniMax 当日 115,595 tokens，为近 7 日均值的 31.9%；连续天数分别为 10 天和 21 天，整体仍处于稳定接入状态，但强度已显著低于近 7 日。Anthropic 上次拉取停留在 2026-06-11，本周已不可用。MiniMax 当日模型为 MiniMax-M3-512k，缓存命中仅 0.54%，说明新会话比例高而非长上下文复用。",
+      "evidence": [
+        "openai.today_vs_7d_avg_ratio=0.022",
+        "minimax.today_vs_7d_avg_ratio=0.319",
+        "openai.current_consecutive_days=10",
+        "minimax.current_consecutive_days=21",
+        "anthropic.fetched_at=2026-06-11",
+        "minimax.top_models_today[0].cache_hit_percent=0.54%"
+      ],
+      "means": "说明工作流强度明显低于近 7 日高基线",
+      "not_means": "不能直接把低 token 写成“今天产出更低”，也不能把 Anthropic 缺数据误读为“今天没用 Anthropic”",
+      "uncertainty": "不能区分是任务密度真实下降、输入更短、缓存策略变化，还是多个调用端集中在运行日完成导致目标日统计回落",
+      "professional_suggestion": "**明日动作**：明天先确认 OpenAI 与 MiniMax 用量回落是任务端真实减少，还是某个调用端被临时关闭/迁移，再决定是否调整工作流节奏。"
+    }
+  ],
+  "life_log_insights": [
+    {
+      "expert_view": "生活记录与主观体验分析",
+      "summary": "日记缺失，今天的主观体验无法校准，所有生活层判断只能在“缺位”层面写。",
+      "positioning": "无法给出当日家庭、情绪或主观体验的相对位置",
+      "evidence": [
+        "daily_diary.missing=true",
+        "weather.missing=true",
+        "drive.missing=true"
+      ],
+      "means": "说明今天的生活层数据空白",
+      "not_means": "不能用其他板块的数据替代日记",
+      "uncertainty": "不知道是当日未写、源未同步，还是工作流未抓取",
+      "professional_suggestion": "明天补回 6/28 日记，以便后续分析能形成四板块闭环。"
+    }
+  ],
+  "environment_mobility_insights": [
+    {
+      "expert_view": "生活环境与出行节奏分析",
+      "summary": "天气与行车同时缺失，环境与移动层当天不可见，因此户外条件解释不能成立。",
+      "positioning": "无法与近 7 日或前一报告日做相对位置比较",
+      "evidence": [
+        "weather.source_files=[]",
+        "drive.source_files=[]、event_count=0"
+      ],
+      "means": "说明今天环境与出行层无数据",
+      "not_means": "不能用其他板块猜测天气或是否出门",
+      "uncertainty": "完全无法判断当日是否在户外、是否出行、天气是否影响作息",
+      "professional_suggestion": "明天先确认天气与行车源是否在 6/28 有抓取，必要时手动补一次。"
+    }
+  ],
+  "git_insights": [
+    {
+      "expert_view": "工程推进与知识沉淀分析",
+      "summary": "当日 11 条 commit 全部为 [auto] 自动化数据流水线（微信读书、港股打新、投资、LLM 使用、每日三省吾身），没有任何工程或写作推进 commit，因此不能把 commit 数等同于产出。",
+      "positioning": "相对前几日，commit 数量没有减少，但主题结构仍是“数据回填”，而非“内容产出”。",
+      "evidence": [
+        "git_activity.commit_count=11",
+        "11 条 commit 全部含 [auto] 前缀",
+        "commits 覆盖 微信读书划线、港股打新、投资数据、LLM 使用、生成每日三省吾身",
+        "未出现 feature/refactor/docs/写作类提交"
+      ],
+      "means": "说明自动化数据通道运行正常",
+      "not_means": "不能把 11 条 commit 写成“今天工程推进顺利”，也不能等同于写作或学习有推进",
+      "uncertainty": "不知道是否有本地未提交的工作，或者非仓库内的写作",
+      "professional_suggestion": "**明日动作**：明天先盘点未提交或非仓库内的写作/笔记，看是否要补一次 commit，避免“自动化 commit 很多但内容空转”。"
+    }
+  ],
+  "cross_domain_insights": [
+    {
+      "summary": "健康、阅读、日记、天气、行车五项同时缺位，意味着今天所谓的“事实层”只剩财务、AI 用量、Git 与 HK IPO；任何跨板块结论都必须明确标注数据不完整带来的判断降权，不能假装四板块闭环已经形成。",
+      "evidence": [
+        "health.today 全部 null",
+        "reading.today.read_seconds=null",
+        "daily_diary.missing=true",
+        "weather.missing=true",
+        "drive.missing=true"
+      ],
+      "uncertainty": "五种来源可能各自有独立的同步延迟或采集失败原因，无法用一个统一解释覆盖"
+    },
+    {
+      "summary": "AI 用量显著回落（OpenAI 2.2% / MiniMax 31.9% 相对 7 日均值）但 Git 当日全部是自动化数据回填，没有内容 commit，提示今天更像“工作流收缩 + 数据管线自检”，而不是高强度内容产出日；但缺少健康与日记，无法把它直接归因于身体或情绪。",
+      "evidence": [
+        "openai.today_vs_7d_avg_ratio=0.022",
+        "minimax.today_vs_7d_avg_ratio=0.319",
+        "git_activity 11 条 commit 全 [auto]",
+        "health.today 全部 null",
+        "daily_diary.missing=true"
+      ],
+      "uncertainty": "在缺少日记与健康的情况下，无法判断强度回落是主动选择还是被动收缩"
+    },
+    {
+      "summary": "财务侧 HKD 集中浮亏（奥克斯电气两账户合计 -52,360 HKD、小米 -16,174 HKD）与 USD 科技赢家（VGT、Intel、SPY、Illumina、AAPL）并存，组合层面互相抵消，但底层是“个股集中度高 + 现金缓冲仅 5.9%”的结构；这不是当天新增风险，而是长期需要持续观察的结构暴露。",
+      "evidence": [
+        "cash_ratio=0.059、market_value_ratio=0.928",
+        "largest_losers 前 3 名合计 -78,754 HKD",
+        "summary_rows FeeiCN2 HKD plVal -26,491.6、FeeiCN HKD plVal -42,354",
+        "largest_winners 全为 USD 科技 / ETF"
+      ],
+      "uncertainty": "不知道奥克斯电气与小米在投资体系中是否仍属长期持仓，也不知道 USD 端赢家是否已被加仓"
+    }
+  ],
+  "data_status": [
+    {
+      "area": "健康",
+      "status": "延迟",
+      "detail": "2026/06.json 与 2026/05.json 最近导出时间分别为 2026-06-21 与 2026-06-27，目标日 6/28 所有字段均为 null，疑为切片未回填；待 2026/06.json 下次重导出后再确认。"
+    },
+    {
+      "area": "阅读",
+      "status": "不可用",
+      "detail": "reading/2026/06.json 当日 read_seconds/read_minutes/vs_7d_avg_ratio 全部为空，baseline_7d.sample_size=0，无法做当日判断；月度与年度统计仍可用。"
+    },
+    {
+      "area": "财务",
+      "status": "完整",
+      "detail": "account-assets/index.json 与 stock.json 最近抓取时间 2026-06-29T07:11:45，覆盖 6/28 两个账户与个股层 PnL，可正常分析。"
+    },
+    {
+      "area": "AI使用",
+      "status": "切片",
+      "detail": "MiniMax 与 OpenAI 当日数据完整且时间戳为 2026-06-29 08:18，可信；Anthropic last fetch 仍为 2026-06-11，本周已不可用，不当作 6/28 信号。"
+    },
+    {
+      "area": "天气",
+      "status": "不可用",
+      "detail": "weather 目录无目标日文件。"
+    },
+    {
+      "area": "行车",
+      "status": "不可用",
+      "detail": "drive 目录无目标日文件，event_count=0。"
+    },
+    {
+      "area": "日记",
+      "status": "不可用",
+      "detail": "daily/2026-06-28.md 不在工作流提供的允许文件清单中。"
+    },
+    {
+      "area": "Git",
+      "status": "完整",
+      "detail": "2026-06-28 00:00 至 2026-06-29 00:00 +0800 共 11 条 commit，主题结构清晰。"
+    },
+    {
+      "area": "港股打新",
+      "status": "完整",
+      "detail": "hk-ipo/data.json 总览 58 条记录、总盈亏 +208,997 HKD，6/28 当日无新股记录。"
+    }
+  ],
+  "follow_ups": [
+    "明天上午先确认 2026/06.json 是否补回 6/28 的步数、睡眠、HRV 与体重，确认是切片还是同步失败，再决定是否提高健康判断强度。",
+    "明天只复盘 HKD 深度回撤仓位（奥克斯电气、小米）的成本结构与单股敞口比例，不扩展新仓位假设，也不调整 USD 既有赢家。",
+    "明天先确认 OpenAI 与 MiniMax 用量回落是任务端真实减少，还是某个调用端被临时关闭/迁移，再决定是否调整工作流节奏。",
+    "明天在阅读面板先确认 6/28 是否只是没读书的休息日，若有阅读则补回时长与书目；同时补回日记、天气与行车，以便次日分析能形成四板块闭环。",
+    "明天先盘点未提交或非仓库内的写作/笔记，看是否要补一次 commit，避免“自动化 commit 很多但内容空转”。"
+  ],
+  "quality_self_check": {
+    "not_number_repetition": true,
+    "has_cross_domain": true,
+    "states_uncertainty": true,
+    "has_positioning": true,
+    "has_expert_judgment": true
+  }
+}

@@ -1,0 +1,228 @@
+{
+  "date": "2026-07-01",
+  "generatedAt": "2026-07-02T04:40:54.245775+00:00",
+  "top_signals": [
+    {
+      "area": "跨板块",
+      "summary": "健康与阅读双双无法验证，让今天所有判断强度整体降权；AI 用量回升但 Git 全是自动提交，提示 token 高并未转化为正文产出。",
+      "evidence": [
+        "健康源文件 2026/06.json 导出时间为 2026-06-27，目标日 7/1 全部字段为 null，且 has_steps/has_sleep/has_weight/has_hrv 均为 false",
+        "阅读今日 read_seconds/read_minutes 为 null，baseline_7d sample_size=0",
+        "MiniMax 当日 tokens=143,902 vs 7 日均 102,239.6（ratio 1.407），但 Git 10 条 commit 全部为 auto 数据更新"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "财务",
+      "summary": "总资产单日 +23,666.1 CNH（+1.5%），主要由 FeeiCN2 贡献 63.4%；HKD 仓位仍处深度回撤（奥克斯 -42.8%、小米 -55.3%），结构风险未缓解。",
+      "evidence": [
+        "total_assets=1,587,383.1、delta=+23,666.1，cash_ratio=0.056、market_value_ratio=0.931",
+        "FeeiCN2 delta_contribution_ratio=0.634，FeeiCN=0.366",
+        "largest_losers 中奥克斯电气浮亏 -25,330、小米 -16,042 均为 HKD 仓位且 todayPlVal=0"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "area": "AI使用",
+      "summary": "MiniMax 用量较 7 日基线放大 40.7%，但 OpenAI 接近持平，工作强度小幅抬高而 Anthropic 数据完全缺失，结构性观察价值打折。",
+      "evidence": [
+        "MiniMax 当日 143,902 / 7 日均 102,239.6，连续第 24 天有数据",
+        "OpenAI 当日 21,414,148 / 7 日均 21,922,737.7（ratio 0.977），连续 13 天",
+        "Anthropic fetched_at=2026-06-11、total_days=0、current_consecutive_days=0"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "health_insights": [
+    {
+      "expert_view": "恢复与负荷分析",
+      "summary": "当前最大的事实不是恢复或负荷本身，而是健康数据完全未回填到目标日——这让所有健康判断必须先于数据可用性被降权。",
+      "positioning": "相对前一日/近 7 日均无定位意义。健康近 7 日基线本身也只基于 2 个样本（avg_7d 步数 3,618、睡眠 7.43h），基线单薄。",
+      "evidence": [
+        "today 所有指标 steps/distance/active_energy/exercise_min/stand_hours/weight/resting_hr/hrv/oxygen_saturation/lean_body_mass 均为 null",
+        "completeness.has_steps/has_sleep/has_weight/has_hrv 全为 false",
+        "baseline_7d 多数指标 sample_size=2，weight/body_fat/bmi/lean_body_mass 仅 sample_size=1"
+      ],
+      "means": "说明今日无法判断睡眠是否恢复、负荷是否升高、HRV 是否回落、体重是否波动；任何健康结论都将基于外推而非事实。",
+      "not_means": "并不说明今天一定处于恢复不足或负荷偏高；更不等于可以放心地把今天视作“正常日”。",
+      "uncertainty": "源文件 2026/06.json 导出时间 2026-06-27 早于目标日，且允许文件未包含 2026/07 健康文件；可能是同步延迟而非真的没有活动。",
+      "professional_suggestion": "**明日动作**：先检查 7/1 健康数据是否真的缺失还是导出失败；若缺失属于切片而非断流，再考虑把 7/2 数据提前抓取并据此重新评估本周恢复趋势。"
+    }
+  ],
+  "reading_insights": [
+    {
+      "expert_view": "学习投入与阅读行为分析",
+      "summary": "今日阅读投入无法验证，年累计连续性仍在（activeDays 1,044、booksFinished 117），但单日节奏判断必须先挂起。",
+      "positioning": "今日 read_seconds=null、baseline_7d sample_size=0、baseline_30d sample_size=0，意味着今天既无单日信号也无短基线可比。",
+      "evidence": [
+        "today.read_seconds=null、compare_to_previous_ratio=-1、vs_7d_avg_ratio=null、vs_30d_avg_ratio=null",
+        "yearly_totals.activeDays=1,044、totalReadSeconds=3,783,789、notesTotal=3,184、bookmarksTotal=84,515",
+        "source_files 包含 2026/07.json 与 2026/06.json，但仍无目标日记录"
+      ],
+      "means": "说明今天不能用来评价“输入是否在加强/降温/断点”；也说明微信读书今日未被抓取或未产生有效阅读切片。",
+      "not_means": "并不说明今天一定没有阅读；更不能据此把“丰富人生”方向归零。",
+      "uncertainty": "是源抓取失败、当日零阅读，还是阅读时长未进入导出字段，目前无法区分。",
+      "professional_suggestion": "**明日动作**：先用 2026/07.json 的 fetch 时间反推今天阅读切片是“未抓取”还是“抓取后为零”，再决定是把今日记为“输入断点”还是“输入信号暂缺”。"
+    }
+  ],
+  "finance_insights": [
+    {
+      "expert_view": "资产配置与风险暴露分析",
+      "summary": "这更像一次“市场反弹 + 风险未消”的日内修复，而非结构改善：CNH 口径总资产 +1.5% 来自市值，HKD 深度回撤仓位（奥克斯、小米）今日零盈亏、零交易，被动等待。",
+      "positioning": "相对前一日，总资产 1,587,383 CNH，处历史区间中段；cash_ratio=0.056 仍偏低，仓位未减。",
+      "evidence": [
+        "total_market_value=1,477,131.4、total_cash=89,515.9，市场占比 93.1%，现金垫薄",
+        "FeeiCN2 delta_contribution_ratio=0.634 主导当日涨幅；其 USD 汇总 todayPlVal=-1,691.9、HKD 汇总 todayPlVal=0",
+        "largest_losers 中奥克斯浮亏 -25,330（-42.8%）、小米 -16,042（-55.3%），QQQ -5,074.7、Gitlab -2,264.5，全部 todayBuyVal/SellVal=0"
+      ],
+      "means": "说明今天的资产上行主要由持有仓位随市场修复，并不来源于主动调仓或现金再平衡；同时说明 HKD 集中度风险与个股深度回撤问题在今日没有得到任何处理动作。",
+      "not_means": "并不等于趋势反转；也不等于 HKD 仓位回撤修复。浮亏与集中度暴露在结构层面没有变化。",
+      "uncertainty": "缺少“昨日 vs 今日”逐仓 pl 序列，无法判断 USD 端回撤是单日波动还是周内延续；也无法判断上涨是不是单纯来自 Vanguard 资讯科技 ETF（最大赢家 todayPlVal=-1,358.3，反而小幅回吐）。",
+      "professional_suggestion": "**明日动作**：只复盘 HKD 奥克斯 + 小米的成本/仓位/集中度逻辑与退出条件，不扩展新仓位假设；如要动作，仅限定为“设好价格/时间止损触发线”。"
+    }
+  ],
+  "ai_insights": [
+    {
+      "expert_view": "AI 生产力与工作流强度分析",
+      "summary": "MiniMax 单日用量放大 40.7% 抬高了工作强度信号，但 OpenAI 持平、Anthropic 长期缺失，三平台结构不完整，强度判断需要打折。",
+      "positioning": "MiniMax 连续 24 天有数据，处“常态化使用 + 单日放量”状态；OpenAI 连续 13 天，量级远高于 MiniMax。",
+      "evidence": [
+        "MiniMax today=143,902 / 7 日均 102,239.6（ratio 1.407）；top model 为 MiniMax-M3-512k，cache_hit_percent=0.74%",
+        "OpenAI today=21,414,148 / 7 日均 21,922,737.7（ratio 0.977）",
+        "Anthropic fetched_at=2026-06-11、current_consecutive_days=0、total_days=0"
+      ],
+      "means": "说明今天有较高强度的 AI 协作（MiniMax 端），且仍以 512k 上下文模型为主；并不说明这一定对应高质量产出。",
+      "not_means": "不等于“今天工作做得更好”；也不等于 OpenAI 持平就代表任务密度未变（OpenAI 日量级波动大，单日 21.4M 紧贴 7 日均 21.9M 仍是“高位维持”）。",
+      "uncertainty": "Anthropic 长期无数据，无法判断“是不是端点故障还是真的停用”；MiniMax 单日放量是常态还是异常也无法只凭一日下结论。",
+      "professional_suggestion": "**明日动作**：先用 Anthropic 的抓取脚本诊断是接口/鉴权问题还是真停用，再决定是否需要补抓；若补不上，明日分析应把 Anthropic 标记为不可用而不是当成低用量。"
+    }
+  ],
+  "life_log_insights": [
+    {
+      "expert_view": "生活记录与主观体验分析",
+      "summary": "日记缺失使今天主观体验只能靠零散信号外推，必须降权；不应强行赋予情绪或生活结论。",
+      "positioning": "diary.missing=true，没有任何可引用的主观记录。",
+      "evidence": [
+        "daily_diary.source_files=[]、missing=true",
+        "没有日记条目可与健康/AI/财务信号交叉验证"
+      ],
+      "means": "说明今天在“家庭/生活/情绪/主观体验”这一维度上，结构化上下文是空白的；任何关于“今天心态如何”的判断都属于猜测。",
+      "not_means": "并不说明今天没有值得记录的事件；也不等于今天没有情绪或反思。",
+      "uncertainty": "日记缺失可能是当天未写、也可能是导出失败，需要由工作流区分。",
+      "professional_suggestion": "**明日动作**：把今天（7/1）的日记补写一次，至少落到“健康是否回填、阅读是否中断、家庭/工作主观体感”三段可定位的记录。"
+    }
+  ],
+  "environment_mobility_insights": [
+    {
+      "expert_view": "生活环境与出行节奏分析",
+      "summary": "环境更接近“高温高湿 + 强紫外 + 偶有零星阵雨”的新加坡典型夏季日，户外条件对活动量构成事实约束；行车缺失导致移动切片无法验证。",
+      "positioning": "观测时间 15:30，气温 29°C、感温 37°C、湿度 89%，UV 指数 10；当日最高 30、最低 27，sun_hour 9.0h。",
+      "evidence": [
+        "weather.current.temp_c=29、feels_like_c=37、humidity=89、wind_kmph=16、description=少云",
+        "forecast.uv_index=10；hourly 1500 阵雨概率 22%，1800 阵雨概率 9%",
+        "drive.source_files=[]、missing=true、event_count=0"
+      ],
+      "means": "说明下午存在高温/高湿/强紫外叠加，户外高强度活动门槛升高；如果今日步数仍然低，需要先考虑环境约束再考虑行为动机。",
+      "not_means": "不构成健康或效率下滑的确定因果；也不等于今日一定没有出行（行车缺失）。",
+      "uncertainty": "行车完全缺失，无法还原当日是否有出行、出行半径和停留点；天气是户外活动“可能影响”的解释候选，不是结论。",
+      "professional_suggestion": "**明日动作**：若健康数据回填后步数仍显著低于 7 日均，应先查 7/1 行车是否真的缺失；若缺失属实，则承认“环境+无移动”是当日低活动量的更合理解释。"
+    }
+  ],
+  "git_insights": [
+    {
+      "expert_view": "工程推进与知识沉淀分析",
+      "summary": "Git 提交 10 条全部为自动数据同步（天气、读书、LLM、港股、投资、日报），无正文/工程类提交，工程与写作推进信号为零。",
+      "positioning": "相对前一日（历史主要由 auto commit 组成），今日节奏一致：自动化抓取链路正常，但缺少“人在写、人在改”的痕迹。",
+      "evidence": [
+        "commit_count=10；subject 中 9 条以 “[auto]” 或 “保存天气数据” 开头，仅 1 条是 manual #351（保存天气数据）",
+        "没有 docs/、src/、content/ 类目录下的正文/代码提交",
+        "日报提交 707a8863 是“生成每日三省吾身分析 2026-06-30”，体现的是工作流自身闭环，不是当日写作"
+      ],
+      "means": "说明 7/1 的工程/写作推进仍以“自动化链路维护”为主，缺乏显式的人为产出痕迹；可作为“事业有成”方向今日较弱的一处证据。",
+      "not_means": "不直接说明今日工作强度低（强度看 AI 用量）；也不等同于“今日无意义”。",
+      "uncertainty": "写作/草稿可能未走 git 提交路径，无法用本仓库历史完全证伪。",
+      "professional_suggestion": "**明日动作**：给自己设一条硬规则——每天至少 1 条非 auto 的提交（哪怕只是 30 行的笔记或脚本改动），否则第二天 Git 推进信号继续降权。"
+    }
+  ],
+  "cross_domain_insights": [
+    {
+      "summary": "AI 用量回暖却没有同步在 Git 里留下人为产出，且健康/阅读/日记/行车同步缺失，使“事业有成 + 丰富人生”两个方向今日只能各拿到半个信号，必须降权合并观察。",
+      "evidence": [
+        "MiniMax ratio 1.407 + OpenAI 持平 vs Git 全 auto",
+        "健康 all-null、阅读 today-null、日记 missing、行车 missing 同时出现",
+        "财务却拿到完整当日快照（+1.5%、cash_ratio 0.056、HKD 深度回撤），是今日唯一完整可判断的板块"
+      ],
+      "uncertainty": "若明日健康/阅读/日记/行车仍集体缺失，则今天不是“偶发断流”，而是“个人数据回流链路本身在掉链子”，分析应转为先修链路再做判断。"
+    },
+    {
+      "summary": "新加坡高温高湿强紫外（feels_like 37°C、UV 10）解释了“户外活动门槛升高”，但今日无行车/无健康数据可验证移动是否真的下降；该因果只能在数据回填后才能成立。",
+      "evidence": [
+        "weather.current.feels_like_c=37、uv_index=10、humidity=89",
+        "drive.missing=true、health.steps=null，无法验证步数与移动",
+        "weather.area=Singapore（Windsor Park Estate）"
+      ],
+      "uncertainty": "无健康步数与行车事件，今日不能把“天气→低活动”写为结论，只能写为解释候选。"
+    }
+  ],
+  "data_status": [
+    {
+      "area": "健康",
+      "status": "延迟",
+      "detail": "源文件 2026/06.json 导出时间 2026-06-27，早于目标日 2026-07-01；目标日所有字段为 null，has_steps/has_sleep/has_weight/has_hrv 全为 false；近 7 日基线样本仅 1–2 天。"
+    },
+    {
+      "area": "阅读",
+      "status": "不可用",
+      "detail": "今日 read_seconds/read_minutes 为 null，baseline_7d/30d sample_size=0；2026/07.json 已存在但无目标日切片，无法区分“未抓取”与“零阅读”。"
+    },
+    {
+      "area": "财务",
+      "status": "完整",
+      "detail": "两份账户快照均在目标日导出（fetched_at 2026-07-02），含 total_assets、delta、cash、marketVal、largest_winners/losers；缺少“昨日逐仓 pl”序列。"
+    },
+    {
+      "area": "AI使用",
+      "status": "切片",
+      "detail": "MiniMax/OpenAI 目标日数据完整，但 Anthropic fetched_at=2026-06-11、total_days=0、current_consecutive_days=0，长期无数据；模型结构与缓存命中信息仅 MiniMax 端可见。"
+    },
+    {
+      "area": "天气",
+      "status": "完整",
+      "detail": "2026/07/01.json 存在，含 current/forecast/hourly，区域 Singapore (Windsor Park Estate)。"
+    },
+    {
+      "area": "行车",
+      "status": "不可用",
+      "detail": "drive.source_files 为空、missing=true、event_count=0，无法还原 7/1 移动轨迹。"
+    },
+    {
+      "area": "日记",
+      "status": "不可用",
+      "detail": "daily_diary.missing=true，今日无任何主观记录可引用。"
+    },
+    {
+      "area": "Git",
+      "status": "完整",
+      "detail": "10 条 commit 已结构化输出，集中在自动数据同步与日报自身生成。"
+    },
+    {
+      "area": "港股打新",
+      "status": "完整",
+      "detail": "data.json 已抓取（fetched_at 2026-07-02），target_day_records 为空，无 7/1 港股打新动作。"
+    }
+  ],
+  "follow_ups": [
+    "明日动作：先排查 7/1 健康/阅读/行车/日记四类数据是“导出失败”还是“真为空”，再决定是否降低今日判断为“链路异常日”而非“行为异常日”。",
+    "明日动作：把 Anthropic 抓取脚本跑一次，确认是鉴权/接口问题还是真停用；若是真停用，明日报里把 Anthropic 标记为“不可用”，不再当作低用量。",
+    "明日动作：只复盘 HKD 奥克斯 + 小米的退出条件（价格/时间/逻辑），不扩展任何新仓位假设；今日市场反弹未改变浮亏结构。",
+    "明日动作：给自己设一条硬规则——每天至少 1 条非 auto 的 Git 提交，否则工程/写作推进信号继续降权。",
+    "明日动作：若健康步数在 7/2 仍显著低于 7 日均，先查 7/1 行车是否真的缺失，再承认环境约束是更合理的解释，不写成自律不足。"
+  ],
+  "quality_self_check": {
+    "not_number_repetition": true,
+    "has_cross_domain": true,
+    "states_uncertainty": true,
+    "has_positioning": true,
+    "has_expert_judgment": true
+  }
+}

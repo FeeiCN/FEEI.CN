@@ -1,9 +1,12 @@
 import net from 'node:net';
+import dns from 'node:dns/promises';
+import {spawn} from 'node:child_process';
 import readline from 'node:readline';
 
 const haeHost = process.env.HAE_HOST || 'localhost';
 const haePort = parseIntegerEnv('HAE_PORT', process.env.HAE_PORT || '9000');
 const defaultTimeoutMs = parseIntegerEnv('HAE_TIMEOUT', process.env.HAE_TIMEOUT || '86400000');
+let resolvedHaeHost = haeHost;
 
 const tools = {
   get_health_metrics: {
@@ -68,14 +71,16 @@ const tools = {
 await main();
 
 async function main() {
-  process.stderr.write(`Performing health check to ${haeHost}:${haePort}...\n`);
-  const isHealthy = await healthCheck(haeHost, haePort, 5000);
+  resolvedHaeHost = await resolveHealthAutoExportHost(haeHost);
+
+  process.stderr.write(`Performing health check to ${resolvedHaeHost}:${haePort}...\n`);
+  const isHealthy = await healthCheck(resolvedHaeHost, haePort, 5000);
 
   if (isHealthy) {
-    process.stderr.write(`Health check passed: Successfully connected to ${haeHost}:${haePort}\n`);
+    process.stderr.write(`Health check passed: Successfully connected to ${resolvedHaeHost}:${haePort}\n`);
   } else {
     process.stderr.write(
-      `Health check warning: Cannot connect to ${haeHost}:${haePort}. Ensure Health Auto Export iOS app is running with TCP server enabled.\n`,
+      `Health check warning: Cannot connect to ${resolvedHaeHost}:${haePort}. Ensure Health Auto Export iOS app is running with TCP server enabled.\n`,
     );
   }
 
@@ -199,96 +204,145 @@ function sendHealthAutoExportRequest(toolName, args) {
     },
   };
 
-  return new Promise((resolve) => {
-    const client = new net.Socket();
-    let responseData = '';
-    let settled = false;
+  return sendTcpPayloadWithPython(resolvedHaeHost, haePort, JSON.stringify(request), defaultTimeoutMs);
+}
 
-    client.setTimeout(defaultTimeoutMs);
+async function resolveHealthAutoExportHost(host) {
+  if (net.isIP(host)) {
+    return host;
+  }
 
-    client.connect(haePort, haeHost, () => {
-      client.write(JSON.stringify(request));
-    });
+  try {
+    const addresses = await dns.lookup(host, {all: true, verbatim: false});
+    const selected = selectPreferredAddress(addresses);
 
-    client.on('data', (data) => {
-      responseData += data.toString();
-    });
-
-    client.on('end', () => {
-      settleWithResponse();
-    });
-
-    client.on('close', () => {
-      settleWithResponse();
-    });
-
-    client.on('error', (error) => {
-      if (responseData) {
-        settleWithResponse();
-        return;
-      }
-
-      settle(`Failed to connect to Health Auto Export at ${haeHost}:${haePort}: ${error.message}`);
-    });
-
-    client.on('timeout', () => {
-      client.destroy();
-      settle(`Request to Health Auto Export timed out after ${defaultTimeoutMs}ms`);
-    });
-
-    function settleWithResponse() {
-      if (!responseData) {
-        settle('No response data received');
-        return;
-      }
-
-      try {
-        settle(JSON.stringify(JSON.parse(responseData), null, 2));
-      } catch {
-        settle(responseData);
-      }
+    if (selected) {
+      const addressList = addresses.map((item) => item.address).join(', ');
+      process.stderr.write(`Resolved HAE_HOST ${host} -> ${selected.address} (${addressList})\n`);
+      return selected.address;
     }
+  } catch (error) {
+    process.stderr.write(
+      `HAE_HOST resolution warning: failed to resolve ${host}: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
+  }
 
-    function settle(text) {
-      if (settled) {
-        return;
-      }
+  return host;
+}
 
-      settled = true;
-      resolve(text);
-    }
-  });
+function selectPreferredAddress(addresses) {
+  return addresses.find((item) => item.family === 4 && isPrivateLanIPv4(item.address))
+    ?? addresses.find((item) => item.family === 4 && !item.address.startsWith('169.254.'))
+    ?? addresses.find((item) => item.family === 6 && !item.address.toLowerCase().startsWith('fe80:'))
+    ?? addresses.find((item) => item.family === 4)
+    ?? addresses[0];
+}
+
+function isPrivateLanIPv4(address) {
+  if (address.startsWith('10.') || address.startsWith('192.168.')) {
+    return true;
+  }
+
+  const parts = address.split('.').map((part) => Number.parseInt(part, 10));
+  return parts.length === 4 && parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31;
 }
 
 function healthCheck(host, port, timeoutMs) {
+  return tcpHealthCheckWithPython(host, port, timeoutMs);
+}
+
+function sendTcpPayloadWithPython(host, port, payload, timeoutMs) {
+  const script = `
+import json
+import socket
+import sys
+
+host = sys.argv[1]
+port = int(sys.argv[2])
+timeout = int(sys.argv[3]) / 1000
+payload = sys.stdin.read().encode("utf-8")
+
+try:
+    with socket.create_connection((host, port), timeout) as sock:
+        sock.settimeout(timeout)
+        sock.sendall(payload)
+        try:
+            sock.shutdown(socket.SHUT_WR)
+        except OSError:
+            pass
+
+        chunks = []
+        while True:
+            chunk = sock.recv(65536)
+            if not chunk:
+                break
+            chunks.append(chunk)
+
+    response = b"".join(chunks).decode("utf-8", "replace")
+    if not response:
+        print("No response data received")
+    else:
+        try:
+            print(json.dumps(json.loads(response), ensure_ascii=False, indent=2))
+        except Exception:
+            print(response, end="" if response.endswith("\\n") else "\\n")
+except Exception as error:
+    print(f"Failed to connect to Health Auto Export at {host}:{port}: {error}")
+`;
+
   return new Promise((resolve) => {
-    const client = new net.Socket();
-    let settled = false;
+    const child = spawn('/usr/bin/python3', ['-c', script, host, String(port), String(timeoutMs)], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
 
-    client.setTimeout(timeoutMs);
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('error', (error) => {
+      resolve(`Failed to run Python TCP client: ${error.message}`);
+    });
+    child.on('close', () => {
+      resolve(stdout.trim() || stderr.trim() || 'No response data received');
+    });
+    child.stdin.end(payload);
+  });
+}
 
-    client.connect(port, host, () => {
-      settle(true);
-      client.end();
+function tcpHealthCheckWithPython(host, port, timeoutMs) {
+  const script = `
+import socket
+import sys
+
+host = sys.argv[1]
+port = int(sys.argv[2])
+timeout = int(sys.argv[3]) / 1000
+
+try:
+    with socket.create_connection((host, port), timeout):
+        pass
+    sys.exit(0)
+except Exception:
+    sys.exit(1)
+`;
+
+  return new Promise((resolve) => {
+    const child = spawn('/usr/bin/python3', ['-c', script, host, String(port), String(timeoutMs)], {
+      stdio: ['ignore', 'ignore', 'ignore'],
     });
 
-    client.on('error', () => {
-      settle(false);
+    child.on('error', () => {
+      resolve(false);
     });
-
-    client.on('timeout', () => {
-      client.destroy();
-      settle(false);
+    child.on('close', (code) => {
+      resolve(code === 0);
     });
-
-    function settle(value) {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-      resolve(value);
-    }
   });
 }
 

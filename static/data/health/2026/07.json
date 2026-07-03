@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-07-03T18:46:33.635Z",
+  "exportedAt": "2026-07-03T20:38:19.942Z",
   "dateRange": {
     "start": "2026-07-01 00:00:00 +0800",
     "end": "2026-07-04 23:59:59 +0800"
@@ -7,6 +7,27 @@
   "data": {
     "healthMetrics": {
       "metrics": [
+        {
+          "name": "apple_exercise_time",
+          "data": [
+            {
+              "date": "2026-07-01 00:00:00 +0800",
+              "qty": 28,
+              "source": "Feei的Apple Watch"
+            },
+            {
+              "qty": 8,
+              "date": "2026-07-02 00:00:00 +0800",
+              "source": "Feei的Apple Watch"
+            },
+            {
+              "qty": 12,
+              "date": "2026-07-03 00:00:00 +0800",
+              "source": "Feei的Apple Watch"
+            }
+          ],
+          "units": "min"
+        },
         {
           "name": "apple_stand_time",
           "data": [
@@ -16,46 +37,25 @@
               "source": "Feei的Apple Watch"
             },
             {
-              "qty": 44,
               "date": "2026-07-02 00:00:00 +0800",
+              "qty": 44,
               "source": "Feei的Apple Watch"
             },
             {
-              "date": "2026-07-03 00:00:00 +0800",
               "qty": 21,
+              "date": "2026-07-03 00:00:00 +0800",
               "source": "Feei的Apple Watch"
             }
           ],
           "units": "min"
         },
         {
-          "units": "min",
-          "name": "apple_exercise_time",
-          "data": [
-            {
-              "date": "2026-07-01 00:00:00 +0800",
-              "qty": 28,
-              "source": "Feei的Apple Watch"
-            },
-            {
-              "date": "2026-07-02 00:00:00 +0800",
-              "qty": 8,
-              "source": "Feei的Apple Watch"
-            },
-            {
-              "qty": 12,
-              "date": "2026-07-03 00:00:00 +0800",
-              "source": "Feei的Apple Watch"
-            }
-          ]
-        },
-        {
-          "name": "apple_stand_hour",
           "units": "count",
+          "name": "apple_stand_hour",
           "data": [
             {
-              "qty": 6,
               "date": "2026-07-01 00:00:00 +0800",
+              "qty": 6,
               "source": ""
             },
             {
@@ -71,7 +71,6 @@
           ]
         },
         {
-          "units": "degC",
           "name": "apple_sleeping_wrist_temperature",
           "data": [
             {
@@ -85,37 +84,27 @@
               "source": "Feei的Apple Watch"
             },
             {
-              "date": "2026-07-03 00:00:00 +0800",
               "qty": 35.88025665283203,
-              "source": "Feei的Apple Watch"
-            }
-          ]
-        },
-        {
-          "units": "m/s",
-          "data": [
-            {
-              "date": "2026-07-02 00:00:00 +0800",
-              "qty": 0.30070121586322784,
+              "date": "2026-07-03 00:00:00 +0800",
               "source": "Feei的Apple Watch"
             }
           ],
-          "name": "stair_speed_down"
+          "units": "degC"
         },
         {
-          "name": "six_minute_walking_test_distance",
-          "units": "m",
+          "name": "stair_speed_down",
+          "units": "m/s",
           "data": [
             {
-              "qty": 498,
+              "qty": 0.30070121586322784,
               "date": "2026-07-02 00:00:00 +0800",
-              "source": "iPhone 16 Pro Max"
+              "source": "Feei的Apple Watch"
             }
           ]
         },
         {
-          "units": "%",
           "name": "body_fat_percentage",
+          "units": "%",
           "data": [
             {
               "qty": 20.100000500679016,
@@ -125,6 +114,18 @@
           ]
         },
         {
+          "name": "six_minute_walking_test_distance",
+          "data": [
+            {
+              "qty": 498,
+              "date": "2026-07-02 00:00:00 +0800",
+              "source": "iPhone 16 Pro Max"
+            }
+          ],
+          "units": "m"
+        },
+        {
+          "units": "kg",
           "name": "weight_body_mass",
           "data": [
             {
@@ -132,8 +133,7 @@
               "qty": 74.9000015258789,
               "source": "Fitdays"
             }
-          ],
-          "units": "kg"
+          ]
         },
         {
           "name": "lean_body_mass",
@@ -147,16 +147,17 @@
           "units": "kg"
         },
         {
+          "name": "respiratory_rate",
           "units": "count/min",
           "data": [
             {
-              "date": "2026-07-01 00:00:00 +0800",
               "qty": 19.564814814814813,
+              "date": "2026-07-01 00:00:00 +0800",
               "source": "Feei的Apple Watch"
             },
             {
-              "qty": 18.5,
               "date": "2026-07-02 00:00:00 +0800",
+              "qty": 18.5,
               "source": "Feei的Apple Watch"
             },
             {
@@ -164,12 +165,10 @@
               "date": "2026-07-03 00:00:00 +0800",
               "source": "Feei的Apple Watch"
             }
-          ],
-          "name": "respiratory_rate"
+          ]
         },
         {
           "name": "heart_rate",
-          "units": "count/min",
           "data": [
             {
               "Max": 148,
@@ -187,19 +186,27 @@
             },
             {
               "Max": 126,
-              "Avg": 70.48183007548676,
               "source": "Feei的Apple Watch",
+              "Avg": 70.76004004756858,
               "Min": 59,
               "date": "2026-07-03 00:00:00 +0800"
+            },
+            {
+              "Max": 64,
+              "Avg": 59.82680918469738,
+              "source": "Feei的Apple Watch",
+              "Min": 55,
+              "date": "2026-07-04 00:00:00 +0800"
             }
-          ]
+          ],
+          "units": "count/min"
         },
         {
-          "name": "heart_rate_variability",
+          "units": "ms",
           "data": [
             {
-              "date": "2026-07-01 00:00:00 +0800",
               "qty": 38.25754113089441,
+              "date": "2026-07-01 00:00:00 +0800",
               "source": "Feei的Apple Watch"
             },
             {
@@ -208,19 +215,25 @@
               "source": "Feei的Apple Watch"
             },
             {
+              "qty": 46.84337225619106,
               "date": "2026-07-03 00:00:00 +0800",
-              "qty": 50.00170692566569,
+              "source": "Feei的Apple Watch"
+            },
+            {
+              "qty": 48.78449556787201,
+              "date": "2026-07-04 00:00:00 +0800",
               "source": "Feei的Apple Watch"
             }
           ],
-          "units": "ms"
+          "name": "heart_rate_variability"
         },
         {
+          "name": "flights_climbed",
           "units": "count",
           "data": [
             {
-              "qty": 2,
               "date": "2026-07-01 00:00:00 +0800",
+              "qty": 2,
               "source": "Feei的Apple Watch"
             },
             {
@@ -229,37 +242,36 @@
               "source": "Feei的Apple Watch|iPhone 16 Pro Max"
             },
             {
+              "qty": 37,
               "date": "2026-07-03 00:00:00 +0800",
-              "qty": 10,
               "source": "Feei的Apple Watch|iPhone 16 Pro Max"
             }
-          ],
-          "name": "flights_climbed"
+          ]
         },
         {
           "units": "min",
+          "name": "time_in_daylight",
           "data": [
             {
               "qty": 15,
               "date": "2026-07-01 00:00:00 +0800",
               "source": "Feei的Apple Watch"
             }
-          ],
-          "name": "time_in_daylight"
-        },
-        {
-          "units": "ml/(kg·min)",
-          "name": "vo2_max",
-          "data": [
-            {
-              "qty": 34.32,
-              "date": "2026-07-01 00:00:00 +0800",
-              "source": "Feei的Apple Watch"
-            }
           ]
         },
         {
-          "name": "walking_step_length",
+          "name": "vo2_max",
+          "data": [
+            {
+              "date": "2026-07-01 00:00:00 +0800",
+              "qty": 34.32,
+              "source": "Feei的Apple Watch"
+            }
+          ],
+          "units": "ml/(kg·min)"
+        },
+        {
+          "units": "cm",
           "data": [
             {
               "qty": 61.75,
@@ -277,53 +289,52 @@
               "source": "iPhone 16 Pro Max"
             }
           ],
-          "units": "cm"
+          "name": "walking_step_length"
         },
         {
           "units": "count",
-          "name": "step_count",
           "data": [
             {
-              "qty": 4503,
               "date": "2026-07-01 00:00:00 +0800",
+              "qty": 4503,
               "source": "Feei的Apple Watch|iPhone 16 Pro Max"
             },
             {
-              "date": "2026-07-02 00:00:00 +0800",
               "qty": 2581.009794135006,
+              "date": "2026-07-02 00:00:00 +0800",
               "source": "Feei的Apple Watch|iPhone 16 Pro Max"
             },
             {
+              "qty": 4478,
               "date": "2026-07-03 00:00:00 +0800",
-              "qty": 4389,
               "source": "Feei的Apple Watch|iPhone 16 Pro Max"
             }
-          ]
+          ],
+          "name": "step_count"
         },
         {
-          "units": "km",
           "name": "walking_running_distance",
           "data": [
             {
-              "date": "2026-07-01 00:00:00 +0800",
               "qty": 3.2500403552992503,
+              "date": "2026-07-01 00:00:00 +0800",
               "source": "Feei的Apple Watch|iPhone 16 Pro Max"
             },
             {
-              "qty": 1.830071557175625,
               "date": "2026-07-02 00:00:00 +0800",
+              "qty": 1.830071557175625,
               "source": "Feei的Apple Watch|iPhone 16 Pro Max"
             },
             {
               "date": "2026-07-03 00:00:00 +0800",
-              "qty": 3.2557667173639637,
+              "qty": 3.3232136969411514,
               "source": "Feei的Apple Watch|iPhone 16 Pro Max"
             }
-          ]
+          ],
+          "units": "km"
         },
         {
           "name": "walking_asymmetry_percentage",
-          "units": "%",
           "data": [
             {
               "qty": 0.5625,
@@ -331,8 +342,8 @@
               "source": "iPhone 16 Pro Max"
             },
             {
-              "date": "2026-07-02 00:00:00 +0800",
               "qty": 0.4,
+              "date": "2026-07-02 00:00:00 +0800",
               "source": "iPhone 16 Pro Max"
             },
             {
@@ -340,10 +351,11 @@
               "qty": 1.2857142857142858,
               "source": "iPhone 16 Pro Max"
             }
-          ]
+          ],
+          "units": "%"
         },
         {
-          "name": "walking_heart_rate_average",
+          "units": "count/min",
           "data": [
             {
               "date": "2026-07-01 00:00:00 +0800",
@@ -351,8 +363,8 @@
               "source": "Feei的Apple Watch"
             },
             {
-              "qty": 113,
               "date": "2026-07-02 00:00:00 +0800",
+              "qty": 113,
               "source": "Feei的Apple Watch"
             },
             {
@@ -361,9 +373,10 @@
               "source": "Feei的Apple Watch"
             }
           ],
-          "units": "count/min"
+          "name": "walking_heart_rate_average"
         },
         {
+          "name": "walking_speed",
           "units": "km/hr",
           "data": [
             {
@@ -372,19 +385,19 @@
               "source": "iPhone 16 Pro Max"
             },
             {
-              "date": "2026-07-02 00:00:00 +0800",
               "qty": 4.181538461538461,
+              "date": "2026-07-02 00:00:00 +0800",
               "source": "iPhone 16 Pro Max"
             },
             {
-              "date": "2026-07-03 00:00:00 +0800",
               "qty": 4.077,
+              "date": "2026-07-03 00:00:00 +0800",
               "source": "iPhone 16 Pro Max"
             }
-          ],
-          "name": "walking_speed"
+          ]
         },
         {
+          "name": "walking_double_support_percentage",
           "units": "%",
           "data": [
             {
@@ -393,35 +406,19 @@
               "source": "iPhone 16 Pro Max"
             },
             {
-              "date": "2026-07-02 00:00:00 +0800",
               "qty": 28.472727272727273,
-              "source": "iPhone 16 Pro Max"
-            },
-            {
-              "date": "2026-07-03 00:00:00 +0800",
-              "qty": 28.720000000000006,
-              "source": "iPhone 16 Pro Max"
-            }
-          ],
-          "name": "walking_double_support_percentage"
-        },
-        {
-          "units": "s",
-          "data": [
-            {
-              "date": "2026-07-01 00:00:00 +0800",
-              "qty": 10.5,
-              "source": "Feei的Apple Watch"
-            },
-            {
               "date": "2026-07-02 00:00:00 +0800",
-              "qty": 14.333333333333334,
-              "source": "Feei的Apple Watch"
+              "source": "iPhone 16 Pro Max"
+            },
+            {
+              "qty": 28.720000000000006,
+              "date": "2026-07-03 00:00:00 +0800",
+              "source": "iPhone 16 Pro Max"
             }
-          ],
-          "name": "handwashing"
+          ]
         },
         {
+          "name": "active_energy",
           "units": "kJ",
           "data": [
             {
@@ -435,23 +432,43 @@
               "source": "Feei的Apple Watch"
             },
             {
+              "qty": 487.27143132900045,
               "date": "2026-07-03 00:00:00 +0800",
-              "qty": 464.66946332900045,
+              "source": "Feei的Apple Watch"
+            },
+            {
+              "qty": 11.577128000000004,
+              "date": "2026-07-04 00:00:00 +0800",
               "source": "Feei的Apple Watch"
             }
-          ],
-          "name": "active_energy"
+          ]
         },
         {
-          "units": "m/s",
+          "name": "handwashing",
           "data": [
             {
-              "qty": 0.3640586468908522,
-              "date": "2026-07-03 00:00:00 +0800",
+              "date": "2026-07-01 00:00:00 +0800",
+              "qty": 10.5,
+              "source": "Feei的Apple Watch"
+            },
+            {
+              "qty": 14.333333333333334,
+              "date": "2026-07-02 00:00:00 +0800",
               "source": "Feei的Apple Watch"
             }
           ],
-          "name": "stair_speed_up"
+          "units": "s"
+        },
+        {
+          "name": "stair_speed_up",
+          "data": [
+            {
+              "date": "2026-07-03 00:00:00 +0800",
+              "qty": 0.3824419677257538,
+              "source": "Feei的Apple Watch"
+            }
+          ],
+          "units": "m/s"
         },
         {
           "name": "environmental_audio_exposure",
@@ -467,8 +484,13 @@
               "source": "Feei的Apple Watch"
             },
             {
-              "qty": 48.11613924958613,
               "date": "2026-07-03 00:00:00 +0800",
+              "qty": 48.300626341898806,
+              "source": "Feei的Apple Watch"
+            },
+            {
+              "date": "2026-07-04 00:00:00 +0800",
+              "qty": 36.26715671906733,
               "source": "Feei的Apple Watch"
             }
           ],
@@ -476,17 +498,18 @@
         },
         {
           "name": "sleep_analysis",
+          "units": "hr",
           "data": [
             {
               "inBedStart": "2026-07-01 00:21:19 +0800",
               "awake": 0.1916183340549469,
               "totalSleep": 8.49754488762882,
-              "source": "Feei的Apple Watch",
               "sleepStart": "2026-07-01 00:21:19 +0800",
-              "sleepEnd": "2026-07-01 09:02:40 +0800",
+              "source": "Feei的Apple Watch",
+              "date": "2026-07-01 00:00:00 +0800",
               "rem": 2.5075819594330255,
               "deep": 1.0914461241496933,
-              "date": "2026-07-01 00:00:00 +0800",
+              "sleepEnd": "2026-07-01 09:02:40 +0800",
               "inBedEnd": "2026-07-01 09:02:40 +0800",
               "inBed": 0,
               "core": 4.898516804046102,
@@ -511,30 +534,29 @@
               "inBedStart": "2026-07-03 00:49:49 +0800",
               "awake": 0.05831995056735145,
               "totalSleep": 7.456613192260265,
-              "sleepStart": "2026-07-03 00:49:49 +0800",
               "source": "Feei的Apple Watch",
-              "date": "2026-07-03 00:00:00 +0800",
+              "sleepStart": "2026-07-03 00:49:49 +0800",
+              "sleepEnd": "2026-07-03 08:20:43 +0800",
               "rem": 2.0828528221117124,
               "deep": 0.816475471953551,
-              "sleepEnd": "2026-07-03 08:20:43 +0800",
+              "date": "2026-07-03 00:00:00 +0800",
               "inBedEnd": "2026-07-03 08:20:43 +0800",
               "inBed": 0,
               "core": 4.557284898195002,
               "asleep": 0
             }
-          ],
-          "units": "hr"
+          ]
         },
         {
-          "units": "dBASPL",
           "name": "headphone_audio_exposure",
           "data": [
             {
-              "qty": 58.63737218146791,
               "date": "2026-07-02 00:00:00 +0800",
+              "qty": 58.63737218146791,
               "source": "iPhone 16 Pro Max"
             }
-          ]
+          ],
+          "units": "dBASPL"
         },
         {
           "units": "%",
@@ -551,7 +573,12 @@
             },
             {
               "date": "2026-07-03 00:00:00 +0800",
-              "qty": 96.23076923076923,
+              "qty": 96.21428571428571,
+              "source": "Feei的Apple Watch"
+            },
+            {
+              "qty": 96,
+              "date": "2026-07-04 00:00:00 +0800",
               "source": "Feei的Apple Watch"
             }
           ],
@@ -559,14 +586,14 @@
         },
         {
           "name": "body_mass_index",
-          "units": "count",
           "data": [
             {
               "date": "2026-07-03 00:00:00 +0800",
               "qty": 24.700000762939453,
               "source": "Fitdays"
             }
-          ]
+          ],
+          "units": "count"
         },
         {
           "name": "physical_effort",
@@ -577,24 +604,29 @@
               "source": "Feei的Apple Watch"
             },
             {
-              "qty": 3.4282051365599675,
               "date": "2026-07-02 00:00:00 +0800",
+              "qty": 3.4282051365599675,
               "source": "Feei的Apple Watch"
             },
             {
-              "qty": 5.457471259709062,
               "date": "2026-07-03 00:00:00 +0800",
+              "qty": 5.270967739884571,
+              "source": "Feei的Apple Watch"
+            },
+            {
+              "date": "2026-07-04 00:00:00 +0800",
+              "qty": 1.050000011920929,
               "source": "Feei的Apple Watch"
             }
           ],
           "units": "kcal/hr·kg"
         },
         {
-          "name": "basal_energy_burned",
+          "units": "kJ",
           "data": [
             {
-              "qty": 7323.216217646519,
               "date": "2026-07-01 00:00:00 +0800",
+              "qty": 7323.216217646519,
               "source": "Feei的Apple Watch"
             },
             {
@@ -603,15 +635,21 @@
               "source": "Feei的Apple Watch"
             },
             {
-              "qty": 3196.236669376921,
+              "qty": 7109.989826371657,
               "date": "2026-07-03 00:00:00 +0800",
+              "source": "Feei的Apple Watch"
+            },
+            {
+              "qty": 832.7228830052622,
+              "date": "2026-07-04 00:00:00 +0800",
               "source": "Feei的Apple Watch"
             }
           ],
-          "units": "kJ"
+          "name": "basal_energy_burned"
         },
         {
           "name": "resting_heart_rate",
+          "units": "count/min",
           "data": [
             {
               "qty": 81,
@@ -624,12 +662,11 @@
               "source": "Feei的Apple Watch"
             },
             {
+              "qty": 67,
               "date": "2026-07-03 00:00:00 +0800",
-              "qty": 80,
               "source": "Feei的Apple Watch"
             }
-          ],
-          "units": "count/min"
+          ]
         }
       ]
     },
@@ -642,23 +679,23 @@
           },
           "location": "户外",
           "heartRate": {
-            "max": {
-              "units": "bpm",
-              "qty": 134
-            },
             "avg": {
-              "units": "bpm",
-              "qty": 121.87773104003796
+              "qty": 121.87773104003796,
+              "units": "bpm"
             },
             "min": {
-              "units": "bpm",
-              "qty": 110
+              "qty": 110,
+              "units": "bpm"
+            },
+            "max": {
+              "qty": 134,
+              "units": "bpm"
             }
           },
           "metadata": {},
           "temperature": {
-            "units": "degC",
-            "qty": 28.039314270017144
+            "qty": 28.039314270017144,
+            "units": "degC"
           },
           "duration": 1167.6852859258652,
           "walkingAndRunningDistance": [
@@ -784,8 +821,8 @@
             }
           ],
           "maxSpeed": {
-            "qty": 5.739407854760623,
-            "units": "km"
+            "units": "km",
+            "qty": 5.739407854760623
           },
           "intensity": {
             "units": "kcal/hr·kg",
@@ -892,8 +929,8 @@
             }
           ],
           "avgSpeed": {
-            "qty": 4.366001242698117,
-            "units": "km"
+            "units": "km",
+            "qty": 4.366001242698117
           },
           "name": "户外 步行",
           "heartRateData": [
@@ -916,17 +953,17 @@
             {
               "Max": 121,
               "units": "bpm",
+              "Avg": 117.92574257425741,
               "source": "Feei的Apple Watch",
               "Min": 114,
-              "Avg": 117.92574257425741,
               "date": "2026-07-01 19:37:28 +0800"
             },
             {
               "Max": 119,
               "units": "bpm",
-              "source": "Feei的Apple Watch",
               "Avg": 117.76237623762376,
               "Min": 116,
+              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:38:28 +0800"
             },
             {
@@ -940,41 +977,41 @@
             {
               "Max": 123.99999999999999,
               "units": "bpm",
-              "source": "Feei的Apple Watch",
               "Avg": 120.54455445544555,
               "Min": 116,
+              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:40:28 +0800"
             },
             {
               "Max": 125.00000000000001,
               "units": "bpm",
               "source": "Feei的Apple Watch",
-              "Avg": 120.17,
               "Min": 115,
+              "Avg": 120.17,
               "date": "2026-07-01 19:41:28 +0800"
             },
             {
               "Max": 125.00000000000001,
               "units": "bpm",
-              "source": "Feei的Apple Watch",
               "Avg": 122.89062499999999,
               "Min": 120,
+              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:42:28 +0800"
             },
             {
               "Max": 126,
               "units": "bpm",
-              "Avg": 123.77551020408163,
-              "Min": 122,
               "source": "Feei的Apple Watch",
+              "Min": 122,
+              "Avg": 123.77551020408163,
               "date": "2026-07-01 19:43:28 +0800"
             },
             {
               "Max": 123.99999999999999,
               "units": "bpm",
-              "Avg": 122.95145631067963,
-              "Min": 119,
               "source": "Feei的Apple Watch",
+              "Min": 119,
+              "Avg": 122.95145631067963,
               "date": "2026-07-01 19:44:28 +0800"
             },
             {
@@ -988,33 +1025,33 @@
             {
               "Max": 122.99999999999999,
               "units": "bpm",
-              "source": "Feei的Apple Watch",
               "Avg": 121.01000000000003,
+              "source": "Feei的Apple Watch",
               "Min": 118,
               "date": "2026-07-01 19:46:28 +0800"
             },
             {
               "Max": 125.00000000000001,
               "units": "bpm",
-              "source": "Feei的Apple Watch",
               "Avg": 122.66176470588236,
               "Min": 121,
+              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:47:28 +0800"
             },
             {
               "Max": 130,
               "units": "bpm",
               "source": "Feei的Apple Watch",
-              "Min": 122.99999999999999,
               "Avg": 125.73711340206187,
+              "Min": 122.99999999999999,
               "date": "2026-07-01 19:48:28 +0800"
             },
             {
               "Max": 123.99999999999999,
               "units": "bpm",
-              "source": "Feei的Apple Watch",
-              "Min": 118,
               "Avg": 120.90104865706647,
+              "Min": 118,
+              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:49:28 +0800"
             },
             {
@@ -1036,31 +1073,31 @@
             {
               "Max": 127,
               "units": "bpm",
-              "source": "Feei的Apple Watch",
-              "Min": 123.99999999999999,
               "Avg": 124.79326923076921,
+              "Min": 123.99999999999999,
+              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:52:28 +0800"
             },
             {
               "Max": 131,
               "units": "bpm",
-              "Avg": 127.65865384615383,
-              "Min": 125.00000000000001,
               "source": "Feei的Apple Watch",
+              "Min": 125.00000000000001,
+              "Avg": 127.65865384615383,
               "date": "2026-07-01 19:53:28 +0800"
             },
             {
               "Max": 134,
               "units": "bpm",
-              "Avg": 131.634328358209,
               "source": "Feei的Apple Watch",
               "Min": 128,
+              "Avg": 131.634328358209,
               "date": "2026-07-01 19:54:28 +0800"
             }
           ],
           "humidity": {
-            "qty": 66,
-            "units": "%"
+            "units": "%",
+            "qty": 66
           },
           "id": "5FB86E65-5667-43CC-B921-7EF3C6EEE221",
           "maxHeartRate": {
@@ -1068,12 +1105,12 @@
             "qty": 134
           },
           "totalEnergy": {
-            "units": "kJ",
-            "qty": 510.3202593519608
+            "qty": 510.3202593519608,
+            "units": "kJ"
           },
           "stepCadence": {
-            "qty": 75.37989992758054,
-            "units": "count/min"
+            "units": "count/min",
+            "qty": 75.37989992758054
           },
           "end": "2026-07-01 19:54:56 +0800",
           "basalEnergy": [
@@ -1210,33 +1247,33 @@
             {
               "Max": 131,
               "units": "bpm",
-              "Avg": 131,
               "source": "Feei的Apple Watch",
               "Min": 131,
+              "Avg": 131,
               "date": "2026-07-01 19:55:02 +0800"
             },
             {
               "Max": 132,
               "units": "bpm",
               "Avg": 132,
-              "source": "Feei的Apple Watch",
               "Min": 132,
+              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:55:03 +0800"
             },
             {
               "Max": 122,
               "units": "bpm",
-              "Avg": 122,
-              "Min": 122,
               "source": "Feei的Apple Watch",
+              "Min": 122,
+              "Avg": 122,
               "date": "2026-07-01 19:55:10 +0800"
             },
             {
               "Max": 118,
               "units": "bpm",
+              "source": "Feei的Apple Watch",
               "Avg": 118,
               "Min": 118,
-              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:55:14 +0800"
             },
             {
@@ -1250,25 +1287,25 @@
             {
               "Max": 116,
               "units": "bpm",
+              "Avg": 116,
               "source": "Feei的Apple Watch",
               "Min": 116,
-              "Avg": 116,
               "date": "2026-07-01 19:55:23 +0800"
             },
             {
               "Max": 118,
               "units": "bpm",
+              "source": "Feei的Apple Watch",
               "Avg": 118,
               "Min": 118,
-              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:55:28 +0800"
             },
             {
               "Max": 117,
               "units": "bpm",
-              "Avg": 117,
-              "Min": 117,
               "source": "Feei的Apple Watch",
+              "Min": 117,
+              "Avg": 117,
               "date": "2026-07-01 19:55:33 +0800"
             },
             {
@@ -1282,9 +1319,9 @@
             {
               "Max": 128,
               "units": "bpm",
+              "Avg": 128,
               "source": "Feei的Apple Watch",
               "Min": 128,
-              "Avg": 128,
               "date": "2026-07-01 19:55:44 +0800"
             },
             {
@@ -1306,72 +1343,72 @@
             {
               "Max": 126,
               "units": "bpm",
-              "Avg": 126,
-              "Min": 126,
               "source": "Feei的Apple Watch",
+              "Min": 126,
+              "Avg": 126,
               "date": "2026-07-01 19:56:00 +0800"
             },
             {
               "Max": 126,
               "units": "bpm",
               "source": "Feei的Apple Watch",
-              "Min": 126,
               "Avg": 126,
+              "Min": 126,
               "date": "2026-07-01 19:56:03 +0800"
             },
             {
               "Max": 128,
               "units": "bpm",
+              "source": "Feei的Apple Watch",
               "Avg": 128,
               "Min": 128,
-              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:56:12 +0800"
             },
             {
               "Max": 129,
               "units": "bpm",
               "source": "Feei的Apple Watch",
-              "Min": 129,
               "Avg": 129,
+              "Min": 129,
               "date": "2026-07-01 19:56:17 +0800"
             },
             {
               "Max": 127,
               "units": "bpm",
-              "Avg": 127,
-              "Min": 127,
               "source": "Feei的Apple Watch",
+              "Min": 127,
+              "Avg": 127,
               "date": "2026-07-01 19:56:22 +0800"
             },
             {
               "Max": 123.99999999999999,
               "units": "bpm",
               "source": "Feei的Apple Watch",
-              "Min": 123.99999999999999,
               "Avg": 123.99999999999999,
+              "Min": 123.99999999999999,
               "date": "2026-07-01 19:56:25 +0800"
             },
             {
               "Max": 121,
               "units": "bpm",
-              "source": "Feei的Apple Watch",
-              "Min": 121,
               "Avg": 121,
+              "Min": 121,
+              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:56:28 +0800"
             },
             {
               "Max": 108,
               "units": "bpm",
-              "source": "Feei的Apple Watch",
-              "Min": 108,
               "Avg": 108,
+              "Min": 108,
+              "source": "Feei的Apple Watch",
               "date": "2026-07-01 19:56:37 +0800"
             },
             {
               "Max": 105,
               "units": "bpm",
-              "Avg": 105,
               "source": "Feei的Apple Watch",
+              "Avg": 105,
               "Min": 105,
               "date": "2026-07-01 19:56:41 +0800"
             },
@@ -1386,9 +1423,9 @@
             {
               "Max": 102,
               "units": "bpm",
-              "Avg": 102,
-              "Min": 102,
               "source": "Feei的Apple Watch",
+              "Min": 102,
+              "Avg": 102,
               "date": "2026-07-01 19:56:49 +0800"
             },
             {

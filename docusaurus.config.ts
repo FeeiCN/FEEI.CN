@@ -288,6 +288,7 @@ const config: Config = {
           items: [
             {type: 'docSidebar', sidebarId: 'aboutMeSidebar', label: '关于', icon: 'user'},
             {type: 'docSidebar', sidebarId: 'lifeProgressSidebar', label: '三省吾身', icon: 'gauge-icon'},
+            {type: 'docSidebar', sidebarId: 'annualReviewSidebar', label: '年度总结', icon: 'history-circle-icon'},
           ],
         },
         {

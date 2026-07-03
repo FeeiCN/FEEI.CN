@@ -3,7 +3,7 @@ import type {HealthData} from './transform';
 
 export const YEARS = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
 
-// Record<year, months[]>
+// Historical months known to exist. The current year is extended at runtime.
 export const MONTH_MAP: Record<number, number[]> = {
   2016: [8],
   2017: [6, 7, 8, 9, 10, 11, 12],
@@ -17,6 +17,18 @@ export const MONTH_MAP: Record<number, number[]> = {
   2025: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
   2026: [1, 2, 3, 4, 5, 6],
 };
+
+function monthsThrough(month: number): number[] {
+  return Array.from({length: month}, (_, index) => index + 1);
+}
+
+export function getAvailableMonthMap(now = new Date()): Record<number, number[]> {
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const map: Record<number, number[]> = {...MONTH_MAP};
+  map[year] = [...new Set([...(map[year] ?? []), ...monthsThrough(month)])].sort((a, b) => a - b);
+  return map;
+}
 
 export const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
 export const RANGE_LABELS: Record<string, string> = {'7d': '7天', '30d': '30天', '90d': '90天', '1y': '近1年'};

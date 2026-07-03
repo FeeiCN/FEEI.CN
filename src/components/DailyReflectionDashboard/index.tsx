@@ -2702,7 +2702,12 @@ function DailyDetailPanel({
   loading: boolean;
   onDateSelect: (date: string) => void;
 }): React.ReactNode {
-  const [activeTab, setActiveTab] = useState<DailyDetailTab>('diary');
+  const defaultTab = analysis ? 'analysis' : diary ? 'diary' : 'timeline';
+  const [activeTab, setActiveTab] = useState<DailyDetailTab>(defaultTab);
+
+  useEffect(() => {
+    setActiveTab(analysis ? 'analysis' : diary ? 'diary' : 'timeline');
+  }, [analysis, date, diary]);
 
   return (
     <section className={styles.dailyDetailPanel}>
@@ -2801,7 +2806,7 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
         const nextDailyDates = dailyManifest?.dates || [];
         const nextAnalysisDates = analysisManifest?.dates || [];
         const merged = [...new Set([...nextDailyDates, ...nextAnalysisDates])].sort();
-        const initialDate = pickInitialDate(merged);
+        const initialDate = pickInitialDate(nextAnalysisDates.length ? nextAnalysisDates : merged);
         setDailyDates(nextDailyDates);
         setAnalysisDates(nextAnalysisDates);
         setAllDates(merged);

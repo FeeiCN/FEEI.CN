@@ -1,10 +1,11 @@
 name: Daily data analysis
 
-# 每天北京时间 08:30 分析前一日完整数据，生成对应日期的结构化分析。
+# 每天北京时间 09:10 分析前一日完整数据，生成对应日期的结构化分析。
+# 健康数据同步也在每小时 30 分运行；这里错开，避免分析抢在健康数据提交前执行。
 
 on:
   schedule:
-    - cron: '30 0 * * *'
+    - cron: '10 1 * * *'
   workflow_dispatch:
     inputs:
       report_date:

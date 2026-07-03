@@ -5,7 +5,7 @@ import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
 import {transform, computeDashboard, getDateRange, filterByTimeRange, type HealthData, type DashCard} from './transform';
 import {
-  YEARS, RANGE_DAYS, RANGE_LABELS, EMPTY, MONTH_MAP,
+  YEARS, RANGE_DAYS, RANGE_LABELS, EMPTY, getAvailableMonthMap,
   YearCtx, type RecentRange, type TimeScope, type YearCtxType,
 } from './index-shared';
 import styles from './styles.module.css';
@@ -1896,6 +1896,7 @@ function HealthProviderInner({
   const [loading, setLoading] = useState(true);
   const scope = controlledScope ?? internalScope;
   const setScope = setControlledScope ?? setInternalScope;
+  const availableMonths = useMemo(() => getAvailableMonthMap(), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -1905,9 +1906,9 @@ function HealthProviderInner({
     // Determine which month keys (YYYY-MM) to load
     let targetMonthKeys: string[] = [];
     if (scope.mode === 'year') {
-      targetMonthKeys = MONTH_MAP[scope.year]?.map((m) => `${scope.year}-${String(m).padStart(2, '0')}`) ?? [];
+      targetMonthKeys = availableMonths[scope.year]?.map((m) => `${scope.year}-${String(m).padStart(2, '0')}`) ?? [];
     } else if (scope.mode === 'all') {
-      targetMonthKeys = Object.entries(MONTH_MAP)
+      targetMonthKeys = Object.entries(availableMonths)
         .flatMap(([y, months]) => months.map((m) => `${y}-${String(m).padStart(2, '0')}`))
         .sort();
     } else {
@@ -1923,7 +1924,7 @@ function HealthProviderInner({
         const y = cur.getFullYear();
         const m = cur.getMonth() + 1;
         const key = `${y}-${String(m).padStart(2, '0')}`;
-        if (MONTH_MAP[y]?.includes(m)) keys.push(key);
+        if (availableMonths[y]?.includes(m)) keys.push(key);
         cur.setMonth(cur.getMonth() + 1);
       }
       targetMonthKeys = keys;
@@ -1955,11 +1956,11 @@ function HealthProviderInner({
         });
     });
     return () => { cancelled = true; };
-  }, [scope]);
+  }, [scope, availableMonths]);
 
   const data = useMemo(() => {
     if (scope.mode === 'year') {
-      const months = MONTH_MAP[scope.year] ?? [];
+      const months = availableMonths[scope.year] ?? [];
       const merged = mergeDataByYear(allData, scope.year, months);
       return merged;
     }
@@ -1969,13 +1970,13 @@ function HealthProviderInner({
     }
     // recent: merge current year data and filter
     const currentYear = new Date().getFullYear();
-    const currentMonths = MONTH_MAP[currentYear] ?? [];
+    const currentMonths = availableMonths[currentYear] ?? [];
     const merged = mergeDataByYear(allData, currentYear, currentMonths);
     return filterByTimeRange(merged, RANGE_DAYS[scope.range]);
-  }, [scope, allData]);
+  }, [scope, allData, availableMonths]);
   const axisDates = useMemo(() => getScopeAxisDates(scope, data), [scope, data]);
 
-  return <YearCtx.Provider value={{scope, setScope, data, axisDates, loading, availableMonths: MONTH_MAP, onDateSelect, selectedDate}}>{children}</YearCtx.Provider>;
+  return <YearCtx.Provider value={{scope, setScope, data, axisDates, loading, availableMonths, onDateSelect, selectedDate}}>{children}</YearCtx.Provider>;
 }
 
 // ── inner components ──────────────────────────────────────────────────────────

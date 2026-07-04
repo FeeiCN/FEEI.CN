@@ -3,7 +3,12 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import type {LoadContext, Plugin} from '@docusaurus/types';
 
-type DocTimestampMap = Record<string, number>;
+type DocMetadata = {
+  updatedAt: number;
+  revisionCount?: number;
+};
+
+type DocMetadataMap = Record<string, DocMetadata>;
 
 function toPosixPath(filePath: string): string {
   return filePath.split(path.sep).join('/');
@@ -57,6 +62,28 @@ function getGitLastUpdatedAt(siteDir: string, relativePath: string): number | un
   return undefined;
 }
 
+function getGitRevisionCount(siteDir: string, relativePath: string): number | undefined {
+  try {
+    const output = execFileSync(
+      'git',
+      ['log', '--follow', '--format=%H', '--', relativePath],
+      {
+        cwd: siteDir,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      },
+    ).trim();
+
+    if (!output) {
+      return undefined;
+    }
+
+    return output.split('\n').filter(Boolean).length;
+  } catch {
+    return undefined;
+  }
+}
+
 export default function docMtimePlugin(context: LoadContext): Plugin {
   const {siteDir} = context;
   const docsDir = path.join(siteDir, 'docs');
@@ -69,23 +96,27 @@ export default function docMtimePlugin(context: LoadContext): Plugin {
         return {};
       }
 
-      const timestamps: DocTimestampMap = {};
+      const metadata: DocMetadataMap = {};
       const docFiles = collectDocFiles(docsDir);
 
       for (const docFile of docFiles) {
         const relativePath = toPosixPath(path.relative(siteDir, docFile));
         const sourceKey = `@site/${relativePath}`;
         const gitLastUpdatedAt = getGitLastUpdatedAt(siteDir, relativePath);
+        const revisionCount = getGitRevisionCount(siteDir, relativePath);
         const fileMtime = fs.statSync(docFile).mtimeMs;
 
-        timestamps[sourceKey] = gitLastUpdatedAt ?? fileMtime;
+        metadata[sourceKey] = {
+          updatedAt: gitLastUpdatedAt ?? fileMtime,
+          revisionCount,
+        };
       }
 
-      return timestamps;
+      return metadata;
     },
 
     contentLoaded({content, actions}) {
-      actions.setGlobalData(content as DocTimestampMap);
+      actions.setGlobalData(content as DocMetadataMap);
     },
   };
 }

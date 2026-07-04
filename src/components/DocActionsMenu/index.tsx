@@ -231,7 +231,7 @@ export default function DocActionsMenu(): ReactNode {
           <div className={styles.divider} />
           <div className={styles.menuMeta}>
             {docMetadata
-              ? `${fileName} 更新于 ${dateFormatter.format(new Date(docMetadata.updatedAt))}${docMetadata.revisionCount ? `，修改 ${docMetadata.revisionCount} 次` : ''}`
+              ? `${docMetadata.revisionCount ? `本文件迭代 ${docMetadata.revisionCount} 版，` : '本文件'}最后更新于 ${dateFormatter.format(new Date(docMetadata.updatedAt))}`
               : fileName}
           </div>
         </div>

@@ -133,7 +133,8 @@ function imageFrame(image: HTMLImageElement): HTMLElement {
 function imageCaption(image: HTMLImageElement): string | undefined {
   const frame = image.closest('.markdownImageFrame');
   const container = frame ?? image;
-  const caption = container.parentElement?.nextElementSibling?.textContent?.trim();
+  const blockCaption = image.closest('.markdownImageBlock')?.querySelector('.markdownImageCaption')?.textContent?.trim();
+  const caption = blockCaption ?? container.parentElement?.nextElementSibling?.textContent?.trim();
   return caption && caption.length <= 80 ? caption : undefined;
 }
 

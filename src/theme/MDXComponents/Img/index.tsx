@@ -8,10 +8,10 @@ function transformImgClassName(className?: string): string {
 }
 
 export default function MDXImg(props: Props): ReactNode {
-  const {className, loading, ...rest} = props;
+  const {className, loading, title, ...rest} = props;
   const eager = loading === 'eager';
-
-  return (
+  const caption = typeof title === 'string' ? title.trim() : undefined;
+  const image = (
     <span className="markdownImageFrame markdownImageFrame--loading">
       <span className="markdownImageSkeleton" aria-hidden="true" />
       {/* eslint-disable-next-line jsx-a11y/alt-text */}
@@ -22,6 +22,17 @@ export default function MDXImg(props: Props): ReactNode {
         {...rest}
         className={transformImgClassName(className)}
       />
+    </span>
+  );
+
+  if (!caption) {
+    return image;
+  }
+
+  return (
+    <span className="markdownImageBlock">
+      {image}
+      {caption ? <span className="markdownImageCaption">{caption}</span> : null}
     </span>
   );
 }

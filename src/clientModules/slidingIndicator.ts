@@ -27,6 +27,13 @@ const CONFIGS: IndicatorConfig[] = [
 ];
 
 const abortControllers = new Map<string, AbortController>();
+const MANUAL_NUMBER_PATTERN = /^(?:(?:\d{1,2}(?:\.\d{1,2})*[.、．]?|[一二三四五六七八九十]{1,3}[、.．]|[（(][一二三四五六七八九十]{1,3}[）)])\s)/;
+
+function markManualNumberedTocLinks() {
+  document.querySelectorAll<HTMLElement>('.table-of-contents__link').forEach((link) => {
+    link.classList.toggle('table-of-contents__link--manual-number', MANUAL_NUMBER_PATTERN.test(link.textContent?.trim() ?? ''));
+  });
+}
 
 function setup({container, links, id, axis}: IndicatorConfig) {
   const containerEl = document.querySelector<HTMLElement>(container);
@@ -73,7 +80,7 @@ function setup({container, links, id, axis}: IndicatorConfig) {
   }
 
   function findActiveLink(): HTMLElement | null {
-    return containerEl.querySelector<HTMLElement>(`${links}--active, ${links}[aria-current='page']`);
+    return containerEl!.querySelector<HTMLElement>(`${links}--active, ${links}[aria-current='page']`);
   }
 
   function moveToActiveLink() {
@@ -114,6 +121,7 @@ function setup({container, links, id, axis}: IndicatorConfig) {
 }
 
 function init() {
+  markManualNumberedTocLinks();
   CONFIGS.forEach(setup);
 }
 

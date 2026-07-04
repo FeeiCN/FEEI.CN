@@ -49,9 +49,9 @@
   --ifm-paragraph-margin-bottom: 2rem;
   --ifm-heading-line-height: 1.22;
   --ifm-heading-margin-bottom: 0.7rem;
-  --ifm-h1-font-size: 2.2rem;
-  --ifm-h2-font-size: 1.45rem;
-  --ifm-h3-font-size: 1.2rem;
+  --ifm-h1-font-size: 2rem;
+  --ifm-h2-font-size: 1.38rem;
+  --ifm-h3-font-size: 1.15rem;
   --ifm-h4-font-size: 1.05rem;
   --ifm-h5-font-size: 1rem;
   --ifm-h6-font-size: 0.95rem;
@@ -81,29 +81,37 @@
   color: inherit;
 }
 
-.markdown h1:first-child {
-  --ifm-h1-font-size: 2.2rem;
+.theme-doc-markdown > h1:first-child,
+.theme-doc-markdown > div:first-child + h1 {
+  --ifm-h1-font-size: 2rem;
+  margin-top: 1.15rem;
 }
 
 .theme-doc-markdown h2 {
   counter-increment: doc-h2;
-  margin-top: 3.1rem;
-  margin-bottom: 1.05rem;
-  font-size: 1.45rem;
+  counter-reset: doc-h3;
+  margin-top: 2.35rem;
+  margin-bottom: 0.8rem;
+  font-size: 1.38rem;
   letter-spacing: 0;
 }
 
 .theme-doc-markdown h2::before {
-  display: block;
-  margin-bottom: 0.35rem;
-  color: rgba(46, 133, 85, 0.58);
-  content: counter(doc-h2, decimal-leading-zero);
+  display: inline-block;
+  margin-right: 0.42rem;
+  color: rgba(15, 23, 42, 0.3);
+  content: counter(doc-h2) '.';
   font-family: var(--ifm-font-family-base);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0;
   line-height: 1;
-  text-align: left;
+  vertical-align: 0.08em;
+}
+
+.theme-doc-markdown :is(h2, h3).doc-heading--manual-number::before {
+  content: none;
 }
 
 .theme-doc-markdown h2 + p,
@@ -115,10 +123,24 @@
 }
 
 .theme-doc-markdown h3 {
-  margin-top: 2rem;
-  margin-bottom: 0.65rem;
-  font-size: 1.2rem;
+  counter-increment: doc-h3;
+  margin-top: 1.55rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.15rem;
   letter-spacing: 0;
+}
+
+.theme-doc-markdown h3::before {
+  display: inline-block;
+  margin-right: 0.42rem;
+  color: rgba(15, 23, 42, 0.26);
+  content: counter(doc-h2) '.' counter(doc-h3) '.';
+  font-family: var(--ifm-font-family-base);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: 0.08em;
 }
 
 .theme-doc-markdown h4,
@@ -132,8 +154,22 @@
   letter-spacing: 0;
 }
 
+.theme-doc-markdown .hash-link {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.theme-doc-markdown :is(h2, h3):hover .hash-link,
+.theme-doc-markdown .hash-link:focus-visible {
+  opacity: 0.42;
+}
+
 [data-theme='dark'] .theme-doc-markdown h2::before {
-  color: rgba(114, 211, 156, 0.64);
+  color: rgba(226, 232, 240, 0.3);
+}
+
+[data-theme='dark'] .theme-doc-markdown h3::before {
+  color: rgba(226, 232, 240, 0.26);
 }
 
 .markdown ul,
@@ -156,19 +192,19 @@
   margin-bottom: 0;
 }
 
-
 /* Justified layout: JS applies dimensions directly via inline styles.
    CSS grid is kept as a fallback for paragraphs where JS hasn't run yet
    (e.g. during SSR or when image dimensions are unavailable). */
-.markdown p:has(> .markdownImageFrame + .markdownImageFrame):not([data-justified]) {
+.markdown p:has(> :is(.markdownImageFrame, .markdownImageBlock) + :is(.markdownImageFrame, .markdownImageBlock)):not([data-justified]) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr));
   gap: 0.6rem;
   align-items: start;
 }
 
-.markdown p:has(> .markdownImageFrame + .markdownImageFrame):not([data-justified]) .markdownImageFrame,
-.markdown p:has(> .markdownImageFrame + .markdownImageFrame):not([data-justified]) img {
+.markdown p:has(> :is(.markdownImageFrame, .markdownImageBlock) + :is(.markdownImageFrame, .markdownImageBlock)):not([data-justified]) .markdownImageBlock,
+.markdown p:has(> :is(.markdownImageFrame, .markdownImageBlock) + :is(.markdownImageFrame, .markdownImageBlock)):not([data-justified]) .markdownImageFrame,
+.markdown p:has(> :is(.markdownImageFrame, .markdownImageBlock) + :is(.markdownImageFrame, .markdownImageBlock)):not([data-justified]) img {
   display: block;
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -178,6 +214,21 @@
 
 .markdown img {
   cursor: zoom-in;
+}
+
+.markdownImageBlock {
+  display: block;
+  margin: 2rem auto 2.2rem;
+}
+
+.markdownImageCaption {
+  display: block;
+  margin-top: 0.72rem;
+  color: var(--ifm-color-emphasis-700);
+  font-family: var(--ifm-font-family-base);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  text-align: center;
 }
 
 .markdownImageFrame {
@@ -236,7 +287,8 @@
   background: color-mix(in srgb, var(--ifm-background-surface-color) 86%, var(--ifm-color-emphasis-300));
 }
 
-.markdown p:not(:has(.markdownImageFrame ~ .markdownImageFrame)) > .markdownImageFrame--loading {
+.markdown p:not(:has(:is(.markdownImageFrame, .markdownImageBlock) ~ :is(.markdownImageFrame, .markdownImageBlock))) > .markdownImageFrame--loading,
+.markdown p:not(:has(:is(.markdownImageFrame, .markdownImageBlock) ~ :is(.markdownImageFrame, .markdownImageBlock))) > .markdownImageBlock:has(> .markdownImageFrame--loading) {
   width: min(100%, 42rem);
   margin: 0 auto;
 }
@@ -252,9 +304,14 @@
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.26);
 }
 
+[data-theme='dark'] .markdownImageCaption {
+  color: var(--ifm-color-emphasis-600);
+}
+
 /* Single standalone image: constrain portrait photos automatically.
    Paragraphs with 2+ images are handled by the grid above. */
-.markdown p:not(:has(.markdownImageFrame ~ .markdownImageFrame)) > .markdownImageFrame {
+.markdown p:not(:has(:is(.markdownImageFrame, .markdownImageBlock) ~ :is(.markdownImageFrame, .markdownImageBlock))) > .markdownImageFrame,
+.markdown p:not(:has(:is(.markdownImageFrame, .markdownImageBlock) ~ :is(.markdownImageFrame, .markdownImageBlock))) > .markdownImageBlock > .markdownImageFrame {
   display: block;
   max-height: 480px;
   width: auto;
@@ -262,12 +319,13 @@
   margin: 0 auto;
 }
 
-.markdown p:not(:has(.markdownImageFrame ~ .markdownImageFrame)) > .markdownImageFrame img {
+.markdown p:not(:has(:is(.markdownImageFrame, .markdownImageBlock) ~ :is(.markdownImageFrame, .markdownImageBlock))) > .markdownImageFrame img,
+.markdown p:not(:has(:is(.markdownImageFrame, .markdownImageBlock) ~ :is(.markdownImageFrame, .markdownImageBlock))) > .markdownImageBlock > .markdownImageFrame img {
   border-radius: 0.75rem;
 }
 
 @media (max-width: 640px) {
-  .markdown p:has(> .markdownImageFrame + .markdownImageFrame):not([data-justified]) {
+  .markdown p:has(> :is(.markdownImageFrame, .markdownImageBlock) + :is(.markdownImageFrame, .markdownImageBlock)):not([data-justified]) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.4rem;
   }
@@ -1196,22 +1254,39 @@
   stroke-width: 1.75;
 }
 
+.table-of-contents {
+  counter-reset: toc-h2;
+}
+
 .table-of-contents li {
   margin: var(--ifm-toc-padding-vertical) 0;
 }
 
 .table-of-contents, .table-of-contents ul {
   border-left: 1px solid rgba(15, 23, 42, 0.09);
-    padding-left: 0px;
-    margin-left: 1.2rem;
+  padding-left: 0;
+  margin-left: 1.2rem;
+}
+
+.table-of-contents > li {
+  counter-increment: toc-h2;
+  counter-reset: toc-h3;
+}
+
+.table-of-contents > li > ul > li {
+  counter-increment: toc-h3;
 }
 
 .table-of-contents__link {
   position: relative;
-  display: block;
+  display: grid;
+  grid-template-columns: 1.55rem minmax(0, 1fr);
+  column-gap: 0.55rem;
+  align-items: baseline;
   border-radius: 0 0.55rem 0.55rem 0;
   padding: 0.22rem 0.55rem 0.22rem 0.85rem;
   font-size: 0.85rem;
+  line-height: 1.45;
   color: #6b7280;
   transition:
     color var(--ifm-transition-fast) ease,
@@ -1223,6 +1298,37 @@
 }
 
 .table-of-contents__link::before {
+  display: inline-block;
+  color: rgba(15, 23, 42, 0.3);
+  content: counter(toc-h2) '.';
+  font-size: 0.64rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: inherit;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table-of-contents > li > ul .table-of-contents__link {
+  grid-template-columns: 2.1rem minmax(0, 1fr);
+  padding-left: 1.05rem;
+  font-size: 0.78rem;
+  color: #9ca3af;
+}
+
+.table-of-contents > li > ul .table-of-contents__link::before {
+  content: counter(toc-h2) '.' counter(toc-h3) '.';
+}
+
+.table-of-contents__link--manual-number {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.table-of-contents__link--manual-number::before {
+  content: none;
+}
+
+.table-of-contents__link::after {
   content: '';
   position: absolute;
   left: 0;
@@ -1245,11 +1351,23 @@
 }
 
 .table-of-contents__link--active::before {
+  color: rgba(15, 23, 42, 0.54);
+}
+
+.table-of-contents__link--active::after {
   background: #111827;
 }
 
 [data-theme='dark'] .table-of-contents__link {
   color: rgba(255, 255, 255, 0.38);
+}
+
+[data-theme='dark'] .table-of-contents__link::before {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+[data-theme='dark'] .table-of-contents__link--active::before {
+  color: rgba(255, 255, 255, 0.58);
 }
 
 [data-theme='dark'] .tocHeader {
@@ -1269,7 +1387,7 @@
   color: #fff;
 }
 
-[data-theme='dark'] .table-of-contents__link--active::before {
+[data-theme='dark'] .table-of-contents__link--active::after {
   background: #fff;
 }
 

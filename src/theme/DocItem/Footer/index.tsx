@@ -2,29 +2,14 @@ import React, {type ReactNode} from 'react';
 import clsx from 'clsx';
 import {ThemeClassNames} from '@docusaurus/theme-common';
 import {useDoc} from '@docusaurus/plugin-content-docs/client';
-import {usePluginData} from '@docusaurus/useGlobalData';
 import TagsListInline from '@theme/TagsListInline';
-import styles from './styles.module.css';
-
-type DocTimestampMap = Record<string, number>;
-
-const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-});
 
 export default function DocItemFooter(): ReactNode {
   const {metadata} = useDoc();
-  const {source, tags} = metadata;
-  const pluginData = usePluginData('doc-mtime-plugin') as
-    | DocTimestampMap
-    | undefined;
-
-  const lastUpdatedAt = source ? pluginData?.[source] : undefined;
+  const {tags} = metadata;
   const canDisplayTagsRow = tags.length > 0;
 
-  if (!canDisplayTagsRow && !lastUpdatedAt) {
+  if (!canDisplayTagsRow) {
     return null;
   }
 
@@ -39,17 +24,6 @@ export default function DocItemFooter(): ReactNode {
           )}>
           <div className="col">
             <TagsListInline tags={tags} />
-          </div>
-        </div>
-      )}
-      {lastUpdatedAt && (
-        <div
-          className={clsx(
-            'row margin-top--sm',
-            ThemeClassNames.docs.docFooterEditMetaRow,
-          )}>
-          <div className={clsx('col', styles.lastUpdated)}>
-            <span>{`最后更新于 ${dateFormatter.format(new Date(lastUpdatedAt))}`}</span>
           </div>
         </div>
       )}

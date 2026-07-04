@@ -2,6 +2,7 @@
 slug: /annual-review-for-2024
 title: Annual Review for 2024
 icon: arrow-big-up-dash-icon
+description: 2024 年英文年度总结，记录工作晋升、知识沉淀、AI 实践、生活空间、旅行、财务和健康状态。
 ---
 
 

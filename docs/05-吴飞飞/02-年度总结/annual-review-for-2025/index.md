@@ -2,6 +2,7 @@
 slug: /annual-review-for-2025
 title: 2025年度总结：量变到质变
 icon: keyframes-icon
+description: 2025 年年度总结，复盘健康、家庭、事业、财务与探索世界的系统性积累，以及从量变走向质变的长期复利。
 ---
 
 

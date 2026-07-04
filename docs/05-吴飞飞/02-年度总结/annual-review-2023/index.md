@@ -2,6 +2,7 @@
 slug: /annual-review-2023
 title: 2023年度总结：成家立业
 icon: users-icon
+description: 2023 年年度总结，记录从网商银行到支付宝的职业转折、成家、健康压力、财务调整、学习和旅行。
 ---
 
 

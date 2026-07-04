@@ -6,6 +6,7 @@ import {getItsHoverIcon} from '@site/src/components/ItsHoverIcon';
 import styles from './styles.module.css';
 
 type MarkdownMap = Record<string, string>;
+type DocTimestampMap = Record<string, number>;
 type CopyState = 'idle' | 'copied' | 'error';
 
 const ICON_SIZE = '16px';
@@ -15,6 +16,12 @@ const IconCopied  = getItsHoverIcon('simple-checked-icon');
 const IconGitHub  = getItsHoverIcon('github-icon');
 const IconClaude  = getItsHoverIcon('brand-anthropic-icon');
 const IconOpenAI  = getItsHoverIcon('brand-openai-icon');
+
+const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
 
 function ChevronIcon({open}: {open: boolean}) {
   return (
@@ -43,6 +50,11 @@ function ExternalArrow() {
   return <span className={styles.externalArrow}>↗</span>;
 }
 
+function docsPathFromSource(source: string): string {
+  const docsPath = source.replace(/^@site\/docs\/?/, '');
+  return docsPath.startsWith('docs/') ? docsPath : `docs/${docsPath}`;
+}
+
 export default function DocActionsMenu(): ReactNode {
   const {metadata} = useDoc();
   const {siteConfig} = useDocusaurusContext();
@@ -50,7 +62,10 @@ export default function DocActionsMenu(): ReactNode {
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const markdownMap = usePluginData('copy-markdown-plugin') as MarkdownMap | undefined;
+  const timestampMap = usePluginData('doc-mtime-plugin') as DocTimestampMap | undefined;
   const canCopyMarkdown = metadata.source.endsWith('.md');
+  const lastUpdatedAt = metadata.source ? timestampMap?.[metadata.source] : undefined;
+  const docsPath = docsPathFromSource(metadata.source);
 
   const pageUrl = `${siteConfig.url}${metadata.permalink}`;
   const aiQuery = encodeURIComponent(`Read ${pageUrl} and answer questions about the content.`);
@@ -200,6 +215,13 @@ export default function DocActionsMenu(): ReactNode {
               <span className={styles.itemDesc}>向 ChatGPT 询问此页面的内容</span>
             </span>
           </a>
+
+          <div className={styles.divider} />
+          <div className={styles.menuMeta}>
+            {lastUpdatedAt
+              ? `${docsPath} 更新于 ${dateFormatter.format(new Date(lastUpdatedAt))}`
+              : docsPath}
+          </div>
         </div>
       )}
     </div>

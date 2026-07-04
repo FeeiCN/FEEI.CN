@@ -1194,7 +1194,7 @@
     linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.62) 45%, transparent 72%),
     linear-gradient(135deg, rgba(148, 163, 184, 0.12), rgba(10, 132, 255, 0.08));
   background-size: 220% 100%, 100% 100%;
-  animation: diaryImageLoading 1.2s ease-in-out infinite;
+  animation: markdownImageLoading 1.2s ease-in-out infinite;
 }
 
 .diaryImageError {
@@ -1238,16 +1238,6 @@
 .diaryImagesGrid .diaryImageFrame {
   width: 100%;
   aspect-ratio: 4 / 3;
-}
-
-@keyframes diaryImageLoading {
-  0% {
-    background-position: 160% 0, 0 0;
-  }
-
-  100% {
-    background-position: -80% 0, 0 0;
-  }
 }
 
 .analysisReport {

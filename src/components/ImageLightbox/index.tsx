@@ -78,7 +78,7 @@ function updateImageGroupType(group: Element) {
     return;
   }
 
-  const images = Array.from(group.querySelectorAll(':scope > img'));
+  const images = Array.from(group.querySelectorAll(':scope > img, :scope > .markdownImageFrame > img'));
   if (images.length <= 1) {
     return;
   }
@@ -96,19 +96,82 @@ function updateImageGroupType(group: Element) {
 // Store original image order per paragraph for resize recalculation
 const justifiedImages = new WeakMap<HTMLElement, HTMLImageElement[]>();
 
+function numberAttribute(element: HTMLElement, name: string): number | null {
+  const value = Number(element.getAttribute(name));
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function applyFrameRatio(frame: HTMLElement, image: HTMLImageElement) {
+  const width = numberAttribute(image, 'width') ?? image.naturalWidth;
+  const height = numberAttribute(image, 'height') ?? image.naturalHeight;
+  if (width > 0 && height > 0) {
+    frame.style.setProperty('--markdown-image-aspect-ratio', `${width} / ${height}`);
+  }
+}
+
+function imageFrame(image: HTMLImageElement): HTMLElement {
+  const parent = image.parentElement;
+  if (parent?.classList.contains('markdownImageFrame')) {
+    applyFrameRatio(parent, image);
+    return parent;
+  }
+
+  const frame = document.createElement('span');
+  frame.className = 'markdownImageFrame markdownImageFrame--loading';
+  image.before(frame);
+  frame.appendChild(image);
+
+  const skeleton = document.createElement('span');
+  skeleton.className = 'markdownImageSkeleton';
+  skeleton.setAttribute('aria-hidden', 'true');
+  frame.prepend(skeleton);
+  applyFrameRatio(frame, image);
+
+  return frame;
+}
+
+function imageCaption(image: HTMLImageElement): string | undefined {
+  const frame = image.closest('.markdownImageFrame');
+  const container = frame ?? image;
+  const caption = container.parentElement?.nextElementSibling?.textContent?.trim();
+  return caption && caption.length <= 80 ? caption : undefined;
+}
+
 function applyJustifiedLayout(paragraph: HTMLElement, images: HTMLImageElement[]) {
   const containerWidth = paragraph.offsetWidth;
   if (!containerWidth || images.length < 2) return;
 
-  const dimensions = images.map(img => ({
-    width: parseInt(img.getAttribute('width') ?? '0') || img.naturalWidth,
-    height: parseInt(img.getAttribute('height') ?? '0') || img.naturalHeight,
-  }));
+  const dimensions = images.map((img) => {
+    const width = parseInt(img.getAttribute('width') ?? '0') || img.naturalWidth || 4;
+    const height = parseInt(img.getAttribute('height') ?? '0') || img.naturalHeight || 3;
+    return {width, height};
+  });
 
   if (dimensions.some(d => !d.width || !d.height)) return;
 
   const isMobile = containerWidth < 640;
   const spacing = isMobile ? 4 : 6;
+  const singleRow = images.length <= 3;
+
+  if (singleRow) {
+    while (paragraph.firstChild) paragraph.removeChild(paragraph.firstChild);
+    paragraph.dataset.justified = 'true';
+    paragraph.style.display = 'flex';
+    paragraph.style.flexDirection = 'row';
+    paragraph.style.gap = `${spacing}px`;
+
+    const ratioSum = dimensions.reduce((sum, item) => sum + item.width / item.height, 0);
+    const rowHeight = Math.max(120, Math.min(320, (containerWidth - spacing * (images.length - 1)) / ratioSum));
+
+    images.forEach((img, index) => {
+      const frame = imageFrame(img);
+      const width = rowHeight * (dimensions[index].width / dimensions[index].height);
+      frame.style.cssText = `width:${width}px;height:${rowHeight}px;display:block;flex-shrink:1;border-radius:0.5rem;`;
+      img.style.cssText = 'width:100%;height:100%;display:block;object-fit:cover;border-radius:0.5rem;';
+      paragraph.appendChild(frame);
+    });
+    return;
+  }
 
   const layout = justifiedLayout(dimensions, {
     containerWidth,
@@ -140,8 +203,10 @@ function applyJustifiedLayout(paragraph: HTMLElement, images: HTMLImageElement[]
     row.style.gap = `${spacing}px`;
 
     items.forEach(({box, img}) => {
+      const frame = imageFrame(img);
+      frame.style.cssText = `width:${box.width}px;height:${box.height}px;display:block;flex-shrink:0;border-radius:0.5rem;`;
       img.style.cssText = `width:${box.width}px;height:${box.height}px;display:block;object-fit:cover;flex-shrink:0;border-radius:0.5rem;`;
-      row.appendChild(img);
+      row.appendChild(frame);
     });
 
     paragraph.appendChild(row);
@@ -194,11 +259,18 @@ export default function ImageLightbox() {
         return;
       }
       image.dataset.lightboxEnhanced = 'true';
-      image.loading = 'lazy';
+      const caption = imageCaption(image);
+      const frame = imageFrame(image);
+      image.classList.add('markdownImage--loading');
+      const markdownRoot = image.closest('.markdown');
+      const firstImage = markdownRoot?.querySelector<HTMLImageElement>('img') === image;
+      image.loading = firstImage ? 'eager' : 'lazy';
       image.decoding = 'async';
+      if (firstImage) {
+        image.fetchPriority = 'high';
+      }
 
-      const caption = image.parentElement?.nextElementSibling?.textContent?.trim();
-      if (caption && caption.length <= 80) {
+      if (caption) {
         image.dataset.caption = caption;
       }
 
@@ -250,21 +322,35 @@ export default function ImageLightbox() {
           !looksLikeScreenshot && !looksLikePoster && !looksLikeDataCard && !looksLikeAppSnapshot,
         );
 
-        const group = image.parentElement;
+        const group = image.closest('p');
         if (group) {
           updateImageGroupType(group);
         }
       }
 
-      if (image.complete) {
-        const idle = (window as Window & {requestIdleCallback?: (cb: () => void) => void}).requestIdleCallback;
-        if (idle) {
-          idle(classifyLoadedImage);
-        } else {
-          setTimeout(classifyLoadedImage, 0);
-        }
+      function markLoaded() {
+        applyFrameRatio(frame, image);
+        frame.classList.remove('markdownImageFrame--loading', 'markdownImageFrame--error');
+        frame.classList.add('markdownImageFrame--loaded');
+        image.classList.remove('markdownImage--loading', 'markdownImage--error');
+        image.classList.add('markdownImage--loaded');
+        classifyLoadedImage();
+      }
+
+      function markError() {
+        frame.classList.remove('markdownImageFrame--loading');
+        frame.classList.add('markdownImageFrame--error');
+        image.classList.remove('markdownImage--loading');
+        image.classList.add('markdownImage--error');
+      }
+
+      if (image.complete && image.naturalWidth > 0) {
+        markLoaded();
+      } else if (image.complete) {
+        markError();
       } else {
-        image.addEventListener('load', classifyLoadedImage, {once: true});
+        image.addEventListener('load', markLoaded, {once: true});
+        image.addEventListener('error', markError, {once: true});
       }
     }
 
@@ -274,7 +360,7 @@ export default function ImageLightbox() {
         // Skip already-justified paragraphs — avoid infinite loop with MutationObserver
         if (paragraph.dataset.justified) return;
 
-        const images = Array.from(paragraph.querySelectorAll<HTMLImageElement>(':scope > img'));
+        const images = Array.from(paragraph.querySelectorAll<HTMLImageElement>(':scope > img, :scope > .markdownImageFrame > img'));
         if (images.length > 1) {
           paragraph.dataset.imageCount = String(images.length);
           justifiedImages.set(paragraph, images);
@@ -301,11 +387,30 @@ export default function ImageLightbox() {
 
     function handleClick(event: MouseEvent) {
       const target = event.target;
-      if (!(target instanceof HTMLImageElement)) {
+      if (!(target instanceof Element)) {
         return;
       }
 
-      const markdownRoot = target.closest('.markdown');
+      const frame = target.closest<HTMLElement>('.markdownImageFrame');
+      const image = target instanceof HTMLImageElement ? target : frame?.querySelector<HTMLImageElement>('img');
+      if (!image) {
+        return;
+      }
+
+      if (frame?.classList.contains('markdownImageFrame--error')) {
+        event.preventDefault();
+        frame.classList.remove('markdownImageFrame--error');
+        frame.classList.add('markdownImageFrame--loading');
+        image.classList.remove('markdownImage--error');
+        image.classList.add('markdownImage--loading');
+        const source = image.currentSrc || image.src;
+        const url = new URL(source, window.location.href);
+        url.searchParams.set('retry', String(Date.now()));
+        image.src = url.toString();
+        return;
+      }
+
+      const markdownRoot = image.closest('.markdown');
       if (!markdownRoot) {
         return;
       }
@@ -313,7 +418,7 @@ export default function ImageLightbox() {
       const pageImages = Array.from(markdownRoot.querySelectorAll('img')).filter(
         (image) => image.width > 48 && image.height > 48,
       );
-      const targetIndex = pageImages.indexOf(target);
+      const targetIndex = pageImages.indexOf(image);
       if (targetIndex < 0) {
         return;
       }

@@ -6,7 +6,11 @@ import {getItsHoverIcon} from '@site/src/components/ItsHoverIcon';
 import styles from './styles.module.css';
 
 type MarkdownMap = Record<string, string>;
-type DocTimestampMap = Record<string, number>;
+type DocMetadata = {
+  updatedAt: number;
+  revisionCount?: number;
+};
+type DocMetadataMap = Record<string, number | DocMetadata>;
 type CopyState = 'idle' | 'copied' | 'error';
 
 const ICON_SIZE = '16px';
@@ -50,9 +54,17 @@ function ExternalArrow() {
   return <span className={styles.externalArrow}>↗</span>;
 }
 
-function docsPathFromSource(source: string): string {
+function fileNameFromSource(source: string): string {
   const docsPath = source.replace(/^@site\/docs\/?/, '');
-  return docsPath.startsWith('docs/') ? docsPath : `docs/${docsPath}`;
+  return docsPath.split('/').filter(Boolean).at(-1) ?? docsPath;
+}
+
+function normalizeDocMetadata(value: number | DocMetadata | undefined): DocMetadata | undefined {
+  if (typeof value === 'number') {
+    return {updatedAt: value};
+  }
+
+  return value;
 }
 
 export default function DocActionsMenu(): ReactNode {
@@ -62,10 +74,10 @@ export default function DocActionsMenu(): ReactNode {
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const markdownMap = usePluginData('copy-markdown-plugin') as MarkdownMap | undefined;
-  const timestampMap = usePluginData('doc-mtime-plugin') as DocTimestampMap | undefined;
+  const metadataMap = usePluginData('doc-mtime-plugin') as DocMetadataMap | undefined;
   const canCopyMarkdown = metadata.source.endsWith('.md');
-  const lastUpdatedAt = metadata.source ? timestampMap?.[metadata.source] : undefined;
-  const docsPath = docsPathFromSource(metadata.source);
+  const docMetadata = normalizeDocMetadata(metadata.source ? metadataMap?.[metadata.source] : undefined);
+  const fileName = fileNameFromSource(metadata.source);
 
   const pageUrl = `${siteConfig.url}${metadata.permalink}`;
   const aiQuery = encodeURIComponent(`Read ${pageUrl} and answer questions about the content.`);
@@ -218,9 +230,9 @@ export default function DocActionsMenu(): ReactNode {
 
           <div className={styles.divider} />
           <div className={styles.menuMeta}>
-            {lastUpdatedAt
-              ? `${docsPath} 更新于 ${dateFormatter.format(new Date(lastUpdatedAt))}`
-              : docsPath}
+            {docMetadata
+              ? `${fileName} 更新于 ${dateFormatter.format(new Date(docMetadata.updatedAt))}${docMetadata.revisionCount ? `，修改 ${docMetadata.revisionCount} 次` : ''}`
+              : fileName}
           </div>
         </div>
       )}

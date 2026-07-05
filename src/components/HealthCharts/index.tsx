@@ -14,9 +14,17 @@ export {YearCtx} from './index-shared';
 export type {TimeScope, YearCtxType} from './index-shared';
 
 type CC = {axis: string; label: string; split: string};
+type HealthDeviationLevel = 'notice' | 'warning';
+type HealthDeviation = {
+  level: HealthDeviationLevel;
+  tooltip: string;
+};
+type DeviationPoint = {date: string; value: number};
+type DeviationSeries = {name: string; points: DeviationPoint[]};
 
 const HEALTH_CHART_COLORS = ['#16a34a', '#f97316', '#ef4444', '#0d9488', '#db2777', '#eab308', '#64748b'];
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+const MIN_BASELINE_SAMPLES = 4;
 
 function cc(isDark: boolean): CC {
   return {
@@ -86,7 +94,7 @@ function ml(color: string, yVal_: number, label: string) {
 }
 
 function smoothLine(name: string, data: number[], color: string, yIdx = 0) {
-  return {name, type: 'line', yAxisIndex: yIdx, data, smooth: true, symbol: 'none', lineStyle: {color, width: 1.5}};
+  return {name, type: 'line', yAxisIndex: yIdx, data, smooth: false, symbol: 'none', lineStyle: {color, width: 1.5}};
 }
 
 function areaLine(name: string, data: number[], color: string, yIdx = 0) {
@@ -266,13 +274,13 @@ function stepsDistanceOpt(isDark: boolean, D: HealthData, isMobile = false) {
       },
       {
         name: '7日均', type: 'line', yAxisIndex: 0, data: r7,
-        smooth: true, symbol: 'none', connectNulls: true,
+        smooth: false, symbol: 'none', connectNulls: true,
         lineStyle: {color: '#f59e0b', width: 1.5},
       },
       {
         name: '距离', type: 'line', yAxisIndex: 1,
         data: b as (number | null)[],
-        smooth: true, symbol: 'none', connectNulls: true,
+        smooth: false, symbol: 'none', connectNulls: true,
         lineStyle: {color: '#ef4444', width: 1.5},
         areaStyle: {color: {type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
           {offset: 0, color: 'rgba(239,68,68,0.12)'}, {offset: 1, color: 'rgba(239,68,68,0)'},
@@ -473,7 +481,7 @@ function respSpo2Opt(isDark: boolean, D: HealthData, isMobile = false) {
       {
         name: '呼吸频率', type: 'line', yAxisIndex: 0,
         data: a as (number | null)[],
-        smooth: true, symbol: 'none', connectNulls: true,
+        smooth: false, symbol: 'none', connectNulls: true,
         lineStyle: {color: '#0891b2', width: 1.5},
         areaStyle: {color: {type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
           {offset: 0, color: 'rgba(8,145,178,0.12)'}, {offset: 1, color: 'rgba(8,145,178,0)'},
@@ -610,7 +618,7 @@ function sixMinWalkOpt(isDark: boolean, D: HealthData) {
     yAxis: yVal(c, {unit: '米', ...dynRange(D.six_min_walk, 10)}),
     series: [{
       name: '六分钟步行', type: 'line', data: D.six_min_walk.map(([, v]) => v),
-      smooth: true, symbol: 'circle', symbolSize: 5,
+      smooth: false, symbol: 'circle', symbolSize: 5,
       lineStyle: {color: '#0891b2', width: 2}, itemStyle: {color: '#0891b2'},
       label: {show: true, position: 'top', fontSize: 9, color: c.label, formatter: (p: {value: number}) => String(p.value)},
     }],
@@ -701,7 +709,7 @@ function vo2Opt(isDark: boolean, D: HealthData) {
     xAxis: xSparse(c, D.vo2),
     yAxis: yVal(c, {unit: 'ml/(kg·min)', ...dynRange(D.vo2, 0.5)}),
     series: [{
-      name: 'VO₂ Max', type: 'line', data: D.vo2.map(([, v]) => v), smooth: true, symbol: 'circle', symbolSize: 5,
+      name: 'VO₂ Max', type: 'line', data: D.vo2.map(([, v]) => v), smooth: false, symbol: 'circle', symbolSize: 5,
       lineStyle: {color: '#0891b2', width: 2}, itemStyle: {color: '#0891b2'},
       label: {show: true, position: 'top', fontSize: 9, color: c.label, formatter: (p: {value: number}) => p.value.toFixed(1)},
     }],
@@ -1557,6 +1565,133 @@ function chartHeight(label: string, isMobile: boolean) {
   return isMobile ? 200 : 240;
 }
 
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function formatDeviationValue(value: number): string {
+  if (Math.abs(value) >= 1000) return Math.round(value).toLocaleString();
+  if (Math.abs(value) >= 100) return Math.round(value).toString();
+  if (Math.abs(value) >= 10) return value.toFixed(1);
+  return value.toFixed(2);
+}
+
+function dateFromValue(raw: unknown): string | null {
+  if (typeof raw === 'string' && raw.length >= 10 && isDateString(raw.slice(0, 10))) return raw.slice(0, 10);
+  return null;
+}
+
+function seriesDisplayName(series: ChartSeries, index: number): string {
+  return typeof series.name === 'string' && series.name ? series.name : `序列 ${index + 1}`;
+}
+
+function getAxisData(axis: unknown, index = 0): unknown[] {
+  const axisObj = Array.isArray(axis) ? axis[index] : axis;
+  const data = asRecord(axisObj).data;
+  return Array.isArray(data) ? data : [];
+}
+
+function numericAt(value: unknown, index: number): number | null {
+  return Array.isArray(value) ? numericValue(value[index]) : numericValue(value);
+}
+
+function extractChartSeries(option: object): DeviationSeries[] {
+  const opt = option as Record<string, unknown>;
+  const rawSeries = Array.isArray(opt.series) ? opt.series as ChartSeries[] : [];
+  if (!rawSeries.length) return [];
+
+  const xAxis = Array.isArray(opt.xAxis) ? opt.xAxis : opt.xAxis ? [opt.xAxis] : [];
+  const yAxis = Array.isArray(opt.yAxis) ? opt.yAxis : opt.yAxis ? [opt.yAxis] : [];
+  const firstX = asRecord(xAxis[0]);
+  const firstY = asRecord(yAxis[0]);
+  const xDates = getAxisData(opt.xAxis).map((item) => dateFromValue(item));
+  const yDates = getAxisData(opt.yAxis).map((item) => dateFromValue(item));
+
+  return rawSeries.flatMap((series, seriesIndex) => {
+    if (series.silent === true || asRecord(series.lineStyle).opacity === 0 || series.tooltip === false) return [];
+    const data = Array.isArray(series.data) ? series.data : [];
+    if (!data.length) return [];
+
+    const points: DeviationPoint[] = [];
+    for (let index = 0; index < data.length; index++) {
+      const raw = data[index];
+      const value = raw && typeof raw === 'object' && 'value' in raw ? (raw as {value?: unknown}).value : raw;
+      let date: string | null = null;
+      let numeric: number | null = null;
+
+      if (Array.isArray(value)) {
+        const encode = asRecord(series.encode);
+        const xEncode = typeof encode.x === 'number' ? encode.x : 0;
+        const yEncode = typeof encode.y === 'number' ? encode.y : 1;
+        date = dateFromValue(value[xEncode]) ?? dateFromValue(value[0]);
+        numeric = numericAt(value, yEncode) ?? value.map(numericValue).find((item): item is number => item !== null) ?? null;
+
+        if (!date && series.type === 'heatmap') {
+          const xIndex = numericValue(value[0]);
+          const yIndex = numericValue(value[1]);
+          const heatValue = numericValue(value[2]);
+          date = xIndex !== null ? dateFromValue(xDates[xIndex] ?? getAxisData(opt.xAxis)[xIndex]) : null;
+          numeric = heatValue ?? yIndex;
+        }
+      } else if (firstX.type === 'category' && xDates[index]) {
+        date = xDates[index];
+        numeric = numericValue(raw);
+      } else if (firstY.type === 'category' && yDates[index]) {
+        date = yDates[index];
+        numeric = numericValue(raw);
+      }
+
+      if (date && numeric !== null) points.push({date, value: numeric});
+    }
+
+    return points.length ? [{name: seriesDisplayName(series, seriesIndex), points}] : [];
+  });
+}
+
+function buildSeriesDeviation(series: DeviationSeries, selectedDate: string): HealthDeviation | null {
+  const currentValues = series.points.filter((point) => point.date === selectedDate).map((point) => point.value);
+  if (!currentValues.length) return null;
+  const current = currentValues.reduce((sum, value) => sum + value, 0);
+  const baselineValues = series.points
+    .filter((point) => point.date !== selectedDate)
+    .map((point) => point.value)
+    .filter((value) => Number.isFinite(value));
+  if (baselineValues.length < MIN_BASELINE_SAMPLES) return null;
+
+  const baseline = median(baselineValues);
+  const deviations = baselineValues.map((value) => Math.abs(value - baseline));
+  const mad = median(deviations);
+  const delta = current - baseline;
+  const absPct = baseline === 0 ? (current === 0 ? 0 : Infinity) : Math.abs(delta / baseline);
+  const robustScore = mad > 0 ? Math.abs(current - baseline) / mad : 0;
+  const isWarning = robustScore >= 5 || absPct >= 1;
+  const isNotice = isWarning || robustScore >= 3 || absPct >= 0.45;
+  if (!isNotice) return null;
+
+  const direction = delta > 0 ? '+' : '-';
+  const change = Number.isFinite(absPct) ? `${direction}${Math.round(absPct * 100)}%` : `${direction}${formatDeviationValue(Math.abs(delta))}`;
+  return {
+    level: isWarning ? 'warning' : 'notice',
+    tooltip: `${series.name} ${change} vs 当前范围中位数（${formatDeviationValue(current)} / ${formatDeviationValue(baseline)}）`,
+  };
+}
+
+function computeOptionDeviation(option: object, selectedDate: string | undefined): HealthDeviation | null {
+  if (!selectedDate) return null;
+  const deviations = extractChartSeries(option)
+    .map((series) => buildSeriesDeviation(series, selectedDate))
+    .filter((item): item is HealthDeviation => Boolean(item))
+    .sort((a, b) => (a.level === b.level ? 0 : a.level === 'warning' ? -1 : 1));
+
+  if (!deviations.length) return null;
+  return {
+    level: deviations.some((item) => item.level === 'warning') ? 'warning' : 'notice',
+    tooltip: deviations.slice(0, 2).map((item) => item.tooltip).join('\n'),
+  };
+}
+
 const SECTIONS = [
   {title: '体重', charts: [
     {label: '体重 & 体脂率', opt: bodyOpt},
@@ -1624,6 +1759,32 @@ export const HEALTH_CHART_NAV = SECTIONS.map((section) => ({
     id: healthChartAnchorId(chart.label),
   })),
 }));
+
+export function HealthChartDeviationMark({label}: {label: string}): React.ReactNode {
+  const {data, axisDates, selectedDate, loading} = useContext(YearCtx);
+  const deviation = useMemo(
+    () => {
+      if (loading) return null;
+      const chart = SECTIONS.flatMap((section) => section.charts).find((item) => item.label === label);
+      if (!chart) return null;
+      const option = alignCalendarRange(alignDateCategoryAxes(chart.opt(false, data, false), axisDates), axisDates);
+      return computeOptionDeviation(option, selectedDate);
+    },
+    [axisDates, data, label, loading, selectedDate],
+  );
+
+  if (!deviation) return null;
+
+  return (
+    <span
+      className={`${styles.deviationMark} ${deviation.level === 'warning' ? styles.deviationMarkWarning : ''}`}
+      title={deviation.tooltip}
+      aria-label={deviation.tooltip}
+    >
+      !
+    </span>
+  );
+}
 
 // ── year / data context ───────────────────────────────────────────────────────
 

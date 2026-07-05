@@ -3,7 +3,7 @@ import AccountAssetsDashboard from '@site/src/components/AccountAssetsDashboard'
 import AlipayInvestDashboard from '@site/src/components/AlipayInvestDashboard';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import FinanceAssetsTrend from '@site/src/components/FinanceAssetsTrend';
-import {HEALTH_CHART_NAV, HealthProvider, HealthSection, type TimeScope as HealthTimeScope} from '@site/src/components/HealthCharts';
+import {HEALTH_CHART_NAV, HealthChartDeviationMark, HealthProvider, HealthSection, type TimeScope as HealthTimeScope} from '@site/src/components/HealthCharts';
 import HKIPOCharts from '@site/src/components/HKIPOCharts';
 import ReactECharts from 'echarts-for-react';
 import {useColorMode} from '@docusaurus/theme-common';
@@ -663,6 +663,7 @@ function pickInitialDate(dates: string[]): string {
     if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
       return value;
     }
+    return formatDateKey(new Date());
   }
   return dates[dates.length - 1] || '';
 }
@@ -1785,48 +1786,69 @@ function FinanceTabs({
   );
 }
 
-function HealthChartSubtabs(): React.ReactNode {
+function scrollToChartPanel(id: string) {
+  const target = document.getElementById(id);
+  const scroller = target?.closest(`.${styles.healthChartsPanel}`);
+  if (!target || !(scroller instanceof HTMLElement)) return;
+  scroller.scrollTo({
+    top: target.offsetTop - scroller.offsetTop - 8,
+    behavior: 'smooth',
+  });
+}
+
+function SubtabPicker({
+  items,
+  label,
+  renderMark,
+}: {
+  items: Array<{id: string; label: string}>;
+  label: string;
+  renderMark?: (item: {id: string; label: string}) => React.ReactNode;
+}): React.ReactNode {
+  const [expanded, setExpanded] = useState(false);
   const handleClick = (id: string) => {
-    const target = document.getElementById(id);
-    const scroller = target?.closest(`.${styles.healthChartsPanel}`);
-    if (!target || !(scroller instanceof HTMLElement)) return;
-    scroller.scrollTo({
-      top: target.offsetTop - scroller.offsetTop - 8,
-      behavior: 'smooth',
-    });
+    scrollToChartPanel(id);
+    setExpanded(false);
   };
 
   return (
-    <nav className={styles.healthChartSubtabs} aria-label="健康图表跳转">
-      {HEALTH_CHART_NAV.flatMap((section) => section.charts).map((chart) => (
-        <button key={chart.id} type="button" onClick={() => handleClick(chart.id)}>
-          {chart.label}
-        </button>
-      ))}
-    </nav>
+    <div className={`${styles.subtabPicker} ${expanded ? styles.subtabPickerExpanded : ''}`}>
+      <nav
+        className={`${styles.healthChartSubtabs} ${expanded ? styles.healthChartSubtabsExpanded : ''}`}
+        aria-label={label}
+      >
+        {items.map((item) => (
+          <button key={item.id} type="button" onClick={() => handleClick(item.id)}>
+            {item.label}
+            {renderMark?.(item)}
+          </button>
+        ))}
+      </nav>
+      <button
+        type="button"
+        className={styles.subtabExpandButton}
+        aria-label={expanded ? '收起全部图表标签' : '展开全部图表标签'}
+        aria-expanded={expanded}
+        onClick={() => setExpanded((value) => !value)}
+      >
+        <span aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+function HealthChartSubtabs(): React.ReactNode {
+  return (
+    <SubtabPicker
+      items={HEALTH_CHART_NAV.flatMap((section) => section.charts)}
+      label="健康图表跳转"
+      renderMark={(chart) => <HealthChartDeviationMark label={chart.label} />}
+    />
   );
 }
 
 function DomainSubtabs({items}: {items: Array<{id: string; label: string}>}): React.ReactNode {
-  const handleClick = (id: string) => {
-    const target = document.getElementById(id);
-    const scroller = target?.closest(`.${styles.healthChartsPanel}`);
-    if (!target || !(scroller instanceof HTMLElement)) return;
-    scroller.scrollTo({
-      top: target.offsetTop - scroller.offsetTop - 8,
-      behavior: 'smooth',
-    });
-  };
-
-  return (
-    <nav className={styles.healthChartSubtabs} aria-label="图表跳转">
-      {items.map((item) => (
-        <button key={item.id} type="button" onClick={() => handleClick(item.id)}>
-          {item.label}
-        </button>
-      ))}
-    </nav>
-  );
+  return <SubtabPicker items={items} label="图表跳转" />;
 }
 
 function ObjectiveStatGrid({items}: {items: Array<{value: React.ReactNode; label: string; tone?: 'accent' | 'green' | 'orange'}>}): React.ReactNode {
@@ -2555,7 +2577,7 @@ function FinanceDataPanel({
         <div className={styles.embeddedDashboardStack}>
           <section className={styles.embeddedDashboardSection}>
             <h3>总资产趋势</h3>
-            <FinanceAssetsTrend onDateSelect={onDateSelect} timeScope={timeScope} />
+            <FinanceAssetsTrend date={date} onDateSelect={onDateSelect} timeScope={timeScope} />
           </section>
           <section className={styles.embeddedDashboardSection}>
             <h3>投资持仓</h3>

@@ -766,20 +766,34 @@
   color: #fff !important;
 }
 
-.healthChartSubtabs {
+.subtabPicker {
   position: sticky;
   top: 3.2rem;
   z-index: 4;
+  display: grid;
+  gap: 0.16rem;
+  padding: 0.22rem 0 0.34rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.healthChartSubtabs {
   display: flex;
   align-items: center;
   gap: 0.24rem;
   min-width: 0;
   min-height: 2.1rem;
   overflow-x: auto;
-  padding: 0.22rem 0 0.42rem;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  padding: 0;
   scrollbar-width: none;
+}
+
+.healthChartSubtabsExpanded {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5.8rem, 1fr));
+  align-items: stretch;
+  gap: 0.28rem;
+  overflow-x: visible;
 }
 
 .healthChartSubtabs::-webkit-scrollbar {
@@ -802,10 +816,46 @@
   white-space: nowrap;
 }
 
+.healthChartSubtabsExpanded button {
+  justify-content: center;
+  width: 100%;
+  white-space: normal;
+}
+
 .healthChartSubtabs button:hover {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
   color: var(--accent);
   background: var(--accent-soft);
+}
+
+.subtabExpandButton {
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 1.05rem;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 8%, transparent);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.subtabExpandButton:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.subtabExpandButton span {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-0.1rem) rotate(45deg);
+}
+
+.subtabPickerExpanded .subtabExpandButton span {
+  transform: translateY(0.12rem) rotate(225deg);
 }
 
 .healthChartsGrid {

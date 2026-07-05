@@ -128,7 +128,7 @@ function buildLineOption(data: PortfolioData, isDark: boolean, isMobile: boolean
         type: 'line',
         yAxisIndex: 0,
         data: data.history.map((h) => ({value: h.securitiesValue, date: getItemDate(h)})),
-        smooth: true,
+        smooth: false,
         symbol: 'none',
         lineStyle: {width: 2, color: '#0891b2'},
       },
@@ -137,7 +137,7 @@ function buildLineOption(data: PortfolioData, isDark: boolean, isMobile: boolean
         type: 'line',
         yAxisIndex: 0,
         data: data.history.map((h) => ({value: h.totalAssets, date: getItemDate(h)})),
-        smooth: true,
+        smooth: false,
         symbol: 'none',
         lineStyle: {width: 2.5, color: '#2563eb'},
         areaStyle: {

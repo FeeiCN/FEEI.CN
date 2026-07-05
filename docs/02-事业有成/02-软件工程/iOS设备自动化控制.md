@@ -331,6 +331,70 @@ python3 scripts/ios_appium_capture.py \
 
 第七步，把长期数据和临时现场分开。临时现场放在 `/tmp` 里用于排查；结构化结果写入稳定目录，供网站、报表或后续分析使用。
 
+## 通用页面采集
+
+业务自动化之前，可以先把任意 App 当前页面采集下来，确认 Appium、WDA、页面树和截图都正常。
+
+采集 Safari 当前页面：
+
+```bash
+python3 scripts/ios_appium_capture.py --bundle-id com.apple.mobilesafari
+```
+
+打开指定网页后采集：
+
+```bash
+python3 scripts/ios_appium_capture.py \
+  --bundle-id com.apple.mobilesafari \
+  --safari-url https://feei.cn \
+  --find FEEI
+```
+
+默认输出到：
+
+```text
+/tmp/ios-appium-capture/
+```
+
+重点看三类文件：
+
+- `*.xml`：当前页面的 UI 元素树。
+- `*.png`：当前屏幕截图。
+- `*.json`：设备、bundle id、窗口尺寸、capabilities 和输出文件路径。
+
+页面树里常见字段：
+
+```text
+type
+name
+label
+value
+enabled
+visible
+x
+y
+width
+height
+```
+
+自动化脚本可以基于这些字段定位元素：
+
+```python
+el = driver.find_element("accessibility id", "搜索")
+el.click()
+
+input_el = driver.find_element("class name", "XCUIElementTypeTextField")
+input_el.send_keys("hello")
+```
+
+如果只是想确认某段文案是否出现在屏幕上，可以直接用 `--find`：
+
+```bash
+python3 scripts/ios_appium_capture.py \
+  --bundle-id com.apple.mobilesafari \
+  --find 搜索
+```
+
 ## 第六步：常见排障
 
 如果 `--check` 找不到设备，按顺序确认：
@@ -497,6 +561,13 @@ python3 scripts/ios_appium_capture.py \
   --max-screens 80
 ```
 
+已经有 `*-summary.json` 时，不需要重新操作手机，可以直接从已有 XML 重新提取并写入站点数据：
+
+```bash
+python3 scripts/ios_appium_capture.py \
+  --extract-existing-summary /tmp/alipay-assets-capture/20260622T162128Z-summary.json
+```
+
 跑完后检查三件事：
 
 ```text
@@ -506,5 +577,50 @@ static/data/invest/YYYY/MM/DD/caitong.json 是否生成
 /tmp/caitong-assets-capture/*-summary.json 是否记录完整导航
 Health Auto Export 页面是否显示「停止服务器」或 9000 端口
 ```
+
+支付宝 `alipay.json` 的顶层结构：
+
+```json
+{
+  "capturedAt": "2026-06-23T00:23:02+08:00",
+  "source": "alipay",
+  "sourceSummary": "/tmp/alipay-assets-capture/xxx-summary.json",
+  "assetRecords": [],
+  "holdingRecords": [],
+  "holdingCount": 15,
+  "holdingAmountSum": 1538856.48
+}
+```
+
+`assetRecords` 是总资产页的分类汇总，例如总资产、余额宝、基金、帮你投、储蓄养老。`holdingRecords` 是「全部持有」里的逐项持仓。
+
+单条持仓字段：
+
+```json
+{
+  "name": "华泰保兴尊睿6个月持有期债券A",
+  "tags": ["基金", "稳健理财"],
+  "amountText": "734,995.35",
+  "amount": 734995.35,
+  "dayProfitText": "+397.65",
+  "dayProfit": 397.65,
+  "holdingProfitText": "+1,495.21",
+  "holdingProfit": 1495.21,
+  "cumulativeProfitText": "+1,495.21",
+  "cumulativeProfit": 1495.21,
+  "assetRatioText": "47.76%",
+  "assetRatio": 47.76,
+  "holdingReturnRateText": "+0.20%",
+  "holdingReturnRate": 0.2
+}
+```
+
+支付宝持仓页的数据提取分三步：
+
+1. 每一屏滚动时保存 XML 和 PNG。
+2. 从 XML 的 `XCUIElementTypeStaticText` 中按坐标恢复「名称/金额、日收益、持有收益、累计收益」表格。
+3. 跨屏边界处按 `(name, amountText)` 合并同一持仓，补齐上一屏缺失的占比或收益率字段。
+
+自动停止依赖页面签名。每滚动一屏，脚本根据 XML 中的文本、坐标、尺寸生成 hash；如果签名重复，就认为已经到底或页面不再滚动。这个判断比固定滚动次数更稳定。
 
 这条链路稳定后，iPhone 就可以作为个人数据系统的一部分：它负责打开那些没有公开 API、但屏幕上可以合法查看的 App 页面；脚本负责控制、截图、解析和落盘；站点或报表再消费这些结构化数据。

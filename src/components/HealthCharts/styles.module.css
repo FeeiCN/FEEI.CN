@@ -649,6 +649,27 @@
   gap: 0.6rem;
 }
 
+.deviationMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.82rem;
+  height: 0.82rem;
+  margin-left: 0.26rem;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #d97706;
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.deviationMarkWarning {
+  background: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
+}
+
 @media (max-width: 767px) {
   .floatingStack {
     width: calc(100vw - 1rem);

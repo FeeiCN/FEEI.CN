@@ -330,7 +330,7 @@ function buildDailyTrendOption(points: InvestDailyPoint[], isDark: boolean, isMo
       {
         name: '总资产',
         type: 'line',
-        smooth: true,
+        smooth: false,
         symbol: 'circle',
         symbolSize: 5,
         data: points.map((point) => point.totalAssets),
@@ -353,7 +353,7 @@ function buildDailyTrendOption(points: InvestDailyPoint[], isDark: boolean, isMo
         name: '持有收益',
         type: 'line',
         yAxisIndex: 1,
-        smooth: true,
+        smooth: false,
         symbol: 'none',
         data: points.map((point) => point.holdingProfit || 0),
         lineStyle: {width: 1.8},

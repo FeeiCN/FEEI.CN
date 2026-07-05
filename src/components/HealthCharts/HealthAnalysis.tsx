@@ -174,7 +174,7 @@ function lagChartOption(isDark: boolean, lags: LagResult[]): object {
       name: `${l.causeLabel} → ${l.effectLabel}`,
       type: 'line',
       data: l.series.map((p) => [String(p.lag), Number(p.r.toFixed(2))]),
-      smooth: true, symbol: 'circle', symbolSize: 6,
+      smooth: false, symbol: 'circle', symbolSize: 6,
       lineStyle: {color: palette[i % palette.length], width: 1.8},
       itemStyle: {color: palette[i % palette.length]},
       markPoint: {
@@ -222,7 +222,7 @@ function recoveryChartOption(isDark: boolean, recovery: RecoveryResult): object 
     series: [
       {
         name: '每日恢复', type: 'line', data: recovery.daily.map((d) => d.score),
-        smooth: true, symbol: 'none',
+        smooth: false, symbol: 'none',
         lineStyle: {color: '#0d9488', width: 1.2, opacity: 0.6},
         areaStyle: {color: {type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
           {offset: 0, color: 'rgba(13,148,136,0.12)'}, {offset: 1, color: 'rgba(13,148,136,0)'},
@@ -230,7 +230,7 @@ function recoveryChartOption(isDark: boolean, recovery: RecoveryResult): object 
       },
       {
         name: '7日均', type: 'line', data: recovery.moving7.map((d) => d.score),
-        smooth: true, symbol: 'none',
+        smooth: false, symbol: 'none',
         lineStyle: {color: '#16a34a', width: 2.4},
       },
     ],

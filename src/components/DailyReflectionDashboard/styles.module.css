@@ -599,7 +599,8 @@
   padding: 0.78rem 0.9rem 1rem;
   box-shadow: 0 12px 36px rgba(15, 23, 42, 0.035);
   backdrop-filter: blur(18px);
-  max-height: 46rem;
+  height: calc(100vh - var(--ifm-navbar-height) - 7.8rem);
+  min-height: 34rem;
   overflow: auto;
   scrollbar-width: thin;
 }
@@ -991,12 +992,28 @@
 }
 
 .objectiveChartScroll {
+  position: relative;
   width: 100%;
   min-width: 0;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   padding-bottom: 0.2rem;
   scrollbar-width: thin;
+}
+
+.objectiveTooltip {
+  position: fixed;
+  z-index: 1000;
+  min-width: 10rem;
+  max-width: min(18rem, calc(100vw - 2rem));
+  padding: 0.58rem 0.68rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--calendar-tooltip-bg);
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.18);
+  color: var(--calendar-tooltip-text);
+  transform: translate(12px, calc(-100% - 12px));
+  pointer-events: none;
 }
 
 .objectiveChart {
@@ -2420,6 +2437,12 @@
   .dailyContext {
     grid-template-columns: 1fr;
     gap: 0.45rem;
+  }
+
+  .healthChartsPanel {
+    height: auto;
+    min-height: 0;
+    max-height: none;
   }
 
   .dashboardHeader {

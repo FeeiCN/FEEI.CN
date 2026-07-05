@@ -11,6 +11,7 @@ type DocRoute = {
   path: string;
   exact?: boolean;
   strict?: boolean;
+  routes?: DocRoute[];
   metadata?: {
     frontMatter?: Record<string, unknown>;
   };
@@ -22,11 +23,25 @@ type DocRootProps = {
   };
 };
 
+function findCurrentRoute(routes: DocRoute[] | undefined, pathname: string): DocRoute | undefined {
+  for (const docRoute of routes ?? []) {
+    const nestedRoute = findCurrentRoute(docRoute.routes, pathname);
+
+    if (nestedRoute) {
+      return nestedRoute;
+    }
+
+    if (matchPath(pathname, docRoute)) {
+      return docRoute;
+    }
+  }
+
+  return undefined;
+}
+
 function useCurrentRouteFrontMatter({route}: DocRootProps) {
   const location = useLocation();
-  const currentRoute = route.routes?.find((docRoute) =>
-    matchPath(location.pathname, docRoute),
-  );
+  const currentRoute = findCurrentRoute(route.routes, location.pathname);
 
   return currentRoute?.metadata?.frontMatter ?? {};
 }
@@ -34,13 +49,17 @@ function useCurrentRouteFrontMatter({route}: DocRootProps) {
 export default function DocRoot(props: DocRootProps) {
   const currentDocRouteMetadata = useDocRootMetadata(props);
   const frontMatter = useCurrentRouteFrontMatter(props);
+  const location = useLocation();
 
   if (!currentDocRouteMetadata) {
     return <NotFoundContent />;
   }
 
   const {docElement, sidebarName, sidebarItems} = currentDocRouteMetadata;
-  const hideSidebar = frontMatter.hide_sidebar === true;
+  const hideSidebar =
+    frontMatter.hide_sidebar === true ||
+    location.pathname === '/review' ||
+    location.pathname === '/review/';
 
   return (
     <HtmlClassNameProvider className={clsx(ThemeClassNames.page.docsDocPage)}>

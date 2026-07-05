@@ -31,7 +31,31 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 1rem;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
+}
+
+.summary small {
+  display: block;
+  min-height: 1rem;
+  margin-top: 0.16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.gain {
+  color: #ef4444;
+}
+
+.loss {
+  color: #22c55e;
+}
+
+.neutral {
+  color: var(--ifm-color-emphasis-600);
 }
 
 .empty {

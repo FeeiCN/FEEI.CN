@@ -9,7 +9,7 @@
     "rawRecords": {
       "healthMetrics": 67012,
       "workouts": 0,
-      "medications": 0,
+      "medications": 4,
       "heartNotifications": 0,
       "stateOfMind": 1,
       "cycleTracking": 0,
@@ -99,7 +99,7 @@
       }
     },
     "medications": {
-      "count": 0
+      "count": 4
     },
     "heartNotifications": {
       "count": 0
@@ -126,11 +126,13 @@
       "bucketCount": 2
     },
     {
-      "type": "stand",
+      "type": "movement",
       "start": "00:45",
-      "end": "00:55",
-      "durationMinutes": 2,
-      "bucketCount": 2
+      "end": "00:50",
+      "durationMinutes": 5,
+      "steps": 91.1,
+      "distanceKm": 0.0661,
+      "bucketCount": 1
     },
     {
       "type": "stairs",
@@ -141,13 +143,11 @@
       "bucketCount": 1
     },
     {
-      "type": "movement",
+      "type": "stand",
       "start": "00:45",
-      "end": "00:50",
-      "durationMinutes": 5,
-      "steps": 91.1,
-      "distanceKm": 0.0661,
-      "bucketCount": 1
+      "end": "00:55",
+      "durationMinutes": 2,
+      "bucketCount": 2
     },
     {
       "type": "active_energy",
@@ -166,6 +166,277 @@
       "durationMinutes": 5,
       "steps": 32.8,
       "distanceKm": 0.0253,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "08:50",
+      "end": "09:15",
+      "durationMinutes": 25,
+      "energyKJ": 61.678,
+      "energyKcal": 14.741,
+      "bucketCount": 3
+    },
+    {
+      "type": "movement",
+      "start": "08:50",
+      "end": "08:55",
+      "durationMinutes": 5,
+      "steps": 93,
+      "distanceKm": 0.0737,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "08:50",
+      "end": "08:55",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "movement",
+      "start": "09:05",
+      "end": "09:10",
+      "durationMinutes": 5,
+      "steps": 83.3,
+      "distanceKm": 0.0621,
+      "bucketCount": 1
+    },
+    {
+      "type": "stairs",
+      "start": "09:05",
+      "end": "09:10",
+      "durationMinutes": 5,
+      "flights": 2,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "09:05",
+      "end": "09:15",
+      "durationMinutes": 4,
+      "bucketCount": 2
+    },
+    {
+      "type": "movement",
+      "start": "10:10",
+      "end": "10:15",
+      "durationMinutes": 5,
+      "steps": 37.8,
+      "distanceKm": 0.0305,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "11:35",
+      "end": "11:50",
+      "durationMinutes": 15,
+      "energyKJ": 23.899,
+      "energyKcal": 5.712,
+      "bucketCount": 3
+    },
+    {
+      "type": "movement",
+      "start": "11:35",
+      "end": "11:45",
+      "durationMinutes": 10,
+      "steps": 71.6,
+      "distanceKm": 0.0584,
+      "bucketCount": 2
+    },
+    {
+      "type": "stairs",
+      "start": "11:35",
+      "end": "11:40",
+      "durationMinutes": 5,
+      "flights": 1.597,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "11:35",
+      "end": "11:40",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "12:05",
+      "end": "12:10",
+      "durationMinutes": 5,
+      "energyKJ": 5.442,
+      "energyKcal": 1.301,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "12:10",
+      "end": "12:15",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "12:55",
+      "end": "13:30",
+      "durationMinutes": 35,
+      "energyKJ": 43.369,
+      "energyKcal": 10.365,
+      "bucketCount": 5
+    },
+    {
+      "type": "movement",
+      "start": "13:15",
+      "end": "13:20",
+      "durationMinutes": 5,
+      "steps": 45.8,
+      "distanceKm": 0.0289,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "13:15",
+      "end": "13:25",
+      "durationMinutes": 4,
+      "bucketCount": 2
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "13:55",
+      "end": "14:00",
+      "durationMinutes": 5,
+      "energyKJ": 5.876,
+      "energyKcal": 1.404,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "14:30",
+      "end": "15:40",
+      "durationMinutes": 70,
+      "energyKJ": 136.393,
+      "energyKcal": 32.599,
+      "bucketCount": 13
+    },
+    {
+      "type": "stand",
+      "start": "14:45",
+      "end": "14:50",
+      "durationMinutes": 2,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "14:55",
+      "end": "15:10",
+      "durationMinutes": 5,
+      "bucketCount": 3
+    },
+    {
+      "type": "movement",
+      "start": "15:25",
+      "end": "15:35",
+      "durationMinutes": 10,
+      "steps": 87.6,
+      "distanceKm": 0.068,
+      "bucketCount": 2
+    },
+    {
+      "type": "stand",
+      "start": "15:30",
+      "end": "15:35",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "16:25",
+      "end": "16:40",
+      "durationMinutes": 15,
+      "energyKJ": 20.383,
+      "energyKcal": 4.872,
+      "bucketCount": 3
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "17:00",
+      "end": "17:25",
+      "durationMinutes": 25,
+      "energyKJ": 43.709,
+      "energyKcal": 10.447,
+      "bucketCount": 5
+    },
+    {
+      "type": "stand",
+      "start": "17:10",
+      "end": "17:20",
+      "durationMinutes": 2,
+      "bucketCount": 2
+    },
+    {
+      "type": "stairs",
+      "start": "17:15",
+      "end": "17:20",
+      "durationMinutes": 5,
+      "flights": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "movement",
+      "start": "17:20",
+      "end": "17:25",
+      "durationMinutes": 5,
+      "steps": 50.4,
+      "distanceKm": 0.0365,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "18:00",
+      "end": "18:05",
+      "durationMinutes": 5,
+      "energyKJ": 9.56,
+      "energyKcal": 2.285,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "18:00",
+      "end": "18:05",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "18:20",
+      "end": "18:30",
+      "durationMinutes": 10,
+      "energyKJ": 17.931,
+      "energyKcal": 4.286,
+      "bucketCount": 2
+    },
+    {
+      "type": "stand",
+      "start": "18:25",
+      "end": "18:30",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "19:10",
+      "end": "19:15",
+      "durationMinutes": 1,
       "bucketCount": 1
     },
     {
@@ -376,56 +647,6 @@
       "source": "Feei的Apple Watch"
     },
     {
-      "type": "stand",
-      "start": "08:50",
-      "end": "08:55",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "08:50",
-      "end": "09:15",
-      "durationMinutes": 25,
-      "energyKJ": 61.678,
-      "energyKcal": 14.741,
-      "bucketCount": 3
-    },
-    {
-      "type": "movement",
-      "start": "08:50",
-      "end": "08:55",
-      "durationMinutes": 5,
-      "steps": 93,
-      "distanceKm": 0.0737,
-      "bucketCount": 1
-    },
-    {
-      "type": "stand",
-      "start": "09:05",
-      "end": "09:15",
-      "durationMinutes": 4,
-      "bucketCount": 2
-    },
-    {
-      "type": "stairs",
-      "start": "09:05",
-      "end": "09:10",
-      "durationMinutes": 5,
-      "flights": 2,
-      "bucketCount": 1
-    },
-    {
-      "type": "movement",
-      "start": "09:05",
-      "end": "09:10",
-      "durationMinutes": 5,
-      "steps": 83.3,
-      "distanceKm": 0.0621,
-      "bucketCount": 1
-    },
-    {
       "type": "handwashing",
       "start": "2026-01-31 09:09:14 +0800",
       "end": "2026-01-31 09:09:34 +0800",
@@ -434,117 +655,19 @@
       "source": "Feei的Apple Watch"
     },
     {
-      "type": "movement",
-      "start": "10:10",
-      "end": "10:15",
-      "durationMinutes": 5,
-      "steps": 37.8,
-      "distanceKm": 0.0305,
-      "bucketCount": 1
+      "type": "medication",
+      "start": "2026-01-31 14:02:08+08:00",
+      "end": "2026-01-31 14:02:08+08:00"
     },
     {
-      "type": "stand",
-      "start": "11:35",
-      "end": "11:40",
-      "durationMinutes": 1,
-      "bucketCount": 1
+      "type": "medication",
+      "start": "2026-01-31 14:02:10+08:00",
+      "end": "2026-01-31 14:02:10+08:00"
     },
     {
-      "type": "active_energy",
-      "level": "high",
-      "start": "11:35",
-      "end": "11:50",
-      "durationMinutes": 15,
-      "energyKJ": 23.899,
-      "energyKcal": 5.712,
-      "bucketCount": 3
-    },
-    {
-      "type": "stairs",
-      "start": "11:35",
-      "end": "11:40",
-      "durationMinutes": 5,
-      "flights": 1.597,
-      "bucketCount": 1
-    },
-    {
-      "type": "movement",
-      "start": "11:35",
-      "end": "11:45",
-      "durationMinutes": 10,
-      "steps": 71.6,
-      "distanceKm": 0.0584,
-      "bucketCount": 2
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "12:05",
-      "end": "12:10",
-      "durationMinutes": 5,
-      "energyKJ": 5.442,
-      "energyKcal": 1.301,
-      "bucketCount": 1
-    },
-    {
-      "type": "stand",
-      "start": "12:10",
-      "end": "12:15",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "12:55",
-      "end": "13:30",
-      "durationMinutes": 35,
-      "energyKJ": 43.369,
-      "energyKcal": 10.365,
-      "bucketCount": 5
-    },
-    {
-      "type": "stand",
-      "start": "13:15",
-      "end": "13:25",
-      "durationMinutes": 4,
-      "bucketCount": 2
-    },
-    {
-      "type": "movement",
-      "start": "13:15",
-      "end": "13:20",
-      "durationMinutes": 5,
-      "steps": 45.8,
-      "distanceKm": 0.0289,
-      "bucketCount": 1
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "13:55",
-      "end": "14:00",
-      "durationMinutes": 5,
-      "energyKJ": 5.876,
-      "energyKcal": 1.404,
-      "bucketCount": 1
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "14:30",
-      "end": "15:40",
-      "durationMinutes": 70,
-      "energyKJ": 136.393,
-      "energyKcal": 32.599,
-      "bucketCount": 13
-    },
-    {
-      "type": "stand",
-      "start": "14:45",
-      "end": "14:50",
-      "durationMinutes": 2,
-      "bucketCount": 1
+      "type": "medication",
+      "start": "2026-01-31 14:02:10+08:00",
+      "end": "2026-01-31 14:02:10+08:00"
     },
     {
       "type": "handwashing",
@@ -555,197 +678,9 @@
       "source": "Feei的Apple Watch"
     },
     {
-      "type": "stand",
-      "start": "14:55",
-      "end": "15:10",
-      "durationMinutes": 5,
-      "bucketCount": 3
-    },
-    {
-      "type": "movement",
-      "start": "15:25",
-      "end": "15:35",
-      "durationMinutes": 10,
-      "steps": 87.6,
-      "distanceKm": 0.068,
-      "bucketCount": 2
-    },
-    {
-      "type": "stand",
-      "start": "15:30",
-      "end": "15:35",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "16:25",
-      "end": "16:40",
-      "durationMinutes": 15,
-      "energyKJ": 20.383,
-      "energyKcal": 4.872,
-      "bucketCount": 3
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "17:00",
-      "end": "17:25",
-      "durationMinutes": 25,
-      "energyKJ": 43.709,
-      "energyKcal": 10.447,
-      "bucketCount": 5
-    },
-    {
-      "type": "stand",
-      "start": "17:10",
-      "end": "17:20",
-      "durationMinutes": 2,
-      "bucketCount": 2
-    },
-    {
-      "type": "stairs",
-      "start": "17:15",
-      "end": "17:20",
-      "durationMinutes": 5,
-      "flights": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "movement",
-      "start": "17:20",
-      "end": "17:25",
-      "durationMinutes": 5,
-      "steps": 50.4,
-      "distanceKm": 0.0365,
-      "bucketCount": 1
-    },
-    {
-      "type": "stand",
-      "start": "18:00",
-      "end": "18:05",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "18:00",
-      "end": "18:05",
-      "durationMinutes": 5,
-      "energyKJ": 9.56,
-      "energyKcal": 2.285,
-      "bucketCount": 1
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "18:20",
-      "end": "18:30",
-      "durationMinutes": 10,
-      "energyKJ": 17.931,
-      "energyKcal": 4.286,
-      "bucketCount": 2
-    },
-    {
-      "type": "stand",
-      "start": "18:25",
-      "end": "18:30",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "stand",
-      "start": "19:10",
-      "end": "19:15",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "20:00",
-      "end": "20:10",
-      "durationMinutes": 10,
-      "energyKJ": 12.548,
-      "energyKcal": 2.999,
-      "bucketCount": 2
-    },
-    {
-      "type": "stand",
-      "start": "22:10",
-      "end": "22:15",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "stairs",
-      "start": "22:10",
-      "end": "22:15",
-      "durationMinutes": 5,
-      "flights": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "movement",
-      "start": "22:10",
-      "end": "22:15",
-      "durationMinutes": 5,
-      "steps": 40.8,
-      "distanceKm": 0.0319,
-      "bucketCount": 1
-    },
-    {
-      "type": "stand",
-      "start": "22:30",
-      "end": "22:35",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "22:30",
-      "end": "22:40",
-      "durationMinutes": 10,
-      "energyKJ": 25.604,
-      "energyKcal": 6.12,
-      "bucketCount": 2
-    },
-    {
-      "type": "stairs",
-      "start": "22:30",
-      "end": "22:35",
-      "durationMinutes": 5,
-      "flights": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "movement",
-      "start": "22:30",
-      "end": "22:35",
-      "durationMinutes": 5,
-      "steps": 123.6,
-      "distanceKm": 0.106,
-      "bucketCount": 1
-    },
-    {
-      "type": "stand",
-      "start": "22:55",
-      "end": "23:00",
-      "durationMinutes": 2,
-      "bucketCount": 1
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "22:55",
-      "end": "23:35",
-      "durationMinutes": 40,
-      "energyKJ": 123.095,
-      "energyKcal": 29.42,
-      "bucketCount": 6
+      "type": "medication",
+      "start": "2026-01-31 19:29:39+08:00",
+      "end": "2026-01-31 19:29:39+08:00"
     },
     {
       "type": "state_of_mind",
@@ -762,11 +697,97 @@
       ]
     },
     {
+      "type": "handwashing",
+      "start": "2026-01-31 23:17:21 +0800",
+      "end": "2026-01-31 23:17:24 +0800",
+      "durationSeconds": 3,
+      "status": "未完成",
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "20:00",
+      "end": "20:10",
+      "durationMinutes": 10,
+      "energyKJ": 12.548,
+      "energyKcal": 2.999,
+      "bucketCount": 2
+    },
+    {
+      "type": "movement",
+      "start": "22:10",
+      "end": "22:15",
+      "durationMinutes": 5,
+      "steps": 40.8,
+      "distanceKm": 0.0319,
+      "bucketCount": 1
+    },
+    {
+      "type": "stairs",
+      "start": "22:10",
+      "end": "22:15",
+      "durationMinutes": 5,
+      "flights": 1,
+      "bucketCount": 1
+    },
+    {
       "type": "stand",
-      "start": "23:15",
+      "start": "22:10",
+      "end": "22:15",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "22:30",
+      "end": "22:40",
+      "durationMinutes": 10,
+      "energyKJ": 25.604,
+      "energyKcal": 6.12,
+      "bucketCount": 2
+    },
+    {
+      "type": "movement",
+      "start": "22:30",
+      "end": "22:35",
+      "durationMinutes": 5,
+      "steps": 123.6,
+      "distanceKm": 0.106,
+      "bucketCount": 1
+    },
+    {
+      "type": "stairs",
+      "start": "22:30",
+      "end": "22:35",
+      "durationMinutes": 5,
+      "flights": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "22:30",
+      "end": "22:35",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "22:55",
       "end": "23:35",
-      "durationMinutes": 8,
-      "bucketCount": 4
+      "durationMinutes": 40,
+      "energyKJ": 123.095,
+      "energyKcal": 29.42,
+      "bucketCount": 6
+    },
+    {
+      "type": "stand",
+      "start": "22:55",
+      "end": "23:00",
+      "durationMinutes": 2,
+      "bucketCount": 1
     },
     {
       "type": "movement",
@@ -778,12 +799,11 @@
       "bucketCount": 4
     },
     {
-      "type": "handwashing",
-      "start": "2026-01-31 23:17:21 +0800",
-      "end": "2026-01-31 23:17:24 +0800",
-      "durationSeconds": 3,
-      "status": "未完成",
-      "source": "Feei的Apple Watch"
+      "type": "stand",
+      "start": "23:15",
+      "end": "23:35",
+      "durationMinutes": 8,
+      "bucketCount": 4
     },
     {
       "type": "effort_zone",
@@ -5216,7 +5236,58 @@
     "workouts": {
       "workouts": []
     },
-    "medications": {},
+    "medications": {
+      "medications": [
+        {
+          "status": "已服用",
+          "end": "2026-01-31 14:02:08 +0800",
+          "start": "2026-01-31 14:02:08 +0800",
+          "scheduledDosage": 1,
+          "isArchived": false,
+          "displayText": "碳酸氢钠片",
+          "scheduledDate": "2026-01-31 13:30:00 +0800",
+          "dosage": 1,
+          "units": "count",
+          "codings": []
+        },
+        {
+          "status": "已服用",
+          "dosage": 1,
+          "isArchived": false,
+          "end": "2026-01-31 14:02:10 +0800",
+          "scheduledDate": "2026-01-31 09:30:00 +0800",
+          "displayText": "碳酸氢钠片",
+          "scheduledDosage": 1,
+          "start": "2026-01-31 14:02:10 +0800",
+          "units": "count",
+          "codings": []
+        },
+        {
+          "dosage": 0.5,
+          "isArchived": false,
+          "status": "已服用",
+          "start": "2026-01-31 14:02:10 +0800",
+          "scheduledDate": "2026-01-31 09:30:00 +0800",
+          "displayText": "苯溴马隆片",
+          "scheduledDosage": 0.5,
+          "end": "2026-01-31 14:02:10 +0800",
+          "units": "count",
+          "codings": []
+        },
+        {
+          "status": "已服用",
+          "end": "2026-01-31 19:29:39 +0800",
+          "scheduledDosage": 1,
+          "dosage": 1,
+          "isArchived": false,
+          "displayText": "碳酸氢钠片",
+          "start": "2026-01-31 19:29:39 +0800",
+          "scheduledDate": "2026-01-31 18:00:00 +0800",
+          "units": "count",
+          "codings": []
+        }
+      ]
+    },
     "heartNotifications": {},
     "stateOfMind": {
       "stateOfMind": [

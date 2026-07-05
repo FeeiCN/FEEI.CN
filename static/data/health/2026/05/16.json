@@ -9,7 +9,7 @@
     "rawRecords": {
       "healthMetrics": 49691,
       "workouts": 1,
-      "medications": 0,
+      "medications": 4,
       "heartNotifications": 0,
       "stateOfMind": 0,
       "cycleTracking": 0,
@@ -123,7 +123,7 @@
       "count": 0
     },
     "medications": {
-      "count": 0
+      "count": 4
     },
     "heartNotifications": {
       "count": 0
@@ -158,13 +158,6 @@
       "bucketCount": 1
     },
     {
-      "type": "stand",
-      "start": "11:10",
-      "end": "11:15",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
       "type": "active_energy",
       "level": "high",
       "start": "11:10",
@@ -173,6 +166,13 @@
       "energyKJ": 20.475,
       "energyKcal": 4.894,
       "bucketCount": 3
+    },
+    {
+      "type": "stand",
+      "start": "11:10",
+      "end": "11:15",
+      "durationMinutes": 1,
+      "bucketCount": 1
     },
     {
       "type": "active_energy",
@@ -211,13 +211,6 @@
       "bucketCount": 3
     },
     {
-      "type": "stand",
-      "start": "12:55",
-      "end": "13:05",
-      "durationMinutes": 5,
-      "bucketCount": 2
-    },
-    {
       "type": "active_energy",
       "level": "high",
       "start": "12:55",
@@ -225,6 +218,15 @@
       "durationMinutes": 10,
       "energyKJ": 34.18,
       "energyKcal": 8.169,
+      "bucketCount": 2
+    },
+    {
+      "type": "movement",
+      "start": "12:55",
+      "end": "13:05",
+      "durationMinutes": 10,
+      "steps": 128.9,
+      "distanceKm": 0.0905,
       "bucketCount": 2
     },
     {
@@ -236,13 +238,155 @@
       "bucketCount": 1
     },
     {
-      "type": "movement",
+      "type": "stand",
       "start": "12:55",
       "end": "13:05",
-      "durationMinutes": 10,
-      "steps": 128.9,
-      "distanceKm": 0.0905,
+      "durationMinutes": 5,
       "bucketCount": 2
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "14:55",
+      "end": "15:05",
+      "durationMinutes": 10,
+      "energyKJ": 15.55,
+      "energyKcal": 3.717,
+      "bucketCount": 2
+    },
+    {
+      "type": "stand",
+      "start": "14:55",
+      "end": "15:05",
+      "durationMinutes": 2,
+      "bucketCount": 2
+    },
+    {
+      "type": "movement",
+      "start": "15:00",
+      "end": "15:05",
+      "durationMinutes": 5,
+      "steps": 27,
+      "distanceKm": 0.0213,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "16:55",
+      "end": "17:00",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "17:45",
+      "end": "17:55",
+      "durationMinutes": 10,
+      "energyKJ": 20.99,
+      "energyKcal": 5.017,
+      "bucketCount": 2
+    },
+    {
+      "type": "stand",
+      "start": "17:45",
+      "end": "17:55",
+      "durationMinutes": 3,
+      "bucketCount": 2
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "18:25",
+      "end": "18:55",
+      "durationMinutes": 30,
+      "energyKJ": 34.92,
+      "energyKcal": 8.346,
+      "bucketCount": 5
+    },
+    {
+      "type": "stand",
+      "start": "18:25",
+      "end": "18:30",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "18:35",
+      "end": "18:40",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "movement",
+      "start": "18:50",
+      "end": "18:55",
+      "durationMinutes": 5,
+      "steps": 31,
+      "distanceKm": 0.0231,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "18:50",
+      "end": "18:55",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "active_energy",
+      "level": "high",
+      "start": "19:20",
+      "end": "19:55",
+      "durationMinutes": 35,
+      "energyKJ": 319.65,
+      "energyKcal": 76.398,
+      "bucketCount": 7
+    },
+    {
+      "type": "movement",
+      "start": "19:20",
+      "end": "19:50",
+      "durationMinutes": 30,
+      "steps": 2379.6,
+      "distanceKm": 1.6066,
+      "bucketCount": 6
+    },
+    {
+      "type": "stand",
+      "start": "19:20",
+      "end": "19:50",
+      "durationMinutes": 27,
+      "bucketCount": 6
+    },
+    {
+      "type": "effort_zone",
+      "level": "high",
+      "start": "19:45",
+      "end": "19:50",
+      "durationMinutes": 5,
+      "avg": 4.96,
+      "min": 1.3,
+      "max": 8.2
+    },
+    {
+      "type": "stairs",
+      "start": "19:45",
+      "end": "19:50",
+      "durationMinutes": 5,
+      "flights": 4.563,
+      "bucketCount": 1
+    },
+    {
+      "type": "medication",
+      "start": "2026-05-16 13:10:04+08:00",
+      "end": "2026-05-16 13:10:04+08:00"
+    },
+    {
+      "type": "medication",
+      "start": "2026-05-16 13:10:04+08:00",
+      "end": "2026-05-16 13:10:04+08:00"
     },
     {
       "type": "sleep",
@@ -290,32 +434,6 @@
       "source": "Feei的Apple Watch"
     },
     {
-      "type": "stand",
-      "start": "14:55",
-      "end": "15:05",
-      "durationMinutes": 2,
-      "bucketCount": 2
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "14:55",
-      "end": "15:05",
-      "durationMinutes": 10,
-      "energyKJ": 15.55,
-      "energyKcal": 3.717,
-      "bucketCount": 2
-    },
-    {
-      "type": "movement",
-      "start": "15:00",
-      "end": "15:05",
-      "durationMinutes": 5,
-      "steps": 27,
-      "distanceKm": 0.0213,
-      "bucketCount": 1
-    },
-    {
       "type": "handwashing",
       "start": "2026-05-16 15:01:02 +0800",
       "end": "2026-05-16 15:01:04 +0800",
@@ -324,94 +442,9 @@
       "source": "Feei的Apple Watch"
     },
     {
-      "type": "stand",
-      "start": "16:55",
-      "end": "17:00",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "stand",
-      "start": "17:45",
-      "end": "17:55",
-      "durationMinutes": 3,
-      "bucketCount": 2
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "17:45",
-      "end": "17:55",
-      "durationMinutes": 10,
-      "energyKJ": 20.99,
-      "energyKcal": 5.017,
-      "bucketCount": 2
-    },
-    {
-      "type": "stand",
-      "start": "18:25",
-      "end": "18:30",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "18:25",
-      "end": "18:55",
-      "durationMinutes": 30,
-      "energyKJ": 34.92,
-      "energyKcal": 8.346,
-      "bucketCount": 5
-    },
-    {
-      "type": "stand",
-      "start": "18:35",
-      "end": "18:40",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "stand",
-      "start": "18:50",
-      "end": "18:55",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
-      "type": "movement",
-      "start": "18:50",
-      "end": "18:55",
-      "durationMinutes": 5,
-      "steps": 31,
-      "distanceKm": 0.0231,
-      "bucketCount": 1
-    },
-    {
-      "type": "stand",
-      "start": "19:20",
-      "end": "19:50",
-      "durationMinutes": 27,
-      "bucketCount": 6
-    },
-    {
-      "type": "active_energy",
-      "level": "high",
-      "start": "19:20",
-      "end": "19:55",
-      "durationMinutes": 35,
-      "energyKJ": 319.65,
-      "energyKcal": 76.398,
-      "bucketCount": 7
-    },
-    {
-      "type": "movement",
-      "start": "19:20",
-      "end": "19:50",
-      "durationMinutes": 30,
-      "steps": 2379.6,
-      "distanceKm": 1.6066,
-      "bucketCount": 6
+      "type": "medication",
+      "start": "2026-05-16 16:19:14+08:00",
+      "end": "2026-05-16 16:19:14+08:00"
     },
     {
       "type": "workout",
@@ -437,29 +470,9 @@
       "humidity": 55
     },
     {
-      "type": "stairs",
-      "start": "19:45",
-      "end": "19:50",
-      "durationMinutes": 5,
-      "flights": 4.563,
-      "bucketCount": 1
-    },
-    {
-      "type": "effort_zone",
-      "level": "high",
-      "start": "19:45",
-      "end": "19:50",
-      "durationMinutes": 5,
-      "avg": 4.96,
-      "min": 1.3,
-      "max": 8.2
-    },
-    {
-      "type": "stand",
-      "start": "22:00",
-      "end": "22:05",
-      "durationMinutes": 1,
-      "bucketCount": 1
+      "type": "medication",
+      "start": "2026-05-16 22:03:00+08:00",
+      "end": "2026-05-16 22:03:00+08:00"
     },
     {
       "type": "active_energy",
@@ -472,6 +485,15 @@
       "bucketCount": 2
     },
     {
+      "type": "movement",
+      "start": "22:00",
+      "end": "22:05",
+      "durationMinutes": 5,
+      "steps": 74.4,
+      "distanceKm": 0.0447,
+      "bucketCount": 1
+    },
+    {
       "type": "stairs",
       "start": "22:00",
       "end": "22:05",
@@ -480,12 +502,10 @@
       "bucketCount": 1
     },
     {
-      "type": "movement",
+      "type": "stand",
       "start": "22:00",
       "end": "22:05",
-      "durationMinutes": 5,
-      "steps": 74.4,
-      "distanceKm": 0.0447,
+      "durationMinutes": 1,
       "bucketCount": 1
     }
   ],
@@ -3058,7 +3078,58 @@
         }
       ]
     },
-    "medications": {},
+    "medications": {
+      "medications": [
+        {
+          "dosage": 0.5,
+          "isArchived": false,
+          "status": "已服用",
+          "start": "2026-05-16 13:10:04 +0800",
+          "scheduledDate": "2026-05-16 09:30:00 +0800",
+          "displayText": "苯溴马隆片",
+          "scheduledDosage": 0.5,
+          "end": "2026-05-16 13:10:04 +0800",
+          "units": "count",
+          "codings": []
+        },
+        {
+          "dosage": 1,
+          "end": "2026-05-16 13:10:04 +0800",
+          "start": "2026-05-16 13:10:04 +0800",
+          "status": "已服用",
+          "scheduledDosage": 1,
+          "displayText": "碳酸氢钠片",
+          "isArchived": false,
+          "scheduledDate": "2026-05-16 09:30:00 +0800",
+          "units": "count",
+          "codings": []
+        },
+        {
+          "dosage": 1,
+          "end": "2026-05-16 16:19:14 +0800",
+          "scheduledDosage": 1,
+          "start": "2026-05-16 16:19:14 +0800",
+          "scheduledDate": "2026-05-16 13:30:00 +0800",
+          "displayText": "碳酸氢钠片",
+          "status": "已服用",
+          "isArchived": false,
+          "units": "count",
+          "codings": []
+        },
+        {
+          "isArchived": false,
+          "dosage": 1,
+          "scheduledDosage": 1,
+          "end": "2026-05-16 22:03:00 +0800",
+          "scheduledDate": "2026-05-16 18:00:00 +0800",
+          "displayText": "碳酸氢钠片",
+          "status": "已服用",
+          "start": "2026-05-16 22:03:00 +0800",
+          "units": "count",
+          "codings": []
+        }
+      ]
+    },
     "heartNotifications": {},
     "stateOfMind": {},
     "cycleTracking": {},

@@ -9,7 +9,7 @@
     "rawRecords": {
       "healthMetrics": 22995,
       "workouts": 0,
-      "medications": 0,
+      "medications": 4,
       "heartNotifications": 0,
       "stateOfMind": 0,
       "cycleTracking": 0,
@@ -86,7 +86,7 @@
       "count": 0
     },
     "medications": {
-      "count": 0
+      "count": 4
     },
     "heartNotifications": {
       "count": 0
@@ -174,10 +174,12 @@
       "bucketCount": 2
     },
     {
-      "type": "stand",
+      "type": "movement",
       "start": "18:00",
       "end": "18:05",
-      "durationMinutes": 1,
+      "durationMinutes": 5,
+      "steps": 74,
+      "distanceKm": 0.0516,
       "bucketCount": 1
     },
     {
@@ -189,12 +191,10 @@
       "bucketCount": 1
     },
     {
-      "type": "movement",
+      "type": "stand",
       "start": "18:00",
       "end": "18:05",
-      "durationMinutes": 5,
-      "steps": 74,
-      "distanceKm": 0.0516,
+      "durationMinutes": 1,
       "bucketCount": 1
     },
     {
@@ -206,6 +206,26 @@
       "energyKJ": 7.359,
       "energyKcal": 1.759,
       "bucketCount": 1
+    },
+    {
+      "type": "medication",
+      "start": "2026-01-25 18:30:19+08:00",
+      "end": "2026-01-25 18:30:19+08:00"
+    },
+    {
+      "type": "medication",
+      "start": "2026-01-25 18:30:19+08:00",
+      "end": "2026-01-25 18:30:19+08:00"
+    },
+    {
+      "type": "medication",
+      "start": "2026-01-25 18:30:21+08:00",
+      "end": "2026-01-25 18:30:21+08:00"
+    },
+    {
+      "type": "medication",
+      "start": "2026-01-25 21:57:41+08:00",
+      "end": "2026-01-25 21:57:41+08:00"
     },
     {
       "type": "stand",
@@ -225,11 +245,13 @@
       "bucketCount": 2
     },
     {
-      "type": "stand",
+      "type": "movement",
       "start": "22:00",
-      "end": "22:10",
-      "durationMinutes": 2,
-      "bucketCount": 2
+      "end": "22:05",
+      "durationMinutes": 5,
+      "steps": 61.7,
+      "distanceKm": 0.0469,
+      "bucketCount": 1
     },
     {
       "type": "stairs",
@@ -240,13 +262,11 @@
       "bucketCount": 1
     },
     {
-      "type": "movement",
+      "type": "stand",
       "start": "22:00",
-      "end": "22:05",
-      "durationMinutes": 5,
-      "steps": 61.7,
-      "distanceKm": 0.0469,
-      "bucketCount": 1
+      "end": "22:10",
+      "durationMinutes": 2,
+      "bucketCount": 2
     },
     {
       "type": "movement",
@@ -1608,7 +1628,58 @@
     "workouts": {
       "workouts": []
     },
-    "medications": {},
+    "medications": {
+      "medications": [
+        {
+          "dosage": 1,
+          "end": "2026-01-25 18:30:19 +0800",
+          "scheduledDosage": 1,
+          "start": "2026-01-25 18:30:19 +0800",
+          "scheduledDate": "2026-01-25 09:30:00 +0800",
+          "status": "已服用",
+          "isArchived": false,
+          "displayText": "碳酸氢钠片",
+          "units": "count",
+          "codings": []
+        },
+        {
+          "isArchived": false,
+          "dosage": 0.5,
+          "scheduledDosage": 0.5,
+          "end": "2026-01-25 18:30:19 +0800",
+          "scheduledDate": "2026-01-25 09:30:00 +0800",
+          "status": "已服用",
+          "start": "2026-01-25 18:30:19 +0800",
+          "displayText": "苯溴马隆片",
+          "units": "count",
+          "codings": []
+        },
+        {
+          "isArchived": false,
+          "end": "2026-01-25 18:30:21 +0800",
+          "scheduledDosage": 1,
+          "start": "2026-01-25 18:30:21 +0800",
+          "scheduledDate": "2026-01-25 13:30:00 +0800",
+          "displayText": "碳酸氢钠片",
+          "status": "已服用",
+          "dosage": 1,
+          "units": "count",
+          "codings": []
+        },
+        {
+          "dosage": 1,
+          "status": "已服用",
+          "start": "2026-01-25 21:57:41 +0800",
+          "end": "2026-01-25 21:57:41 +0800",
+          "isArchived": false,
+          "displayText": "碳酸氢钠片",
+          "scheduledDate": "2026-01-25 18:00:00 +0800",
+          "scheduledDosage": 1,
+          "units": "count",
+          "codings": []
+        }
+      ]
+    },
     "heartNotifications": {},
     "stateOfMind": {},
     "cycleTracking": {},

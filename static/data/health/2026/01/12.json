@@ -9,7 +9,7 @@
     "rawRecords": {
       "healthMetrics": 51735,
       "workouts": 0,
-      "medications": 0,
+      "medications": 4,
       "heartNotifications": 0,
       "stateOfMind": 1,
       "cycleTracking": 0,
@@ -109,7 +109,7 @@
       }
     },
     "medications": {
-      "count": 0
+      "count": 4
     },
     "heartNotifications": {
       "count": 0
@@ -126,13 +126,6 @@
   },
   "timeline": [
     {
-      "type": "stand",
-      "start": "09:05",
-      "end": "09:15",
-      "durationMinutes": 4,
-      "bucketCount": 2
-    },
-    {
       "type": "active_energy",
       "level": "high",
       "start": "09:05",
@@ -143,6 +136,13 @@
       "bucketCount": 8
     },
     {
+      "type": "stand",
+      "start": "09:05",
+      "end": "09:15",
+      "durationMinutes": 4,
+      "bucketCount": 2
+    },
+    {
       "type": "movement",
       "start": "09:10",
       "end": "09:15",
@@ -150,21 +150,6 @@
       "steps": 58.5,
       "distanceKm": 0.0438,
       "bucketCount": 1
-    },
-    {
-      "type": "handwashing",
-      "start": "2026-01-12 09:12:17 +0800",
-      "end": "2026-01-12 09:12:31 +0800",
-      "durationSeconds": 14,
-      "status": "未完成",
-      "source": "Feei的Apple Watch"
-    },
-    {
-      "type": "stand",
-      "start": "09:25",
-      "end": "09:40",
-      "durationMinutes": 8,
-      "bucketCount": 3
     },
     {
       "type": "movement",
@@ -177,10 +162,10 @@
     },
     {
       "type": "stand",
-      "start": "10:05",
-      "end": "10:15",
-      "durationMinutes": 2,
-      "bucketCount": 2
+      "start": "09:25",
+      "end": "09:40",
+      "durationMinutes": 8,
+      "bucketCount": 3
     },
     {
       "type": "movement",
@@ -189,6 +174,13 @@
       "durationMinutes": 10,
       "steps": 262.9,
       "distanceKm": 0.201,
+      "bucketCount": 2
+    },
+    {
+      "type": "stand",
+      "start": "10:05",
+      "end": "10:15",
+      "durationMinutes": 2,
       "bucketCount": 2
     },
     {
@@ -248,19 +240,19 @@
       "bucketCount": 5
     },
     {
-      "type": "stand",
-      "start": "12:05",
-      "end": "12:10",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
       "type": "movement",
       "start": "12:05",
       "end": "12:10",
       "durationMinutes": 5,
       "steps": 67,
       "distanceKm": 0.0452,
+      "bucketCount": 1
+    },
+    {
+      "type": "stand",
+      "start": "12:05",
+      "end": "12:10",
+      "durationMinutes": 1,
       "bucketCount": 1
     },
     {
@@ -310,13 +302,6 @@
       "bucketCount": 1
     },
     {
-      "type": "stand",
-      "start": "15:50",
-      "end": "15:55",
-      "durationMinutes": 1,
-      "bucketCount": 1
-    },
-    {
       "type": "movement",
       "start": "15:50",
       "end": "15:55",
@@ -326,12 +311,11 @@
       "bucketCount": 1
     },
     {
-      "type": "handwashing",
-      "start": "2026-01-12 15:53:29 +0800",
-      "end": "2026-01-12 15:53:46 +0800",
-      "durationSeconds": 17,
-      "status": "未完成",
-      "source": "Feei的Apple Watch"
+      "type": "stand",
+      "start": "15:50",
+      "end": "15:55",
+      "durationMinutes": 1,
+      "bucketCount": 1
     },
     {
       "type": "active_energy",
@@ -354,13 +338,6 @@
       "bucketCount": 3
     },
     {
-      "type": "stand",
-      "start": "18:55",
-      "end": "19:05",
-      "durationMinutes": 5,
-      "bucketCount": 2
-    },
-    {
       "type": "movement",
       "start": "18:55",
       "end": "19:05",
@@ -371,9 +348,9 @@
     },
     {
       "type": "stand",
-      "start": "19:20",
-      "end": "19:30",
-      "durationMinutes": 6,
+      "start": "18:55",
+      "end": "19:05",
+      "durationMinutes": 5,
       "bucketCount": 2
     },
     {
@@ -385,14 +362,6 @@
       "energyKJ": 120.408,
       "energyKcal": 28.778,
       "bucketCount": 3
-    },
-    {
-      "type": "stairs",
-      "start": "19:20",
-      "end": "19:30",
-      "durationMinutes": 10,
-      "flights": 10.051,
-      "bucketCount": 2
     },
     {
       "type": "effort_zone",
@@ -414,11 +383,19 @@
       "bucketCount": 2
     },
     {
+      "type": "stairs",
+      "start": "19:20",
+      "end": "19:30",
+      "durationMinutes": 10,
+      "flights": 10.051,
+      "bucketCount": 2
+    },
+    {
       "type": "stand",
-      "start": "19:55",
-      "end": "20:00",
-      "durationMinutes": 1,
-      "bucketCount": 1
+      "start": "19:20",
+      "end": "19:30",
+      "durationMinutes": 6,
+      "bucketCount": 2
     },
     {
       "type": "active_energy",
@@ -429,6 +406,65 @@
       "energyKJ": 29.776,
       "energyKcal": 7.117,
       "bucketCount": 5
+    },
+    {
+      "type": "stand",
+      "start": "19:55",
+      "end": "20:00",
+      "durationMinutes": 1,
+      "bucketCount": 1
+    },
+    {
+      "type": "handwashing",
+      "start": "2026-01-12 09:12:17 +0800",
+      "end": "2026-01-12 09:12:31 +0800",
+      "durationSeconds": 14,
+      "status": "未完成",
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "handwashing",
+      "start": "2026-01-12 15:53:29 +0800",
+      "end": "2026-01-12 15:53:46 +0800",
+      "durationSeconds": 17,
+      "status": "未完成",
+      "source": "Feei的Apple Watch"
+    },
+    {
+      "type": "state_of_mind",
+      "kind": "momentary_emotion",
+      "start": "2026-01-12 23:46:36 +0800",
+      "end": "2026-01-12 23:46:36 +0800",
+      "valenceClassification": "slightly_unpleasant",
+      "valence": -0.187,
+      "labels": [
+        "worried",
+        "irritated"
+      ],
+      "associations": [
+        "health",
+        "work"
+      ]
+    },
+    {
+      "type": "medication",
+      "start": "2026-01-12 23:50:30+08:00",
+      "end": "2026-01-12 23:50:30+08:00"
+    },
+    {
+      "type": "medication",
+      "start": "2026-01-12 23:50:30+08:00",
+      "end": "2026-01-12 23:50:30+08:00"
+    },
+    {
+      "type": "medication",
+      "start": "2026-01-12 23:50:32+08:00",
+      "end": "2026-01-12 23:50:32+08:00"
+    },
+    {
+      "type": "medication",
+      "start": "2026-01-12 23:50:33+08:00",
+      "end": "2026-01-12 23:50:33+08:00"
     },
     {
       "type": "effort_zone",
@@ -484,22 +520,6 @@
       "steps": 28,
       "distanceKm": 0.0226,
       "bucketCount": 1
-    },
-    {
-      "type": "state_of_mind",
-      "kind": "momentary_emotion",
-      "start": "2026-01-12 23:46:36 +0800",
-      "end": "2026-01-12 23:46:36 +0800",
-      "valenceClassification": "slightly_unpleasant",
-      "valence": -0.187,
-      "labels": [
-        "worried",
-        "irritated"
-      ],
-      "associations": [
-        "health",
-        "work"
-      ]
     },
     {
       "type": "active_energy",
@@ -3331,7 +3351,58 @@
     "workouts": {
       "workouts": []
     },
-    "medications": {},
+    "medications": {
+      "medications": [
+        {
+          "dosage": 1,
+          "status": "已服用",
+          "start": "2026-01-12 23:50:30 +0800",
+          "end": "2026-01-12 23:50:30 +0800",
+          "scheduledDate": "2026-01-12 09:30:00 +0800",
+          "displayText": "碳酸氢钠片",
+          "isArchived": false,
+          "scheduledDosage": 1,
+          "units": "count",
+          "codings": []
+        },
+        {
+          "status": "已服用",
+          "isArchived": false,
+          "scheduledDosage": 0.5,
+          "start": "2026-01-12 23:50:30 +0800",
+          "scheduledDate": "2026-01-12 09:30:00 +0800",
+          "displayText": "苯溴马隆片",
+          "dosage": 0.5,
+          "end": "2026-01-12 23:50:30 +0800",
+          "units": "count",
+          "codings": []
+        },
+        {
+          "isArchived": false,
+          "status": "已服用",
+          "start": "2026-01-12 23:50:32 +0800",
+          "dosage": 1,
+          "scheduledDate": "2026-01-12 13:30:00 +0800",
+          "displayText": "碳酸氢钠片",
+          "scheduledDosage": 1,
+          "end": "2026-01-12 23:50:32 +0800",
+          "units": "count",
+          "codings": []
+        },
+        {
+          "status": "已服用",
+          "dosage": 1,
+          "scheduledDosage": 1,
+          "isArchived": false,
+          "scheduledDate": "2026-01-12 18:00:00 +0800",
+          "displayText": "碳酸氢钠片",
+          "end": "2026-01-12 23:50:33 +0800",
+          "start": "2026-01-12 23:50:33 +0800",
+          "units": "count",
+          "codings": []
+        }
+      ]
+    },
     "heartNotifications": {},
     "stateOfMind": {
       "stateOfMind": [

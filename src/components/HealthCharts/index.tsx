@@ -205,6 +205,12 @@ function chartGrid(right = 16, left = 12, top = 32, bottom = 28) {
   return {top, right, bottom, left, containLabel: true};
 }
 
+function dailyBarWidth(count: number): number {
+  if (count <= 14) return 8;
+  if (count <= 30) return 6;
+  return 4;
+}
+
 function dualAxisGrid(isMobile: boolean) {
   return chartGrid(isMobile ? 16 : 40);
 }
@@ -253,7 +259,7 @@ function stepsDistanceOpt(isDark: boolean, D: HealthData, isMobile = false) {
     ],
     series: [
       {
-        name: '步数', type: 'bar', yAxisIndex: 0, barMaxWidth: dates.length <= 14 ? 12 : dates.length <= 30 ? 10 : 6,
+        name: '步数', type: 'bar', yAxisIndex: 0, barWidth: dailyBarWidth(dates.length),
         itemStyle: {color: '#64748b'},
         data: stepsArr.map((v) => v === null ? null : {value: v, itemStyle: {color: stepsGoal !== null && v >= stepsGoal ? '#22c55e' : '#64748b', borderRadius: [2, 2, 0, 0]}}),
         ...(stepsGoal !== null ? {markLine: ml('#f59e0b', stepsGoal, `目标 ${stepsGoal.toLocaleString()}`)} : {}),
@@ -284,7 +290,7 @@ function exerciseOpt(isDark: boolean, D: HealthData) {
     xAxis: xCat(c, D.exercise),
     yAxis: yVal(c, {unit: '分钟'}),
     series: [{
-      name: '运动时长', type: 'bar', barMaxWidth: 6,
+      name: '运动时长', type: 'bar', barWidth: dailyBarWidth(D.exercise.length),
       itemStyle: {color: '#94a3b8'},
       data: D.exercise.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#22c55e' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
       ...(goal !== null ? {markLine: {...ml('#f59e0b', goal, `目标 ${goal} 分钟`), label: {show: false}}} : {}),
@@ -321,7 +327,7 @@ function flightsOpt(isDark: boolean, D: HealthData) {
     xAxis: xCat(c, D.flights),
     yAxis: yVal(c, {unit: '层'}),
     series: [{
-      name: '爬楼层数', type: 'bar', barMaxWidth: 6,
+      name: '爬楼层数', type: 'bar', barWidth: dailyBarWidth(D.flights.length),
       itemStyle: {color: '#0891b2'},
       data: D.flights.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#22c55e' : '#0891b2', borderRadius: [2, 2, 0, 0]}})),
       ...(goal !== null ? {markLine: {...ml('#f59e0b', goal, `目标 ${goal}`), label: {show: false}}} : {}),
@@ -638,7 +644,7 @@ function daylightOpt(isDark: boolean, D: HealthData) {
     xAxis: xCat(c, D.daylight, 5),
     yAxis: yVal(c, {unit: '分钟', min: 0, fmt: (v) => `${v}m`}),
     series: [{
-      name: '日晒时间', type: 'bar', barMaxWidth: 6,
+      name: '日晒时间', type: 'bar', barWidth: dailyBarWidth(D.daylight.length),
       itemStyle: {color: '#94a3b8'},
       data: D.daylight.map(([, v]) => ({value: v, itemStyle: {color: goal !== null && v >= goal ? '#f59e0b' : '#94a3b8', borderRadius: [2, 2, 0, 0]}})),
       ...(goal !== null ? {markLine: ml('#f59e0b', goal, `目标 ${goal} 分钟`)} : {}),
@@ -744,88 +750,6 @@ function workoutTimelineOpt(isDark: boolean, D: HealthData) {
   };
 }
 
-type WorkoutItem = {name: string; dur: number; kcal: number; avgHr: number; minHr: number; maxHr: number; dist: number; steps: number; elev: number; time: string};
-
-function workoutCalendarOpt(isDark: boolean, D: HealthData, isMobile = false) {
-  const c = cc(isDark);
-  const byDay = new Map<string, {mins: number; kcal: number; count: number; names: Set<string>; items: WorkoutItem[]}>();
-  for (const [date, name, dur, kcal, avgHr, minHr, maxHr, dist, steps, elev, time] of D.workouts) {
-    const cur = byDay.get(date) ?? {mins: 0, kcal: 0, count: 0, names: new Set<string>(), items: []};
-    cur.mins += dur;
-    cur.kcal += kcal;
-    cur.count += 1;
-    cur.names.add(name);
-    cur.items.push({name, dur, kcal, avgHr, minHr, maxHr, dist, steps, elev, time});
-    byDay.set(date, cur);
-  }
-  const dates = D.workouts.map(([d]) => d).sort();
-  const start = dates[0] ?? new Date().toISOString().slice(0, 10);
-  const end = dates.at(-1) ?? start;
-  const values: Array<{value: [string, number]; kcal: number; count: number; names: string; items: WorkoutItem[]}> = [];
-  const cur = new Date(start);
-  const endDate = new Date(end);
-  while (cur <= endDate) {
-    const dateStr = cur.toISOString().slice(0, 10);
-    const v = byDay.get(dateStr);
-    values.push(v
-      ? {value: [dateStr, Math.round(v.mins)], kcal: Math.round(v.kcal), count: v.count, names: [...v.names].join('、'), items: v.items}
-      : {value: [dateStr, 0], kcal: 0, count: 0, names: '', items: []},
-    );
-    cur.setDate(cur.getDate() + 1);
-  }
-  const maxMins = Math.max(30, ...values.map((item) => item.value[1]));
-  return {
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'item',
-      formatter: (p: {value: [string, number]; data: {items: WorkoutItem[]}}) => {
-        const dateLabel = formatMonthDayWeekday(p.value[0]);
-        if (!p.data.items.length) return dateLabel;
-        const lines = [`<b>${dateLabel}</b>`];
-        for (const w of p.data.items) {
-          const parts: string[] = [`<b>${w.name}</b>`, w.time, `${Math.round(w.dur)}分钟`, `${w.kcal}kcal`];
-          if (w.avgHr > 0) parts.push(`${w.avgHr}bpm${w.minHr > 0 && w.maxHr > 0 ? `(${w.minHr}~${w.maxHr})` : ''}`);
-          if (w.dist > 0) parts.push(`${w.dist}km`);
-          if (w.steps > 0) parts.push(`${w.steps.toLocaleString()}步`);
-          if (w.elev > 0) parts.push(`↑${w.elev}m`);
-          lines.push(parts.join('&nbsp;&nbsp;'));
-        }
-        return lines.join('<br/>');
-      },
-    },
-    visualMap: {
-      min: 0, max: maxMins, show: true, orient: 'horizontal', left: 'center', bottom: 0,
-      itemWidth: 10, itemHeight: 70, textStyle: {color: c.label, fontSize: 10},
-      inRange: {color: isDark ? ['#1e293b', '#16a34a'] : ['#e2e8f0', '#22c55e']},
-    },
-    calendar: {
-      top: 22, left: 34, right: 16, bottom: 34,
-      range: [start, end],
-      cellSize: ['auto', isMobile ? 22 : 20],
-      splitLine: {lineStyle: {color: c.split}},
-      itemStyle: {borderWidth: 1, borderColor: c.split},
-      yearLabel: {show: false},
-      monthLabel: {color: c.label, fontSize: 10},
-      dayLabel: {color: c.label, fontSize: 10, firstDay: 1, nameMap: ['日', '一', '二', '三', '四', '五', '六']},
-    },
-    series: [{
-      name: '运动时长', type: 'heatmap', coordinateSystem: 'calendar',
-      data: values,
-      label: {
-        show: true,
-        color: c.label,
-        fontSize: 8,
-        lineHeight: 10,
-        formatter: (p: {value: [string, number]; data: {names: string}}) => {
-          const monthDay = p.value[0].slice(5, 10);
-          const name = p.data.names.split('、')[0] ?? '';
-          return name ? `${monthDay}\n${name}` : monthDay;
-        },
-      },
-    }],
-  };
-}
-
 function workoutTypeOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
   const totals: Record<string, {sessions: number; mins: number; kcal: number}> = {};
@@ -866,37 +790,6 @@ function workoutTypeOpt(isDark: boolean, D: HealthData) {
 }
 
 // ── medications ───────────────────────────────────────────────────────────────
-
-function medMonthlyOpt(isDark: boolean, D: HealthData) {
-  const c = cc(isDark);
-  const months = D.med_monthly.map(([m]) => m.slice(5));
-  return {
-    ...base(isDark),
-    grid: chartGrid(16),
-    tooltip: {
-      trigger: 'axis',
-      formatter: (p: {seriesName: string; value: number; axisValue: string}[]) =>
-        `${p[0]?.axisValue ?? ''}<br/>${p.map((x) => `${x.seriesName}：${x.value}%`).join('<br/>')}`,
-    },
-    legend: topLegend(c, ['碳酸氢钠片', '苯溴马隆片']),
-    xAxis: {type: 'category', data: months, axisTick: {show: false}, axisLine: {lineStyle: {color: c.axis}}, axisLabel: {color: c.label, fontSize: 11}},
-    yAxis: {type: 'value', min: 0, max: 100, axisLabel: {color: c.label, fontSize: 10, formatter: (v: number) => `${v}%`}, splitLine: {lineStyle: {color: c.split}}},
-    series: [
-      {
-        name: '碳酸氢钠片', type: 'bar', barMaxWidth: 28, barGap: '20%',
-        itemStyle: {color: '#22c55e'},
-        data: D.med_monthly.map(([, nah]) => ({value: nah, itemStyle: {color: nah >= 80 ? '#22c55e' : nah >= 50 ? '#f59e0b' : '#ef4444', borderRadius: [4, 4, 0, 0]}})),
-        label: {show: true, position: 'top', fontSize: 10, color: c.label, formatter: (p: {value: number}) => `${p.value}%`},
-      },
-      {
-        name: '苯溴马隆片', type: 'bar', barMaxWidth: 28,
-        itemStyle: {color: '#db2777'},
-        data: D.med_monthly.map(([,, bns]) => ({value: bns, itemStyle: {color: bns >= 80 ? '#db2777' : bns >= 50 ? '#f59e0b' : '#ef4444', borderRadius: [4, 4, 0, 0]}})),
-        label: {show: true, position: 'top', fontSize: 10, color: c.label, formatter: (p: {value: number}) => `${p.value}%`},
-      },
-    ],
-  };
-}
 
 function medDailyCombinedOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
@@ -1661,9 +1554,6 @@ function alignCalendarRange(option: object, axisDates: string[]): object {
 // ── layout ───────────────────────────────────────────────────────────────────
 
 function chartHeight(label: string, isMobile: boolean) {
-  if (label === '运动日历热力图') {
-    return isMobile ? 260 : 280;
-  }
   return isMobile ? 200 : 240;
 }
 
@@ -1681,7 +1571,6 @@ const SECTIONS = [
   ]},
   {title: '运动记录', charts: [
     {label: '运动时间轴', opt: workoutTimelineOpt},
-    {label: '运动日历热力图', opt: workoutCalendarOpt},
     {label: '运动类型统计', opt: workoutTypeOpt},
   ]},
   {title: '睡眠', charts: [
@@ -1701,7 +1590,6 @@ const SECTIONS = [
     {label: '六分钟步行测试', opt: sixMinWalkOpt},
   ]},
   {title: '用药', charts: [
-    {label: '月度服药依从率', opt: medMonthlyOpt},
     {label: '每日服药（碳酸氢钠片 & 苯溴马隆片）', opt: medDailyCombinedOpt},
   ]},
   {title: '环境 & 习惯', charts: [

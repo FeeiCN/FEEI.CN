@@ -48,6 +48,12 @@ type FinanceAssetsTrendProps = {
   timeScope?: TimeScope;
 };
 
+type AssetKey = 'totalAssets' | 'indexAssets' | 'stockAssets' | 'alipayAssets' | 'caitongAssets';
+type ChangeInfo = {
+  delta: number;
+  ratio: number | null;
+};
+
 const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
 
 async function fetchJson<T>(path: string): Promise<T | null> {
@@ -91,6 +97,49 @@ function formatCompactMoney(value: number | null | undefined): string {
   if (typeof value !== 'number' || !Number.isFinite(value)) return '暂无';
   if (Math.abs(value) >= 10000) return `${(value / 10000).toFixed(1)}万`;
   return value.toLocaleString('zh-CN', {maximumFractionDigits: 0});
+}
+
+function formatChangeMoney(value: number): string {
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${formatCompactMoney(value)}`;
+}
+
+function formatPercent(value: number | null): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${(value * 100).toFixed(1)}%`;
+}
+
+function valueChange(points: TrendPoint[], key: AssetKey): ChangeInfo | null {
+  const latestIndex = [...points].reverse().findIndex((point) => typeof point[key] === 'number');
+  if (latestIndex < 0) return null;
+  const latestPosition = points.length - 1 - latestIndex;
+  const latestValue = points[latestPosition][key];
+  if (typeof latestValue !== 'number') return null;
+  for (let index = latestPosition - 1; index >= 0; index -= 1) {
+    const previousValue = points[index][key];
+    if (typeof previousValue !== 'number') continue;
+    const delta = latestValue - previousValue;
+    return {
+      delta,
+      ratio: previousValue === 0 ? null : delta / previousValue,
+    };
+  }
+  return null;
+}
+
+function SummaryCard({label, value, change}: {label: string; value: number | null | undefined; change: ChangeInfo | null}) {
+  const tone = change && change.delta !== 0 ? (change.delta > 0 ? styles.gain : styles.loss) : styles.neutral;
+  const percent = change ? formatPercent(change.ratio) : '';
+  return (
+    <div>
+      <span>{label}</span>
+      <strong>{formatCompactMoney(value)}</strong>
+      <small className={tone}>
+        {change ? `${formatChangeMoney(change.delta)}${percent ? ` / ${percent}` : ''}` : '暂无变化'}
+      </small>
+    </div>
+  );
 }
 
 function investTotalAssets(payload: InvestPayload | null): number | undefined {
@@ -287,6 +336,13 @@ function FinanceAssetsTrendClient({onDateSelect, timeScope}: FinanceAssetsTrendP
 
   const scopedPoints = useMemo(() => filterByScope(points, timeScope), [points, timeScope]);
   const latest = scopedPoints.at(-1);
+  const changes = useMemo(() => ({
+    totalAssets: valueChange(scopedPoints, 'totalAssets'),
+    indexAssets: valueChange(scopedPoints, 'indexAssets'),
+    stockAssets: valueChange(scopedPoints, 'stockAssets'),
+    alipayAssets: valueChange(scopedPoints, 'alipayAssets'),
+    caitongAssets: valueChange(scopedPoints, 'caitongAssets'),
+  }), [scopedPoints]);
   const chartEvents = onDateSelect
     ? {
         click: (params: {dataIndex?: number}) => {
@@ -302,26 +358,11 @@ function FinanceAssetsTrendClient({onDateSelect, timeScope}: FinanceAssetsTrendP
   return (
     <div className={styles.dashboard}>
       <div className={styles.summary}>
-        <div>
-          <span>最新总资产</span>
-          <strong>{formatCompactMoney(latest?.totalAssets)}</strong>
-        </div>
-        <div>
-          <span>指数账户</span>
-          <strong>{formatCompactMoney(latest?.indexAssets)}</strong>
-        </div>
-        <div>
-          <span>个股账户</span>
-          <strong>{formatCompactMoney(latest?.stockAssets)}</strong>
-        </div>
-        <div>
-          <span>支付宝</span>
-          <strong>{formatCompactMoney(latest?.alipayAssets)}</strong>
-        </div>
-        <div>
-          <span>财通</span>
-          <strong>{formatCompactMoney(latest?.caitongAssets)}</strong>
-        </div>
+        <SummaryCard label="最新总资产" value={latest?.totalAssets} change={changes.totalAssets} />
+        <SummaryCard label="指数账户" value={latest?.indexAssets} change={changes.indexAssets} />
+        <SummaryCard label="个股账户" value={latest?.stockAssets} change={changes.stockAssets} />
+        <SummaryCard label="支付宝" value={latest?.alipayAssets} change={changes.alipayAssets} />
+        <SummaryCard label="财通" value={latest?.caitongAssets} change={changes.caitongAssets} />
       </div>
       <ReactECharts
         option={buildOption(scopedPoints, isDark, isMobile)}

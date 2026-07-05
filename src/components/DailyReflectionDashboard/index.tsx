@@ -202,6 +202,13 @@ type CalendarHover = CalendarCell & {
   y: number;
 };
 
+type ObjectiveChartTooltip = {
+  x: number;
+  y: number;
+  title: string;
+  lines: string[];
+};
+
 type DataDomain = 'health' | 'career' | 'finance' | 'life';
 type DailyDetailTab = 'diary' | 'timeline' | 'analysis';
 type FinanceTab = 'income' | 'expense' | 'investment';
@@ -1835,6 +1842,24 @@ function ObjectiveStatGrid({items}: {items: Array<{value: React.ReactNode; label
   );
 }
 
+function ObjectiveTooltip({tooltip}: {tooltip: ObjectiveChartTooltip | null}): React.ReactNode {
+  if (!tooltip) return null;
+  return (
+    <div
+      className={styles.objectiveTooltip}
+      style={{left: tooltip.x, top: tooltip.y}}
+      role="tooltip"
+    >
+      <div className={styles.tooltipDate}>{tooltip.title}</div>
+      <div className={styles.tooltipMeta}>
+        {tooltip.lines.map((line) => (
+          <span key={line}>{line}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ObjectiveBarLineChart({
   points,
   valueLabel,
@@ -1852,6 +1877,7 @@ function ObjectiveBarLineChart({
   selectedDate?: string;
   onDateSelect: (date: string) => void;
 }): React.ReactNode {
+  const [tooltip, setTooltip] = useState<ObjectiveChartTooltip | null>(null);
   const chartHeight = 238;
   const labelHeight = 30;
   const plotHeight = chartHeight - labelHeight - 16;
@@ -1903,11 +1929,19 @@ function ObjectiveBarLineChart({
           const secondaryHeight = Math.max(point.secondary ? 1 : 0, ((point.secondary || 0) / maxValue) * plotHeight);
           const tertiaryHeight = Math.max(point.tertiary ? 1 : 0, ((point.tertiary || 0) / maxValue) * plotHeight);
           const showLabel = points.length <= 35 || index % Math.ceil(points.length / 18) === 0;
+          const tooltipLines = [
+            `${valueLabel}: ${formatValue(point.value)}`,
+            secondaryLabel ? `${secondaryLabel}: ${formatValue(point.secondary || 0)}` : '',
+            tertiaryLabel ? `${tertiaryLabel}: ${formatValue(point.tertiary || 0)}` : '',
+          ].filter(Boolean);
           return (
-            <g key={point.date} className={styles.objectiveChartPoint} onClick={() => onDateSelect(point.date)}>
-              <title>
-                {[`${point.date}`, `${valueLabel}: ${formatValue(point.value)}`, secondaryLabel && `${secondaryLabel}: ${formatValue(point.secondary || 0)}`, tertiaryLabel && `${tertiaryLabel}: ${formatValue(point.tertiary || 0)}`].filter(Boolean).join(' · ')}
-              </title>
+            <g
+              key={point.date}
+              className={styles.objectiveChartPoint}
+              onClick={() => onDateSelect(point.date)}
+              onMouseMove={(event) => setTooltip({x: event.clientX, y: event.clientY, title: point.date, lines: tooltipLines})}
+              onMouseLeave={() => setTooltip(null)}
+            >
               <rect x={Math.max(0, x - gap / 2)} y={0} width={barWidth + gap} height={plotHeight + labelHeight} rx={5} className={styles.objectiveHoverBand} />
               {tertiaryLabel ? (
                 <rect x={x + groupedBarWidth * 2 + 2} y={plotHeight - tertiaryHeight} width={groupedBarWidth} height={tertiaryHeight} rx={2} className={styles.objectiveBarTertiary} />
@@ -1932,6 +1966,7 @@ function ObjectiveBarLineChart({
           </>
         ) : null}
       </svg>
+      <ObjectiveTooltip tooltip={tooltip} />
     </div>
   );
 }
@@ -1945,6 +1980,7 @@ function TokenStackedBarChart({
   selectedDate?: string;
   onDateSelect: (date: string) => void;
 }): React.ReactNode {
+  const [tooltip, setTooltip] = useState<ObjectiveChartTooltip | null>(null);
   const chartHeight = 238;
   const labelHeight = 30;
   const plotHeight = chartHeight - labelHeight - 16;
@@ -1990,17 +2026,20 @@ function TokenStackedBarChart({
             {key: 'openai', label: 'OpenAI', value: point.openai, className: styles.objectiveBarSecondary},
             {key: 'anthropic', label: 'Anthropic', value: point.anthropic, className: styles.objectiveBarTertiary},
           ];
+          const tooltipLines = [
+            `总量: ${formatCompactNumber(total, 1)}`,
+            `MiniMax: ${formatCompactNumber(point.minimax, 1)}`,
+            `OpenAI: ${formatCompactNumber(point.openai, 1)}`,
+            `Anthropic: ${formatCompactNumber(point.anthropic, 1)}`,
+          ];
           return (
-            <g key={point.date} className={styles.objectiveChartPoint} onClick={() => onDateSelect(point.date)}>
-              <title>
-                {[
-                  point.date,
-                  `总量: ${formatCompactNumber(total, 1)}`,
-                  `MiniMax: ${formatCompactNumber(point.minimax, 1)}`,
-                  `OpenAI: ${formatCompactNumber(point.openai, 1)}`,
-                  `Anthropic: ${formatCompactNumber(point.anthropic, 1)}`,
-                ].join(' · ')}
-              </title>
+            <g
+              key={point.date}
+              className={styles.objectiveChartPoint}
+              onClick={() => onDateSelect(point.date)}
+              onMouseMove={(event) => setTooltip({x: event.clientX, y: event.clientY, title: point.date, lines: tooltipLines})}
+              onMouseLeave={() => setTooltip(null)}
+            >
               <rect x={Math.max(0, x - gap / 2)} y={0} width={barWidth + gap} height={plotHeight + labelHeight} rx={5} className={styles.objectiveHoverBand} />
               {segments.map((segment) => {
                 if (segment.value <= 0) return null;
@@ -2025,6 +2064,7 @@ function TokenStackedBarChart({
           );
         })}
       </svg>
+      <ObjectiveTooltip tooltip={tooltip} />
     </div>
   );
 }

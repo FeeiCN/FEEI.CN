@@ -51,5 +51,4 @@ Codex must read and follow `AI.md` before making changes.
 - 用户明确要求 `commit push` 时，不要再执行“stash → pull/rebase → pop/恢复 → 再 build gate”的繁琐流程。
 - `commit push` 默认流程：完成必要验证（如需要 build gate，则只跑一次）后，直接 `git add`、`git commit`、`git push`。
 - 如果 `git push` 因 non-fast-forward 失败，再执行 `git pull --rebase origin main` 处理远端同步，然后重试 push。
-- `git push` 前必须向用户确认，得到明确同意后才能执行。
 - `build/`、`.docusaurus/` 是 Docusaurus 生成产物，不要手动编辑，下次构建会被覆盖。

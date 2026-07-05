@@ -393,12 +393,78 @@ def extract_reading_context(paths: list[Path], report_date: date) -> dict[str, A
     }
 
 
+def _asset_record_amount(records: list[dict[str, Any]], *, fields: tuple[str, ...] = (), names: tuple[str, ...] = ()) -> float | None:
+    for record in records:
+        if fields and record.get("field") in fields and isinstance(record.get("amount"), (int, float)):
+            return float(record["amount"])
+        if names and record.get("name") in names and isinstance(record.get("amount"), (int, float)):
+            return float(record["amount"])
+    return None
+
+
+def _summarize_invest_payload(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    asset_records = [row for row in payload.get("assetRecords") or [] if isinstance(row, dict)]
+    holding_records = [row for row in payload.get("holdingRecords") or [] if isinstance(row, dict)]
+    source = payload.get("source") or path.stem
+
+    total_asset = _asset_record_amount(
+        asset_records,
+        fields=("totalAsset",),
+        names=("总资产", "总资产(人民币)"),
+    )
+    market_value = _asset_record_amount(asset_records, fields=("marketValue",), names=("证券总市值",))
+    total_profit = _asset_record_amount(asset_records, fields=("totalProfit",), names=("总盈亏",))
+    day_profit = _asset_record_amount(asset_records, fields=("dayProfit",), names=("当日参考盈亏",))
+    position_ratio = _asset_record_amount(asset_records, fields=("positionRatio",), names=("仓位",))
+    available_cash = _asset_record_amount(asset_records, fields=("availableCash",), names=("可用",))
+
+    holding_amount_sum = payload.get("holdingAmountSum")
+    if not isinstance(holding_amount_sum, (int, float)):
+        holding_amount_sum = sum(float(row.get("amount") or 0) for row in holding_records)
+
+    def profit_value(row: dict[str, Any]) -> float:
+        for key in ("profit", "holdingProfit", "cumulativeProfit", "dayProfit"):
+            value = row.get(key)
+            if isinstance(value, (int, float)):
+                return float(value)
+        return 0.0
+
+    top_holdings = sorted(
+        holding_records,
+        key=lambda row: float(row.get("amount") or row.get("marketValue") or 0),
+        reverse=True,
+    )[:8]
+    largest_winners = sorted(holding_records, key=profit_value, reverse=True)[:5]
+    largest_losers = sorted(holding_records, key=profit_value)[:5]
+
+    return {
+        "source": source,
+        "source_file": path.as_posix(),
+        "captured_at": payload.get("capturedAt"),
+        "total_asset": safe_round(total_asset, 2),
+        "market_value": safe_round(market_value, 2),
+        "total_profit": safe_round(total_profit, 2),
+        "day_profit": safe_round(day_profit, 2),
+        "position_ratio": safe_round(position_ratio, 2),
+        "available_cash": safe_round(available_cash, 2),
+        "holding_count": payload.get("holdingCount") if isinstance(payload.get("holdingCount"), int) else len(holding_records),
+        "holding_amount_sum": safe_round(float(holding_amount_sum), 2),
+        "top_holdings": top_holdings,
+        "largest_winners": largest_winners,
+        "largest_losers": largest_losers,
+    }
+
+
 def extract_finance_context(paths: list[Path], report_date: date) -> dict[str, Any]:
     payloads = []
+    invest_payloads = []
     for path in paths:
         payload = load_json(path)
         if isinstance(payload, dict):
-            payloads.append((path, payload))
+            if path.as_posix().startswith("static/data/invest/") and path.name != "index.json":
+                invest_payloads.append((path, payload))
+            else:
+                payloads.append((path, payload))
 
     account_daily = []
     positions = []
@@ -455,8 +521,19 @@ def extract_finance_context(paths: list[Path], report_date: date) -> dict[str, A
             }
         )
 
+    investment_sources = [
+        _summarize_invest_payload(path, payload)
+        for path, payload in sorted(invest_payloads, key=lambda item: item[0].as_posix())
+    ]
+    investment_total_assets = sum(
+        float(source.get("total_asset") or source.get("holding_amount_sum") or 0)
+        for source in investment_sources
+    )
+    investment_market_value = sum(float(source.get("market_value") or 0) for source in investment_sources)
+    investment_cash = sum(float(source.get("available_cash") or 0) for source in investment_sources)
+
     return {
-        "source_files": [path.as_posix() for path, _ in payloads],
+        "source_files": [path.as_posix() for path, _ in payloads + invest_payloads],
         "fetched_at": sorted(fetched_at),
         "today": {
             "accounts": account_daily,
@@ -472,6 +549,15 @@ def extract_finance_context(paths: list[Path], report_date: date) -> dict[str, A
         "largest_winners": largest_winners,
         "largest_losers": largest_losers,
         "account_count": len(daily_by_account),
+        "investment": {
+            "source_count": len(investment_sources),
+            "sources": investment_sources,
+            "total_assets": safe_round(investment_total_assets, 2),
+            "market_value": safe_round(investment_market_value, 2),
+            "available_cash": safe_round(investment_cash, 2),
+            "market_value_ratio": ratio_to_baseline(investment_market_value, investment_total_assets),
+            "cash_ratio": ratio_to_baseline(investment_cash, investment_total_assets),
+        },
     }
 
 
@@ -754,7 +840,12 @@ def main() -> None:
 
     health_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/health/")]
     reading_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/reading/")]
-    finance_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/account-assets/")]
+    finance_paths = [
+        path
+        for path in allowed_paths
+        if path.as_posix().startswith("static/data/account-assets/")
+        or path.as_posix().startswith("static/data/invest/")
+    ]
     ai_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/llm-usage/")]
     hk_ipo_paths = [path for path in allowed_paths if path.as_posix() == "static/data/hk-ipo/data.json"]
     weather_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/weather/")]

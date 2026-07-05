@@ -2518,7 +2518,7 @@ function FinanceDataPanel({
             <FinanceAssetsTrend onDateSelect={onDateSelect} timeScope={timeScope} />
           </section>
           <section className={styles.embeddedDashboardSection}>
-            <h3>支付宝持仓</h3>
+            <h3>投资持仓</h3>
             <AlipayInvestDashboard date={date} />
           </section>
           <section className={styles.embeddedDashboardSection}>

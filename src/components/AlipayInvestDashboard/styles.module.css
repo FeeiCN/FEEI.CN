@@ -4,6 +4,30 @@
   width: 100%;
 }
 
+.sourceStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.sourceHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sourceHeading h4 {
+  margin: 0;
+  color: var(--ifm-color-emphasis-800);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.sourceHeading span {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.74rem;
+}
+
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

@@ -6,11 +6,16 @@ import styles from './styles.module.css';
 
 type HoldingRecord = {
   name: string;
+  source?: string;
   tags?: string[];
   amount?: number;
   amountText?: string;
+  marketValue?: number;
+  marketValueText?: string;
   dayProfit?: number;
   dayProfitText?: string;
+  profit?: number;
+  profitText?: string;
   holdingProfit?: number;
   holdingProfitText?: string;
   cumulativeProfit?: number;
@@ -19,10 +24,14 @@ type HoldingRecord = {
   assetRatioText?: string;
   holdingReturnRate?: number;
   holdingReturnRateText?: string;
+  quantityText?: string;
+  costText?: string;
+  priceText?: string;
 };
 
 type AssetRecord = {
   name: string;
+  field?: string;
   amount?: number;
   amountText?: string;
   yesterdayProfit?: number;
@@ -54,10 +63,20 @@ type AlipayInvestDashboardProps = {
 };
 
 type Tone = 'gain' | 'loss' | 'neutral';
+type InvestSource = 'alipay' | 'caitong';
 
-function dateToDataPath(date: string): string {
+type InvestSourceData = {
+  source: InvestSource;
+  displayDate: string;
+  data: InvestPayload;
+  dailyPoints: InvestDailyPoint[];
+};
+
+const INVEST_SOURCES: InvestSource[] = ['alipay', 'caitong'];
+
+function dateToDataPath(date: string, source: InvestSource): string {
   const [year, month, day] = date.split('-');
-  return `/data/invest/${year}/${month}/${day}/alipay.json`;
+  return `/data/invest/${year}/${month}/${day}/${source}.json`;
 }
 
 async function fetchJson<T>(path: string): Promise<T | null> {
@@ -88,6 +107,54 @@ function toneFor(value: number | undefined): Tone {
   return value > 0 ? 'gain' : 'loss';
 }
 
+function sourceLabel(source: string | undefined): string {
+  if (source === 'alipay') return '支付宝';
+  if (source === 'caitong') return '财通';
+  return source || '投资';
+}
+
+function recordAmount(record: HoldingRecord): number | undefined {
+  if (typeof record.amount === 'number') return record.amount;
+  if (typeof record.marketValue === 'number') return record.marketValue;
+  return undefined;
+}
+
+function recordProfit(record: HoldingRecord): number | undefined {
+  if (typeof record.holdingProfit === 'number') return record.holdingProfit;
+  if (typeof record.profit === 'number') return record.profit;
+  if (typeof record.cumulativeProfit === 'number') return record.cumulativeProfit;
+  return undefined;
+}
+
+function recordProfitText(record: HoldingRecord): string {
+  return record.holdingProfitText || record.profitText || record.cumulativeProfitText || '暂无';
+}
+
+function payloadTotalAssets(payload: InvestPayload | null | undefined): number | undefined {
+  const totalAsset = payload?.assetRecords?.find((record) =>
+    record.field === 'totalAsset' ||
+    record.name === '总资产' ||
+    record.name === '总资产(人民币)'
+  )?.amount;
+  if (typeof totalAsset === 'number') return totalAsset;
+  return payload?.holdingAmountSum;
+}
+
+function payloadDayProfit(payload: InvestPayload | null | undefined): number | undefined {
+  const dayProfitRecord = payload?.assetRecords?.find((record) => record.field === 'dayProfit')?.amount;
+  if (typeof dayProfitRecord === 'number') return dayProfitRecord;
+  const yesterdayProfit = payload?.assetRecords
+    ?.filter((record) => typeof record.yesterdayProfit === 'number')
+    .reduce((sum, record) => sum + (record.yesterdayProfit || 0), 0);
+  return yesterdayProfit;
+}
+
+function payloadHoldingProfit(payload: InvestPayload | null | undefined): number | undefined {
+  const records = payload?.holdingRecords || [];
+  if (!records.length) return undefined;
+  return records.reduce((sum, record) => sum + (recordProfit(record) || 0), 0);
+}
+
 function pickDisplayDate(date: string | undefined, dates: string[]): string {
   if (date && dates.includes(date)) return date;
   if (date) {
@@ -97,12 +164,28 @@ function pickDisplayDate(date: string | undefined, dates: string[]): string {
   return dates.at(-1) || date || '';
 }
 
+async function sourceHasData(source: InvestSource, date: string): Promise<boolean> {
+  return Boolean(await fetchJson<InvestPayload>(dateToDataPath(date, source)));
+}
+
+async function pickSourceDisplayDate(source: InvestSource, preferredDate: string, dates: string[]): Promise<string> {
+  if (preferredDate && await sourceHasData(source, preferredDate)) return preferredDate;
+  const candidates = preferredDate ? dates.filter((item) => item <= preferredDate).reverse() : dates.slice().reverse();
+  for (const candidate of candidates) {
+    if (await sourceHasData(source, candidate)) return candidate;
+  }
+  for (const candidate of dates.slice().reverse()) {
+    if (await sourceHasData(source, candidate)) return candidate;
+  }
+  return '';
+}
+
 function buildDistributionOption(records: HoldingRecord[], isDark: boolean, isMobile: boolean) {
   const labelColor = isDark ? '#94a3b8' : '#64748b';
   const colors = ['#2563eb', '#0891b2', '#7c3aed', '#db2777', '#ea580c', '#65a30d', '#0d9488', '#ca8a04'];
   const sorted = records
-    .filter((record) => typeof record.amount === 'number' && record.amount > 0)
-    .sort((left, right) => (right.amount || 0) - (left.amount || 0));
+    .filter((record) => typeof recordAmount(record) === 'number' && (recordAmount(record) || 0) > 0)
+    .sort((left, right) => (recordAmount(right) || 0) - (recordAmount(left) || 0));
 
   return {
     backgroundColor: 'transparent',
@@ -123,7 +206,7 @@ function buildDistributionOption(records: HoldingRecord[], isDark: boolean, isMo
         center: isMobile ? ['50%', '50%'] : ['38%', '50%'],
         label: {formatter: '{d}%', color: labelColor, fontSize: 11},
         labelLine: {length: 8, length2: 6},
-        data: sorted.map((record) => ({name: record.name, value: record.amount || 0})),
+        data: sorted.map((record) => ({name: record.name, value: recordAmount(record) || 0})),
       },
     ],
   };
@@ -133,8 +216,8 @@ function buildProfitOption(records: HoldingRecord[], isDark: boolean, isMobile: 
   const labelColor = isDark ? '#94a3b8' : '#64748b';
   const splitColor = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(148,163,184,0.2)';
   const sorted = records
-    .filter((record) => typeof record.holdingProfit === 'number')
-    .sort((left, right) => (left.holdingProfit || 0) - (right.holdingProfit || 0));
+    .filter((record) => typeof recordProfit(record) === 'number')
+    .sort((left, right) => (recordProfit(left) || 0) - (recordProfit(right) || 0));
 
   return {
     backgroundColor: 'transparent',
@@ -143,7 +226,7 @@ function buildProfitOption(records: HoldingRecord[], isDark: boolean, isMobile: 
       trigger: 'item',
       formatter: (params: {dataIndex: number; name: string}) => {
         const item = sorted[params.dataIndex];
-        return `${params.name}<br/>持有收益：${formatSigned(item?.holdingProfit)}<br/>收益率：${item?.holdingReturnRateText || '暂无'}`;
+        return `${params.name}<br/>持有收益：${formatSigned(recordProfit(item))}<br/>收益率：${item?.holdingReturnRateText || '暂无'}`;
       },
     },
     xAxis: {
@@ -174,15 +257,15 @@ function buildProfitOption(records: HoldingRecord[], isDark: boolean, isMobile: 
         type: 'bar',
         barMaxWidth: 24,
         data: sorted.map((record) => ({
-          value: record.holdingProfit || 0,
+          value: recordProfit(record) || 0,
           itemStyle: {
-            color: (record.holdingProfit || 0) >= 0 ? '#ef4444' : '#22c55e',
-            borderRadius: (record.holdingProfit || 0) >= 0 ? [0, 4, 4, 0] : [4, 0, 0, 4],
+            color: (recordProfit(record) || 0) >= 0 ? '#ef4444' : '#22c55e',
+            borderRadius: (recordProfit(record) || 0) >= 0 ? [0, 4, 4, 0] : [4, 0, 0, 4],
           },
           label: {
             show: !isMobile,
             position: 'right',
-            formatter: () => `${formatSigned(record.holdingProfit, 0)} ${record.holdingReturnRateText || ''}`,
+            formatter: () => `${formatSigned(recordProfit(record), 0)} ${record.holdingReturnRateText || ''}`,
             color: labelColor,
             fontSize: 11,
           },
@@ -289,10 +372,12 @@ function MetricCard({label, value, tone = 'neutral'}: {label: string; value: str
 }
 
 function AlipayInvestCharts({
+  source,
   data,
   displayDate,
   dailyPoints,
 }: {
+  source: InvestSource;
   data: InvestPayload;
   displayDate: string;
   dailyPoints: InvestDailyPoint[];
@@ -309,17 +394,19 @@ function AlipayInvestCharts({
   }, []);
 
   const holdings = useMemo(
-    () => [...(data.holdingRecords || [])].sort((left, right) => (right.amount || 0) - (left.amount || 0)),
+    () => [...(data.holdingRecords || [])].sort((left, right) => (recordAmount(right) || 0) - (recordAmount(left) || 0)),
     [data.holdingRecords],
   );
-  const totalAsset = data.assetRecords?.find((record) => record.name === '总资产')?.amount ?? data.holdingAmountSum;
-  const dayProfit = data.assetRecords
-    ?.filter((record) => typeof record.yesterdayProfit === 'number')
-    .reduce((sum, record) => sum + (record.yesterdayProfit || 0), 0);
-  const holdingProfit = holdings.reduce((sum, record) => sum + (record.holdingProfit || 0), 0);
+  const totalAsset = payloadTotalAssets(data);
+  const dayProfit = payloadDayProfit(data);
+  const holdingProfit = holdings.reduce((sum, record) => sum + (recordProfit(record) || 0), 0);
 
   return (
     <div className={styles.dashboard}>
+      <div className={styles.sourceHeading}>
+        <h4>{sourceLabel(source)}</h4>
+        <span>{displayDate}</span>
+      </div>
       <div className={styles.summaryGrid}>
         <MetricCard label="总资产" value={formatMoney(totalAsset)} />
         <MetricCard label="昨日收益" value={formatSigned(dayProfit)} tone={toneFor(dayProfit)} />
@@ -327,13 +414,12 @@ function AlipayInvestCharts({
         <MetricCard label="持仓数量" value={`${data.holdingCount || holdings.length} 项`} />
       </div>
       <div className={styles.metaLine}>
-        <span>{displayDate}</span>
         {data.capturedAt ? <span>采集 {data.capturedAt.replace('T', ' ').slice(0, 16)}</span> : null}
       </div>
       {holdings.length ? (
         <>
           <section className={styles.trendSection}>
-            <h4>支付宝日趋势</h4>
+            <h4>{sourceLabel(source)}日趋势</h4>
             <ReactECharts
               option={buildDailyTrendOption(dailyPoints.length ? dailyPoints : [{
                 date: displayDate,
@@ -377,6 +463,7 @@ function AlipayInvestCharts({
                   <th>持有收益</th>
                   <th>收益率</th>
                   <th>累计收益</th>
+                  <th>数量 / 成本 / 现价</th>
                 </tr>
               </thead>
               <tbody>
@@ -386,12 +473,13 @@ function AlipayInvestCharts({
                       <strong>{record.name}</strong>
                       {record.tags?.length ? <small>{record.tags.join(' · ')}</small> : null}
                     </td>
-                    <td>{record.amountText || formatMoney(record.amount)}</td>
+                    <td>{record.amountText || record.marketValueText || formatMoney(recordAmount(record))}</td>
                     <td>{record.assetRatioText || '暂无'}</td>
                     <td className={styles[toneFor(record.dayProfit)]}>{record.dayProfitText || '暂无'}</td>
-                    <td className={styles[toneFor(record.holdingProfit)]}>{record.holdingProfitText || '暂无'}</td>
+                    <td className={styles[toneFor(recordProfit(record))]}>{recordProfitText(record)}</td>
                     <td className={styles[toneFor(record.holdingReturnRate)]}>{record.holdingReturnRateText || '暂无'}</td>
                     <td className={styles[toneFor(record.cumulativeProfit)]}>{record.cumulativeProfitText || '暂无'}</td>
+                    <td>{[record.quantityText, record.costText, record.priceText].filter(Boolean).join(' / ') || '暂无'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -399,7 +487,7 @@ function AlipayInvestCharts({
           </div>
         </>
       ) : (
-        <p className={styles.empty}>当天没有可展示的支付宝持仓记录。</p>
+        <p className={styles.empty}>当天没有可展示的投资持仓记录。</p>
       )}
     </div>
   );
@@ -407,8 +495,7 @@ function AlipayInvestCharts({
 
 function AlipayInvestClient({date}: AlipayInvestDashboardProps) {
   const [manifest, setManifest] = useState<InvestManifest | null>(null);
-  const [data, setData] = useState<InvestPayload | null>(null);
-  const [dailyPoints, setDailyPoints] = useState<InvestDailyPoint[]>([]);
+  const [sourceData, setSourceData] = useState<InvestSourceData[]>([]);
   const [displayDate, setDisplayDate] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -423,31 +510,41 @@ function AlipayInvestClient({date}: AlipayInvestDashboardProps) {
         setManifest(nextManifest);
         setDisplayDate(nextDate);
         if (!nextDate) return null;
-        return Promise.all([
-          fetchJson<InvestPayload>(dateToDataPath(nextDate)),
-          Promise.all(dates.map(async (itemDate) => {
-            const payload = await fetchJson<InvestPayload>(dateToDataPath(itemDate));
-            const totalAssets = payload?.assetRecords?.find((record) => record.name === '总资产')?.amount ?? payload?.holdingAmountSum;
+        return Promise.all(INVEST_SOURCES.map(async (source): Promise<InvestSourceData | null> => {
+          const sourceDate = await pickSourceDisplayDate(source, nextDate, dates);
+          if (!sourceDate) return null;
+          const data = await fetchJson<InvestPayload>(dateToDataPath(sourceDate, source));
+          if (!data) return null;
+          const dailyPoints = await Promise.all(dates.map(async (itemDate): Promise<InvestDailyPoint | null> => {
+            const payload = await fetchJson<InvestPayload>(dateToDataPath(itemDate, source));
+            const totalAssets = payloadTotalAssets(payload);
             if (typeof totalAssets !== 'number') return null;
-            const dayProfit = payload?.assetRecords
-              ?.filter((record) => typeof record.yesterdayProfit === 'number')
-              .reduce((sum, record) => sum + (record.yesterdayProfit || 0), 0);
-            const holdingProfit = payload?.holdingRecords
-              ?.reduce((sum, record) => sum + (record.holdingProfit || 0), 0);
-            return {date: itemDate, totalAssets, dayProfit, holdingProfit};
-          })),
-        ]);
+            return {
+              date: itemDate,
+              totalAssets,
+              dayProfit: payloadDayProfit(payload),
+              holdingProfit: payloadHoldingProfit(payload),
+            };
+          }));
+          return {
+            source,
+            displayDate: sourceDate,
+            data: {
+              ...data,
+              source,
+              holdingRecords: (data.holdingRecords || []).map((record) => ({...record, source})),
+            },
+            dailyPoints: dailyPoints.filter((point): point is InvestDailyPoint => Boolean(point)),
+          };
+        }));
       })
       .then((result) => {
         if (cancelled) return;
         if (!result) {
-          setData(null);
-          setDailyPoints([]);
+          setSourceData([]);
           return;
         }
-        const [nextData, nextDailyPoints] = result;
-        setData(nextData || null);
-        setDailyPoints(nextDailyPoints.filter((point): point is InvestDailyPoint => point !== null));
+        setSourceData(result.filter((item): item is InvestSourceData => Boolean(item)));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -459,10 +556,22 @@ function AlipayInvestClient({date}: AlipayInvestDashboardProps) {
 
   const hasManifest = Boolean(manifest?.dates?.length);
   if (loading) return <div className={styles.skeleton} />;
-  if (!hasManifest) return <p className={styles.empty}>暂无支付宝持仓数据。</p>;
-  if (!data) return <p className={styles.empty}>选中日期附近没有支付宝持仓数据。</p>;
+  if (!hasManifest) return <p className={styles.empty}>暂无投资持仓数据。</p>;
+  if (!sourceData.length) return <p className={styles.empty}>选中日期附近没有投资持仓数据。</p>;
 
-  return <AlipayInvestCharts data={data} displayDate={displayDate} dailyPoints={dailyPoints} />;
+  return (
+    <div className={styles.sourceStack}>
+      {sourceData.map((item) => (
+        <AlipayInvestCharts
+          key={item.source}
+          source={item.source}
+          data={item.data}
+          displayDate={item.displayDate}
+          dailyPoints={item.dailyPoints}
+        />
+      ))}
+    </div>
+  );
 }
 
 export default function AlipayInvestDashboard(props: AlipayInvestDashboardProps) {

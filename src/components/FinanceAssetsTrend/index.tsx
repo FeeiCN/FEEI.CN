@@ -22,6 +22,11 @@ type InvestManifest = {
 
 type InvestPayload = {
   holdingAmountSum?: number;
+  assetRecords?: Array<{
+    field?: string;
+    name?: string;
+    amount?: number | null;
+  }>;
 };
 
 type TimeScope =
@@ -34,6 +39,7 @@ type TrendPoint = {
   indexAssets: number | null;
   stockAssets: number | null;
   alipayAssets: number | null;
+  caitongAssets: number | null;
   totalAssets: number | null;
 };
 
@@ -54,9 +60,9 @@ async function fetchJson<T>(path: string): Promise<T | null> {
   }
 }
 
-function dateToInvestPath(date: string): string {
+function dateToInvestPath(date: string, source: 'alipay' | 'caitong'): string {
   const [year, month, day] = date.split('-');
-  return `/data/invest/${year}/${month}/${day}/alipay.json`;
+  return `/data/invest/${year}/${month}/${day}/${source}.json`;
 }
 
 function normalizeHistory(history: HistoryPoint[] | undefined): Map<string, number> {
@@ -87,30 +93,45 @@ function formatCompactMoney(value: number | null | undefined): string {
   return value.toLocaleString('zh-CN', {maximumFractionDigits: 0});
 }
 
+function investTotalAssets(payload: InvestPayload | null): number | undefined {
+  const totalAsset = payload?.assetRecords?.find((record) =>
+    record.field === 'totalAsset' ||
+    record.name === '总资产' ||
+    record.name === '总资产(人民币)'
+  )?.amount;
+  if (typeof totalAsset === 'number') return totalAsset;
+  return payload?.holdingAmountSum;
+}
+
 function buildTrendPoints(
   indexHistory: Map<string, number>,
   stockHistory: Map<string, number>,
   alipayHistory: Map<string, number>,
+  caitongHistory: Map<string, number>,
 ): TrendPoint[] {
   const dates = [...new Set([
     ...indexHistory.keys(),
     ...stockHistory.keys(),
     ...alipayHistory.keys(),
+    ...caitongHistory.keys(),
   ])].sort();
   let latestIndex: number | null = null;
   let latestStock: number | null = null;
   let latestAlipay: number | null = null;
+  let latestCaitong: number | null = null;
 
   return dates.map((date) => {
     if (indexHistory.has(date)) latestIndex = indexHistory.get(date) || null;
     if (stockHistory.has(date)) latestStock = stockHistory.get(date) || null;
     if (alipayHistory.has(date)) latestAlipay = alipayHistory.get(date) || null;
-    const values = [latestIndex, latestStock, latestAlipay].filter((value): value is number => typeof value === 'number');
+    if (caitongHistory.has(date)) latestCaitong = caitongHistory.get(date) || null;
+    const values = [latestIndex, latestStock, latestAlipay, latestCaitong].filter((value): value is number => typeof value === 'number');
     return {
       date,
       indexAssets: latestIndex,
       stockAssets: latestStock,
       alipayAssets: latestAlipay,
+      caitongAssets: latestCaitong,
       totalAssets: values.length ? values.reduce((sum, value) => sum + value, 0) : null,
     };
   });
@@ -124,7 +145,7 @@ function buildOption(points: TrendPoint[], isDark: boolean, isMobile: boolean) {
 
   return {
     backgroundColor: 'transparent',
-    color: ['#2563eb', '#0891b2', '#7c3aed', '#ea580c'],
+    color: ['#2563eb', '#0891b2', '#7c3aed', '#ea580c', '#16a34a'],
     grid: {top: isMobile ? 54 : 42, right: 18, bottom: 28, left: 12, containLabel: true},
     legend: {
       top: 0,
@@ -159,37 +180,44 @@ function buildOption(points: TrendPoint[], isDark: boolean, isMobile: boolean) {
     },
     series: [
       {
-        name: '总资产',
-        type: 'line',
-        smooth: true,
-        symbol: 'none',
-        lineStyle: {width: 2.8},
-        data: points.map((point) => point.totalAssets),
-      },
-      {
         name: '指数账户',
-        type: 'line',
-        smooth: true,
-        symbol: 'none',
-        lineStyle: {width: 1.7},
+        type: 'bar',
+        stack: 'assets',
+        barMaxWidth: 22,
+        itemStyle: {borderRadius: [0, 0, 3, 3]},
         data: points.map((point) => point.indexAssets),
       },
       {
         name: '个股账户',
-        type: 'line',
-        smooth: true,
-        symbol: 'none',
-        lineStyle: {width: 1.7},
+        type: 'bar',
+        stack: 'assets',
+        barMaxWidth: 22,
         data: points.map((point) => point.stockAssets),
       },
       {
         name: '支付宝',
+        type: 'bar',
+        stack: 'assets',
+        barMaxWidth: 22,
+        data: points.map((point) => point.alipayAssets),
+      },
+      {
+        name: '财通',
+        type: 'bar',
+        stack: 'assets',
+        barMaxWidth: 22,
+        itemStyle: {borderRadius: [3, 3, 0, 0]},
+        data: points.map((point) => point.caitongAssets),
+      },
+      {
+        name: '总资产',
         type: 'line',
         smooth: true,
         symbol: 'circle',
         symbolSize: 5,
-        lineStyle: {width: 1.7},
-        data: points.map((point) => point.alipayAssets),
+        lineStyle: {width: 2.8},
+        data: points.map((point) => point.totalAssets),
+        z: 4,
       },
     ],
   };
@@ -220,18 +248,33 @@ function FinanceAssetsTrendClient({onDateSelect, timeScope}: FinanceAssetsTrendP
       .then(async ([indexPayload, stockPayload, investManifest]) => {
         const investEntries = await Promise.all(
           (investManifest?.dates || []).map(async (date) => {
-            const payload = await fetchJson<InvestPayload>(dateToInvestPath(date));
-            return [date, payload?.holdingAmountSum] as const;
+            const [alipayPayload, caitongPayload] = await Promise.all([
+              fetchJson<InvestPayload>(dateToInvestPath(date, 'alipay')),
+              fetchJson<InvestPayload>(dateToInvestPath(date, 'caitong')),
+            ]);
+            return {
+              date,
+              alipay: investTotalAssets(alipayPayload),
+              caitong: investTotalAssets(caitongPayload),
+            };
           }),
         );
         if (cancelled) return;
         const alipayHistory = new Map(
-          investEntries.filter((entry): entry is readonly [string, number] => typeof entry[1] === 'number'),
+          investEntries
+            .filter((entry): entry is {date: string; alipay: number; caitong: number | undefined} => typeof entry.alipay === 'number')
+            .map((entry) => [entry.date, entry.alipay] as const),
+        );
+        const caitongHistory = new Map(
+          investEntries
+            .filter((entry): entry is {date: string; alipay: number | undefined; caitong: number} => typeof entry.caitong === 'number')
+            .map((entry) => [entry.date, entry.caitong] as const),
         );
         setPoints(buildTrendPoints(
           normalizeHistory(indexPayload?.portfolio?.history),
           normalizeHistory(stockPayload?.portfolio?.history),
           alipayHistory,
+          caitongHistory,
         ));
       })
       .finally(() => {
@@ -274,6 +317,10 @@ function FinanceAssetsTrendClient({onDateSelect, timeScope}: FinanceAssetsTrendP
         <div>
           <span>支付宝</span>
           <strong>{formatCompactMoney(latest?.alipayAssets)}</strong>
+        </div>
+        <div>
+          <span>财通</span>
+          <strong>{formatCompactMoney(latest?.caitongAssets)}</strong>
         </div>
       </div>
       <ReactECharts

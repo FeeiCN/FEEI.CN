@@ -1,0 +1,195 @@
+name: iOS device assets
+
+# 每天北京时间 12:00 在 Mac mini self-hosted runner 上运行。
+# GitHub Actions cron 使用 UTC，北京时间 12:00 = UTC 04:00。
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ios-device-assets
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    name: Capture iOS assets
+    runs-on: [self-hosted, macnimi]
+    timeout-minutes: 60
+    env:
+      TZ: Asia/Shanghai
+      APPIUM_HOST: ${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}
+      APPIUM_PORT: ${{ vars.IOS_APPIUM_PORT || '4723' }}
+      APPIUM_URL: http://${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}:${{ vars.IOS_APPIUM_PORT || '4723' }}
+      IOS_DEVICE_UDID: ${{ vars.IOS_DEVICE_UDID || '00008101-0014494A1A83001E' }}
+      XCODE_ORG_ID: ${{ vars.IOS_XCODE_ORG_ID || '792GZF4XQ4' }}
+      UPDATED_WDA_BUNDLE_ID: ${{ vars.IOS_UPDATED_WDA_BUNDLE_ID || 'com.feei.WebDriverAgentRunner' }}
+      CAITONG_TRADE_PASSWORD: ${{ secrets.CAITONG_TRADE_PASSWORD }}
+      PYTHONUNBUFFERED: '1'
+      NO_PROXY: 127.0.0.1,localhost,${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}
+      HTTP_PROXY: ''
+      HTTPS_PROXY: ''
+      ALL_PROXY: ''
+      http_proxy: ''
+      https_proxy: ''
+      all_proxy: ''
+
+    steps:
+      - name: Check secrets
+        env:
+          WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+        run: |
+          if [ -z "${WORKFLOW_TRIGGER_PAT:-}" ]; then
+            echo "::error::WORKFLOW_TRIGGER_PAT 未配置"
+            exit 1
+          fi
+          if [ -z "${CAITONG_TRADE_PASSWORD:-}" ]; then
+            echo "::error::CAITONG_TRADE_PASSWORD 未配置"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Prepare runner
+        run: |
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+          echo "/usr/local/bin" >> "$GITHUB_PATH"
+          git config user.name "FeeiCN[bot]"
+          git config user.email "feei@feei.cn"
+          if git rev-parse --verify "origin/${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            git checkout -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}"
+          fi
+
+      - name: Check local dependencies
+        run: |
+          command -v python3 >/dev/null
+          command -v curl >/dev/null
+          command -v appium >/dev/null
+          python3 - <<'PY'
+          import importlib.util
+          import sys
+
+          missing = [
+              name
+              for name in ("appium",)
+              if importlib.util.find_spec(name) is None
+          ]
+          if missing:
+              print(f"::error::缺少 Python 依赖: {', '.join(missing)}")
+              sys.exit(1)
+          PY
+
+      - name: Ensure Appium server
+        run: |
+          if curl -fsS "${APPIUM_URL%/}/status" >/dev/null 2>&1; then
+            echo "Appium already running at ${APPIUM_URL}"
+            exit 0
+          fi
+
+          mkdir -p "$HOME/Library/Logs"
+          nohup appium --address "$APPIUM_HOST" --port "$APPIUM_PORT" > "$HOME/Library/Logs/FEEI.CN-ios-appium.log" 2>&1 &
+          echo "$!" > /tmp/FEEI.CN-ios-appium.pid
+
+          for _ in $(seq 1 30); do
+            if curl -fsS "${APPIUM_URL%/}/status" >/dev/null 2>&1; then
+              echo "Appium started at ${APPIUM_URL}"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "::error::Appium 启动失败，查看 $HOME/Library/Logs/FEEI.CN-ios-appium.log"
+          exit 1
+
+      - name: Capture Alipay, Caitong and Health Auto Export
+        run: |
+          python3 <<'PY'
+          import fcntl
+          import os
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          command = [
+              "python3",
+              "scripts/ios_appium_capture.py",
+              "--alipay-assets",
+              "--appium-url",
+              os.environ["APPIUM_URL"],
+              "--udid",
+              os.environ["IOS_DEVICE_UDID"],
+              "--xcode-org-id",
+              os.environ["XCODE_ORG_ID"],
+              "--updated-wda-bundle-id",
+              os.environ["UPDATED_WDA_BUNDLE_ID"],
+              "--max-screens",
+              "20",
+              "--caitong-max-screens",
+              "12",
+              "--new-command-timeout",
+              "600",
+          ]
+
+          env = os.environ.copy()
+          appium_host = os.environ.get("APPIUM_HOST", "")
+          env["NO_PROXY"] = ",".join(
+              value for value in ("127.0.0.1", "localhost", appium_host) if value
+          )
+          for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+              env.pop(name, None)
+
+          log_dir = Path.home() / "Library" / "Logs"
+          log_dir.mkdir(parents=True, exist_ok=True)
+          log_path = log_dir / "FEEI.CN-ios-device-assets.log"
+
+          with open("/tmp/FEEI.CN-ios-device-assets.lock", "w", encoding="utf-8") as lock:
+              print("Waiting for iOS device automation lock...")
+              fcntl.flock(lock, fcntl.LOCK_EX)
+              print("Acquired iOS device automation lock.")
+              print("Running:", " ".join(command))
+
+              with log_path.open("a", encoding="utf-8") as log_file:
+                  process = subprocess.Popen(
+                      command,
+                      env=env,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.STDOUT,
+                      text=True,
+                      encoding="utf-8",
+                      errors="replace",
+                  )
+                  assert process.stdout is not None
+                  for line in process.stdout:
+                      print(line, end="")
+                      log_file.write(line)
+                  status = process.wait()
+
+          sys.exit(status)
+          PY
+
+      - name: Commit generated investment data
+        run: |
+          python3 <<'PY'
+          import sys
+          from pathlib import Path
+
+          repo_root = Path.cwd()
+          sys.path.insert(0, str(repo_root / "scripts"))
+          from git_ops import git_commit_and_push_target_repo
+
+          git_commit_and_push_target_repo(
+              [Path("static/data/invest")],
+              repo_root=repo_root,
+              description="同步 iOS 资产数据",
+          )
+          PY

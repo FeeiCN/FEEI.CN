@@ -197,7 +197,7 @@
    (e.g. during SSR or when image dimensions are unavailable). */
 .markdown p:has(> :is(.markdownImageFrame, .markdownImageBlock) + :is(.markdownImageFrame, .markdownImageBlock)):not([data-justified]) {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
   gap: 0.6rem;
   align-items: start;
 }

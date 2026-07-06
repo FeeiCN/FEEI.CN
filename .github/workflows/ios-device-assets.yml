@@ -45,8 +45,7 @@ jobs:
             exit 1
           fi
           if [ -z "${CAITONG_TRADE_PASSWORD:-}" ]; then
-            echo "::error::CAITONG_TRADE_PASSWORD 未配置"
-            exit 1
+            echo "::warning::CAITONG_TRADE_PASSWORD 未配置，本次财通任务会失败，但不影响支付宝和 Health Auto Export"
           fi
 
       - name: Checkout
@@ -112,29 +111,86 @@ jobs:
         run: |
           python3 <<'PY'
           import fcntl
+          import json
           import os
           import subprocess
           import sys
+          import textwrap
           from pathlib import Path
 
-          command = [
-              "python3",
-              "scripts/ios_appium_capture.py",
-              "--alipay-assets",
-              "--appium-url",
-              os.environ["APPIUM_URL"],
-              "--udid",
-              os.environ["IOS_DEVICE_UDID"],
-              "--xcode-org-id",
-              os.environ["XCODE_ORG_ID"],
-              "--updated-wda-bundle-id",
-              os.environ["UPDATED_WDA_BUNDLE_ID"],
-              "--max-screens",
-              "20",
-              "--caitong-max-screens",
-              "12",
-              "--new-command-timeout",
-              "600",
+          common_args = [
+              "--appium-url", os.environ["APPIUM_URL"],
+              "--udid", os.environ["IOS_DEVICE_UDID"],
+              "--xcode-org-id", os.environ["XCODE_ORG_ID"],
+              "--updated-wda-bundle-id", os.environ["UPDATED_WDA_BUNDLE_ID"],
+              "--new-command-timeout", "600",
+          ]
+          commands = [
+              (
+                  "alipay",
+                  [
+                      "python3",
+                      "scripts/ios_appium_capture.py",
+                      "--alipay-assets",
+                      "--no-sync-caitong",
+                      "--no-start-health-server",
+                      "--max-screens",
+                      "20",
+                      *common_args,
+                  ],
+              ),
+              (
+                  "caitong",
+                  [
+                      "python3",
+                      "scripts/ios_appium_capture.py",
+                      "--caitong-assets",
+                      "--caitong-max-screens",
+                      "12",
+                      *common_args,
+                  ],
+              ),
+              (
+                  "health-auto-export",
+                  [
+                      "python3",
+                      "-c",
+                      textwrap.dedent(
+                          """
+                          import argparse
+                          import scripts.ios_appium_capture as capture
+
+                          args = argparse.Namespace(
+                              appium_url='{appium_url}',
+                              udid='{udid}',
+                              bundle_id=capture.HEALTH_AUTO_EXPORT_BUNDLE_ID,
+                              device_name=None,
+                              platform_version=None,
+                              show_xcode_log=False,
+                              xcode_org_id='{xcode_org_id}',
+                              xcode_signing_id='iPhone Developer',
+                              updated_wda_bundle_id='{updated_wda_bundle_id}',
+                              wda_local_port=None,
+                              allow_provisioning_updates=False,
+                              allow_provisioning_device_registration=False,
+                              new_command_timeout=600,
+                              step_wait=1.5,
+                              nav_timeout=20,
+                          )
+                          driver = capture.create_driver(args, args.udid)
+                          try:
+                              print(capture.start_health_auto_export_server(driver, args), flush=True)
+                          finally:
+                              driver.quit()
+                          """
+                      ).format(
+                          appium_url=os.environ["APPIUM_URL"],
+                          udid=os.environ["IOS_DEVICE_UDID"],
+                          xcode_org_id=os.environ["XCODE_ORG_ID"],
+                          updated_wda_bundle_id=os.environ["UPDATED_WDA_BUNDLE_ID"],
+                      ),
+                  ],
+              ),
           ]
 
           env = os.environ.copy()
@@ -148,30 +204,58 @@ jobs:
           log_dir = Path.home() / "Library" / "Logs"
           log_dir.mkdir(parents=True, exist_ok=True)
           log_path = log_dir / "FEEI.CN-ios-device-assets.log"
+          status_path = Path("static/data/invest/ios-device-assets-status.json")
+          results = []
 
           with open("/tmp/FEEI.CN-ios-device-assets.lock", "w", encoding="utf-8") as lock:
               print("Waiting for iOS device automation lock...")
               fcntl.flock(lock, fcntl.LOCK_EX)
               print("Acquired iOS device automation lock.")
-              print("Running:", " ".join(command))
 
               with log_path.open("a", encoding="utf-8") as log_file:
-                  process = subprocess.Popen(
-                      command,
-                      env=env,
-                      stdout=subprocess.PIPE,
-                      stderr=subprocess.STDOUT,
-                      text=True,
-                      encoding="utf-8",
-                      errors="replace",
-                  )
-                  assert process.stdout is not None
-                  for line in process.stdout:
-                      print(line, end="")
-                      log_file.write(line)
-                  status = process.wait()
+                  for task, command in commands:
+                      print(f"::group::{task}")
+                      print("Running:", " ".join(command))
+                      log_file.write(f"\n===== {task} =====\n")
+                      process = subprocess.Popen(
+                          command,
+                          env=env,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          text=True,
+                          encoding="utf-8",
+                          errors="replace",
+                      )
+                      assert process.stdout is not None
+                      output_lines = []
+                      for line in process.stdout:
+                          print(line, end="")
+                          log_file.write(line)
+                          output_lines.append(line.rstrip())
+                      status = process.wait()
+                      results.append(
+                          {
+                              "task": task,
+                              "status": "success" if status == 0 else "failed",
+                              "exitCode": status,
+                              "tail": output_lines[-20:],
+                          }
+                      )
+                      print(f"::{ 'notice' if status == 0 else 'error' }::{task} exit code {status}")
+                      print("::endgroup::")
 
-          sys.exit(status)
+          status_path.parent.mkdir(parents=True, exist_ok=True)
+          status_path.write_text(
+              json.dumps({"results": results}, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+
+          if not any(item["status"] == "success" for item in results):
+              print("::error::iOS 资产自动化三项任务全部失败")
+              sys.exit(1)
+          failed = [item["task"] for item in results if item["status"] != "success"]
+          if failed:
+              print(f"::warning::部分任务失败: {', '.join(failed)}")
           PY
 
       - name: Commit generated investment data

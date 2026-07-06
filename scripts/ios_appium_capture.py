@@ -241,6 +241,51 @@ def visible_text_rects(driver: Any, contains_text: str) -> list[dict[str, Any]]:
     return rects
 
 
+def visible_element_rects(
+    driver: Any,
+    text: str,
+    *,
+    element_type: str | None = None,
+    contains: bool = False,
+) -> list[dict[str, Any]]:
+    try:
+        root = ElementTree.fromstring(driver.page_source.encode("utf-8"))
+    except ElementTree.ParseError:
+        return []
+    rects: list[dict[str, Any]] = []
+    for element in root.iter():
+        attrs = element.attrib
+        if attrs.get("visible") != "true":
+            continue
+        if element_type and attrs.get("type") != element_type:
+            continue
+        text_values = [attrs.get("name", ""), attrs.get("label", ""), attrs.get("value", "")]
+        matched = next(
+            (
+                value
+                for value in text_values
+                if value and ((text in value) if contains else (text == value))
+            ),
+            None,
+        )
+        if not matched:
+            continue
+        try:
+            rects.append(
+                {
+                    "text": matched,
+                    "type": attrs.get("type"),
+                    "x": int(float(attrs.get("x", "0"))),
+                    "y": int(float(attrs.get("y", "0"))),
+                    "width": int(float(attrs.get("width", "0"))),
+                    "height": int(float(attrs.get("height", "0"))),
+                }
+            )
+        except ValueError:
+            continue
+    return rects
+
+
 def tap_relative(driver: Any, x_ratio: float, y_ratio: float) -> tuple[int, int]:
     size = driver.get_window_size()
     x = int(size.get("width", 390) * x_ratio)
@@ -313,6 +358,25 @@ def tap_numeric_keypad(driver: Any, text: str) -> list[dict[str, Any]]:
             actions.append({"index": index, "method": "coordinate", "x": x, "y": y})
         time.sleep(0.15)
     return actions
+
+
+def numeric_keypad_visible(driver: Any) -> bool:
+    source = driver.page_source
+    if source_contains_any(driver, ["删除", "完成", "收起键盘", "密码", "交易密码"]):
+        return True
+    try:
+        rows = collect_visible_texts(source)
+    except ElementTree.ParseError:
+        return False
+    height = int(driver.get_window_size().get("height", 844))
+    digits = {
+        row["text"]
+        for row in rows
+        if row["text"].isdigit()
+        and len(row["text"]) == 1
+        and row["y"] >= int(height * 0.55)
+    }
+    return len(digits) >= 6
 
 
 def dismiss_optional_overlays(driver: Any) -> list[str]:
@@ -1402,6 +1466,53 @@ def caitong_trade_password(args: argparse.Namespace) -> str | None:
     return os.environ.get(CAITONG_TRADE_PASSWORD_ENV)
 
 
+def caitong_asset_page_visible(driver: Any) -> bool:
+    return source_contains_any(driver, ["总资产(人民币)", "证券总市值", "持仓/可用"])
+
+
+def caitong_trade_login_pending(driver: Any) -> bool:
+    source = driver.page_source
+    return "委托登录" in source or ("资金账号" in source and "登录" in source)
+
+
+def wait_for_caitong_asset_page(driver: Any, timeout: float) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if caitong_asset_page_visible(driver):
+            return True
+        time.sleep(0.5)
+    return False
+
+
+def tap_caitong_login_button(driver: Any) -> dict[str, Any]:
+    buttons = [
+        rect
+        for rect in visible_element_rects(
+            driver,
+            "登录",
+            element_type="XCUIElementTypeButton",
+        )
+        if rect["x"] >= 300 and 80 <= rect["y"] <= 180
+    ]
+    if buttons:
+        rect = max(buttons, key=lambda item: item["x"])
+        x = rect["x"] + rect["width"] // 2
+        y = rect["y"] + rect["height"] // 2
+        tap_point(driver, x, y)
+        return {
+            "text": rect["text"],
+            "coordinates": {"x": x, "y": y},
+            "method": "buttonCenter",
+        }
+    x, y = tap_relative(driver, 0.91, 0.16)
+    return {
+        "text": None,
+        "coordinates": {"x": x, "y": y},
+        "method": "coordinate",
+        "note": "未找到委托登录按钮文本,已点击右上登录按钮区域",
+    }
+
+
 def login_caitong_trade(driver: Any, args: argparse.Namespace) -> list[dict[str, Any]]:
     actions: list[dict[str, Any]] = []
     dismissed = dismiss_optional_overlays(driver)
@@ -1423,13 +1534,31 @@ def login_caitong_trade(driver: Any, args: argparse.Namespace) -> list[dict[str,
         actions.append({"step": "tapTrade", "text": tapped})
     time.sleep(args.step_wait)
 
-    if source_contains_any(driver, ["总资产(人民币)", "证券总市值", "持仓/可用"]):
+    if caitong_asset_page_visible(driver):
         actions.append({"step": "tradeAlreadyLoggedIn", "status": "已在财通交易资产页"})
         return actions
 
     password = caitong_trade_password(args)
     if not password:
         raise RuntimeError(f"财通证券需要交易密码,请设置环境变量 {CAITONG_TRADE_PASSWORD_ENV}")
+
+    if not numeric_keypad_visible(driver):
+        if caitong_trade_login_pending(driver):
+            for attempt in range(1, 4):
+                login_tap = tap_caitong_login_button(driver)
+                actions.append(
+                    {
+                        "step": "openTradePasswordKeyboard",
+                        "attempt": attempt,
+                        **login_tap,
+                    }
+                )
+                time.sleep(args.step_wait)
+                if caitong_asset_page_visible(driver) or numeric_keypad_visible(driver):
+                    break
+
+    if not numeric_keypad_visible(driver):
+        raise RuntimeError("财通证券未弹出交易密码键盘")
 
     actions.append(
         {
@@ -1467,6 +1596,9 @@ def login_caitong_trade(driver: Any, args: argparse.Namespace) -> list[dict[str,
         actions.append({"step": "confirmLogin", "text": tapped})
 
     time.sleep(args.step_wait)
+    if not wait_for_caitong_asset_page(driver, min(args.nav_timeout, 12)):
+        if caitong_trade_login_pending(driver):
+            raise RuntimeError("财通证券登录后仍停留在委托登录页")
     return actions
 
 

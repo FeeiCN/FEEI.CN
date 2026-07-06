@@ -1,0 +1,217 @@
+{
+  "date": "2026-07-05",
+  "generatedAt": "2026-07-06T05:22:31.680520+00:00",
+  "top_signals": [
+    {
+      "area": "健康",
+      "summary": "睡眠仅 4.25 小时且 HRV 同步走低，今天是典型恢复不足日",
+      "evidence": [
+        "睡眠 4.25h，较近 7 日均值 7.48h 少 3.23h",
+        "HRV 36.15，较近 7 日均值 43.89 低约 17.6%"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "AI使用",
+      "summary": "OpenAI 用量跳升至近 7 日均值的 2.55 倍，工作强度显著放大",
+      "evidence": [
+        "OpenAI 当日 82.7M tokens，基线 32.5M",
+        "MiniMax 80.8k，与近 7 日持平，强度放大主要来自 OpenAI"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "area": "跨板块",
+      "summary": "高强度工作日伴随睡眠断崖式下跌，恢复与产出剪刀差需要警惕",
+      "evidence": [
+        "Git 23 次提交，多条自动化与三省吾身优化",
+        "睡眠低于 5 小时，HRV 同步下降"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "health_insights": [
+    {
+      "expert_view": "恢复与负荷分析",
+      "summary": "这更像一次恢复被严重透支的工作日，而不是单纯的低活动日",
+      "positioning": "睡眠 4.25h 处于近 7 日最低区间，HRV 36.15 也落到基线下沿，静息心率反而下降到 69，说明身体处于透支后的代偿期而非警觉期",
+      "evidence": [
+        "总睡眠 4.25h（近 7 日均值 7.48h）",
+        "HRV 36.15（近 7 日均值 43.89，比值 0.824）",
+        "步数 2906.78（近 7 日均值 4885，比值 0.595）"
+      ],
+      "means": "当日负荷与恢复之间已经出现明显失衡，身体被迫用更长睡眠债来补偿",
+      "not_means": "不能直接等同于慢性失眠或睡眠障碍，更像是单日事件性睡眠截断",
+      "uncertainty": "无日记与无 voice 记录，缺少主观体验与触发原因，机制只能停留在候选阶段",
+      "professional_suggestion": "明日优先确认这一夜是否属于偶发截断；若连续 2 天低于 5h，应主动下调 AI 工作流与 Git 自动化频率"
+    }
+  ],
+  "reading_insights": [
+    {
+      "expert_view": "学习投入与阅读行为分析",
+      "summary": "今日阅读投入缺失，但月度连续性尚未被打断",
+      "positioning": "当日 read_seconds 为 null，月度仅记录 2 天阅读、0 条笔记，与近 7 日节奏相比是明显的降温",
+      "evidence": [
+        "today.read_seconds = null",
+        "月度读过 1 本、读完 1 本、笔记 0 条",
+        "top_books 仍指向水浒解读单本"
+      ],
+      "means": "当天阅读让位给 AI 工作与数据维护，结构上偏输入停滞",
+      "not_means": "不能据此判断阅读习惯已经中断，月度样本仍有效",
+      "uncertainty": "缺失数据无法判断是“没读”还是“未同步”，需要工作流确认是否被采集",
+      "professional_suggestion": "明日先确认阅读数据是否回填，再决定是否将“单日 0 阅读”写进趋势"
+    }
+  ],
+  "finance_insights": [
+    {
+      "expert_view": "资产配置与风险暴露分析",
+      "summary": "当前更像是 HKD 深度回撤仓位待验证的阶段，而不是趋势反转",
+      "positioning": "证券账户总资产 1,563,018.4 CNH，市值占比 93%，现金仅 5.7%；HKD 仓位合计浮亏约 64,240 CNH，主要由奥克斯 -41.1%、小米 -52.5% 贡献",
+      "evidence": [
+        "奥克斯电气单只浮亏 -24,344 HKD，跨两账户重复计亏",
+        "小米集团-W 浮亏 -15,250 HKD",
+        "USD 端资讯科技 ETF +10,281、英特尔 +4,963 部分对冲"
+      ],
+      "means": "回撤集中暴露在 HKD 单只仓位上，整体资产结构并未好转",
+      "not_means": "今日 todayPlVal 全为 0，说明当日价格变动尚未结算，今天不是反弹日",
+      "uncertainty": "没有当日逐仓 P&L，无法区分“趋势延续”与“盘中止损触发”，需要次日真实收盘数据",
+      "professional_suggestion": "明日只复盘 HKD 深度回撤仓位的逻辑与集中度，不扩展新仓位假设"
+    }
+  ],
+  "ai_insights": [
+    {
+      "expert_view": "AI 生产力与工作流强度分析",
+      "summary": "OpenAI 跳升更多说明工作强度放大，但暂不能等同于产出质量",
+      "positioning": "OpenAI 当日 82.7M tokens 是近 7 日均值的 2.55 倍，而 MiniMax 80.8k 与基线持平，说明强度放大集中在 OpenAI 端，不是全平台同步",
+      "evidence": [
+        "OpenAI 当日 vs 近 7 日比值 2.546",
+        "MiniMax 当日 vs 近 7 日比值 1.004",
+        "MiniMax 连续 28 天活跃，OpenAI 连续 17 天"
+      ],
+      "means": "当天很可能存在自动化任务批量执行或长上下文任务集中跑批",
+      "not_means": "不能把高 token 直接等同于“今天工作做得更好”，仍需结合 Git 与实际产物判断",
+      "uncertainty": "无 top_models_today 数据，无法判断是模型结构变化还是缓存命中变化",
+      "professional_suggestion": "明日先确认 OpenAI 高用量的任务来源，再判断是否需要主动降速"
+    }
+  ],
+  "life_log_insights": [
+    {
+      "expert_view": "生活记录与主观体验分析",
+      "summary": "日记与语音均缺失，主观证据强度需要降权",
+      "positioning": "daily_diary.missing = true，且 voice-transcripts 不在允许文件清单中，无法用主观材料校准健康和 AI 高强度日",
+      "evidence": [
+        "daily_diary.source_files 为空",
+        "voice-transcripts 未列入允许文件清单"
+      ],
+      "means": "当天主观体验只能停留在结构化数据推测层面",
+      "not_means": "不能因此推断“情绪平稳”或“生活正常”",
+      "uncertainty": "最关键的生活材料缺失，所有跨板块归因都被限制在候选层面",
+      "professional_suggestion": "明日补写一段简短的当日日记，覆盖睡眠与高强度工作的主观感受"
+    }
+  ],
+  "environment_mobility_insights": [
+    {
+      "expert_view": "生活环境与出行节奏分析",
+      "summary": "当日仅有一次下车切片，移动信号非常稀薄",
+      "positioning": "drive 仅记录 14:13 在杭州余杭区五常大道下车一次，trip 数组为空；天气数据来自东京而非杭州，存在数据归属错位",
+      "evidence": [
+        "drive.event_count = 1，仅下车事件",
+        "trips = []，未形成完整出行链",
+        "weather.area = Tokyo，但 drive 在杭州"
+      ],
+      "means": "当天出行结构极简，可能主要停留在固定地点",
+      "not_means": "不能据此判断全天无移动，更可能是行车采集未完整覆盖",
+      "uncertainty": "天气与行车地理不一致，说明采集端存在地区切换，背景变量只能作为参考",
+      "professional_suggestion": "明日确认行车采集是否覆盖完整工作日移动，避免长期以“单点切片”判断节奏"
+    }
+  ],
+  "git_insights": [
+    {
+      "expert_view": "工程推进与知识沉淀分析",
+      "summary": "当日推进集中在自动化与三省吾身可视化改造，不是内容产出日",
+      "positioning": "23 次提交中以 [auto] 数据同步占多数，真正工程性提交包括三省吾身看板优化、iOS 资产自动化采集、财通数据接入、推送规则更新",
+      "evidence": [
+        "ad4c7814 优化三省吾身财务与健康看板",
+        "66f14e1b 接入财通投资数据",
+        "94a8750f 添加 iOS 资产自动化采集"
+      ],
+      "means": "工作流本身在被持续加固，但内容/分析产出没有对应提交",
+      "not_means": "不能把 commit 数量等同于产出质量，自动同步不应被高估",
+      "uncertainty": "没有 diff 摘要，无法判断三省吾身看板优化是否完成",
+      "professional_suggestion": "明日只跟踪 1 项看板优化效果，不扩展新功能"
+    }
+  ],
+  "cross_domain_insights": [
+    {
+      "summary": "高 OpenAI 用量 + 23 次 Git 提交 + 睡眠 4.25h，组合提示当日把恢复让位给了工作流",
+      "evidence": [
+        "OpenAI 比值 2.546",
+        "Git 23 commits",
+        "睡眠 4.25h"
+      ],
+      "uncertainty": "缺少日记与 diff，无法确定是必要推进还是被低价值事务劫持"
+    },
+    {
+      "summary": "HKD 仓位深度回撤与 OpenAI 高强度同时出现，说明回撤修复和工程自动化都在并行推进",
+      "evidence": [
+        "HKD 浮亏约 64k CNH",
+        "OpenAI 跳升至 82.7M tokens"
+      ],
+      "uncertainty": "不能把“并行推进”写成因果，回撤修复未必由工作强度带来"
+    }
+  ],
+  "data_status": [
+    {
+      "area": "健康",
+      "status": "完整",
+      "detail": "睡眠、HRV、体重、静息心率与活动量均覆盖目标日"
+    },
+    {
+      "area": "阅读",
+      "status": "延迟",
+      "detail": "当日 read_seconds 为 null，可能尚未回填"
+    },
+    {
+      "area": "财务",
+      "status": "切片",
+      "detail": "todayPlVal 全为 0，当日盈亏尚未结算"
+    },
+    {
+      "area": "AI使用",
+      "status": "完整",
+      "detail": "MiniMax 与 OpenAI 数据齐全，Anthropic 无有效样本"
+    },
+    {
+      "area": "日记",
+      "status": "不可用",
+      "detail": "daily_diary.missing = true"
+    },
+    {
+      "area": "天气",
+      "status": "完整",
+      "detail": "目标日数据存在，但与行车地理不一致"
+    },
+    {
+      "area": "行车",
+      "status": "切片",
+      "detail": "仅 1 条下车事件，trip 为空"
+    },
+    {
+      "area": "Git",
+      "status": "完整",
+      "detail": "目标日内 23 次提交可见"
+    }
+  ],
+  "follow_ups": [
+    "明日动作：23:30 前上床睡觉，先把单日睡眠截断确认是偶发",
+    "明日动作：只复盘 HKD 深度回撤仓位的逻辑与集中度，不扩展新仓位假设",
+    "观察项：确认 OpenAI 当日高用量来源与阅读数据是否回填"
+  ],
+  "quality_self_check": {
+    "not_number_repetition": true,
+    "has_cross_domain": true,
+    "states_uncertainty": true,
+    "has_positioning": true,
+    "has_expert_judgment": true
+  }
+}

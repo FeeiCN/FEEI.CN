@@ -430,6 +430,24 @@ def create_driver(args: argparse.Namespace, udid: str):
     return webdriver.Remote(args.appium_url, options=options)
 
 
+def terminate_app_safely(driver: Any, bundle_id: str, label: str) -> bool:
+    try:
+        if driver.query_app_state(bundle_id) <= 1:
+            return True
+        driver.terminate_app(bundle_id)
+    except Exception as error:
+        print(f"{label}关闭失败: {error}", file=sys.stderr, flush=True)
+        return False
+    print(f"{label}已关闭", flush=True)
+    return True
+
+
+def restart_app(driver: Any, bundle_id: str, label: str, wait_seconds: float) -> None:
+    terminate_app_safely(driver, bundle_id, label)
+    driver.activate_app(bundle_id)
+    time.sleep(wait_seconds)
+
+
 def capture_artifacts(
     driver: Any,
     out_dir: Path,
@@ -461,6 +479,48 @@ def capture_artifacts(
         "screenshot": str(screenshot_path),
         "metadata": str(metadata_path),
     }
+
+
+def source_has_alipay_total_asset_content(page_source: str) -> bool:
+    return any(
+        text in page_source
+        for text in (
+            "总资产：",
+            "我的资产",
+            "昨日收益",
+            "今日收益",
+            "三笔钱分布",
+            "理财资产",
+            "余额宝",
+        )
+    )
+
+
+def capture_alipay_total_asset_artifacts(
+    driver: Any,
+    out_dir: Path,
+    session_id: str,
+) -> list[dict[str, str]]:
+    files: list[dict[str, str]] = []
+    intervals = [0.0, 0.2, 0.3, 0.5, 0.8, 1.2]
+    for index, interval in enumerate(intervals, start=1):
+        if interval:
+            time.sleep(interval)
+        file_info = capture_artifacts(
+            driver,
+            out_dir,
+            session_id,
+            f"total-assets-{index:02d}",
+            {"step": "totalAssets", "sample": index},
+        )
+        files.append(file_info)
+        page_source = Path(file_info["pageSource"]).read_text(encoding="utf-8")
+        daily_profit = extract_alipay_daily_profit_from_source(page_source)
+        if daily_profit and daily_profit.get("name") == "昨日收益":
+            break
+        if source_has_alipay_total_asset_content(page_source) and index >= 3:
+            break
+    return files
 
 
 def page_signature(page_source: str) -> str:
@@ -605,6 +665,45 @@ def extract_static_text_rows(page_source: str) -> list[dict[str, Any]]:
                 "width": width,
                 "height": height,
                 "visible": attrs.get("visible") == "true",
+            }
+        )
+    return rows
+
+
+def extract_text_rows(page_source: str) -> list[dict[str, Any]]:
+    try:
+        root = ElementTree.fromstring(page_source.encode("utf-8"))
+    except ElementTree.ParseError:
+        return []
+
+    rows: list[dict[str, Any]] = []
+    seen: set[tuple[str, int, int]] = set()
+    for element in root.iter():
+        attrs = element.attrib
+        text = attrs.get("value") or attrs.get("name") or attrs.get("label") or ""
+        text = text.strip()
+        if not text:
+            continue
+        try:
+            x = int(float(attrs.get("x", "0")))
+            y = int(float(attrs.get("y", "0")))
+            width = int(float(attrs.get("width", "0")))
+            height = int(float(attrs.get("height", "0")))
+        except ValueError:
+            continue
+        key = (text, x, y)
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append(
+            {
+                "text": text,
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height,
+                "visible": attrs.get("visible") == "true",
+                "type": attrs.get("type", ""),
             }
         )
     return rows
@@ -799,6 +898,118 @@ def extract_holding_records(files: list[dict[str, str]]) -> list[dict[str, Any]]
     return list(records_by_key.values())
 
 
+def extract_alipay_daily_profit_from_source(page_source: str) -> dict[str, Any] | None:
+    rows = [
+        row
+        for row in extract_text_rows(page_source)
+        if row["text"]
+    ]
+    label_rows = [
+        row
+        for row in rows
+        if any(label in row["text"] for label in ("昨日收益", "今日收益"))
+    ]
+    for label_row in sorted(
+        label_rows,
+        key=lambda row: (
+            0 if ("昨日收益" in row["text"] and row["visible"]) else 1,
+            0 if "昨日收益" in row["text"] else 1,
+            row["y"],
+            row["x"],
+        ),
+    ):
+        inline_match = re.search(r"(昨日收益|今日收益)[:：]\s*([+-]?\d[\d,]*(?:\.\d+)?)\s*元?", label_row["text"])
+        if not inline_match:
+            continue
+        if label_row["y"] > 600:
+            continue
+        amount_text = inline_match.group(2)
+        if not amount_text.startswith(("+", "-")):
+            amount_text = f"+{amount_text}"
+        return {
+            "name": inline_match.group(1),
+            "amountText": amount_text,
+            "amount": parse_amount(amount_text),
+            "source": "inlineLabel",
+            "frame": {
+                "x": label_row["x"],
+                "y": label_row["y"],
+                "width": label_row["width"],
+                "height": label_row["height"],
+            },
+        }
+    for label_row in sorted(label_rows, key=lambda row: (row["y"], row["x"])):
+        if "更新" in label_row["text"]:
+            continue
+        candidates = [
+            row
+            for row in rows
+            if row is not label_row
+            and row["visible"]
+            and abs(row["x"] - label_row["x"]) <= 90
+            and 12 <= row["y"] - label_row["y"] <= 90
+            and is_amount_text(row["text"])
+        ]
+        if not candidates:
+            continue
+        value_row = min(candidates, key=lambda row: (row["y"], abs(row["x"] - label_row["x"])))
+        return {
+            "name": label_row["text"],
+            "amountText": value_row["text"],
+            "amount": parse_amount(value_row["text"]),
+            "source": "labelBelow",
+            "frame": {
+                "x": value_row["x"],
+                "y": value_row["y"],
+                "width": value_row["width"],
+                "height": value_row["height"],
+            },
+        }
+    return None
+
+
+def extract_alipay_daily_profit(files: list[dict[str, str]]) -> dict[str, Any] | None:
+    fallback: dict[str, Any] | None = None
+    for file_info in files:
+        source_path = file_info.get("pageSource")
+        if not source_path:
+            continue
+        path = Path(source_path)
+        if not path.exists():
+            continue
+        record = extract_alipay_daily_profit_from_source(path.read_text(encoding="utf-8"))
+        if not record:
+            continue
+        if record.get("name") == "昨日收益":
+            return record
+        if fallback is None:
+            fallback = record
+    asset_records = extract_asset_records(files)
+    yesterday_profits = [
+        record["yesterdayProfit"]
+        for record in asset_records
+        if isinstance(record.get("yesterdayProfit"), (int, float))
+    ]
+    if yesterday_profits:
+        amount = round(sum(yesterday_profits), 2)
+        return {
+            "name": "昨日收益",
+            "amountText": f"{amount:+.2f}",
+            "amount": amount,
+            "source": "assetDistributionSum",
+            "components": [
+                {
+                    "name": record.get("name"),
+                    "amountText": record.get("yesterdayProfitText"),
+                    "amount": record.get("yesterdayProfit"),
+                }
+                for record in asset_records
+                if isinstance(record.get("yesterdayProfit"), (int, float))
+            ],
+        }
+    return fallback
+
+
 def normalize_label(text: str) -> str:
     return re.sub(r"\s+", "", text).replace("：", ":")
 
@@ -834,7 +1045,7 @@ def is_caitong_amount_text(value: str) -> bool:
 
 
 def is_caitong_value_text(value: str) -> bool:
-    return is_caitong_amount_text(value) or bool(re.fullmatch(r"-?\d[\d,]*(?:\.\d+)?%", value.strip()))
+    return is_caitong_amount_text(value) or bool(re.fullmatch(r"[+-]?\d[\d,]*(?:\.\d+)?%", value.strip()))
 
 
 def find_nearby_value(
@@ -898,7 +1109,7 @@ def extract_caitong_asset_records_from_source(page_source: str) -> list[dict[str
         label_rows = [
             row
             for row in rows
-            if 200 <= row["y"] <= 460
+            if 140 <= row["y"] <= 460
             and normalize_label(row["text"]) in normalized_labels
         ]
         for label_row in label_rows:
@@ -1016,6 +1227,11 @@ def extract_caitong_position_records_from_source(page_source: str) -> list[dict[
             for item in group
             if is_caitong_amount_text(item["text"])
         ]
+        value_rows = [
+            item
+            for item in group
+            if is_caitong_value_text(item["text"])
+        ]
         if len(amount_rows) < 2:
             continue
         code_rows = [item for item in group if re.fullmatch(r"\d{5,6}", item["text"])]
@@ -1026,10 +1242,12 @@ def extract_caitong_position_records_from_source(page_source: str) -> list[dict[
             max_x: int,
             min_dy: int,
             max_dy: int,
+            candidates_source: list[dict[str, Any]] | None = None,
         ) -> dict[str, Any] | None:
+            source_rows = candidates_source or amount_rows
             candidates = [
                 item
-                for item in amount_rows
+                for item in source_rows
                 if min_x <= item["x"] <= max_x
                 and min_dy <= item["y"] - row["y"] <= max_dy
             ]
@@ -1040,7 +1258,7 @@ def extract_caitong_position_records_from_source(page_source: str) -> list[dict[
         field_rows = {
             "marketValue": value_in_column(10, 110, 16, 45),
             "profit": value_in_column(110, 215, -8, 28),
-            "profitRate": value_in_column(110, 215, 20, 60),
+            "profitRate": value_in_column(110, 215, 20, 60, value_rows),
             "quantity": value_in_column(215, 320, -8, 28),
             "available": value_in_column(215, 320, 20, 60),
             "cost": value_in_column(315, 420, -8, 28),
@@ -1072,7 +1290,10 @@ def extract_caitong_position_records_from_source(page_source: str) -> list[dict[
                 continue
             text_value = value_row["text"]
             record[f"{field}Text"] = text_value
-            record[field] = parse_money_text(text_value)
+            if field == "profitRate":
+                record[field] = parse_percent_text(text_value)
+            else:
+                record[field] = parse_money_text(text_value)
         if "marketValue" in record:
             record["amountText"] = record["marketValueText"]
             record["amount"] = record["marketValue"]
@@ -1135,8 +1356,9 @@ def build_invest_export(
     captured_at: str | None,
     asset_records: list[dict[str, Any]],
     holding_records: list[dict[str, Any]],
+    daily_profit: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    payload = {
         "capturedAt": captured_at,
         "source": "alipay",
         "sourceSummary": str(summary_path),
@@ -1148,6 +1370,9 @@ def build_invest_export(
             2,
         ),
     }
+    if daily_profit:
+        payload["dailyProfit"] = daily_profit
+    return payload
 
 
 def write_invest_export(
@@ -1156,6 +1381,7 @@ def write_invest_export(
     captured_at: str | None,
     asset_records: list[dict[str, Any]],
     holding_records: list[dict[str, Any]],
+    daily_profit: dict[str, Any] | None = None,
 ) -> Path | None:
     if not output_path:
         return None
@@ -1168,6 +1394,7 @@ def write_invest_export(
             captured_at,
             asset_records,
             holding_records,
+            daily_profit,
         ),
     )
     update_invest_manifest(resolved_output)
@@ -1647,7 +1874,7 @@ def run_caitong_assets_flow(args: argparse.Namespace, driver: Any | None = None)
             driver = create_driver(args, udid)
         else:
             driver.activate_app(args.bundle_id)
-        time.sleep(args.wait)
+        restart_app(driver, args.bundle_id, "财通证券", args.wait)
 
         files.append(
             capture_artifacts(
@@ -1753,6 +1980,8 @@ def run_caitong_assets_flow(args: argparse.Namespace, driver: Any | None = None)
         raise RuntimeError(f"财通证券流程中断: {error}; 错误现场: {error_path}") from error
     finally:
         args.bundle_id = original_bundle_id
+        if driver is not None:
+            terminate_app_safely(driver, CAITONG_BUNDLE_ID, "财通证券")
         if own_driver and driver is not None:
             driver.quit()
 
@@ -1804,7 +2033,7 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
     stop_reason = ""
 
     try:
-        time.sleep(args.wait)
+        restart_app(driver, args.bundle_id, "支付宝", args.wait)
         dismissed = dismiss_optional_overlays(driver)
         if dismissed:
             navigation.append({"step": "dismissOverlays", "texts": dismissed})
@@ -1872,8 +2101,9 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
                     raise RuntimeError(stop_reason)
                 navigation.append({"step": "tapTotalAssets", "text": tapped})
                 print(f"已点击资产入口: {tapped}", flush=True)
-                time.sleep(args.step_wait)
+                time.sleep(min(args.step_wait, 0.6))
 
+            files.extend(capture_alipay_total_asset_artifacts(driver, out_dir, session_id))
             total_amount_tap = tap_alipay_total_asset_number(driver)
             navigation.append({"step": "tapTotalAssetNumber", **total_amount_tap})
             print(f"已点击总资产数字区域: {total_amount_tap}", flush=True)
@@ -1892,6 +2122,7 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
         captured_at = datetime.now().astimezone().isoformat(timespec="seconds")
         asset_records = extract_asset_records(files)
         holding_records = extract_holding_records(files)
+        daily_profit = extract_alipay_daily_profit(files)
         if not holding_records:
             stop_reason = "支付宝未提取到持仓记录"
             raise RuntimeError(stop_reason)
@@ -1905,6 +2136,7 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
                 "bundleId": args.bundle_id,
                 "navigation": navigation,
                 "stopReason": stop_reason,
+                "dailyProfit": daily_profit,
                 "assetRecords": asset_records,
                 "holdingRecords": holding_records,
                 "files": files,
@@ -1916,12 +2148,14 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
             captured_at,
             asset_records,
             holding_records,
+            daily_profit,
         )
         print(f"支付宝理财持有明细截图: {out_dir}")
         print(f"汇总: {summary_path}")
         if invest_output:
             print(f"投资数据: {invest_output}")
         print(f"停止原因: {stop_reason}")
+        terminate_app_safely(driver, ALIPAY_BUNDLE_ID, "支付宝")
         if args.sync_caitong:
             try:
                 args.caitong_output = args.caitong_output or caitong_output_path_for_alipay_output(invest_output)
@@ -1935,6 +2169,7 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
                         "bundleId": args.bundle_id,
                         "navigation": navigation,
                         "stopReason": stop_reason,
+                        "dailyProfit": daily_profit,
                         "assetRecords": asset_records,
                         "holdingRecords": holding_records,
                         "files": files,
@@ -1950,6 +2185,7 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
                         "bundleId": args.bundle_id,
                         "navigation": navigation,
                         "stopReason": stop_reason,
+                        "dailyProfit": daily_profit,
                         "assetRecords": asset_records,
                         "holdingRecords": holding_records,
                         "files": files,
@@ -1969,6 +2205,7 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
                     "bundleId": args.bundle_id,
                     "navigation": navigation,
                     "stopReason": stop_reason,
+                    "dailyProfit": daily_profit,
                     "assetRecords": asset_records,
                     "holdingRecords": holding_records,
                     "files": files,
@@ -2001,6 +2238,8 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
         print(f"错误现场: {error_path}", file=sys.stderr)
         return 1
     finally:
+        terminate_app_safely(driver, ALIPAY_BUNDLE_ID, "支付宝")
+        terminate_app_safely(driver, CAITONG_BUNDLE_ID, "财通证券")
         driver.quit()
 
 
@@ -2017,9 +2256,11 @@ def extract_existing_summary(args: argparse.Namespace) -> int:
     )
     if is_caitong_summary:
         data["assetRecords"], data["holdingRecords"] = extract_caitong_records(files)
+        data["dailyProfit"] = None
     else:
         data["assetRecords"] = extract_asset_records(files)
         data["holdingRecords"] = extract_holding_records(files)
+        data["dailyProfit"] = extract_alipay_daily_profit(files)
     data["extractedAt"] = datetime.now().astimezone().isoformat(timespec="seconds")
     write_json(summary_path, data)
     if is_caitong_summary:
@@ -2037,6 +2278,7 @@ def extract_existing_summary(args: argparse.Namespace) -> int:
             data.get("capturedAt"),
             data["assetRecords"],
             data["holdingRecords"],
+            data.get("dailyProfit"),
         )
     print(f"已更新汇总: {summary_path}")
     if invest_output:

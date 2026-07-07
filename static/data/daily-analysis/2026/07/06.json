@@ -1,0 +1,206 @@
+{
+  "date": "2026-07-06",
+  "generatedAt": "2026-07-07T05:04:20.371960+00:00",
+  "top_signals": [
+    {
+      "area": "健康",
+      "summary": "恢复与负荷双正向：睡眠 7.8h、HRV 49.9、静息心率 67 同步优于 7 日均值",
+      "evidence": [
+        "睡眠 +0.62h vs 7d",
+        "HRV +6.18 vs 7d",
+        "RHR -5.29 vs 7d"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "AI使用",
+      "summary": "OpenAI 骤降至 7 日均值 14.5%，MiniMax 略升至 120.6%，更像任务迁移",
+      "evidence": [
+        "OpenAI today_vs_7d_avg_ratio=0.145",
+        "MiniMax today_vs_7d_avg_ratio=1.206"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "area": "财务",
+      "summary": "HKD 集中仓位深亏未变（奥克斯 -40.4%、小米 -51.9%），当日 USD 回补抵消",
+      "evidence": [
+        "汇总 HKD 浮亏 -63228.7",
+        "USD 当日 +4483.8"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "health_insights": [
+    {
+      "expert_view": "恢复与负荷分析",
+      "summary": "这是一次恢复指标与活动量同向走强的少有组合，不是单点偶然。",
+      "positioning": "相对 7 日基线处于更优区间：睡眠、HRV、静息心率三条线同时向好。",
+      "evidence": [
+        "睡眠 7.8h（+0.62h）",
+        "HRV 49.9（+6.18）",
+        "RHR 67（-5.29）",
+        "活动量与锻炼时长同步抬升"
+      ],
+      "means": "身体已进入一次较完整的恢复窗口，且并未出现恢复日常见的活动骤降。",
+      "not_means": "不能据此推断长期训练状态或健康趋势反转，单日组合存在切片解释。",
+      "uncertainty": "天气源指向东京而行车在杭州，户外环境与地理位置无法交叉验证。",
+      "professional_suggestion": "观察接下来 2-3 天 RHR/HRV 是否延续上行；若回落则本次更倾向一次性恢复。"
+    }
+  ],
+  "reading_insights": [
+    {
+      "expert_view": "学习投入与阅读行为分析",
+      "summary": "当日阅读断档，主题集中在文学/个人成长，本月仅有 2 天阅读且 0 笔记。",
+      "positioning": "相对前一日下降 77.3%，相对近 7 日已显著降温，但月度连续性尚未被打断。",
+      "evidence": [
+        "today.read_seconds=null",
+        "compare_to_previous_ratio=-0.773",
+        "月笔记=0"
+      ],
+      "means": "知识输入端进入短期冷却，可能与高活动日/工程任务挤占相关。",
+      "not_means": "不构成月度阅读习惯断裂，也不能据此判定输入质量下降。",
+      "uncertainty": "今日阅读字段为空是否同步延迟无法判断，缺笔记数据可能掩盖轻度输入。",
+      "professional_suggestion": "明日观察：若连续 3 天零阅读，需安排至少 30 分钟深度阅读重建节奏。"
+    }
+  ],
+  "finance_insights": [
+    {
+      "expert_view": "资产配置与风险暴露分析",
+      "summary": "总资产小幅回撤主要由 HKD 集中持仓浮亏结构性问题延续所致，USD 仓位提供当日正贡献。",
+      "positioning": "FeeiCN2 占当日回撤 57.9%，FeeiCN 占 42.1%，两账户同步暴露同一 HKD 风险源。",
+      "evidence": [
+        "总资产 -314.1",
+        "USD 当日 +4483.8",
+        "HKD 当日 0 但累计浮亏 -63228.7",
+        "奥克斯 -40.4%、小米 -51.9%"
+      ],
+      "means": "这是结构性集中风险在波动中的持续释放，而非新风险。",
+      "not_means": "今日 -314 的小幅变动不能说明风险下降，也不构成趋势反转信号。",
+      "uncertainty": "奥克斯、小米同日 HKD 今日盈亏为 0，可能存在数据切片或停牌/未成交情况。",
+      "professional_suggestion": "明日动作：仅复盘 HKD 集中仓位逻辑与下行容忍度，不扩展任何新仓位假设。"
+    }
+  ],
+  "ai_insights": [
+    {
+      "expert_view": "AI 生产力与工作流强度分析",
+      "summary": "OpenAI 骤降更像是任务类型或调用源迁移，而非生产力整体下行。",
+      "positioning": "OpenAI 跌至 7 日均值 14.5%，MiniMax 升至 120.6%，Anthropic 当日无数据。",
+      "evidence": [
+        "OpenAI today_vs_7d_avg_ratio=0.145",
+        "MiniMax 连续 29 天",
+        "Anthropic 全部字段为 null"
+      ],
+      "means": "高 token 强度的工作流没有消失，但调用主力平台发生了切换或限流。",
+      "not_means": "不能据此判定今天工作量下降，更不能等同于产出下降。",
+      "uncertainty": "OpenAI 跌幅过大，需先排除同步异常或额度/限流触发。",
+      "professional_suggestion": "明日动作：先验证 OpenAI 调用端是否同步异常，再判断是否需要连续 2 天观察。"
+    }
+  ],
+  "life_log_insights": [
+    {
+      "expert_view": "生活记录与主观体验分析",
+      "summary": "当日日记不可用，主观体验数据缺口，建议降权该板块判断。",
+      "evidence": [
+        "daily_diary.missing=true"
+      ],
+      "means": "无法用第一手材料补足健康、活动与 AI 平台切换背后的人因解释。",
+      "not_means": "不构成对当日生活质量的否定。",
+      "uncertainty": "完全缺失，任何归因都属推测。",
+      "professional_suggestion": "明日观察：日记恢复后再补充主观侧校准。"
+    }
+  ],
+  "environment_mobility_insights": [
+    {
+      "expert_view": "生活环境与出行节奏分析",
+      "summary": "当日主要移动切片为早晨送托+西溪路短停、晚间蚂蚁 A 空间返回；天气源疑似错配。",
+      "evidence": [
+        "09:57-10:19 精英托育→西溪路571号",
+        "20:45 蚂蚁 A 空间下车",
+        "天气源：东京 Kohinata"
+      ],
+      "means": "白天以家庭/通勤为主，晚间有工作场景延伸；天气与生活地理位置不一致。",
+      "not_means": "天气少云 21°C 不能直接解释杭州当日体感或户外条件。",
+      "uncertainty": "天气数据指向东京而行车在杭州，源地址疑似错配。",
+      "professional_suggestion": "明日动作：确认 weather 采集源是否指向杭州本地，否则在 data_status 标注错配。"
+    }
+  ],
+  "git_insights": [
+    {
+      "expert_view": "工程推进与知识沉淀分析",
+      "summary": "30 次提交几乎全部是自动采集流水，可见的手动推进集中在天气接入与 iOS 任务拆分。",
+      "evidence": [
+        "commit_count=30",
+        "主题含 27 条 [auto] 同步",
+        "手动：保存天气数据、拆分 iOS 资产采集任务"
+      ],
+      "means": "工程侧的可见推进痕迹集中在数据接入与自动化稳定性，而非新功能或内容创作。",
+      "not_means": "提交数量不能等同于当日产出质量。",
+      "uncertainty": "无文档/写作类提交，知识沉淀是否真正发生需另行验证。",
+      "professional_suggestion": "明日观察：若连续多日无内容类提交，需补充写作或反思类动作。"
+    }
+  ],
+  "cross_domain_insights": [
+    {
+      "summary": "健康恢复与活动同步上行，但阅读/AI(OpenAI)/日记同侧降温，说明输入与反思端被工程与生活事务挤占。",
+      "evidence": [
+        "HRV/睡眠正向",
+        "阅读当日无",
+        "OpenAI 14.5%"
+      ],
+      "uncertainty": "日记缺失削弱因果判断强度。"
+    },
+    {
+      "summary": "天气源指向东京、行车指向杭州，采集源疑似错配，需先校验而非据此做环境归因。",
+      "evidence": [
+        "weather.area=Kohinata Tokyo",
+        "drive.address=杭州余杭区/西湖区"
+      ],
+      "uncertainty": "weather 可能为历史/默认地点，需核对采集脚本定位参数。"
+    }
+  ],
+  "data_status": [
+    {
+      "area": "日记",
+      "status": "不可用",
+      "detail": "daily_diary.missing=true，无主观一手材料"
+    },
+    {
+      "area": "阅读",
+      "status": "切片",
+      "detail": "当日 read_seconds 为 null，无法确认是零还是同步延迟"
+    },
+    {
+      "area": "Anthropic",
+      "status": "不可用",
+      "detail": "所有字段为 null，usage_summary 未覆盖目标日期"
+    },
+    {
+      "area": "天气",
+      "status": "错配",
+      "detail": "源指向东京 Kohinata，行车记录显示杭州，需校验采集源"
+    },
+    {
+      "area": "HK 打新",
+      "status": "完整",
+      "detail": "总记录 58 条、总盈亏 208997 HKD，目标日无新增"
+    },
+    {
+      "area": "行车",
+      "status": "完整",
+      "detail": "11 个事件 2 个有效出行，无未配对事件"
+    }
+  ],
+  "follow_ups": [
+    "**明日动作**：仅复盘 HKD 集中持仓（奥克斯 -40.4%、小米 -51.9%）逻辑与下行容忍度，不扩展任何新仓位假设。",
+    "**明日动作**：先验证 OpenAI 调用端是否同步异常，再判断是否需要连续 2 天低位观察。",
+    "**观察项**：若阅读连续 3 天零输入，安排 30 分钟深度阅读重建节奏；若天气源仍指向东京，修复采集脚本定位参数。"
+  ],
+  "quality_self_check": {
+    "not_number_repetition": true,
+    "has_cross_domain": true,
+    "states_uncertainty": true,
+    "has_positioning": true,
+    "has_expert_judgment": true
+  }
+}

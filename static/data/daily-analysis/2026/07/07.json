@@ -1,0 +1,187 @@
+{
+  "date": "2026-07-07",
+  "generatedAt": "2026-07-08T04:27:56.730311+00:00",
+  "top_signals": [
+    {
+      "area": "健康",
+      "summary": "恢复日特征明显：睡眠与HRV同步走强",
+      "evidence": [
+        "睡眠8.74h高于7日均1.41h",
+        "HRV 49.87ms较7日均+14.8%"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "AI使用",
+      "summary": "OpenAI腰斩而MiniMax走高，平台结构迁移",
+      "evidence": [
+        "OpenAI 18.9M tokens为7日均42.1%",
+        "MiniMax 118.9k为7日均142.2%"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "area": "Git",
+      "summary": "28次提交几乎全部为自动化同步，工程推进空心",
+      "evidence": [
+        "28 commits中仅1条手动bug修复",
+        "其余皆为[auto]数据同步"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "health_insights": [
+    {
+      "expert_view": "恢复与负荷分析",
+      "summary": "今日是明确的恢复日，自主神经修复信号强但训练负荷并未同步走高。",
+      "positioning": "相对近7日基线：睡眠+1.41小时、HRV+14.8%、活动能耗+53.7%，三项恢复指标同向上行。",
+      "evidence": [
+        "睡眠8.74h vs 7日均7.33h",
+        "HRV 49.87ms vs 7日均43.44ms",
+        "步数3824、活动能耗1409.1kJ"
+      ],
+      "means": "身体处于回血阶段，副交感张力走强，与静息心率72(略低于7日均)方向一致。",
+      "not_means": "不等于今日有显著训练负荷，也不等于长期恢复趋势已确认，仅为单日切片。",
+      "uncertainty": "distance_km=0与3824步、22分钟运动不一致，疑似Apple Watch距离字段未刷新，不影响恢复判断但影响活动量精度。",
+      "professional_suggestion": "今明两晚维持7.5h+睡眠，连续2天HRV保持在48ms以上再考虑恢复中高强度训练。"
+    }
+  ],
+  "reading_insights": [
+    {
+      "expert_view": "学习投入与阅读行为分析",
+      "summary": "当日阅读归零，与近期节奏形成断裂，输入/输出本就失衡。",
+      "positioning": "相对昨日-71.7%，月度阅读日仅3天、笔记仍为0条，当日为空读日。",
+      "evidence": [
+        "今日read_seconds为null",
+        "vs_7d_avg_ratio为null、baseline sample为0"
+      ],
+      "means": "可能与恢复日让位有关，也可能暴露阅读本身缺乏最低保底机制。",
+      "not_means": "不能直接归因为“没时间”，月度0笔记说明输出习惯本就比输入更弱。",
+      "uncertainty": "微信读书当日划线是否落库未知，无法判断是否有短时阅读未计入。",
+      "professional_suggestion": "明日安排至少10分钟单主题阅读并写1条短笔记，先打破月度0笔记惯性。"
+    }
+  ],
+  "finance_insights": [
+    {
+      "expert_view": "资产配置与风险暴露分析",
+      "summary": "总资产上涨由US科技ETF反弹带动，HKD深套仓位未参与修复，更像反弹而非趋势反转。",
+      "positioning": "当日+33,529.6 CNH(+2.1%)，FeeiCN贡献59.4%、FeeiCN2贡献40.6%。",
+      "evidence": [
+        "资讯科技ETF +9905浮盈",
+        "标普500ETF +2883",
+        "奥克斯电气仍-24412、小米仍-15166"
+      ],
+      "means": "修复集中在US科技板块，仓位结构未发生调整。",
+      "not_means": "不等于HKD风险已解除，也不等于US科技趋势反转已确立。",
+      "uncertainty": "支付宝侧华泰保兴债券占比45.48%，单一债性仓位集中度高且无对冲；当日是否调仓未知。",
+      "professional_suggestion": "继续观察HKD深套仓位(奥克斯+小米合计-39,578)是否仍维持“不动作”判断，不因单日反弹扩展新仓位假设。"
+    }
+  ],
+  "ai_insights": [
+    {
+      "expert_view": "AI 生产力与工作流强度分析",
+      "summary": "两平台出现明显分化，OpenAI腰斩而MiniMax走高，不能直接说整体工作强度下降。",
+      "positioning": "OpenAI为7日均的42.1%，MiniMax为7日均的142.2%，Anthropic无更新。",
+      "evidence": [
+        "OpenAI 18,918,126 tokens",
+        "MiniMax 118,928 tokens",
+        "Anthropic 自2026-06-11后未更新"
+      ],
+      "means": "高token任务可能从OpenAI迁移至MiniMax，或两类任务量本身就在收缩。",
+      "not_means": "不等同于今日整体AI产出更低，因Anthropic缺失，无法做三平台完整归因。",
+      "uncertainty": "三平台中Anthropic长时间未同步，call pattern与模型结构未知，无法定性“任务类型变化”。",
+      "professional_suggestion": "明日先确认Anthropic数据是否恢复再做归因，否则只观察OpenAI/MiniMax相对结构即可。"
+    }
+  ],
+  "life_log_insights": [],
+  "environment_mobility_insights": [
+    {
+      "expert_view": "生活环境与出行节奏分析",
+      "summary": "当日移动极少，疑似西山游步道一次户外步行，但天气数据归属地疑似错位。",
+      "positioning": "6个行车事件中5个时长<30秒，仅09:51在西山游步道下车为可能的真实步行切片。",
+      "evidence": [
+        "09:51 下车 西湖区西山游步道",
+        "21:02 上车/下车 西溪路571号(<30秒)"
+      ],
+      "means": "非远距离出行日，但存在一次户外活动窗口，可解释Apple Watch 22分钟运动的部分来源。",
+      "not_means": "不能据行车记录得出“今日无活动”，因为运动数据已独立记录。",
+      "uncertainty": "天气数据area为东京Ichibancho，与杭州行车记录不在同一坐标，地理位置疑似错位或为默认值，降低户外天气与活动关联的解释力。",
+      "professional_suggestion": "明日校验天气数据源地理位置配置，确认是否回退到默认城市。"
+    }
+  ],
+  "git_insights": [
+    {
+      "expert_view": "工程推进与知识沉淀分析",
+      "summary": "28次提交几乎全部为自动化数据同步，工程推进是数据流水线而非功能/写作产出。",
+      "positioning": "当日无功能开发、无人工写作commit；唯一手动提交为修复iOS资产日收益解析bug。",
+      "evidence": [
+        "commit_count=28",
+        "1条手动commit：修复 iOS 资产采集日收益解析",
+        "其余皆为[auto]数据同步"
+      ],
+      "means": "这是一个数据维护日，不是产出日，自动化流水本身也是产品但不应被计为内容产出。",
+      "not_means": "不等于今天没工作，但也不能用commit数量论证工作质量。",
+      "uncertainty": "自动化commit数量大，可能掩盖真实手动工作，需结合diff内容核实是否被自动提交覆盖。",
+      "professional_suggestion": "明日争取至少1条非自动化提交(功能/写作/分析)，避免工程输出空心化。"
+    }
+  ],
+  "cross_domain_insights": [
+    {
+      "summary": "恢复与产出背离：健康恢复信号最强，但阅读归零、AI OpenAI腰斩、Git仅自动化同步，这是“修复日”而非“产出日”的典型组合。",
+      "evidence": [
+        "睡眠8.74h+HRV+14.8%",
+        "阅读read_seconds为null",
+        "OpenAI为7日均42.1%"
+      ],
+      "uncertainty": "若日记可获取，可能补足主观层面是否主动选择“修复日”还是被动进入低产。"
+    },
+    {
+      "summary": "跨源数据完整性下降：天气归属东京、行车在杭州、日记缺失、Anthropic延迟，跨板块解释力被数据源打折，需要先校准数据源再做归因。",
+      "evidence": [
+        "weather.area=东京Ichibancho",
+        "drive地址全部在杭州西湖/余杭",
+        "Anthropic fetched_at=2026-06-11"
+      ],
+      "uncertainty": "位置错位也可能由用户当日出差导致，但当前上下文无法证实或证伪。"
+    }
+  ],
+  "data_status": [
+    {
+      "area": "日记",
+      "status": "不可用",
+      "detail": "source_files为空，target_day无主观材料"
+    },
+    {
+      "area": "天气",
+      "status": "切片",
+      "detail": "area归属东京Ichibancho，与行车/活动地理位置不一致"
+    },
+    {
+      "area": "Anthropic",
+      "status": "延迟",
+      "detail": "fetched_at停留在2026-06-11，三平台对比缺失一维"
+    },
+    {
+      "area": "行车",
+      "status": "切片",
+      "detail": "6个事件中5个<30秒，疑似设备捕捉问题，仅西山游步道一次疑似真实步行"
+    },
+    {
+      "area": "距离字段",
+      "status": "切片",
+      "detail": "distance_km=0与3824步、22分钟运动不一致，Apple Watch距离字段可能未刷新"
+    }
+  ],
+  "follow_ups": [
+    "**明日动作**：校验天气数据源地理位置配置(预期改为杭州或当前所在城市)，避免位置错位持续影响跨板块解释。",
+    "**明日动作**：保留至少10分钟单主题阅读并写1条短笔记，先打破月度0笔记的输出空转。",
+    "**观察项**：HKD深套仓位(奥克斯+小米合计-39,578 HKD)继续不动作1-2日，观察US科技ETF反弹持续性，再决定是否调整风险敞口。"
+  ],
+  "quality_self_check": {
+    "not_number_repetition": true,
+    "has_cross_domain": true,
+    "states_uncertainty": true,
+    "has_positioning": true,
+    "has_expert_judgment": true
+  }
+}

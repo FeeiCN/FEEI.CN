@@ -1,0 +1,199 @@
+{
+  "date": "2026-07-08",
+  "generatedAt": "2026-07-09T05:04:26.550503+00:00",
+  "top_signals": [
+    {
+      "area": "健康",
+      "summary": "恢复信号优于负荷：HRV 较 7d 基线 +22%，步数与活动高于均位，体重同步下移。",
+      "evidence": [
+        "HRV 54.72 vs 7d avg 44.73（ratio 1.223）",
+        "步数 4309 vs 7d avg 3643，比基线高 18%"
+      ],
+      "confidence": "high"
+    },
+    {
+      "area": "AI使用",
+      "summary": "OpenAI 当日 551K 对比 7d 均值约 47M 出现断崖，先排查同步异常再下结论。",
+      "evidence": [
+        "openai today/7d ratio 0.012",
+        "MiniMax 同期仅回落至 0.646，平台间量级不一致"
+      ],
+      "confidence": "low"
+    },
+    {
+      "area": "财务",
+      "summary": "总资产回撤 -24,003（-1.5%），主要源自港股深度套牢仓估值波动，非当日新决策。",
+      "evidence": [
+        "FeeiCN2/FeeiCN 双账户同持奥克斯电气 6800 股，浮亏约 -47,396 HKD",
+        "HKD 汇总浮亏 -61,515，USD 汇总仍浮盈 +13,718"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "health_insights": [
+    {
+      "expert_view": "恢复与负荷分析",
+      "summary": "今天更像一次完整恢复日，而不是负荷日。",
+      "positioning": "相对 7d 基线，HRV +22%、活动量 +40%，明显好于近期常态。",
+      "evidence": [
+        "HRV 54.72 vs 7d avg 44.73",
+        "活动能耗 1485 kJ vs 7d avg 1062 kJ（ratio 1.398）"
+      ],
+      "means": "睡眠充足且自主神经系统状态优于近期。",
+      "not_means": "高活动并不等于训练负荷，只代表日常活动抬升。",
+      "uncertainty": "静息心率 73 vs 7d avg 71.57 略偏高，与高活动可能相关，不是孤立异常。",
+      "professional_suggestion": "保持当前睡眠边界；连续 3 天 HRV 抬升后再上调训练强度。"
+    }
+  ],
+  "reading_insights": [
+    {
+      "expert_view": "学习投入与阅读行为分析",
+      "summary": "当天无有效阅读记录，节奏降温而非断流。",
+      "positioning": "对比前一日 read_seconds 出现 -74.9% 衰减，但 7d/30d 基线为空，无法用基线评估。",
+      "evidence": [
+        "today read_seconds 为空",
+        "本月已读 2 本、读完 1 本、阅读 3 天，活跃度本就偏低"
+      ],
+      "means": "阅读节奏本就是稀疏型，单日缺读不构成断流信号。",
+      "not_means": "不等于本月阅读投入已经失效。",
+      "uncertainty": "7d/30d baseline 缺失且当日为 0，定量判断暂不可得。",
+      "professional_suggestion": "明天恢复至少一段 20 分钟单主题阅读，避免连续多日空白。"
+    }
+  ],
+  "finance_insights": [
+    {
+      "expert_view": "资产配置与风险暴露分析",
+      "summary": "这是一次估值波动型回撤，而不是仓位恶化型风险事件。",
+      "positioning": "总资产 1,572,230.7，-24,003（-1.5%）；FeeiCN2 贡献 58.9%，FeeiCN 贡献 41.1%。",
+      "evidence": [
+        "奥克斯电气双账户合计 6800 股、浮亏 -47,396 HKD",
+        "USD 端仍浮盈（Vanguard ETF、苹果、Illumina、INTC）"
+      ],
+      "means": "风险主要集中在港股 IPO 风格的深度套牢仓，且跨账户重复持仓放大单股敞口。",
+      "not_means": "当天没有实质调仓或新增交易，回撤不是决策性亏损。",
+      "uncertainty": "account-assets 1.57M 与 invest 2.47M 口径不重叠，不能直接相加比较。",
+      "professional_suggestion": "不操作现有 HKD 深度回撤仓，先评估奥克斯电气是否需要跨账户合并或部分减仓。"
+    }
+  ],
+  "ai_insights": [
+    {
+      "expert_view": "AI 生产力与工作流强度分析",
+      "summary": "工作强度在回落，但回落是否真实需要先验证数据同步。",
+      "positioning": "MiniMax 53,159 vs 7d avg 82,251（0.646）温和回落；OpenAI 551,186 vs 7d avg ~47M（0.012）异常断崖。",
+      "evidence": [
+        "OpenAI 比值与近 7 日最低值仍有量级差",
+        "MiniMax 已连续 31 天有数据，趋势相对可信"
+      ],
+      "means": "MiniMax 用量回落说明高强度任务没有延续，OpenAI 异常更可能来自数据管道。",
+      "not_means": "AI 用量降低不等于今天产出下降，也不等于工作被低价值事务劫持。",
+      "uncertainty": "Anthropic 数据停在 2026-06-11，不能进入当日判断；OpenAI 当日是否完整回传未知。",
+      "professional_suggestion": "明日先核对 OpenAI 接口/导出完整性，再决定是否把今天归入高强度工作断档日。"
+    }
+  ],
+  "life_log_insights": [
+    {
+      "expert_view": "生活记录与主观体验分析",
+      "summary": "日记数据缺失，今天的主观体验只能借活动与移动切片反推。",
+      "positioning": "无法对家庭、情绪、主观体验做直接判断，所有判断需降权。",
+      "evidence": [
+        "daily_diary.source_files 为空，状态 missing=true"
+      ],
+      "means": "",
+      "not_means": "",
+      "uncertainty": "没有日记就无法验证傍晚西山游步道是否带有真实恢复意义。",
+      "professional_suggestion": "明天补一篇 3 行日记，至少记录「身体感受 + 当天最重要的一件事」。"
+    }
+  ],
+  "environment_mobility_insights": [
+    {
+      "expert_view": "生活环境与出行节奏分析",
+      "summary": "上午外出 + 傍晚西山移动，节奏偏向半休日而非高负荷日。",
+      "positioning": "09:14→09:50 一段完整行程；18:39 西山游步道 + 19:12 天目山西路，傍晚户外移动与步数 +18% 同步抬升。",
+      "evidence": [
+        "trips 仅 1 条完整行程",
+        "weather 当前少云 24°C、湿度 78%"
+      ],
+      "means": "天气与户外移动和步数/HRV 改善方向一致。",
+      "not_means": "天气良好不等于户外活动充分，必须看具体移动。",
+      "uncertainty": "weather 区域字段显示 Tokyo，但 drive 与活动地址在杭州，地理位置归属可疑。",
+      "professional_suggestion": "明日确认 weather 数据源城市是否仍需修正。"
+    }
+  ],
+  "git_insights": [
+    {
+      "expert_view": "工程推进与知识沉淀分析",
+      "summary": "当天 28 次提交全部来自自动化数据同步，没有内容型推进。",
+      "positioning": "提交覆盖健康/资产/微信读书/LLM/天气/行车/港股打新 7 个数据通道，无 feature/fix 类提交。",
+      "evidence": [
+        "commit_count 28，其中 27 条为 [auto] 系列",
+        "仅 1 条「生成每日三省吾身分析」为分析型"
+      ],
+      "means": "工作流在持续拉取数据，但当日没有写入型产出。",
+      "not_means": "提交数量不能等同于产出质量，更不等于学习/写作推进。",
+      "uncertainty": "auto-commit 数量受采集周期影响，不能简单当作「工作强度」证据。",
+      "professional_suggestion": "明日安排至少一个非 [auto] 提交（笔记/文档/代码）以拉开信号。"
+    }
+  ],
+  "cross_domain_insights": [
+    {
+      "summary": "身体信号转好 + 活动量抬升 + 傍晚西山游步道 共同指向「恢复日」，与 AI 强度同步走弱方向一致；今天更像物理恢复期而非工作推进日。",
+      "evidence": [
+        "HRV +22% / 活动 +40%",
+        "18:39 西山游步道下车 + MiniMax 用量回落 35%"
+      ],
+      "uncertainty": "日记缺失，无法验证恢复日是否被主观体验认同。"
+    },
+    {
+      "summary": "OpenAI 用量断崖与 M3 温和回落 + Git 全是 auto 并存，提示数据管道本身可能存在波动，工作强度判断需要降权。",
+      "evidence": [
+        "OpenAI 比值 0.012 vs MiniMax 0.646，量级差距过大",
+        "提交 28/28 几乎全是 [auto]"
+      ],
+      "uncertainty": "需先排查 OpenAI 上传/汇总延迟，再决定是否把今天视作低工作日。"
+    }
+  ],
+  "data_status": [
+    {
+      "area": "日记",
+      "status": "不可用",
+      "detail": "source_files 为空，缺失当日日记"
+    },
+    {
+      "area": "AI-Anthropic",
+      "status": "延迟",
+      "detail": "fetched_at 停留在 2026-06-11，长期未更新"
+    },
+    {
+      "area": "AI-OpenAI",
+      "status": "异常",
+      "detail": "今日 551K 与 7d 均值 47M 相差 3 个数量级，需排查"
+    },
+    {
+      "area": "HK-IPO",
+      "status": "切片",
+      "detail": "目标日无新增记录，仅有全周期汇总"
+    },
+    {
+      "area": "天气-地理位置",
+      "status": "异常",
+      "detail": "area 标记 Tokyo Japan，但行车与活动均在杭州"
+    },
+    {
+      "area": "行车",
+      "status": "切片",
+      "detail": "18:39 / 19:12 两次下车事件缺配对上车"
+    }
+  ],
+  "follow_ups": [
+    "**明日动作**：先核对 OpenAI 数据管道/导出完整性，再决定今日 AI 工作强度判断是否降权。",
+    "**明日动作**：明天上午完成最重要任务的第一版，避开晚间被 auto-commit 数据流劫持注意力。",
+    "**观察项**：评估 FeeiCN2/FeeiCN 双账户奥克斯电气（合计 6800 股）是否需要合并或部分减仓。"
+  ],
+  "quality_self_check": {
+    "not_number_repetition": true,
+    "has_cross_domain": true,
+    "states_uncertainty": true,
+    "has_positioning": true,
+    "has_expert_judgment": true
+  }
+}

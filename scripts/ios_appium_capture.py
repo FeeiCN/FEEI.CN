@@ -26,7 +26,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from xml.etree import ElementTree
 
 
@@ -286,6 +286,27 @@ def visible_element_rects(
     return rects
 
 
+def page_source_has_visible_text(page_source: str, text: str) -> bool:
+    try:
+        root = ElementTree.fromstring(page_source.encode("utf-8"))
+    except ElementTree.ParseError:
+        return False
+    for element in root.iter():
+        attrs = element.attrib
+        if attrs.get("visible") != "true":
+            continue
+        if text in (attrs.get("name", ""), attrs.get("label", ""), attrs.get("value", "")):
+            return True
+    return False
+
+
+def alipay_holding_page_source_visible(page_source: str) -> bool:
+    return (
+        page_source_has_visible_text(page_source, "全部持有")
+        and page_source_has_visible_text(page_source, "收益明细")
+    )
+
+
 def tap_relative(driver: Any, x_ratio: float, y_ratio: float) -> tuple[int, int]:
     size = driver.get_window_size()
     x = int(size.get("width", 390) * x_ratio)
@@ -500,6 +521,7 @@ def capture_alipay_total_asset_artifacts(
     driver: Any,
     out_dir: Path,
     session_id: str,
+    level: int,
 ) -> list[dict[str, str]]:
     files: list[dict[str, str]] = []
     intervals = [0.0, 0.2, 0.3, 0.5, 0.8, 1.2]
@@ -510,8 +532,8 @@ def capture_alipay_total_asset_artifacts(
             driver,
             out_dir,
             session_id,
-            f"total-assets-{index:02d}",
-            {"step": "totalAssets", "sample": index},
+            f"total-assets-{level}-{index:02d}",
+            {"step": "totalAssets", "level": level, "sample": index},
         )
         files.append(file_info)
         page_source = Path(file_info["pageSource"]).read_text(encoding="utf-8")
@@ -564,6 +586,7 @@ def extract_asset_records_from_source(page_source: str) -> list[dict[str, Any]]:
             r"(?P<name>[^：，]+)：(?P<amount>[-\d,.]+)元，昨日收益：(?P<profit>[-\d,.]+)元"
         ),
         re.compile(r"(?P<name>总资产)：(?P<amount>[-\d,.]+)元"),
+        re.compile(r"(?P<name>总资产[（(]元[）)])[,，](?P<amount>[-\d,.]+)"),
     ]
 
     try:
@@ -918,7 +941,10 @@ def extract_alipay_daily_profit_from_source(page_source: str) -> dict[str, Any] 
             row["x"],
         ),
     ):
-        inline_match = re.search(r"(昨日收益|今日收益)[:：]\s*([+-]?\d[\d,]*(?:\.\d+)?)\s*元?", label_row["text"])
+        inline_match = re.search(
+            r"(昨日收益|今日收益)[:：,，]\s*([+-]?\d[\d,]*(?:\.\d+)?)\s*元?",
+            label_row["text"],
+        )
         if not inline_match:
             continue
         if label_row["y"] > 600:
@@ -1510,12 +1536,16 @@ def capture_scrolling_area(
     prefix: str,
     max_screens: int,
     settle_seconds: float,
+    page_validator: Callable[[str], bool] | None = None,
+    invalid_page_reason: str = "页面不符合采集条件",
 ) -> tuple[list[dict[str, str]], str]:
     files = []
     seen_signatures: set[str] = set()
 
     for index in range(1, max_screens + 1):
         page_source = driver.page_source
+        if page_validator and not page_validator(page_source):
+            return files, invalid_page_reason
         signature = page_signature(page_source)
         if signature in seen_signatures:
             return files, "页面内容重复,已到达底部或未发生滚动"
@@ -1632,17 +1662,91 @@ def enter_alipay_if_prompted(driver: Any, timeout: float) -> str | None:
 
 
 def find_alipay_total_asset_number_rect(driver: Any) -> dict[str, Any] | None:
-    rects = [
-        rect
-        for rect in visible_text_rects(driver, "总资产：")
-        if rect["y"] >= 120 and rect["width"] >= 100
-    ]
+    rects = []
+    for label in ("总资产：", "总资产(元)", "总资产（元）"):
+        rects.extend(
+            rect
+            for rect in visible_text_rects(driver, label)
+            if 80 <= rect["y"] <= 360 and rect["width"] >= 100
+        )
     if not rects:
         return None
     return min(rects, key=lambda item: item["y"])
 
 
-def tap_alipay_total_asset_number(driver: Any) -> dict[str, Any]:
+def alipay_total_asset_page_visible(driver: Any) -> bool:
+    return find_alipay_total_asset_number_rect(driver) is not None
+
+
+def alipay_holding_page_visible(driver: Any) -> bool:
+    return alipay_holding_page_source_visible(driver.page_source)
+
+
+def alipay_finance_asset_entry_visible(driver: Any) -> bool:
+    for text in ("总资产", "资产总额", "我的资产"):
+        if any(90 <= rect["y"] <= 700 for rect in visible_element_rects(driver, text)):
+            return True
+    return False
+
+
+def wait_for_alipay_page(driver: Any, predicate: Callable[[Any], bool], timeout: float) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate(driver):
+            return True
+        time.sleep(0.5)
+    return False
+
+
+def wait_for_alipay_holding_or_page_change(
+    driver: Any,
+    previous_signature: str,
+    timeout: float,
+) -> str | None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        page_source = driver.page_source
+        if alipay_holding_page_source_visible(page_source):
+            return "holding"
+        if page_signature(page_source) != previous_signature:
+            return "changed"
+        time.sleep(0.5)
+    return None
+
+
+def tap_alipay_finance_entry(driver: Any) -> dict[str, Any] | None:
+    candidates = [
+        rect
+        for rect in visible_element_rects(driver, "理财")
+        if rect["y"] >= 650
+    ]
+    if not candidates:
+        return None
+    rect = max(candidates, key=lambda item: item["y"])
+    x = rect["x"] + rect["width"] // 2
+    y = rect["y"] + rect["height"] // 2
+    tap_point(driver, x, y)
+    return {"text": rect["text"], "coordinates": {"x": x, "y": y}}
+
+
+def tap_alipay_total_asset_entry(driver: Any) -> dict[str, Any] | None:
+    for text in ("总资产", "资产总额", "我的资产"):
+        candidates = [
+            rect
+            for rect in visible_element_rects(driver, text)
+            if 90 <= rect["y"] <= 700
+        ]
+        if not candidates:
+            continue
+        rect = min(candidates, key=lambda item: item["y"])
+        x = rect["x"] + rect["width"] // 2
+        y = rect["y"] + rect["height"] // 2
+        tap_point(driver, x, y)
+        return {"text": rect["text"], "coordinates": {"x": x, "y": y}}
+    return None
+
+
+def tap_alipay_total_asset_number(driver: Any) -> dict[str, Any] | None:
     rect = find_alipay_total_asset_number_rect(driver)
     if rect:
         x = rect["x"] + max(20, int(rect["width"] * 0.38))
@@ -1650,40 +1754,7 @@ def tap_alipay_total_asset_number(driver: Any) -> dict[str, Any]:
         tap_point(driver, x, y)
         return {"method": "amountElement", "text": rect["text"], "coordinates": {"x": x, "y": y}}
 
-    scroll_to_top(driver, attempts=2)
-    rect = find_alipay_total_asset_number_rect(driver)
-    if rect:
-        x = rect["x"] + max(20, int(rect["width"] * 0.38))
-        y = rect["y"] + max(10, int(rect["height"] * 0.55))
-        tap_point(driver, x, y)
-        return {
-            "method": "amountElementAfterScrollTop",
-            "text": rect["text"],
-            "coordinates": {"x": x, "y": y},
-        }
-
-    size = driver.get_window_size()
-    candidates = [
-        (0.30, 0.24),
-        (0.38, 0.24),
-        (0.30, 0.20),
-    ]
-    for x_ratio, y_ratio in candidates:
-        x = int(size.get("width", 390) * x_ratio)
-        y = int(size.get("height", 844) * y_ratio)
-        tap_point(driver, x, y)
-        time.sleep(0.8)
-        if source_contains_any(driver, ["全部持有", "持有明细"]):
-            return {
-                "method": "coordinate",
-                "coordinates": {"x": x, "y": y},
-                "note": "点击总资产数字区域后进入持仓明细",
-            }
-    return {
-        "method": "coordinate",
-        "coordinates": {"x": x, "y": y},
-        "note": "已点击总资产数字区域",
-    }
+    return None
 
 
 def caitong_trade_password(args: argparse.Namespace) -> str | None:
@@ -2059,7 +2130,7 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
                 if dismissed:
                     navigation.append({"step": "dismissAfterEnterAlipay", "texts": dismissed})
 
-            if source_contains_any(driver, ["总资产", "资产总额", "全部持有", "持有明细"]):
+            if alipay_total_asset_page_visible(driver) or alipay_holding_page_visible(driver):
                 navigation.append(
                     {
                         "step": "tapFinance",
@@ -2069,18 +2140,29 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
                 )
                 print("当前已在资产相关页面,跳过理财入口", flush=True)
             else:
-                tapped = tap_any_text(driver, ["理财"], timeout=args.nav_timeout)
+                tapped = tap_alipay_finance_entry(driver)
                 if not tapped:
-                    stop_reason = "未找到「理财」入口"
+                    stop_reason = "未找到底部「理财」入口"
                     raise RuntimeError(stop_reason)
-                navigation.append({"step": "tapFinance", "text": tapped})
-                print(f"已点击入口: {tapped}", flush=True)
+                navigation.append({"step": "tapFinance", **tapped})
+                print(f"已点击入口: {tapped['text']}", flush=True)
                 time.sleep(args.step_wait)
                 dismissed = dismiss_optional_overlays(driver)
                 if dismissed:
                     navigation.append({"step": "dismissFinanceOverlays", "texts": dismissed})
+                if not wait_for_alipay_page(
+                    driver,
+                    lambda current_driver: (
+                        alipay_finance_asset_entry_visible(current_driver)
+                        or alipay_total_asset_page_visible(current_driver)
+                        or alipay_holding_page_visible(current_driver)
+                    ),
+                    args.nav_timeout,
+                ):
+                    stop_reason = "点击「理财」后未进入理财资产页面"
+                    raise RuntimeError(stop_reason)
 
-            if source_has_text_near_top(driver, "总资产") or source_contains_any(driver, ["全部持有", "持有明细"]):
+            if alipay_total_asset_page_visible(driver) or alipay_holding_page_visible(driver):
                 navigation.append(
                     {
                         "step": "tapTotalAssets",
@@ -2090,24 +2172,49 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
                 )
                 print("当前已在总资产或持有区域,跳过资产入口", flush=True)
             else:
-                tapped = tap_any_text(
-                    driver,
-                    ["总资产", "资产总额", "我的资产", "资产"],
-                    timeout=args.nav_timeout,
-                    contains=True,
-                )
+                tapped = tap_alipay_total_asset_entry(driver)
                 if not tapped:
                     stop_reason = "未找到「总资产」入口"
                     raise RuntimeError(stop_reason)
-                navigation.append({"step": "tapTotalAssets", "text": tapped})
-                print(f"已点击资产入口: {tapped}", flush=True)
+                navigation.append({"step": "tapTotalAssets", **tapped})
+                print(f"已点击资产入口: {tapped['text']}", flush=True)
                 time.sleep(min(args.step_wait, 0.6))
+                if not wait_for_alipay_page(
+                    driver,
+                    lambda current_driver: (
+                        alipay_total_asset_page_visible(current_driver)
+                        or alipay_holding_page_visible(current_driver)
+                    ),
+                    args.nav_timeout,
+                ):
+                    stop_reason = "点击「总资产」后未进入总资产页面"
+                    raise RuntimeError(stop_reason)
 
-            files.extend(capture_alipay_total_asset_artifacts(driver, out_dir, session_id))
-            total_amount_tap = tap_alipay_total_asset_number(driver)
-            navigation.append({"step": "tapTotalAssetNumber", **total_amount_tap})
-            print(f"已点击总资产数字区域: {total_amount_tap}", flush=True)
-            time.sleep(args.step_wait)
+            if not alipay_holding_page_visible(driver):
+                for level in range(1, 3):
+                    files.extend(capture_alipay_total_asset_artifacts(driver, out_dir, session_id, level))
+                    before_signature = page_signature(driver.page_source)
+                    total_amount_tap = tap_alipay_total_asset_number(driver)
+                    if not total_amount_tap:
+                        stop_reason = "总资产页面未找到可点击的总资产金额"
+                        raise RuntimeError(stop_reason)
+                    navigation.append(
+                        {"step": "tapTotalAssetNumber", "level": level, **total_amount_tap}
+                    )
+                    print(f"已点击总资产数字区域: {total_amount_tap}", flush=True)
+                    result = wait_for_alipay_holding_or_page_change(
+                        driver,
+                        before_signature,
+                        args.nav_timeout,
+                    )
+                    if result == "holding":
+                        break
+                    if result != "changed" or not alipay_total_asset_page_visible(driver):
+                        stop_reason = "点击总资产金额后未进入总资产或持仓明细页"
+                        raise RuntimeError(stop_reason)
+                if not alipay_holding_page_visible(driver):
+                    stop_reason = "点击总资产金额后未进入持仓明细页"
+                    raise RuntimeError(stop_reason)
 
         holding_files, stop_reason = capture_scrolling_area(
             driver,
@@ -2116,8 +2223,13 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
             "holding-detail",
             max_screens=args.max_screens,
             settle_seconds=args.step_wait,
+            page_validator=alipay_holding_page_source_visible,
+            invalid_page_reason="已离开支付宝持仓明细页,停止滚动",
         )
         files.extend(holding_files)
+
+        if stop_reason == "已离开支付宝持仓明细页,停止滚动":
+            raise RuntimeError(stop_reason)
 
         captured_at = datetime.now().astimezone().isoformat(timespec="seconds")
         asset_records = extract_asset_records(files)

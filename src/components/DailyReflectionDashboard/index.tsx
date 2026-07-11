@@ -692,6 +692,15 @@ async function fetchText(path: string): Promise<string> {
   }
 }
 
+async function fetchDailyAnalysis(date: string): Promise<DailyAnalysis | null> {
+  const markdown = await fetchText(`/data/daily-analysis/${dateToPath(date, 'md')}`);
+  if (markdown.trim()) {
+    return {date, legacy_report_markdown: markdown};
+  }
+  // Historical reports remain readable while new reports use Markdown.
+  return fetchJson<DailyAnalysis>(`/data/daily-analysis/${dateToPath(date, 'json')}`);
+}
+
 async function fetchWeather(date: string): Promise<unknown | null> {
   const params = new URLSearchParams({
     latitude: String(HANGZHOU_LATITUDE),
@@ -2457,7 +2466,7 @@ function CareerDataPanel({
       ]);
       const dates = manifest?.dates || [];
       const analysisList = await Promise.all(dates.map(async (date) => {
-        const analysis = await fetchJson<DailyAnalysis>(`/data/daily-analysis/${dateToPath(date, 'json')}`);
+        const analysis = await fetchDailyAnalysis(date);
         return analysis ? [date, analysis] as const : null;
       }));
       if (cancelled) return;
@@ -2635,7 +2644,7 @@ function LifeDataPanel({
       });
       const dates = analysisManifest?.dates || [];
       const analysisList = await Promise.all(dates.map(async (date) => {
-        const analysis = await fetchJson<DailyAnalysis>(`/data/daily-analysis/${dateToPath(date, 'json')}`);
+        const analysis = await fetchDailyAnalysis(date);
         return analysis ? [date, analysis] as const : null;
       }));
       if (cancelled) return;
@@ -2892,7 +2901,7 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
     setDailyLoading(true);
     Promise.all([
       fetchText(`/data/daily/${dateToPath(selectedDate, 'md')}`),
-      fetchJson<DailyAnalysis>(`/data/daily-analysis/${dateToPath(selectedDate, 'json')}`),
+      fetchDailyAnalysis(selectedDate),
       fetchWeather(selectedDate),
       fetchJson<DriveLog>(`/data/drive/${selectedYearPart}/${selectedMonth}/${selectedDay}.json`),
       fetchJson<HealthData>(`/data/health/${selectedYearPart}/${selectedMonth}.json`),

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -149,6 +150,22 @@ def extract_health_context(paths: list[Path], report_date: date) -> dict[str, An
                 return item
         return None
 
+    def summarize_sleep_record(record: dict[str, Any] | None) -> dict[str, Any] | None:
+        if not record:
+            return None
+        record_date = parse_day_key(str(record.get("date") or ""))
+        return {
+            "record_date": record_date.isoformat() if record_date else None,
+            "total_sleep_hours": safe_round(float(record.get("totalSleep") or 0), 2),
+            "deep_sleep_hours": safe_round(float(record.get("deep") or 0), 2),
+            "rem_sleep_hours": safe_round(float(record.get("rem") or 0), 2),
+            "awake_hours": safe_round(float(record.get("awake") or 0), 2),
+            "in_bed_start": record.get("inBedStart"),
+            "sleep_start": record.get("sleepStart"),
+            "sleep_end": record.get("sleepEnd"),
+            "source": record.get("source"),
+        }
+
     def series_for_metric(name: str, days: int) -> list[float]:
         items = metrics_by_name.get(name) or []
         start = report_date - timedelta(days=days)
@@ -169,13 +186,7 @@ def extract_health_context(paths: list[Path], report_date: date) -> dict[str, An
         record = value_for_metric(raw_name, report_date)
         if raw_name == "sleep_analysis":
             if record:
-                today_metrics[short_name] = {
-                    "total_sleep_hours": safe_round(float(record.get("totalSleep") or 0), 2),
-                    "deep_sleep_hours": safe_round(float(record.get("deep") or 0), 2),
-                    "rem_sleep_hours": safe_round(float(record.get("rem") or 0), 2),
-                    "awake_hours": safe_round(float(record.get("awake") or 0), 2),
-                    "source": record.get("source"),
-                }
+                today_metrics[short_name] = summarize_sleep_record(record)
             baseline_sleep = []
             for item in metrics_by_name.get(raw_name) or []:
                 item_date = parse_day_key(str(item.get("date") or ""))
@@ -284,6 +295,11 @@ def extract_health_context(paths: list[Path], report_date: date) -> dict[str, An
         "source_files": [path.as_posix() for path in paths],
         "exported_at": sorted(exported_at),
         "today": today_metrics,
+        "action_evidence": {
+            "overnight_sleep_after_report_date": summarize_sleep_record(
+                value_for_metric("sleep_analysis", report_date + timedelta(days=1))
+            ),
+        },
         "baseline_7d": baselines,
         "completeness": completeness_flags,
         "recovery_summary": recovery_summary,
@@ -531,6 +547,12 @@ def extract_finance_context(paths: list[Path], report_date: date) -> dict[str, A
     )
     investment_market_value = sum(float(source.get("market_value") or 0) for source in investment_sources)
     investment_cash = sum(float(source.get("available_cash") or 0) for source in investment_sources)
+    asset_delta_ratio = ratio_to_baseline(total_delta, total_assets)
+    finance_signal_reasons = []
+    if asset_delta_ratio is not None and abs(asset_delta_ratio) >= 0.01:
+        finance_signal_reasons.append("target_day_asset_move_ge_1pct")
+    if not account_daily and not investment_sources:
+        finance_signal_reasons.append("target_day_data_missing")
 
     return {
         "source_files": [path.as_posix() for path, _ in payloads + invest_payloads],
@@ -549,6 +571,12 @@ def extract_finance_context(paths: list[Path], report_date: date) -> dict[str, A
         "largest_winners": largest_winners,
         "largest_losers": largest_losers,
         "account_count": len(daily_by_account),
+        "signal_eligibility": {
+            "should_enter_daily_reflection": bool(finance_signal_reasons),
+            "reasons": finance_signal_reasons,
+            "asset_delta_ratio": asset_delta_ratio,
+            "static_position_or_cash_ratio_is_daily_signal": False,
+        },
         "investment": {
             "source_count": len(investment_sources),
             "sources": investment_sources,
@@ -789,6 +817,41 @@ def extract_daily_diary_context(paths: list[Path], report_date: date) -> dict[st
     }
 
 
+def extract_recent_reflections_context(paths: list[Path], report_date: date) -> dict[str, Any]:
+    entries = []
+    for path in paths:
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8").strip()
+        action_match = re.search(r"^\*\*明日动作\*\*[：:]\s*(.+)$", text, flags=re.MULTILINE)
+        judgment_match = re.search(r"^>\s*(.+)$", text, flags=re.MULTILINE)
+        judgments = re.findall(r"^\*\*判断\*\*[：:]\s*(.+)$", text, flags=re.MULTILINE)
+        try:
+            reflection_date = date.fromisoformat(path.stem)
+        except ValueError:
+            continue
+        if reflection_date >= report_date:
+            continue
+        entries.append(
+            {
+                "date": reflection_date.isoformat(),
+                "overall_judgment": judgment_match.group(1).strip() if judgment_match else None,
+                "section_judgments": [value.strip() for value in judgments[:3]],
+                "tomorrow_action": action_match.group(1).strip() if action_match else None,
+            }
+        )
+    entries.sort(key=lambda item: item["date"])
+    entries = entries[-3:]
+    previous_date = (report_date - timedelta(days=1)).isoformat()
+    previous_day = next((item for item in entries if item["date"] == previous_date), None)
+    return {
+        "source_files": [path.as_posix() for path in paths if path.is_file()],
+        "recent": entries,
+        "previous_day": previous_day,
+        "missing_previous_day": previous_day is None,
+    }
+
+
 def extract_git_context(report_date: date) -> dict[str, Any]:
     since = f"{report_date.isoformat()} 00:00:00 +0800"
     until = f"{(report_date + timedelta(days=1)).isoformat()} 00:00:00 +0800"
@@ -824,11 +887,19 @@ def extract_git_context(report_date: date) -> dict[str, Any]:
             }
         )
 
+    automated_prefixes = ("[auto]", "保存天气数据", "保存行车数据", "生成每日三省吾身")
+    manual_commits = [
+        commit for commit in commits
+        if not str(commit.get("subject") or "").startswith(automated_prefixes)
+    ]
     return {
         "available": True,
         "since": since,
         "until": until,
         "commit_count": len(commits),
+        "manual_commit_count": len(manual_commits),
+        "automated_commit_count": len(commits) - len(manual_commits),
+        "manual_commits": manual_commits[:15],
         "commits": commits[:30],
     }
 
@@ -851,6 +922,10 @@ def main() -> None:
     weather_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/weather/")]
     drive_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/drive/")]
     daily_diary_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/daily/")]
+    recent_reflection_paths = [
+        path for path in allowed_paths
+        if path.suffix == ".md" and "daily-analysis" in path.as_posix()
+    ]
 
     context = {
         "report_date": report_date.isoformat(),
@@ -863,6 +938,7 @@ def main() -> None:
         "weather": extract_weather_context(weather_paths, report_date),
         "drive": extract_drive_context(drive_paths, report_date),
         "daily_diary": extract_daily_diary_context(daily_diary_paths, report_date),
+        "recent_reflections": extract_recent_reflections_context(recent_reflection_paths, report_date),
         "git_activity": extract_git_context(report_date),
     }
 

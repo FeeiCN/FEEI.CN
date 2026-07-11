@@ -12,18 +12,22 @@ from typing import Any
 
 
 TITLE_PATTERN = re.compile(
-    r"(?<!\d)(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2}:\d{2}).*?(上车|下车)"
+    r"^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2}:\d{2})\s*(上车|下车)\s*$"
 )
 
 
 def parse_drive_title(title: str) -> tuple[str, str, str, str, str]:
-    match = TITLE_PATTERN.search(title)
+    match = TITLE_PATTERN.fullmatch(title.strip())
     if not match:
         raise ValueError(f"行车 issue 标题缺少 YYYY-MM-DD HH:MM:SS + 上车/下车: {title}")
 
     year, month, day, time_key, action = match.groups()
     datetime.strptime(f"{year}-{month}-{day} {time_key}", "%Y-%m-%d %H:%M:%S")
     return year, month, day, time_key, action
+
+
+def normalize_address(address: object) -> str:
+    return " ".join(str(address or "").split())
 
 
 def event_time(event_key: str, value: dict[str, Any]) -> str:
@@ -49,7 +53,7 @@ def event_matches(
     return (
         event_time(event_key, value) == time_key
         and value.get("action") == action
-        and str(value.get("address") or "").strip() == address
+        and normalize_address(value.get("address")) == normalize_address(address)
     )
 
 
@@ -73,7 +77,8 @@ def upsert_drive_event(
     issue_number: int,
 ) -> dict[str, Any]:
     year, month, day, time_key, action = parse_drive_title(title)
-    normalized_address = address.strip()
+    stored_address = address.strip()
+    address_key = normalize_address(stored_address)
     data_file = data_root / year / month / f"{day}.json"
 
     if data_file.is_file():
@@ -85,17 +90,19 @@ def upsert_drive_event(
 
     def write_data() -> None:
         data_file.parent.mkdir(parents=True, exist_ok=True)
-        data_file.write_text(
+        temporary_file = data_file.with_name(f".{data_file.name}.tmp")
+        temporary_file.write_text(
             json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+        temporary_file.replace(data_file)
 
     same_slot = [
         (event_key, value)
         for event_key, value in data.items()
         if isinstance(value, dict)
         and event_time(event_key, value) == time_key
-        and str(value.get("address") or "").strip() == normalized_address
+        and normalize_address(value.get("address")) == address_key
     ]
     existing_up = next(
         ((event_key, value) for event_key, value in same_slot if value.get("action") == "上车"),
@@ -108,7 +115,24 @@ def upsert_drive_event(
     if existing_up and (action == "下车" or existing_down):
         up_key, up_value = existing_up
         canonical_value = dict(up_value)
-        canonical_value.update({"time": time_key, "action": "上车", "address": normalized_address})
+        canonical_address = str(up_value.get("address") or "").strip() or stored_address
+        canonical_value.update({"time": time_key, "action": "上车", "address": canonical_address})
+        if action == "上车" and not canonical_value.get("issue_number"):
+            canonical_value["issue_number"] = issue_number
+        suppressed_issue_numbers = {
+            value
+            for value in canonical_value.get("suppressed_issue_numbers") or []
+            if isinstance(value, int)
+        }
+        suppressed_issue_numbers.update(
+            value.get("issue_number")
+            for _, value in existing_down
+            if isinstance(value.get("issue_number"), int)
+        )
+        if action == "下车":
+            suppressed_issue_numbers.add(issue_number)
+        if suppressed_issue_numbers:
+            canonical_value["suppressed_issue_numbers"] = sorted(suppressed_issue_numbers)
         changed = len(same_slot) > 1 or up_key != time_key or data.get(time_key) != canonical_value
         if changed:
             for event_key, _ in same_slot:
@@ -124,14 +148,23 @@ def upsert_drive_event(
         }
 
     if action == "上车" and existing_down:
+        suppressed_issue_numbers = sorted(
+            {
+                value.get("issue_number")
+                for _, value in existing_down
+                if isinstance(value.get("issue_number"), int)
+            }
+        )
         for event_key, _ in existing_down:
             data.pop(event_key, None)
         data[time_key] = {
             "time": time_key,
             "action": action,
-            "address": normalized_address,
+            "address": stored_address,
             "issue_number": issue_number,
         }
+        if suppressed_issue_numbers:
+            data[time_key]["suppressed_issue_numbers"] = suppressed_issue_numbers
         write_data()
         return {
             "path": data_file.as_posix(),
@@ -147,22 +180,36 @@ def upsert_drive_event(
             value,
             time_key=time_key,
             action=action,
-            address=normalized_address,
+            address=stored_address,
             issue_number=issue_number,
         ):
+            changed = False
+            status = "existing"
+            if (
+                isinstance(value, dict)
+                and not value.get("issue_number")
+                and event_time(event_key, value) == time_key
+                and value.get("action") == action
+                and normalize_address(value.get("address")) == address_key
+            ):
+                value["time"] = time_key
+                value["issue_number"] = issue_number
+                write_data()
+                changed = True
+                status = "enriched_existing"
             return {
                 "path": data_file.as_posix(),
                 "event_key": event_key,
                 "action": action,
-                "status": "existing",
-                "changed": False,
+                "status": status,
+                "changed": changed,
             }
 
     event_key = allocate_event_key(data, time_key, issue_number)
     data[event_key] = {
         "time": time_key,
         "action": action,
-        "address": normalized_address,
+        "address": stored_address,
         "issue_number": issue_number,
     }
     write_data()
@@ -186,7 +233,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    if not args.title or not args.issue_number:
+    if not args.title or not args.issue_number or args.issue_number < 1:
         raise SystemExit("必须提供 issue 标题和编号")
 
     result = upsert_drive_event(

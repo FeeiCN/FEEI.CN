@@ -45,6 +45,7 @@ Function Calling 是动作，ReAct 是动态探索，Plan-and-Execute 是先规�
 
 ## 实践主题
 
+- **需要设计跨层循环、停止条件与预算**：阅读 [Loop 工程](/agent-loop-engineering)，区分执行、任务、产品与系统循环的对象和出口。
 - **[ReAct 模式](/react-agent-loop)**：用最小代码理解模型如何在多轮观察中动态决定下一步工具调用。
 - **[Plan-and-Execute 模式](/plan-and-execute-loop)**：先把任务拆成计划，再按计划逐步执行并在需要时重规划。
 

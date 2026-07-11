@@ -2087,6 +2087,14 @@ def start_health_auto_export_server(driver: Any, args: argparse.Namespace) -> st
     return "Health Auto Export 服务器已启动"
 
 
+def keep_health_auto_export_foreground(driver: Any, args: argparse.Namespace) -> str:
+    driver.activate_app(HEALTH_AUTO_EXPORT_BUNDLE_ID)
+    time.sleep(min(args.step_wait, 0.8))
+    if driver.query_app_state(HEALTH_AUTO_EXPORT_BUNDLE_ID) != 4:
+        raise RuntimeError("Health Auto Export 未处于前台")
+    return "Health Auto Export 保持前台运行"
+
+
 def run_alipay_assets_flow(args: argparse.Namespace) -> int:
     udid = detect_udid(args.udid)
     if not udid:
@@ -2102,6 +2110,7 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
     navigation: list[dict[str, Any]] = []
     files: list[dict[str, str]] = []
     stop_reason = ""
+    health_auto_export_foreground = False
 
     try:
         restart_app(driver, args.bundle_id, "支付宝", args.wait)
@@ -2324,6 +2333,26 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
                 },
             )
             print(health_status)
+            foreground_status = keep_health_auto_export_foreground(driver, args)
+            health_auto_export_foreground = True
+            navigation.append(
+                {"step": "keepHealthAutoExportForeground", "status": foreground_status}
+            )
+            write_json(
+                summary_path,
+                {
+                    "capturedAt": captured_at,
+                    "udid": udid,
+                    "bundleId": args.bundle_id,
+                    "navigation": navigation,
+                    "stopReason": stop_reason,
+                    "dailyProfit": daily_profit,
+                    "assetRecords": asset_records,
+                    "holdingRecords": holding_records,
+                    "files": files,
+                },
+            )
+            print(foreground_status)
         return 0
     except Exception as error:
         error_path = out_dir / f"{session_id}-error.json"
@@ -2352,6 +2381,11 @@ def run_alipay_assets_flow(args: argparse.Namespace) -> int:
     finally:
         terminate_app_safely(driver, ALIPAY_BUNDLE_ID, "支付宝")
         terminate_app_safely(driver, CAITONG_BUNDLE_ID, "财通证券")
+        if health_auto_export_foreground:
+            try:
+                driver.activate_app(HEALTH_AUTO_EXPORT_BUNDLE_ID)
+            except Exception as error:
+                print(f"Health Auto Export 前台恢复失败: {error}", file=sys.stderr)
         driver.quit()
 
 

@@ -251,7 +251,7 @@ def _call_codex(article: str, *, timeout: float, model: str | None) -> str:
                     "--config",
                     'model_providers.custom.wire_api="responses"',
                     "--config",
-                    "model_providers.custom.requires_openai_auth=true",
+                    'model_providers.custom.env_key="OPENAI_API_KEY"',
                     "--config",
                     'model_reasoning_effort="medium"',
                 ]

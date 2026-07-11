@@ -473,7 +473,7 @@ jobs:
             --config 'model_providers.custom.name="AI Proxy"'
             --config "model_providers.custom.base_url=\"${OPENAI_BASE_URL}\""
             --config 'model_providers.custom.wire_api="responses"'
-            --config 'model_providers.custom.requires_openai_auth=true'
+            --config 'model_providers.custom.env_key="OPENAI_API_KEY"'
             --config 'model_reasoning_effort="medium"'
           )
           if [ "$MODE" = "plan" ]; then

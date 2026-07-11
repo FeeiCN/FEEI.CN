@@ -28,9 +28,9 @@ Codex must read and follow `AI.md` before making changes.
 | 任务类型 | 读取 |
 |---------|------|
 | 仓库结构、构建命令、提交规范、静态资源 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/仓库结构.md` |
-| TypeScript 风格、命名、front matter（slug / icon / description / image） | `docs/05-吴飞飞/01-关于/关于FEEI.CN/网站开发规范.md` |
-| Docusaurus 配置、sidebars、入口页规则 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/docusaurus配置.md` |
-| 通用文档文风（01 健康 / 02 事业 / 03 财务 / 05 关于） | `docs/05-吴飞飞/01-关于/关于FEEI.CN/我的写作原则.md` |
+| TypeScript 风格、命名、front matter（slug / icon / description / image / content_type / last_reviewed） | `docs/05-吴飞飞/01-关于/关于FEEI.CN/网站开发规范.md` |
+| Docusaurus 配置、sidebars、入口页文件位置与命名 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/docusaurus配置.md` |
+| 通用文档写作（入口页 / 观点文 / 教程 / 资料 / 复盘 / 历史档案）、证据强度与质量检查 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/我的写作原则.md` |
 | 04-人生丰富 散文、游记 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/散文写作.md` |
 | GitHub Issue 内容沉淀 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/github-issue-skill.md` |
 | 每日健康、阅读、财务、AI 数据分析与三省吾身 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/每日三省吾身.md` |

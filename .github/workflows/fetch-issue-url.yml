@@ -15,10 +15,10 @@ name: Fetch issue content
 
 on:
   issues:
-    types: [opened]
+    types: [opened, reopened]
 
 concurrency:
-  group: fetch-issue-url-${{ github.event.issue.number }}
+  group: ${{ (contains(github.event.issue.title, '天气') || (startsWith(github.event.issue.title, '20') && (contains(github.event.issue.title, '上车') || contains(github.event.issue.title, '下车')))) && 'fetch-issue-data-writer' || format('fetch-issue-url-{0}', github.event.issue.number) }}
   cancel-in-progress: false
 
 permissions:
@@ -34,8 +34,9 @@ jobs:
       (startsWith(github.event.issue.title, 'http://') ||
        startsWith(github.event.issue.title, 'https://') ||
        contains(github.event.issue.title, '天气') ||
-       contains(github.event.issue.title, '上车') ||
-       contains(github.event.issue.title, '下车'))
+       (startsWith(github.event.issue.title, '20') &&
+        (contains(github.event.issue.title, '上车') ||
+         contains(github.event.issue.title, '下车'))))
 
     steps:
       - name: Classify issue
@@ -55,7 +56,7 @@ jobs:
           elif [[ "$title" == *天气* ]]; then
             echo "mode=weather" >> "$GITHUB_OUTPUT"
             echo "命中天气: $title"
-          elif [[ "$title" == *上车* || "$title" == *下车* ]]; then
+          elif [[ "$title" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]+[0-9]{2}:[0-9]{2}:[0-9]{2}.*(上车|下车) ]]; then
             echo "mode=drive" >> "$GITHUB_OUTPUT"
             echo "命中行车: $title"
           else
@@ -174,69 +175,7 @@ jobs:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          python3 <<'PY'
-          import datetime
-          import json
-          import os
-          import pathlib
-          import re
-          import sys
-
-          title = os.environ.get("ISSUE_TITLE", "")
-          address = os.environ.get("ISSUE_BODY", "").strip()
-          issue_number = os.environ.get("ISSUE_NUMBER", "")
-
-          match = re.search(
-              r"(?<!\d)(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2}:\d{2}).*?(上车|下车)",
-              title,
-          )
-          if not match:
-              print(f"::error::行车 issue 标题缺少 YYYY-MM-DD HH:MM:SS + 上车/下车: {title}")
-              sys.exit(1)
-
-          year, month, day, time_key, action = match.groups()
-          try:
-              datetime.datetime.strptime(f"{year}-{month}-{day} {time_key}", "%Y-%m-%d %H:%M:%S")
-          except ValueError as exc:
-              print(f"::error::行车 issue 标题时间无效: {match.group(0)} ({exc})")
-              sys.exit(1)
-
-          data_dir = pathlib.Path("static/data/drive") / year / month
-          data_dir.mkdir(parents=True, exist_ok=True)
-          data_file = data_dir / f"{day}.json"
-
-          if data_file.exists():
-              try:
-                  data = json.loads(data_file.read_text(encoding="utf-8"))
-              except json.JSONDecodeError as exc:
-                  print(f"::error::现有行车 JSON 无法解析: {data_file} ({exc})")
-                  sys.exit(1)
-              if not isinstance(data, dict):
-                  print(f"::error::现有行车 JSON 顶层必须是对象: {data_file}")
-                  sys.exit(1)
-          else:
-              data = {}
-
-          data[time_key] = {
-              "action": action,
-              "address": address,
-          }
-          data_file.write_text(
-              json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-              encoding="utf-8",
-          )
-
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fp:
-              fp.write(f"path={data_file.as_posix()}\n")
-
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fp:
-              fp.write("### drive JSON saved\n\n")
-              fp.write(f"- issue: #{issue_number}\n")
-              fp.write(f"- title: {title}\n")
-              fp.write(f"- action: {action}\n")
-              fp.write(f"- address: {address}\n")
-              fp.write(f"- path: `{data_file.as_posix()}`\n")
-          PY
+          python3 scripts/upsert_drive_event.py
 
       - name: Commit drive JSON
         id: commit_drive
@@ -255,7 +194,21 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$DRIVE_PATH"
           git commit -m "保存行车数据 (#${ISSUE_NUMBER})"
-          git push origin main
+          pushed=no
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              pushed=yes
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "push 发生并发冲突，第 ${attempt} 次重试前同步 main"
+              git pull --rebase origin main
+            fi
+          done
+          if [ "$pushed" != "yes" ]; then
+            echo "::error::行车数据连续 3 次 push 失败"
+            exit 1
+          fi
           echo "committed=yes" >> "$GITHUB_OUTPUT"
           echo "processed=yes" >> "$GITHUB_OUTPUT"
 

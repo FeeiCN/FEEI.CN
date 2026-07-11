@@ -756,12 +756,15 @@ def extract_drive_context(paths: list[Path], report_date: date) -> dict[str, Any
     for time_key, value in sorted(payload.items()):
         if not isinstance(value, dict):
             continue
+        event_time = value.get("time") or time_key.split("#", 1)[0]
         events.append(
             {
-                "time": time_key,
-                "datetime": f"{report_date.isoformat()} {time_key}",
+                "event_id": time_key,
+                "time": event_time,
+                "datetime": f"{report_date.isoformat()} {event_time}",
                 "action": value.get("action"),
                 "address": value.get("address"),
+                "issue_number": value.get("issue_number"),
             }
         )
 

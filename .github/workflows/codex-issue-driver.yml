@@ -465,7 +465,16 @@ jobs:
           PY
 
           # plan 阶段只读，execute 阶段仅允许工作区写入。
-          COMMON=( exec --ephemeral --output-last-message /tmp/result.txt )
+          COMMON=(
+            exec
+            --ephemeral
+            --output-last-message /tmp/result.txt
+            --config 'model_provider="custom"'
+            --config 'model_providers.custom.name="AI Proxy"'
+            --config "model_providers.custom.base_url=\"${OPENAI_BASE_URL}\""
+            --config 'model_providers.custom.wire_api="responses"'
+            --config 'model_providers.custom.requires_openai_auth=true'
+          )
           if [ "$MODE" = "plan" ]; then
             EXTRA=( --sandbox read-only )
           else

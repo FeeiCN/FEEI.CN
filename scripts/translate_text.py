@@ -238,6 +238,22 @@ def _call_codex(article: str, *, timeout: float, model: str | None) -> str:
             "--output-last-message",
             str(output_path),
         ]
+        base_url = (os.environ.get("OPENAI_BASE_URL") or "").strip()
+        if base_url:
+            cmd.extend(
+                [
+                    "--config",
+                    'model_provider="custom"',
+                    "--config",
+                    'model_providers.custom.name="AI Proxy"',
+                    "--config",
+                    f"model_providers.custom.base_url={json.dumps(base_url)}",
+                    "--config",
+                    'model_providers.custom.wire_api="responses"',
+                    "--config",
+                    "model_providers.custom.requires_openai_auth=true",
+                ]
+            )
         if model:
             cmd.extend(["--model", model])
         cmd.append("-")

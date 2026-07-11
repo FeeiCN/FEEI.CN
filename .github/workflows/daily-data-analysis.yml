@@ -24,15 +24,17 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
 
     steps:
       - name: Check credentials
         env:
-          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
         run: |
-          if [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
-            echo "::error::ANTHROPIC_AUTH_TOKEN 未配置"
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo "::error::OPENAI_API_KEY 未配置"
             exit 1
           fi
           if [ -z "${WORKFLOW_TRIGGER_PAT:-}" ]; then
@@ -54,9 +56,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: |
-          npm install -g @anthropic-ai/claude-code
-          npm ci
+        run: npm ci
 
       - name: Resolve report date and files
         id: report
@@ -185,13 +185,9 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Run Claude for structured insights
-        id: claude_analysis
+      - name: Build Codex analysis prompt
         env:
           REPORT_DATE: ${{ steps.report.outputs.date }}
-          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
-          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
         run: |
           python3 <<'PY' > /tmp/daily-analysis-prompt.md
           import os
@@ -245,46 +241,25 @@ jobs:
           )
           PY
 
-          set +e
-          bash scripts/run_claude_with_retry.sh \
-            --label "structured insights" \
-            --prompt-file /tmp/daily-analysis-prompt.md \
-            --output-file /tmp/claude-analysis.json \
-            --stderr-file /tmp/claude-analysis.err \
-            --meta-file /tmp/claude-analysis.meta \
-            --attempts 2 \
-            --timeout-seconds 480 \
-            --max-budget-usd 3
-          CLAUDE_STATUS=$?
-          set -e
+      - name: Run Codex for structured insights
+        id: codex_analysis
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: /tmp/daily-analysis-prompt.md
+          output-file: /tmp/codex-analysis.json
+          sandbox: read-only
 
+      - name: Normalize Codex analysis
+        env:
+          REPORT_DATE: ${{ steps.report.outputs.date }}
+        run: |
           {
-            echo "## Claude structured analysis"
+            echo "## Codex structured analysis"
             echo
             echo "- report date: \`${REPORT_DATE}\`"
-            echo "- status: \`${CLAUDE_STATUS}\`"
-            echo
-            echo "### attempt metadata"
-            echo '```'
-            cat /tmp/claude-analysis.meta || true
-            echo
-            echo '```'
-            echo
-            echo "- turns: \`$(jq -r '.num_turns // 0' /tmp/claude-analysis.json 2>/dev/null || echo 0)\`"
-            echo "- cost: \`$(jq -r '.total_cost_usd // 0' /tmp/claude-analysis.json 2>/dev/null || echo 0)\` USD"
-            echo "- result length: \`$(jq -r '(.result // .message // "") | length' /tmp/claude-analysis.json 2>/dev/null || echo 0)\`"
-            echo
-            echo "### stderr 前 2000 字符"
-            echo '```'
-            head -c 2000 /tmp/claude-analysis.err || true
-            echo
-            echo '```'
+            echo "- result length: \`$(wc -c < /tmp/codex-analysis.json)\`"
           } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$CLAUDE_STATUS" -ne 0 ]; then
-            echo "::error::Claude Code 执行失败，status=${CLAUDE_STATUS}"
-            exit 1
-          fi
 
           python3 <<'PY'
           import json
@@ -295,7 +270,7 @@ jobs:
               if isinstance(value, (dict, list)):
                   return value
               if not isinstance(value, str):
-                  raise SystemExit(f"Claude analysis 输出格式不支持: {type(value).__name__}")
+                  raise SystemExit(f"Codex analysis 输出格式不支持: {type(value).__name__}")
 
               decoder = json.JSONDecoder()
               candidates = []
@@ -320,10 +295,9 @@ jobs:
                           continue
 
               preview = text[:500].replace("\n", "\\n")
-              raise SystemExit(f"Claude analysis JSON 解析失败，前 500 字符: {preview}")
+              raise SystemExit(f"Codex analysis JSON 解析失败，前 500 字符: {preview}")
 
-          payload = json.loads(Path("/tmp/claude-analysis.json").read_text(encoding="utf-8"))
-          value = payload.get("result", payload.get("message"))
+          value = Path("/tmp/codex-analysis.json").read_text(encoding="utf-8")
           parsed = parse_embedded_json(value)
 
           Path("/tmp/daily-analysis.json").write_text(

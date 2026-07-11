@@ -1,9 +1,9 @@
-name: Claude Code issue driver
+name: Codex issue driver
 
-# 把 owner 的 GitHub issue 当作 Claude Code 的异步任务入口。
+# 把 owner 的 GitHub issue 当作 Codex 的异步任务入口。
 # 触发:issue/issue_comment 任一变化(由 owner 发起);或 workflow_dispatch 手动。
 # 两段式:plan → 等 owner /approve → execute → 开 PR。
-# 状态用 label(claude:planning/plan-ready/executing/done/failed/paused)。
+# 状态用 label(codex:planning/plan-ready/executing/done/failed/paused)。
 # Marker 仅作评论定位 + 元信息,不参与状态判定。
 
 on:
@@ -17,14 +17,14 @@ on:
         description: '指定 issue 编号'
         required: true
       dry_run:
-        description: '只 decide,不调 claude'
+        description: '只 decide,不调 codex'
         required: false
         default: 'false'
 
 concurrency:
-  group: claude-driver-issue-${{ github.event.issue.number || github.event.inputs.issue_number }}
+  group: codex-driver-issue-${{ github.event.issue.number || github.event.inputs.issue_number }}
   # 不再 cancel-in-progress:旧 run 自然结束。否则 owner 在 /plan 跑出后再发 /replan,
-  # 旧 run 被中途杀,claude step 走 cancelled → 残留 claude:planning 锁,issue 卡死。
+  # 旧 run 被中途杀,codex step 走 cancelled → 残留 codex:planning 锁,issue 卡死。
   # 现在 cleanup step 已覆盖 failure + cancelled,保留旧 run 让其贴出 plan 后再退出即可。
 
 permissions:
@@ -48,7 +48,7 @@ jobs:
       (
         github.event.sender.login == github.repository_owner
         && (github.event_name != 'issue_comment' || !github.event.issue.pull_request)
-        && (github.event_name != 'issue_comment' || !startsWith(github.event.comment.body, '<!-- claude-driver:'))
+        && (github.event_name != 'issue_comment' || !startsWith(github.event.comment.body, '<!-- codex-driver:'))
         && (
           github.event_name != 'issues' ||
           (
@@ -106,7 +106,7 @@ jobs:
           labels = {l["name"] for l in d["labels"]}
           # planning / executing / paused 锁住 driver(防并发覆盖);done / failed 不挡,
           # owner 可在已完成的 issue 上评论 /plan 重新激活(走"非 plan-ready"分支)。
-          locked = labels & {"claude:paused","claude:executing","claude:planning"}
+          locked = labels & {"codex:paused","codex:executing","codex:planning"}
           if locked:
               reason = f"driver locked by label(s): {', '.join(sorted(locked))}; 请等待上次 /approve 流程结束"
               print("mode=skip"); print(f"number={n}"); print(f"reason={reason}")
@@ -114,13 +114,13 @@ jobs:
               sys.exit(0)
 
           comments = d["comments"]
-          last_claude = max(
-              (c for c in comments if c["body"].startswith("<!-- claude-driver:")),
+          last_codex = max(
+              (c for c in comments if c["body"].startswith("<!-- codex-driver:")),
               key=lambda c: c["createdAt"], default=None)
           last_owner = max(
               (c for c in comments
                if c["author"]["login"] == OWNER
-               and not c["body"].startswith("<!-- claude-driver:")),
+               and not c["body"].startswith("<!-- codex-driver:")),
               key=lambda c: c["createdAt"], default=None)
 
           def has(body, tok):
@@ -139,8 +139,8 @@ jobs:
              and not has(d["title"], "/replan") \
              and not has(d["title"], "/reject"):
               reason = "no owner comment with /plan|/approve|/replan|/reject and title has no command"
-          elif "claude:plan-ready" in labels:
-              if not last_claude or (last_owner and last_owner["createdAt"] > last_claude["createdAt"]):
+          elif "codex:plan-ready" in labels:
+              if not last_codex or (last_owner and last_owner["createdAt"] > last_codex["createdAt"]):
                   combined = ((last_owner["body"] if last_owner else "") + "\n" + d["title"])
                   if has(combined, "/reject"):
                       mode = "paused"
@@ -150,7 +150,7 @@ jobs:
                       mode = "execute"
                   # /plan 在 plan-ready 状态下被忽略(已经 plan 过了,要先 /replan)
           else:
-              if not last_claude or (last_owner and last_owner["createdAt"] > last_claude["createdAt"]):
+              if not last_codex or (last_owner and last_owner["createdAt"] > last_codex["createdAt"]):
                   combined = ((last_owner["body"] if last_owner else "") + "\n" + d["title"])
                   if has(combined, "/reject"):
                       mode = "paused"
@@ -169,7 +169,7 @@ jobs:
           print(f"[decide] issue=#{n} mode={mode} author={author_login} state={d['state']} "
                 f"labels={sorted(labels)} reason={reason or '-'} "
                 f"last_owner={last_owner['createdAt'] if last_owner else None} "
-                f"last_claude={last_claude['createdAt'] if last_claude else None} "
+                f"last_codex={last_codex['createdAt'] if last_codex else None} "
                 f"body_empty={not d['body'].strip()} comments={len(comments)} "
                 f"title_has_plan={has(d['title'], '/plan')} title_has_approve={has(d['title'], '/approve')} "
                 f"title_has_replan={has(d['title'], '/replan')} title_has_reject={has(d['title'], '/reject')}",
@@ -204,9 +204,9 @@ jobs:
           case "${REASON}" in
             *"author is not owner"*|*"state is"*|*"driver locked by"*)
               {
-                echo "<!-- claude-driver:diagnostic:skip -->"
+                echo "<!-- codex-driver:diagnostic:skip -->"
                 echo
-                echo "## Claude Code driver 跳过了此次 \`/plan\`"
+                echo "## Codex driver 跳过了此次 \`/plan\`"
                 echo
                 echo "- issue: #${N}"
                 echo "- author: \`${AUTHOR}\`"
@@ -218,9 +218,9 @@ jobs:
                 echo
                 echo "- 若 issue 非 owner 创建,改在 owner 自建的 issue 上发 \`/plan\`"
                 echo "- 若 issue 已关闭,重新打开后重发"
-                echo "- 若 driver 被锁(\`claude:executing\` 等),等待上一次 \`/approve\` 流程结束后再发"
+                echo "- 若 driver 被锁(\`codex:executing\` 等),等待上一次 \`/approve\` 流程结束后再发"
                 echo
-                echo "<!-- 本条评论由 driver 自动生成,无 Claude 调用 -->"
+                echo "<!-- 本条评论由 driver 自动生成,无 Codex 调用 -->"
               } > /tmp/diag.md
               gh issue comment "$N" --repo "$REPO" --body-file /tmp/diag.md 2>/dev/null || true
               ;;
@@ -231,19 +231,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          # driver 用到 6 个 claude:* label,仓库里可能一个都没有;
+          # driver 用到 6 个 codex:* label,仓库里可能一个都没有;
           # 已存在会报 "already exists",吞掉即可,保证后续 add 不会因 label 不存在失败。
           declare -A L=(
-            [claude:planning]="fbc108"
-            [claude:plan-ready]="0e8a16"
-            [claude:executing]="fbca04"
-            [claude:done]="0e8a16"
-            [claude:failed]="d93f0b"
-            [claude:paused]="cccccc"
+            [codex:planning]="fbc108"
+            [codex:plan-ready]="0e8a16"
+            [codex:executing]="fbca04"
+            [codex:done]="0e8a16"
+            [codex:failed]="d93f0b"
+            [codex:paused]="cccccc"
           )
           for name in "${!L[@]}"; do
             gh label create "$name" --repo "$REPO" --color "${L[$name]}" \
-              --description "Claude Code driver state" 2>/dev/null || true
+              --description "Codex driver state" 2>/dev/null || true
           done
 
       - name: Apply paused label
@@ -254,9 +254,9 @@ jobs:
           N: ${{ steps.decide.outputs.number }}
         run: |
           for s in planning plan-ready executing done failed; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
           done
-          gh issue edit "$N" --repo "$REPO" --add-label claude:paused
+          gh issue edit "$N" --repo "$REPO" --add-label codex:paused
 
       - name: Apply state label
         if: steps.decide.outputs.mode == 'plan' || steps.decide.outputs.mode == 'execute'
@@ -266,14 +266,14 @@ jobs:
           N: ${{ steps.decide.outputs.number }}
           MODE: ${{ steps.decide.outputs.mode }}
         run: |
-          # 视觉信号:Claude 进入 plan 阶段立刻上 planning label(失败也方便定位);
-          # execute 阶段实际上由 claude step 内部 add claude:executing(因为要等切分支),
+          # 视觉信号:Codex 进入 plan 阶段立刻上 planning label(失败也方便定位);
+          # execute 阶段实际上由 codex step 内部 add codex:executing(因为要等切分支),
           # 这里只对 plan 模式加 planning,execute 模式不做事。
           for s in planning plan-ready executing done failed; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
           done
           if [ "$MODE" = "plan" ]; then
-            gh issue edit "$N" --repo "$REPO" --add-label claude:planning 2>/dev/null || true
+            gh issue edit "$N" --repo "$REPO" --add-label codex:planning 2>/dev/null || true
           fi
 
       # ─────────────────────────────────────
@@ -283,11 +283,11 @@ jobs:
         id: creds
         if: steps.decide.outputs.mode == 'plan' || steps.decide.outputs.mode == 'execute'
         env:
-          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          if [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
             echo "skip=no_credentials" >> "$GITHUB_OUTPUT"
-            echo "ANTHROPIC_AUTH_TOKEN 未配置,跳过 claude 执行"
+            echo "OPENAI_API_KEY 未配置,跳过 Codex 执行"
           else
             echo "skip=no" >> "$GITHUB_OUTPUT"
           fi
@@ -316,22 +316,22 @@ jobs:
             $(npm root -g)
           # 不再把 workflow 文件 hash 进 key:workflow 改一次就 cold cache,3 次 /replan
           # 全付重装代价。npm 包本身不依赖 workflow 变化。
-          key: claude-cli-${{ hashFiles('package-lock.json') }}
+          key: codex-cli-${{ hashFiles('package-lock.json') }}
           restore-keys: |
-            claude-cli-${{ hashFiles('package-lock.json') }}-
-            claude-cli-
+            codex-cli-${{ hashFiles('package-lock.json') }}-
+            codex-cli-
 
       - name: Install dependencies
         if: steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
         run: |
-          npm install -g @anthropic-ai/claude-code
+          npm install -g @openai/codex
           npm ci
 
       # ─────────────────────────────────────
-      # 3. 构造 prompt + 跑 Claude
+      # 3. 构造 prompt + 跑 Codex
       # ─────────────────────────────────────
-      - name: Build prompt and run Claude
-        id: claude
+      - name: Build prompt and run Codex
+        id: codex
         if: (steps.decide.outputs.mode == 'plan' || steps.decide.outputs.mode == 'execute') && steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -340,9 +340,9 @@ jobs:
           N: ${{ steps.decide.outputs.number }}
           MODE: ${{ steps.decide.outputs.mode }}
           ISSUE_JSON: ${{ steps.decide.outputs.issue-json-path }}
-          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
-          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
         run: |
           BASE_SHA="$(git rev-parse origin/main)"
           echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
@@ -354,9 +354,9 @@ jobs:
             git config user.name  "FeeiCN[bot]"
             git config user.email "feei@feei.cn"
             for s in planning plan-ready done failed; do
-              gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+              gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
             done
-            gh issue edit "$N" --repo "$REPO" --add-label claude:executing
+            gh issue edit "$N" --repo "$REPO" --add-label codex:executing
           fi
 
           # 构造 prompt
@@ -366,10 +366,9 @@ jobs:
           N, REPO, MODE = os.environ["N"], os.environ["REPO"], os.environ["MODE"]
           d = json.loads(pathlib.Path(os.environ["ISSUE_JSON"]).read_text(encoding="utf-8"))
 
-          # 完整读 CLAUDE.md:之前的 [:4000] 截断会让 plan 阶段看不到
+          # 完整读 AGENTS.md，确保 Codex 获得仓库协作规范。
           # "内容写作规范""PR 规范""GitHub Issue 处理流程"等后半段规则,
-          # 导致 plan 阶段 Claude 拿到的工程规范残缺。当前 7KB,完整进 prompt 完全够。
-          claude_md = pathlib.Path("CLAUDE.md").read_text(encoding="utf-8")
+          agents_md = pathlib.Path("AGENTS.md").read_text(encoding="utf-8")
           recent = d["comments"][-20:]
 
           if MODE == "plan":
@@ -377,7 +376,7 @@ jobs:
                   f"你正在分析 GitHub issue #{N}。\n\n"
                   f"你的任务是根据:\n"
                   f"- Issue 正文与最近评论\n"
-                  f"- CLAUDE.md\n"
+                  f"- AGENTS.md\n"
                   f"- 必要时查看少量文件或检索互联网资料\n\n"
                   f"生成实施计划。\n\n"
                   f"完成后立即输出计划,禁止继续探索。\n\n"
@@ -389,7 +388,7 @@ jobs:
                   f"5. 验证方式\n\n"
                   f"硬约束:\n"
                   f"- 工具调用总次数不超过 11 次(Read / Grep / Glob / WebFetch / WebSearch / 限定 Bash 合计)。\n"
-                  f"- 优先复用 CLAUDE.md 中已有的目录结构与命名约定,不要再发起额外的探索性调用。\n"
+                  f"- 优先复用 AGENTS.md 中已有的目录结构与命名约定,不要再发起额外的探索性调用。\n"
                   f"- 一旦计划在内心完整,立即输出,不要再追加「进一步分析」类调用。\n\n"
                   f"## Plan metadata(实施型建议填)\n"
                   f"如果本计划需要新增/修改/删除文件,建议在末尾包含下面这一段,字段齐全,绝对路径:\n"
@@ -403,7 +402,7 @@ jobs:
                   f"\n"
                   f"字段语义:\n"
                   f"- affected_files:实施本计划预计要新增/修改/删除的文件列表(只列路径,不要解释)。\n"
-                  f"- risk:依据 CLAUDE.md 的「构建检查」「破坏面」「新依赖」综合判断。\n"
+                  f"- risk:依据 AGENTS.md 的「构建检查」「破坏面」「新依赖」综合判断。\n"
                   f"- verification:owner 验收时应该跑的命令,例如 `npm run build` / `npm run typecheck` / `git diff --stat` / 具体的 grep/cat 验证。\n"
                   f"\n"
                   f"**特例:纯分析 / 调研任务**(例如「为什么这个 label 被改了又改」、「driver 这一步为什么这么设计」,不涉及文件改动):在计划末尾显式声明一句『这是一个纯分析 / 调研任务,不涉及文件修改。』即可,driver 会跳过 metadata 校验、贴评论、标 plan-ready。driver 通过以下关键词判定:『这是...纯分析/调研/研究』/『本计划/任务/issue 是...分析/调研』/『不需要/无需 修改文件/代码』/『不涉及文件修改』。\n"
@@ -413,7 +412,7 @@ jobs:
           else:
               plan = next(
                   (c for c in reversed(d["comments"])
-                   if c["body"].startswith("<!-- claude-driver:plan:")),
+                   if c["body"].startswith("<!-- codex-driver:plan:")),
                   {"body":"(未找到 plan 评论)"})
               m = re.search(r"commit=([a-f0-9]+)", plan["body"])
               plan_commit = m.group(1) if m else "(unknown)"
@@ -452,8 +451,8 @@ jobs:
               comments_block = "(无)"
 
           print(
-              f"# 仓库背景(CLAUDE.md 摘要)\n\n"
-              f"{claude_md}\n\n"
+              f"# 仓库背景(AGENTS.md)\n\n"
+              f"{agents_md}\n\n"
               f"# Issue 信息\n\n"
               f"标题: {d['title']}\n\n"
               f"## Issue 正文\n\n"
@@ -465,72 +464,37 @@ jobs:
           )
           PY
 
-          # 跑 Claude
-          # --permission-mode 拆 mode:
-          #   - plan:Claude Code 内置只读模式(禁止 Write/Edit/Bash 写类),plan
-          #     阶段用这个,工具级别硬阻断改文件
-          #   - bypassPermissions:完全信任模式(允许一切),execute 阶段用,
-          #     靠 prompt 硬约束('不要 git commit') + driver step 边界
-          #     (commit/push 在 build step 统一做)
-          COMMON=( -p --output-format json )
+          # plan 阶段只读，execute 阶段仅允许工作区写入。
+          COMMON=( exec --ephemeral --output-last-message /tmp/result.txt )
           if [ "$MODE" = "plan" ]; then
-            EXTRA=(
-              --permission-mode plan
-              --max-turns 200
-              --max-budget-usd 20
-            )
+            EXTRA=( --sandbox read-only )
           else
-            EXTRA=(
-              --permission-mode bypassPermissions
-              --max-turns 200
-              --max-budget-usd 20
-            )
+            EXTRA=( --sandbox workspace-write )
+          fi
+          if [ -n "${OPENAI_MODEL:-}" ]; then
+            EXTRA+=( --model "$OPENAI_MODEL" )
           fi
 
+          : > /tmp/result.txt
           set +e
-          claude "${COMMON[@]}" "${EXTRA[@]}" < /tmp/prompt.md \
-            > /tmp/claude.json 2> /tmp/claude.err
-          CLAUDE_STATUS=$?
+          codex "${COMMON[@]}" "${EXTRA[@]}" - < /tmp/prompt.md \
+            > /tmp/codex.log 2> /tmp/codex.err
+          CODEX_STATUS=$?
           set -e
 
           # 诊断:inline 日志 + step summary 都写,任何页面都能看到
           {
-            echo "### claude stderr 前 2000 字符"
+            echo "### Codex stderr 前 2000 字符"
             echo '```'
-            head -c 2000 /tmp/claude.err || true
+            head -c 2000 /tmp/codex.err || true
             echo
             echo '```'
-            echo "### claude.json 顶层字段"
+            echo "### Codex log 前 1500 字符"
             echo '```'
-            jq -r 'keys_unsorted | join(", ")' /tmp/claude.json 2>/dev/null || echo "(jq failed)"
-            echo
-            echo '```'
-            echo "### claude.json 摘要 前 1500 字符"
-            echo '```'
-            head -c 1500 /tmp/claude.json || true
+            head -c 1500 /tmp/codex.log || true
             echo
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
-
-          jq -r '.result // .message // ""' /tmp/claude.json > /tmp/result.txt
-
-          # plan mode 下 Claude 不把详细计划写到 stdout,而是写到
-          # ~/.claude/plans/<id>.md,stdout 只剩一句「计划已写入 ...」。
-          # 用最新的 plan 文件覆盖 result.txt,这样 Post plan comment
-          # 拿到的是真实计划内容而不是文件名。execute 模式不写 plan 文件,
-          # glob 找不到,fall back 到 stdout 原值。
-          PLAN_FILE="$(ls -t ~/.claude/plans/*.md 2>/dev/null | head -1 || true)"
-          if [ -n "$PLAN_FILE" ] && [ -s "$PLAN_FILE" ]; then
-            cat "$PLAN_FILE" > /tmp/result.txt
-            {
-              echo "### plan source"
-              echo
-              echo "检测到 plan mode 写到本地文件,已用其覆盖 stdout 结果:"
-              echo
-              echo "- file: \`$PLAN_FILE\`"
-              echo "- size: $(wc -c < "$PLAN_FILE") bytes"
-            } | tee -a "$GITHUB_STEP_SUMMARY"
-          fi
 
           RESULT_NONEMPTY="$(python3 - <<'PY'
           from pathlib import Path
@@ -539,74 +503,61 @@ jobs:
           PY
           )"
 
-          echo "cost=$(jq -r '.total_cost_usd // 0' /tmp/claude.json)" >> "$GITHUB_OUTPUT"
-          echo "turns=$(jq -r '.num_turns // 0' /tmp/claude.json)" >> "$GITHUB_OUTPUT"
+          echo "cost=unknown" >> "$GITHUB_OUTPUT"
+          echo "turns=unknown" >> "$GITHUB_OUTPUT"
           echo "result_len=$(wc -c < /tmp/result.txt)" >> "$GITHUB_OUTPUT"
 
-          if [ "$CLAUDE_STATUS" -ne 0 ] || [ "$RESULT_NONEMPTY" != "yes" ]; then
-            echo "::group::Claude diagnostics"
-            echo "claude_status=$CLAUDE_STATUS"
-            jq -r '{
-              type,
-              subtype,
-              is_error,
-              total_cost_usd,
-              num_turns,
-              result_len: ((.result // .message // "") | length)
-            }' /tmp/claude.json 2>/dev/null || true
+          if [ "$CODEX_STATUS" -ne 0 ] || [ "$RESULT_NONEMPTY" != "yes" ]; then
+            echo "::group::Codex diagnostics"
+            echo "codex_status=$CODEX_STATUS"
             echo "--- stderr ---"
-            head -c 4000 /tmp/claude.err || true
+            head -c 4000 /tmp/codex.err || true
             echo
-            echo "--- json head ---"
-            head -c 4000 /tmp/claude.json || true
+            echo "--- log head ---"
+            head -c 4000 /tmp/codex.log || true
             echo
             echo "::endgroup::"
             {
-              echo "## Claude 执行失败"
+              echo "## Codex 执行失败"
               echo
-              echo "- status: $CLAUDE_STATUS"
-              echo "- subtype: $(jq -r '.subtype // "unknown"' /tmp/claude.json)"
-              echo "- terminal_reason: $(jq -r '.terminal_reason // "unknown"' /tmp/claude.json)"
-              echo "- stop_reason: $(jq -r '.stop_reason // "unknown"' /tmp/claude.json)"
-              echo "- turns: $(jq -r '.num_turns // 0' /tmp/claude.json)"
-              echo "- cost: \$$(jq -r '.total_cost_usd // 0' /tmp/claude.json)"
+              echo "- status: $CODEX_STATUS"
               echo
-              echo "请提高 max-turns,或收窄 issue 范围后重新执行。"
+              echo "请检查 Codex 日志，或收窄 issue 范围后重新执行。"
             } > /tmp/result.txt
-            echo "Claude 无有效输出"
+            echo "Codex 无有效输出"
             exit 1
           fi
 
       # ─────────────────────────────────────
-      # 4. 失败时清锁:plan 阶段 claude 失败(execute 阶段由 Post execute result 负责)
-      # 不清就会把 issue 永久锁在 claude:planning / claude:executing,后续指令全部被
+      # 4. 失败时清锁:plan 阶段 codex 失败(execute 阶段由 Post execute result 负责)
+      # 不清就会把 issue 永久锁在 codex:planning / codex:executing,后续指令全部被
       # Decide mode 的 `locked` 拦截。覆盖 plan-only 失败 + plan/execute 都失败两种情况。
       # ─────────────────────────────────────
       - name: Cleanup stuck lock on plan failure
-        if: steps.claude.outcome == 'failure' && steps.decide.outputs.mode == 'plan'
+        if: steps.codex.outcome == 'failure' && steps.decide.outputs.mode == 'plan'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           N: ${{ steps.decide.outputs.number }}
         run: |
           for s in planning plan-ready executing done paused; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
           done
-          gh issue edit "$N" --repo "$REPO" --add-label claude:failed 2>/dev/null || true
+          gh issue edit "$N" --repo "$REPO" --add-label codex:failed 2>/dev/null || true
 
       # ─────────────────────────────────────
       # 4. plan 分支:post + label
       # ─────────────────────────────────────
       - name: Post plan comment
         id: post_plan
-        if: steps.decide.outputs.mode == 'plan' && steps.claude.outcome == 'success'
+        if: steps.decide.outputs.mode == 'plan' && steps.codex.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           N: ${{ steps.decide.outputs.number }}
-          BASE: ${{ steps.claude.outputs.base_sha }}
-          COST: ${{ steps.claude.outputs.cost }}
-          TURNS: ${{ steps.claude.outputs.turns }}
+          BASE: ${{ steps.codex.outputs.base_sha }}
+          COST: ${{ steps.codex.outputs.cost }}
+          TURNS: ${{ steps.codex.outputs.turns }}
         run: |
           # Schema 校验:必须含 ## Plan metadata 段,且三个字段齐全。
           # 缺则视为"plan 不完整"——清锁、标 failed、贴 reject 评论、exit 1。
@@ -615,7 +566,7 @@ jobs:
           python3 - <<'PY'
           import re, sys, pathlib
           text = pathlib.Path("/tmp/result.txt").read_text(encoding="utf-8", errors="replace")
-          # 分析型 plan:Claude 显式声明本计划是纯分析/调研,不涉及文件修改。
+          # 分析型 plan:Codex 显式声明本计划是纯分析/调研,不涉及文件修改。
           # 这种 plan 没有 verification 命令可跑,允许跳过校验,verification 视为 ["无"]。
           # 没声明分析 → 默认实施型,直接放行(实施型不再强校验 ## Plan metadata)。
           ANALYSIS_PATTERNS = (
@@ -637,17 +588,17 @@ jobs:
             REJECT_REASON="$(python3 -c "import sys; print('rejected by schema validator (exit=)')" 2>/dev/null || true)"
             echo "::error::plan schema 校验失败,exit=$SCHEMA_STATUS"
             for s in planning plan-ready executing done paused; do
-              gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+              gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
             done
-            gh issue edit "$N" --repo "$REPO" --add-label claude:failed 2>/dev/null || true
+            gh issue edit "$N" --repo "$REPO" --add-label codex:failed 2>/dev/null || true
             {
-              echo "<!-- claude-driver:plan-rejected -->"
+              echo "<!-- codex-driver:plan-rejected -->"
               echo
               echo "## plan 被 driver 拒绝"
               echo
-              echo "原因:Claude 输出的 plan 缺少 \`## Plan metadata\` 结构化段,无法校验完整性。"
+              echo "原因:Codex 输出的 plan 缺少 \`## Plan metadata\` 结构化段,无法校验完整性。"
               echo
-              echo "请重新发 \`/plan\` 让 Claude 重出。注意末尾必须含:"
+              echo "请重新发 \`/plan\` 让 Codex 重出。注意末尾必须含:"
               echo
               echo '```'
               echo "## Plan metadata"
@@ -661,9 +612,9 @@ jobs:
           fi
 
           {
-            echo "<!-- claude-driver:plan:commit=${BASE}:cost=${COST}:turns=${TURNS} -->"
+            echo "<!-- codex-driver:plan:commit=${BASE}:cost=${COST}:turns=${TURNS} -->"
             echo
-            echo "## Claude Code 执行计划"
+            echo "## Codex 执行计划"
             echo
             cat /tmp/result.txt
             echo
@@ -677,9 +628,9 @@ jobs:
           gh issue comment "$N" --repo "$REPO" --body-file /tmp/comment.md
 
           for s in planning executing done failed; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
           done
-          gh issue edit "$N" --repo "$REPO" --add-label claude:plan-ready
+          gh issue edit "$N" --repo "$REPO" --add-label codex:plan-ready
 
       # ─────────────────────────────────────
       # 5. execute 分支:build → commit → ff-merge main → push main
@@ -688,12 +639,12 @@ jobs:
       #   - 不需要 CI 矩阵
       #   - PAT 不需要 createPullRequest scope
       #   - 避免 agent/issue-N 分支残留 / runner ephemeral 磁盘丢改动
-      # 改为:Claude 直接在 main 上改文件 → build 卡门 → commit → rebase → push main
+      # 改为:Codex 直接在 main 上改文件 → build 卡门 → commit → rebase → push main
       # rebase 冲突 = 远端 main 上有冲突更新,driver 不强推,标 failed 等用户处理
       # ─────────────────────────────────────
       - name: Build and push
         id: build
-        if: steps.decide.outputs.mode == 'execute' && steps.claude.outcome == 'success'
+        if: steps.decide.outputs.mode == 'execute' && steps.codex.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
           REPO: ${{ github.repository }}
@@ -707,14 +658,14 @@ jobs:
             echo "reason=build 失败(无 [SUCCESS]),未 push" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # diff 检查:Claude 应该改了东西(对比起点是 claude step 切到的 origin/main)。
+          # diff 检查:Codex 应该改了东西(对比起点是 codex step 切到的 origin/main)。
           # 必须同时检测 tracked 变更和 untracked 文件:`git diff` 不显示 untracked,
-          # 只看 tracked 会漏掉「只新增文件」的合法 plan(issue #233 实测:Claude 用
+          # 只看 tracked 会漏掉「只新增文件」的合法 plan(issue #233 实测:Codex 用
           # Write 创建了 AI洗脑.md,git diff 仍为空,build step 误判失败,文件随
           # runner 销毁,主仓永远拿不到)。`git status --porcelain` 同时覆盖两类。
           if git diff --quiet origin/main && [ -z "$(git status --porcelain)" ]; then
             echo "state=failed" >> "$GITHUB_OUTPUT"
-            echo "reason=Claude 跑完后无任何变更(tracked + untracked 都空),可能 plan 已过期或被 abort" >> "$GITHUB_OUTPUT"
+            echo "reason=Codex 跑完后无任何变更(tracked + untracked 都空),可能 plan 已过期或被 abort" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           # commit(在 main 上直接做,无需切分支 / ff-merge)
@@ -724,28 +675,28 @@ jobs:
           [ "${#ISSUE_TITLE}" -gt 80 ] && TITLE="${TITLE}…"
           [ -z "${TITLE}" ] && TITLE="(无标题)"
           printf 'Agent: #%s — %s\n' "${N}" "${TITLE}" | git commit -F -
-          # 校验:Claude 不应自作 commit。HEAD 距离 origin/main 应只有 1 个 commit
-          # (就是 build step 这一笔)。如果 > 1,说明 Claude 跑了 git commit,
+          # 校验:Codex 不应自作 commit。HEAD 距离 origin/main 应只有 1 个 commit
+          # (就是 build step 这一笔)。如果 > 1,说明 Codex 跑了 git commit,
           # 把 warn 写进 step summary,留 trace 但不阻塞(已 prompt 约束)。
           COMMIT_COUNT="$(git rev-list --count origin/main..HEAD)"
           if [ "${COMMIT_COUNT}" -gt 1 ]; then
-            echo "::warning::Claude 自作 ${COMMIT_COUNT} 个 commit(prompt 要求 Claude 不 commit)"
+            echo "::warning::Codex 自作 ${COMMIT_COUNT} 个 commit(prompt 要求 Codex 不 commit)"
             {
-              echo "### ⚠️ Claude 自作 commit"
+              echo "### ⚠️ Codex 自作 commit"
               echo
               echo "检测到 \`git log origin/main..HEAD\` 有 ${COMMIT_COUNT} 个 commit(预期 1 个)。"
-              echo "可能是 Claude 绕过了 prompt 约束跑了 \`git commit\`。"
+              echo "可能是 Codex 绕过了 prompt 约束跑了 \`git commit\`。"
               echo
               echo '```'
               git log --oneline origin/main..HEAD
               echo '```'
             } | tee -a "$GITHUB_STEP_SUMMARY"
           fi
-          # rebase:拉远端 main 上来,处理 Claude 改文件期间其他 commit 进 main 的情况
+          # rebase:拉远端 main 上来,处理 Codex 改文件期间其他 commit 进 main 的情况
           git fetch origin main
           if ! git pull --rebase origin main; then
             echo "state=failed" >> "$GITHUB_OUTPUT"
-            echo "reason=rebase 冲突(Claude 改的文件在远端 main 上有冲突更新),需用户处理" >> "$GITHUB_OUTPUT"
+            echo "reason=rebase 冲突(Codex 改的文件在远端 main 上有冲突更新),需用户处理" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if ! git push origin main; then
@@ -757,22 +708,22 @@ jobs:
           echo "merge_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Post execute result
-        if: steps.decide.outputs.mode == 'execute' && (steps.claude.outcome == 'success' || steps.claude.outcome == 'failure')
+        if: steps.decide.outputs.mode == 'execute' && (steps.codex.outcome == 'success' || steps.codex.outcome == 'failure')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           N: ${{ steps.decide.outputs.number }}
-          BASE: ${{ steps.claude.outputs.base_sha }}
-          COST: ${{ steps.claude.outputs.cost }}
-          TURNS: ${{ steps.claude.outputs.turns }}
+          BASE: ${{ steps.codex.outputs.base_sha }}
+          COST: ${{ steps.codex.outputs.cost }}
+          TURNS: ${{ steps.codex.outputs.turns }}
           STATE: ${{ steps.build.outputs.state }}
           MERGE_COMMIT: ${{ steps.build.outputs.merge_commit }}
           REASON: ${{ steps.build.outputs.reason }}
         run: |
           {
-            echo "<!-- claude-driver:result:commit=${BASE}:merge=${MERGE_COMMIT:-none}:cost=${COST}:turns=${TURNS} -->"
+            echo "<!-- codex-driver:result:commit=${BASE}:merge=${MERGE_COMMIT:-none}:cost=${COST}:turns=${TURNS} -->"
             echo
-            echo "## Claude Code 执行结果"
+            echo "## Codex 执行结果"
             echo
             echo "- 合并到 main: \`${MERGE_COMMIT:-none}\`"
             echo "- 状态: ${STATE}"
@@ -787,17 +738,17 @@ jobs:
           gh issue comment "$N" --repo "$REPO" --body-file /tmp/result.md
 
           for s in planning plan-ready executing done failed; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
           done
           LABEL="${STATE:-failed}"
-          gh issue edit "$N" --repo "$REPO" --add-label "claude:${LABEL}"
+          gh issue edit "$N" --repo "$REPO" --add-label "codex:${LABEL}"
 
       # ─────────────────────────────────────
       # 6. 终态保险:无论前面哪步失败 / cancel,这里都跑一次,
       # 把 issue label 拉回一致状态。覆盖以下漏网场景:
       #   - setup 步骤失败 (Checkout / Setup Node / Cache / Install)
       #   - 无凭证 (creds check → skip=no_credentials)
-      #   - claude 步骤 cancelled (timeout 60min / 手动 cancel)
+      #   - codex 步骤 cancelled (timeout 60min / 手动 cancel)
       #   - Post plan comment 中段失败 (gh issue comment exit 后跳过 label 切换)
       #   - 整个 workflow 被 cancel
       # 设计原则:按 mode + 各 step outcome 算出「期望终态」,
@@ -810,7 +761,7 @@ jobs:
           REPO: ${{ github.repository }}
           N: ${{ steps.decide.outputs.number }}
           MODE: ${{ steps.decide.outputs.mode }}
-          CLAUDE_OUTCOME: ${{ steps.claude.outcome }}
+          CODEX_OUTCOME: ${{ steps.codex.outcome }}
           POST_PLAN_OUTCOME: ${{ steps.post_plan.outcome }}
           BUILD_STATE: ${{ steps.build.outputs.state }}
         run: |
@@ -824,7 +775,7 @@ jobs:
               DESIRED="paused"
               ;;
             plan)
-              if [ "$CLAUDE_OUTCOME" = "success" ] && [ "$POST_PLAN_OUTCOME" = "success" ]; then
+              if [ "$CODEX_OUTCOME" = "success" ] && [ "$POST_PLAN_OUTCOME" = "success" ]; then
                 DESIRED="plan-ready"
               else
                 DESIRED="failed"
@@ -844,24 +795,24 @@ jobs:
           esac
 
           # 查现状
-          CURRENT_LABELS="$(gh issue view "$N" --repo "$REPO" --json labels --jq -r '.labels[].name' | grep '^claude:' || true)"
+          CURRENT_LABELS="$(gh issue view "$N" --repo "$REPO" --json labels --jq -r '.labels[].name' | grep '^codex:' || true)"
           CURRENT_COUNT="$(printf '%s\n' "$CURRENT_LABELS" | grep -c . || true)"
-          echo "current claude:* labels: ${CURRENT_LABELS:-<none>}"
-          echo "desired: claude:$DESIRED"
+          echo "current codex:* labels: ${CURRENT_LABELS:-<none>}"
+          echo "desired: codex:$DESIRED"
 
-          # 已经是期望状态(且只有一个 claude:* label),不动
-          if [ "$CURRENT_COUNT" = "1" ] && printf '%s\n' "$CURRENT_LABELS" | grep -qx "claude:$DESIRED"; then
-            echo "label 已是 claude:$DESIRED, 无需调整"
+          # 已经是期望状态(且只有一个 codex:* label),不动
+          if [ "$CURRENT_COUNT" = "1" ] && printf '%s\n' "$CURRENT_LABELS" | grep -qx "codex:$DESIRED"; then
+            echo "label 已是 codex:$DESIRED, 无需调整"
             exit 0
           fi
 
-          # 一次性清掉所有 claude:*
+          # 一次性清掉所有 codex:*
           for s in planning plan-ready executing done failed paused; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "claude:$s" 2>/dev/null || true
+            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
           done
 
           # 加上期望值
-          gh issue edit "$N" --repo "$REPO" --add-label "claude:$DESIRED" 2>/dev/null || true
+          gh issue edit "$N" --repo "$REPO" --add-label "codex:$DESIRED" 2>/dev/null || true
 
           # step summary 留 trace,方便排查
           {
@@ -869,8 +820,8 @@ jobs:
             echo
             echo "- issue: #${N}"
             echo "- mode: \`${MODE}\`"
-            echo "- claude outcome: \`${CLAUDE_OUTCOME:-<n/a>}\`"
+            echo "- codex outcome: \`${CODEX_OUTCOME:-<n/a>}\`"
             echo "- post_plan outcome: \`${POST_PLAN_OUTCOME:-<n/a>}\`"
             echo "- build state: \`${BUILD_STATE:-<n/a>}\`"
-            echo "- previous: \`${CURRENT_LABELS:-<none>}\` → \`claude:${DESIRED}\`"
+            echo "- previous: \`${CURRENT_LABELS:-<none>}\` → \`codex:${DESIRED}\`"
           } | tee -a "$GITHUB_STEP_SUMMARY"

@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""用 Claude Code 翻译文本,产出 逐行翻译 + 通俗讲解 两段式 Markdown(逐行翻译每段先英文后中文,复杂词内联标注)。
+"""用 Codex 翻译文本,产出 逐行翻译 + 通俗讲解 两段式 Markdown(逐行翻译每段先英文后中文,复杂词内联标注)。
 
 替代原 MyMemory / Google GTX / LibreTranslate 链路的脚本实现。
-调用 `claude -p --output-format json`(参照 .github/workflows/claude-code-issue-driver.yml),
-让 Claude 直接做翻译 / 标注 / 讲解,质量与可控性都比免费 API 翻译好。
+调用 `codex exec`，让 Codex 直接做翻译 / 标注 / 讲解，质量与可控性都比免费 API 翻译好。
 
 CLI: python translate_text.py "text" [--source en] [--target zh-CN] [--json]
 """
@@ -19,6 +18,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,7 +28,7 @@ from typing import Any
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1.15 Safari/605.1.15"
 DEFAULT_TIMEOUT = 300.0
 CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
-CACHE_VERSION = "v3"
+CACHE_VERSION = "v4"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CACHE_PATH = SCRIPT_DIR / "cache" / "translation_cache.json"
@@ -213,68 +213,56 @@ def _cache_put(path: Path, key: str, value: str, provider_id: str) -> None:
     _write_cache(path, cache)
 
 
-def _resolve_claude_bin() -> str:
-    claude_bin = shutil.which("claude")
-    if not claude_bin:
+def _resolve_codex_bin() -> str:
+    codex_bin = shutil.which("codex")
+    if not codex_bin:
         raise TranslationError(
-            "claude 命令未找到。请先安装 Claude Code CLI:`npm install -g @anthropic-ai/claude-code`"
+            "codex 命令未找到。请先安装 Codex CLI：`npm install -g @openai/codex`"
         )
-    return claude_bin
+    return codex_bin
 
 
-def _call_claude(article: str, *, timeout: float, model: str | None) -> str:
-    """调 `claude -p` 拿翻译结果。返回纯文本(已剥 JSON 包装)。"""
-    claude_bin = _resolve_claude_bin()
-    cmd = [claude_bin, "-p", "--output-format", "json"]
-    if model:
-        cmd.extend(["--model", model])
+def _call_codex(article: str, *, timeout: float, model: str | None) -> str:
+    """调用非交互式 `codex exec` 并返回最终消息。"""
+    codex_bin = _resolve_codex_bin()
     full_prompt = f"{SYSTEM_PROMPT}\n\n## 待翻译原文\n\n{article}\n"
 
-    try:
-        result = subprocess.run(
-            cmd,
-            input=full_prompt,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as error:
-        raise TranslationError(f"claude 调用超时({timeout}s)") from error
-    except OSError as error:
-        raise TranslationError(f"claude 调用失败: {error}") from error
+    with tempfile.TemporaryDirectory(prefix="codex-translate-") as temp_dir:
+        output_path = Path(temp_dir) / "result.md"
+        cmd = [
+            codex_bin,
+            "exec",
+            "--ephemeral",
+            "--sandbox",
+            "read-only",
+            "--output-last-message",
+            str(output_path),
+        ]
+        if model:
+            cmd.extend(["--model", model])
+        cmd.append("-")
+        try:
+            result = subprocess.run(
+                cmd,
+                input=full_prompt,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise TranslationError(f"codex 调用超时({timeout}s)") from error
+        except OSError as error:
+            raise TranslationError(f"codex 调用失败: {error}") from error
 
-    if result.returncode != 0:
-        stderr = (result.stderr or "").strip()[:500]
-        raise TranslationError(f"claude exit={result.returncode}: {stderr or '(no stderr)'}")
+        if result.returncode != 0:
+            stderr = (result.stderr or "").strip()[:500]
+            raise TranslationError(f"codex exit={result.returncode}: {stderr or '(no stderr)'}")
 
-    raw = (result.stdout or "").strip()
-    if not raw:
-        raise TranslationError("claude 输出为空")
-
-    text: str | None = None
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        text = raw
-    else:
-        if isinstance(payload, dict):
-            for key in ("result", "message", "content", "text"):
-                value = payload.get(key)
-                if isinstance(value, str) and value.strip():
-                    text = value
-                    break
-            if text is None and isinstance(payload.get("result"), dict):
-                # 兼容 {result: {text: ...}} 这类嵌套
-                inner = payload["result"]
-                if isinstance(inner.get("text"), str):
-                    text = inner["text"]
-        elif isinstance(payload, str):
-            text = payload
-
-    if text is None or not text.strip():
-        raise TranslationError("claude 输出无法解析为文本")
-    return text.strip()
+        text = output_path.read_text(encoding="utf-8").strip() if output_path.is_file() else ""
+        if not text:
+            raise TranslationError("codex 输出为空")
+        return text
 
 
 def translate_text(
@@ -296,12 +284,12 @@ def translate_text(
         target_language: 目标语言代码,默认 `zh-CN`。
         cache_path: 缓存文件路径;`None` 时使用 `scripts/cache/translation_cache.json`。
         use_cache: 是否读写本地缓存。
-        timeout: claude 调用超时秒数,默认 300。
-        bilingual: 兼容旧 API,本实现忽略(Claude 输出本身就是结构化对照)。
-        model: 覆盖 Claude 模型,默认读 `ANTHROPIC_MODEL` 环境变量或 claude 默认。
+        timeout: codex 调用超时秒数,默认 300。
+        bilingual: 兼容旧 API,本实现忽略(Codex 输出本身就是结构化对照)。
+        model: 覆盖 Codex 模型,默认读 `OPENAI_MODEL` 环境变量或 Codex 默认。
 
     Returns:
-        TranslateResult,`text` 字段是 Claude 输出的两段式 Markdown
+        TranslateResult,`text` 字段是 Codex 输出的两段式 Markdown
         (逐行翻译 + 通俗讲解,逐行翻译每段先英文后中文,复杂词内联标注);`pairs` 始终为 None。
     """
     if not text or not text.strip():
@@ -327,34 +315,34 @@ def translate_text(
         if cached is not None:
             return TranslateResult(
                 text=str(cached["value"]),
-                provider_id=f"{cached.get('providerId', 'claude-code')}(cache)",
+                provider_id=f"{cached.get('providerId', 'codex')}(cache)",
                 detected_source=normalized_source or "auto",
                 bilingual=bilingual,
             )
 
-    resolved_model = model or os.environ.get("ANTHROPIC_MODEL")
-    translated = _call_claude(text, timeout=timeout, model=resolved_model)
+    resolved_model = model or os.environ.get("OPENAI_MODEL")
+    translated = _call_codex(text, timeout=timeout, model=resolved_model)
 
     if use_cache:
-        _cache_put(cache_file, cache_key_value, translated, "claude-code")
+        _cache_put(cache_file, cache_key_value, translated, "codex")
 
     return TranslateResult(
         text=translated,
-        provider_id="claude-code",
+        provider_id="codex",
         detected_source=normalized_source or "auto",
         bilingual=bilingual,
     )
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="用 Claude Code 翻译文本(逐行翻译 + 词汇标注 + 通俗讲解)")
+    parser = argparse.ArgumentParser(description="用 Codex 翻译文本(逐行翻译 + 词汇标注 + 通俗讲解)")
     parser.add_argument("text", help="待翻译文本")
     parser.add_argument("--source", default="", help="源语言代码,留空自动检测")
     parser.add_argument("--target", default="zh-CN", help="目标语言代码,默认 zh-CN")
     parser.add_argument("--no-cache", action="store_true", help="跳过本地缓存读写")
-    parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT, help="claude 调用超时秒数,默认 300")
+    parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT, help="codex 调用超时秒数,默认 300")
     parser.add_argument("--bilingual", action="store_true", help="兼容旧 API(本实现忽略)")
-    parser.add_argument("--model", default=None, help="覆盖 Claude 模型,默认读 ANTHROPIC_MODEL")
+    parser.add_argument("--model", default=None, help="覆盖 Codex 模型,默认读 OPENAI_MODEL")
     parser.add_argument("--json", action="store_true", help="以 JSON 输出结果")
     args = parser.parse_args()
 

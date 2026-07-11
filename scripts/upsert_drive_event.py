@@ -83,6 +83,64 @@ def upsert_drive_event(
     else:
         data = {}
 
+    def write_data() -> None:
+        data_file.parent.mkdir(parents=True, exist_ok=True)
+        data_file.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+    same_slot = [
+        (event_key, value)
+        for event_key, value in data.items()
+        if isinstance(value, dict)
+        and event_time(event_key, value) == time_key
+        and str(value.get("address") or "").strip() == normalized_address
+    ]
+    existing_up = next(
+        ((event_key, value) for event_key, value in same_slot if value.get("action") == "上车"),
+        None,
+    )
+    existing_down = [
+        (event_key, value) for event_key, value in same_slot if value.get("action") == "下车"
+    ]
+
+    if existing_up and (action == "下车" or existing_down):
+        up_key, up_value = existing_up
+        canonical_value = dict(up_value)
+        canonical_value.update({"time": time_key, "action": "上车", "address": normalized_address})
+        changed = len(same_slot) > 1 or up_key != time_key or data.get(time_key) != canonical_value
+        if changed:
+            for event_key, _ in same_slot:
+                data.pop(event_key, None)
+            data[time_key] = canonical_value
+            write_data()
+        return {
+            "path": data_file.as_posix(),
+            "event_key": time_key,
+            "action": "上车",
+            "status": "ignored_conflicting_down" if action == "下车" else "collapsed_conflicting_pair",
+            "changed": changed,
+        }
+
+    if action == "上车" and existing_down:
+        for event_key, _ in existing_down:
+            data.pop(event_key, None)
+        data[time_key] = {
+            "time": time_key,
+            "action": action,
+            "address": normalized_address,
+            "issue_number": issue_number,
+        }
+        write_data()
+        return {
+            "path": data_file.as_posix(),
+            "event_key": time_key,
+            "action": action,
+            "status": "replaced_conflicting_down",
+            "changed": True,
+        }
+
     for event_key, value in data.items():
         if event_matches(
             event_key,
@@ -96,6 +154,7 @@ def upsert_drive_event(
                 "path": data_file.as_posix(),
                 "event_key": event_key,
                 "action": action,
+                "status": "existing",
                 "changed": False,
             }
 
@@ -106,15 +165,12 @@ def upsert_drive_event(
         "address": normalized_address,
         "issue_number": issue_number,
     }
-    data_file.parent.mkdir(parents=True, exist_ok=True)
-    data_file.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    write_data()
     return {
         "path": data_file.as_posix(),
         "event_key": event_key,
         "action": action,
+        "status": "inserted",
         "changed": True,
     }
 
@@ -146,6 +202,7 @@ def main() -> None:
         with Path(github_output).open("a", encoding="utf-8") as output:
             output.write(f"path={result['path']}\n")
             output.write(f"event_key={result['event_key']}\n")
+            output.write(f"status={result['status']}\n")
             output.write(f"changed={'yes' if result['changed'] else 'no'}\n")
 
     step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -156,6 +213,7 @@ def main() -> None:
             summary.write(f"- action: {result['action']}\n")
             summary.write(f"- event key: `{result['event_key']}`\n")
             summary.write(f"- path: `{result['path']}`\n")
+            summary.write(f"- status: `{result['status']}`\n")
             summary.write(f"- changed: `{result['changed']}`\n")
 
 

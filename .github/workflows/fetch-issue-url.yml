@@ -219,8 +219,9 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
           DRIVE_PATH: ${{ steps.drive.outputs.path }}
+          DRIVE_STATUS: ${{ steps.drive.outputs.status }}
         run: |
-          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "已保存行车数据到 \`$DRIVE_PATH\`。"
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "已核对行车数据到 \`$DRIVE_PATH\`，处理状态：\`$DRIVE_STATUS\`。"
           gh issue close "$ISSUE_NUMBER" --repo "$REPO" --comment "行车数据已处理完成。"
 
       # fetch_url_content.py 默认会调 translate_text.py → Codex CLI 做翻译。

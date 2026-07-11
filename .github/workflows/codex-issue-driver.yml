@@ -474,6 +474,7 @@ jobs:
             --config "model_providers.custom.base_url=\"${OPENAI_BASE_URL}\""
             --config 'model_providers.custom.wire_api="responses"'
             --config 'model_providers.custom.requires_openai_auth=true'
+            --config 'model_reasoning_effort="medium"'
           )
           if [ "$MODE" = "plan" ]; then
             EXTRA=( --sandbox read-only )
@@ -495,7 +496,7 @@ jobs:
           {
             echo "### Codex stderr 前 2000 字符"
             echo '```'
-            head -c 2000 /tmp/codex.err || true
+            tail -c 2000 /tmp/codex.err || true
             echo
             echo '```'
             echo "### Codex log 前 1500 字符"
@@ -520,7 +521,7 @@ jobs:
             echo "::group::Codex diagnostics"
             echo "codex_status=$CODEX_STATUS"
             echo "--- stderr ---"
-            head -c 4000 /tmp/codex.err || true
+            tail -c 4000 /tmp/codex.err || true
             echo
             echo "--- log head ---"
             head -c 4000 /tmp/codex.log || true

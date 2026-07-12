@@ -26,7 +26,7 @@ jobs:
       APPIUM_PORT: ${{ vars.IOS_APPIUM_PORT || '4723' }}
       APPIUM_URL: http://${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}:${{ vars.IOS_APPIUM_PORT || '4723' }}
       IOS_DEVICE_UDID: ${{ vars.IOS_DEVICE_UDID || '00008101-0014494A1A83001E' }}
-      XCODE_ORG_ID: ${{ vars.IOS_XCODE_ORG_ID || '792GZF4XQ4' }}
+      XCODE_ORG_ID: ${{ vars.IOS_XCODE_ORG_ID || '29CH3TC643' }}
       UPDATED_WDA_BUNDLE_ID: ${{ vars.IOS_UPDATED_WDA_BUNDLE_ID || 'com.feei.WebDriverAgentRunner' }}
       CAITONG_TRADE_PASSWORD: ${{ secrets.CAITONG_TRADE_PASSWORD }}
       PYTHONUNBUFFERED: '1'

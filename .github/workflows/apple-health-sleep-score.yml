@@ -1,0 +1,111 @@
+name: Apple Health sleep score
+
+# 每天北京时间 09:00 在 Mac mini self-hosted runner 上运行。
+# GitHub Actions cron 使用 UTC，北京时间 09:00 = UTC 01:00。
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ios-device-assets
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    name: Capture Apple Health sleep score
+    runs-on: [self-hosted, macmini]
+    timeout-minutes: 30
+    env:
+      TZ: Asia/Shanghai
+      APPIUM_HOST: ${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}
+      APPIUM_PORT: ${{ vars.IOS_APPIUM_PORT || '4723' }}
+      APPIUM_URL: http://${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}:${{ vars.IOS_APPIUM_PORT || '4723' }}
+      IOS_DEVICE_UDID: ${{ vars.IOS_DEVICE_UDID || '00008101-0014494A1A83001E' }}
+      XCODE_ORG_ID: ${{ vars.IOS_XCODE_ORG_ID || '29CH3TC643' }}
+      UPDATED_WDA_BUNDLE_ID: ${{ vars.IOS_UPDATED_WDA_BUNDLE_ID || 'com.feei.WebDriverAgentRunner' }}
+      PYTHONUNBUFFERED: '1'
+      NO_PROXY: 127.0.0.1,localhost,${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}
+      HTTP_PROXY: ''
+      HTTPS_PROXY: ''
+      ALL_PROXY: ''
+
+    steps:
+      - name: Check secret
+        env:
+          WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+        run: |
+          if [ -z "${WORKFLOW_TRIGGER_PAT:-}" ]; then
+            echo "::error::WORKFLOW_TRIGGER_PAT 未配置"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Prepare runner
+        run: |
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+          echo "/usr/local/bin" >> "$GITHUB_PATH"
+          git config user.name "FeeiCN[bot]"
+          git config user.email "feei@feei.cn"
+          if git rev-parse --verify "origin/${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            git checkout -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}"
+          fi
+
+      - name: Ensure Appium server
+        run: |
+          command -v python3 >/dev/null
+          command -v curl >/dev/null
+          command -v appium >/dev/null
+          python3 -c 'import appium'
+          if curl -fsS "${APPIUM_URL%/}/status" >/dev/null 2>&1; then
+            echo "Appium already running at ${APPIUM_URL}"
+            exit 0
+          fi
+          mkdir -p "$HOME/Library/Logs"
+          nohup appium --address "$APPIUM_HOST" --port "$APPIUM_PORT" > "$HOME/Library/Logs/FEEI.CN-ios-appium.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -fsS "${APPIUM_URL%/}/status" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Appium 启动失败"
+          exit 1
+
+      - name: Capture sleep score and start Health Auto Export
+        run: |
+          python3 scripts/apple_health_sleep_score.py \
+            --appium-url "$APPIUM_URL" \
+            --udid "$IOS_DEVICE_UDID" \
+            --xcode-org-id "$XCODE_ORG_ID" \
+            --updated-wda-bundle-id "$UPDATED_WDA_BUNDLE_ID" \
+            --allow-provisioning-updates \
+            --new-command-timeout 600
+
+      - name: Commit generated sleep score data
+        run: |
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+
+          repo_root = Path.cwd()
+          sys.path.insert(0, str(repo_root / "scripts"))
+          from git_ops import git_commit_and_push_target_repo
+
+          git_commit_and_push_target_repo(
+              [Path("static/data/sleep-score")],
+              repo_root=repo_root,
+              description="同步 Apple 健康睡眠评分",
+          )
+          PY

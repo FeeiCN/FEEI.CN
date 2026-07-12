@@ -318,10 +318,20 @@ def main() -> int:
         return 2
 
     driver = ios.create_driver(args, udid)
+    collection_error: Exception | None = None
     try:
         saved, skipped, empty_dates = collect_sleep_scores(driver, args)
+    except Exception as error:
+        collection_error = error
+
+    try:
+        print(ios.start_health_auto_export_server(driver, args))
+        print(ios.keep_health_auto_export_foreground(driver, args))
     finally:
         driver.quit()
+
+    if collection_error:
+        raise collection_error
 
     if not saved and not skipped:
         print(f"未找到 {args.start_date.isoformat()} 至 {args.end_date.isoformat()} 的睡眠评分", file=sys.stderr)

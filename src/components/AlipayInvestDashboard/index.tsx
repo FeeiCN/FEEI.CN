@@ -2,6 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
+import {fetchJsonCached, filterByFinanceTimeScope, type FinanceTimeScope} from '@site/src/components/financeShared';
 import styles from './styles.module.css';
 
 type HoldingRecord = {
@@ -60,6 +61,7 @@ type InvestManifest = {
 
 type AlipayInvestDashboardProps = {
   date?: string;
+  timeScope?: FinanceTimeScope;
 };
 
 type Tone = 'gain' | 'loss' | 'neutral';
@@ -81,9 +83,7 @@ function dateToDataPath(date: string, source: InvestSource): string {
 
 async function fetchJson<T>(path: string): Promise<T | null> {
   try {
-    const response = await fetch(path);
-    if (!response.ok) return null;
-    return JSON.parse(await response.text()) as T;
+    return await fetchJsonCached<T>(path);
   } catch {
     return null;
   }
@@ -162,22 +162,6 @@ function pickDisplayDate(date: string | undefined, dates: string[]): string {
     if (previous) return previous;
   }
   return dates.at(-1) || date || '';
-}
-
-async function sourceHasData(source: InvestSource, date: string): Promise<boolean> {
-  return Boolean(await fetchJson<InvestPayload>(dateToDataPath(date, source)));
-}
-
-async function pickSourceDisplayDate(source: InvestSource, preferredDate: string, dates: string[]): Promise<string> {
-  if (preferredDate && await sourceHasData(source, preferredDate)) return preferredDate;
-  const candidates = preferredDate ? dates.filter((item) => item <= preferredDate).reverse() : dates.slice().reverse();
-  for (const candidate of candidates) {
-    if (await sourceHasData(source, candidate)) return candidate;
-  }
-  for (const candidate of dates.slice().reverse()) {
-    if (await sourceHasData(source, candidate)) return candidate;
-  }
-  return '';
 }
 
 function buildDistributionOption(records: HoldingRecord[], isDark: boolean, isMobile: boolean) {
@@ -493,39 +477,50 @@ function AlipayInvestCharts({
   );
 }
 
-function AlipayInvestClient({date}: AlipayInvestDashboardProps) {
+function AlipayInvestClient({date, timeScope}: AlipayInvestDashboardProps) {
   const [manifest, setManifest] = useState<InvestManifest | null>(null);
   const [sourceData, setSourceData] = useState<InvestSourceData[]>([]);
-  const [displayDate, setDisplayDate] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchJson<InvestManifest>('/data/invest/index.json')
-      .then((nextManifest) => {
+    setSourceData([]);
+    (async () => {
+      try {
+        const nextManifest = await fetchJson<InvestManifest>('/data/invest/index.json');
         if (cancelled) return;
-        const dates = (nextManifest?.dates || []).slice().sort();
-        const nextDate = pickDisplayDate(date, dates);
         setManifest(nextManifest);
-        setDisplayDate(nextDate);
-        if (!nextDate) return null;
-        return Promise.all(INVEST_SOURCES.map(async (source): Promise<InvestSourceData | null> => {
-          const sourceDate = await pickSourceDisplayDate(source, nextDate, dates);
-          if (!sourceDate) return null;
-          const data = await fetchJson<InvestPayload>(dateToDataPath(sourceDate, source));
-          if (!data) return null;
-          const dailyPoints = await Promise.all(dates.map(async (itemDate): Promise<InvestDailyPoint | null> => {
-            const payload = await fetchJson<InvestPayload>(dateToDataPath(itemDate, source));
+        const dates = [...new Set(nextManifest?.dates || [])].sort();
+        const cappedDates = filterByFinanceTimeScope(dates, (item) => item, undefined, date);
+        const scopedDates = filterByFinanceTimeScope(cappedDates, (item) => item, timeScope, date);
+        const nextDate = pickDisplayDate(date, scopedDates);
+        if (!nextDate) {
+          setSourceData([]);
+          return;
+        }
+
+        const result = await Promise.all(INVEST_SOURCES.map(async (source): Promise<InvestSourceData | null> => {
+          const entries = await Promise.all(scopedDates.map(async (itemDate) => ({
+            date: itemDate,
+            payload: await fetchJson<InvestPayload>(dateToDataPath(itemDate, source)),
+          })));
+          const availableEntries = entries.filter(
+            (entry): entry is {date: string; payload: InvestPayload} => Boolean(entry.payload),
+          );
+          const sourceDate = pickDisplayDate(nextDate, availableEntries.map((entry) => entry.date));
+          const data = availableEntries.find((entry) => entry.date === sourceDate)?.payload;
+          if (!sourceDate || !data) return null;
+          const dailyPoints = availableEntries.flatMap(({date: itemDate, payload}) => {
             const totalAssets = payloadTotalAssets(payload);
-            if (typeof totalAssets !== 'number') return null;
-            return {
+            if (typeof totalAssets !== 'number') return [];
+            return [{
               date: itemDate,
               totalAssets,
               dayProfit: payloadDayProfit(payload),
               holdingProfit: payloadHoldingProfit(payload),
-            };
-          }));
+            }];
+          });
           return {
             source,
             displayDate: sourceDate,
@@ -534,25 +529,23 @@ function AlipayInvestClient({date}: AlipayInvestDashboardProps) {
               source,
               holdingRecords: (data.holdingRecords || []).map((record) => ({...record, source})),
             },
-            dailyPoints: dailyPoints.filter((point): point is InvestDailyPoint => Boolean(point)),
+            dailyPoints,
           };
         }));
-      })
-      .then((result) => {
-        if (cancelled) return;
-        if (!result) {
+        if (!cancelled) setSourceData(result.filter((item): item is InvestSourceData => Boolean(item)));
+      } catch {
+        if (!cancelled) {
+          setManifest(null);
           setSourceData([]);
-          return;
         }
-        setSourceData(result.filter((item): item is InvestSourceData => Boolean(item)));
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [date]);
+  }, [date, timeScope]);
 
   const hasManifest = Boolean(manifest?.dates?.length);
   if (loading) return <div className={styles.skeleton} />;

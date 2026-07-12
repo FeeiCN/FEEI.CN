@@ -30,6 +30,15 @@ def normalize_address(address: object) -> str:
     return " ".join(str(address or "").split())
 
 
+def sanitize_sensitive_place(address: object) -> str:
+    value = normalize_address(address)
+    if re.search(r"山水居|杭州家中", value):
+        return "居住区域"
+    if re.search(r"蚂蚁|A空间|西山游步道|西溪路(?:310|312|550|569|571)号|西溪路辅路", value):
+        return "办公地点"
+    return value
+
+
 def event_time(event_key: str, value: dict[str, Any]) -> str:
     value_time = value.get("time")
     if isinstance(value_time, str) and value_time:
@@ -69,6 +78,15 @@ def allocate_event_key(data: dict[str, Any], time_key: str, issue_number: int) -
     return candidate
 
 
+def write_drive_manifest(data_root: Path) -> None:
+    dates = sorted(
+        path.relative_to(data_root).with_suffix("").as_posix().replace("/", "-", 2)
+        for path in data_root.glob("[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9].json")
+    )
+    manifest = data_root / "index.json"
+    manifest.write_text(json.dumps({"dates": dates}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def upsert_drive_event(
     *,
     data_root: Path,
@@ -77,7 +95,7 @@ def upsert_drive_event(
     issue_number: int,
 ) -> dict[str, Any]:
     year, month, day, time_key, action = parse_drive_title(title)
-    stored_address = address.strip()
+    stored_address = sanitize_sensitive_place(address)
     address_key = normalize_address(stored_address)
     data_file = data_root / year / month / f"{day}.json"
 
@@ -96,6 +114,7 @@ def upsert_drive_event(
             encoding="utf-8",
         )
         temporary_file.replace(data_file)
+        write_drive_manifest(data_root)
 
     same_slot = [
         (event_key, value)

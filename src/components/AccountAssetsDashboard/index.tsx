@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import PortfolioCharts from '@site/src/components/PortfolioCharts';
+import {fetchJsonCached, type FinanceTimeScope} from '@site/src/components/financeShared';
 import styles from './styles.module.css';
 
 type HistoryPoint = {
@@ -65,11 +66,6 @@ type AccountAssetsPayload = {
   fundRows: FundRow[];
   positionRows: PositionRow[];
 };
-
-type TimeScope =
-  | {mode: 'recent'; range: '7d' | '30d' | '90d' | '1y'}
-  | {mode: 'year'; year: number}
-  | {mode: 'all'};
 
 type Tone = 'gain' | 'loss' | 'neutral';
 
@@ -237,13 +233,15 @@ function Skeleton() {
 
 function DashboardInner({
   dataUrl,
+  date,
   onDateSelect,
   timeScope,
   compact = false,
 }: {
   dataUrl: string;
+  date?: string;
   onDateSelect?: (date: string) => void;
-  timeScope?: TimeScope;
+  timeScope?: FinanceTimeScope;
   compact?: boolean;
 }) {
   const [data, setData] = useState<AccountAssetsPayload | null>(null);
@@ -252,13 +250,11 @@ function DashboardInner({
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     (async () => {
       try {
-        const response = await fetch(dataUrl, {cache: 'no-store'});
-        if (!response.ok) {
-          throw new Error('暂无账户资产数据');
-        }
-        const json = (await response.json()) as AccountAssetsPayload;
+        const json = await fetchJsonCached<AccountAssetsPayload>(dataUrl);
         if (cancelled) return;
         setData(json);
       } catch (e) {
@@ -279,7 +275,13 @@ function DashboardInner({
 
   return (
     <div className={styles.dashboard}>
-      <PortfolioCharts data={data.portfolio} onDateSelect={onDateSelect} timeScope={timeScope} compact={compact} />
+      <PortfolioCharts
+        data={data.portfolio}
+        endDate={date}
+        onDateSelect={onDateSelect}
+        timeScope={timeScope}
+        compact={compact}
+      />
       {compact ? null : (
         <>
           <h2>资金</h2>
@@ -295,18 +297,28 @@ function DashboardInner({
 
 export default function AccountAssetsDashboard({
   dataUrl,
+  date,
   onDateSelect,
   timeScope,
   compact,
 }: {
   dataUrl: string;
+  date?: string;
   onDateSelect?: (date: string) => void;
-  timeScope?: TimeScope;
+  timeScope?: FinanceTimeScope;
   compact?: boolean;
 }) {
   return (
     <BrowserOnly fallback={<div style={{minHeight: 620}} />}>
-      {() => <DashboardInner dataUrl={dataUrl} onDateSelect={onDateSelect} timeScope={timeScope} compact={compact} />}
+      {() => (
+        <DashboardInner
+          dataUrl={dataUrl}
+          date={date}
+          onDateSelect={onDateSelect}
+          timeScope={timeScope}
+          compact={compact}
+        />
+      )}
     </BrowserOnly>
   );
 }

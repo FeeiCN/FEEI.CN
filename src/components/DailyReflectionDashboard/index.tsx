@@ -1,9 +1,11 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
+import ReactDOM from 'react-dom';
 import AccountAssetsDashboard from '@site/src/components/AccountAssetsDashboard';
 import AlipayInvestDashboard from '@site/src/components/AlipayInvestDashboard';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import FinanceAssetsTrend from '@site/src/components/FinanceAssetsTrend';
-import {HEALTH_CHART_NAV, HealthChartDeviationMark, HealthProvider, HealthSection, type TimeScope as HealthTimeScope} from '@site/src/components/HealthCharts';
+import {HEALTH_CHART_NAV, HealthChartSelection, HealthProvider, loadHealthChartHistory, type TimeScope as HealthTimeScope} from '@site/src/components/HealthCharts';
+import type {HealthData} from '@site/src/components/HealthCharts/transform';
 import HKIPOCharts from '@site/src/components/HKIPOCharts';
 import ReactECharts from 'echarts-for-react';
 import {useColorMode} from '@docusaurus/theme-common';
@@ -60,21 +62,6 @@ type Manifest = {
   dates?: string[];
 };
 
-type HealthMetric = {
-  name?: string;
-  units?: string;
-  data?: Array<Record<string, unknown>>;
-};
-
-type HealthData = {
-  exportedAt?: string;
-  data?: {
-    healthMetrics?: {
-      metrics?: HealthMetric[];
-    };
-  };
-};
-
 type DailyHealthTimelineRecord = {
   type?: string;
   stage?: string;
@@ -109,6 +96,39 @@ type DailyHealthData = {
 };
 
 type DriveLog = Record<string, {action?: string; address?: string}>;
+type DriveDaySummary = {
+  trips: number;
+  minutes: number;
+  tripRanges: Array<{start: number; end: number}>;
+  firstDeparture?: number;
+  lastArrival?: number;
+};
+
+function summarizeDriveLog(log: DriveLog | null): DriveDaySummary {
+  const events = Object.entries(log || {})
+    .map(([key, value]) => ({minute: timeToMinute(key.split('#')[0]), action: value.action || '', address: value.address || ''}))
+    .filter((event): event is {minute: number; action: string; address: string} => event.minute !== null)
+    .sort((left, right) => left.minute - right.minute);
+  let departure: number | null = null;
+  let trips = 0;
+  let minutes = 0;
+  let firstDeparture: number | undefined;
+  let lastArrival: number | undefined;
+  const tripRanges: Array<{start: number; end: number}> = [];
+  events.forEach((event) => {
+    if (/上车/.test(event.action)) {
+      departure = event.minute;
+      firstDeparture ??= event.minute;
+    } else if (/下车/.test(event.action) && departure !== null && event.minute >= departure) {
+      trips += 1;
+      minutes += event.minute - departure;
+      tripRanges.push({start: departure, end: event.minute});
+      lastArrival = event.minute;
+      departure = null;
+    }
+  });
+  return {trips, minutes, tripRanges, firstDeparture, lastArrival};
+}
 
 type LLMSummaryPayload = {
   fetchedAt?: string;
@@ -145,7 +165,7 @@ type WeatherSummary = {
 };
 
 type TimelineItem = {
-  type: 'sleep' | 'drive' | 'weather' | 'workout';
+  type: 'sleep' | 'drive' | 'weather' | 'workout' | 'medication' | 'mind';
   title: string;
   detail?: string;
   startMinute: number;
@@ -179,27 +199,12 @@ type SleepBlock = {
 type TimelineModel = {
   items: TimelineItem[];
   bands: TimelineBand[];
-  sleep: SleepBlock | null;
+  sleep: SleepBlock[];
   weather: TimelineItem[];
-};
-
-type TimelineTooltip = {
-  text: React.ReactNode;
-  x: number;
-  y: number;
-};
-
-type CalendarCell = {
-  date: string;
-  score: number;
-  hasDaily: boolean;
-  hasAnalysis: boolean;
-  isElapsed: boolean;
-};
-
-type CalendarHover = CalendarCell & {
-  x: number;
-  y: number;
+  exerciseMinutes: number | null;
+  healthAvailable: boolean;
+  healthObservedUntil: number | null;
+  driveAvailable: boolean;
 };
 
 type ObjectiveChartTooltip = {
@@ -209,16 +214,33 @@ type ObjectiveChartTooltip = {
   lines: string[];
 };
 
-type DataDomain = 'health' | 'career' | 'finance' | 'life';
+type DataDomain = 'health' | 'career' | 'finance' | 'life' | 'compare';
 type DailyDetailTab = 'diary' | 'timeline' | 'analysis';
 type FinanceTab = 'income' | 'expense' | 'investment';
+type DatedReviewPeriodKind = 'day' | 'week' | 'month' | 'year';
+type ReviewPeriodKind = DatedReviewPeriodKind | 'life';
+type DatedReviewPeriod =
+  | {kind: 'day'; key: string}
+  | {kind: 'week'; key: string}
+  | {kind: 'month'; key: string}
+  | {kind: 'year'; key: string};
+type ReviewPeriod = DatedReviewPeriod | {kind: 'life'};
+type PeriodBounds = {
+  start: string;
+  naturalEnd: string;
+  end: string;
+  label: string;
+};
 type ObjectiveTimeScope =
   | {mode: 'recent'; range: '7d' | '30d' | '90d' | '1y'}
+  | {mode: 'period'; start: string; end: string; label?: string}
   | {mode: 'year'; year: number}
-  | {mode: 'all'};
+  | {mode: 'all'; label?: string};
 
-const OBJECTIVE_RANGE_LABELS: Record<string, string> = {'7d': '7天', '30d': '30天', '90d': '90天', '1y': '近1年'};
+const OBJECTIVE_RANGE_LABELS: Record<string, string> = {'7d': '7天', '30d': '30天', '90d': '90天', '1y': '1年'};
 const RANGE_DAYS: Record<'7d' | '30d' | '90d' | '1y', number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
+const DATED_REVIEW_PERIOD_KINDS: DatedReviewPeriodKind[] = ['day', 'week', 'month', 'year'];
+const REVIEW_PERIOD_LABELS: Record<ReviewPeriodKind, string> = {day: '日', week: '周', month: '月', year: '年', life: '人生'};
 const LLM_VENDOR_CONFIGS = [
   {id: 'minimax', label: 'MiniMax', path: '/data/llm-usage/minimax/usage_summary.json'},
   {id: 'openai', label: 'OpenAI', path: '/data/llm-usage/openai/usage_summary.json'},
@@ -226,11 +248,58 @@ const LLM_VENDOR_CONFIGS = [
 ];
 
 const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
+const REVIEW_START_YEAR = 2014;
 const LIFE_START_DATE = '1992-01-01';
 const LIFE_END_DATE = '2092-12-31';
+const HEALTH_HISTORY_START_DATE = '2016-08-13';
 const HANGZHOU_LATITUDE = 30.2741;
 const HANGZHOU_LONGITUDE = 120.1551;
+const jsonRequestCache = new Map<string, Promise<unknown | null>>();
+const textRequestCache = new Map<string, Promise<string>>();
+type AuthoredPeriodReview = {
+  title: string;
+  summary: string;
+  href: string;
+  load: () => Promise<{default: React.ComponentType<unknown>}>;
+};
+const AUTHORED_PERIOD_REVIEWS: Record<string, AuthoredPeriodReview> = {
+  'year:2019': {
+    title: '2019 年度总结：一个安全工程师的七年之痒',
+    summary: '从蘑菇街到蚂蚁金服，复盘七年安全工程经历、平台选择与职业阶段转换。',
+    href: '/a-security-engineer-2019',
+    load: () => import('@site/docs/05-吴飞飞/02-年度总结/a-security-engineer-2019/index.md'),
+  },
+  'year:2023': {
+    title: '2023 年度总结：成家立业',
+    summary: '这一年完成从网商银行到支付宝的职业转折，也建立家庭，在变化与压力中重新寻找平衡。',
+    href: '/annual-review-2023',
+    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-2023/index.md'),
+  },
+  'year:2024': {
+    title: '2024 年度总结',
+    summary: '复盘工作晋升、知识沉淀、AI 实践、生活空间、旅行、财务与健康状态。',
+    href: '/annual-review-for-2024',
+    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2024/index.md'),
+  },
+  'year:2025': {
+    title: '2025 年度总结：量变到质变',
+    summary: '围绕健康幸福、事业有成、财务自由与探索世界持续积累，个人成长系统开始显现复利。',
+    href: '/annual-review-for-2025',
+    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2025/index.md'),
+  },
+  'month:2024-11': {
+    title: '2024 年 11 月复盘：Happiness',
+    summary: '以 Happiness 为关键词，记录工作反馈、知识结构、AI 实践与生活空间带来的幸福感。',
+    href: '/the-happiness-of-nov-2024',
+    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2024/the-happiness-of-nov-2024/index.md'),
+  },
+  'month:2024-12': {
+    title: '2024 年 12 月复盘：Trend',
+    summary: '以 Trend 为关键词，复盘工作、行业、投资与健康中的趋势，以及下一阶段判断。',
+    href: '/december-2024-in-review-trend',
+    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2024/december-2024-in-review-trend/index.md'),
+  },
+};
 const WEATHER_CODE_LABELS: Record<number, string> = {
   0: '晴',
   1: '大部晴朗',
@@ -262,11 +331,6 @@ const WEATHER_CODE_LABELS: Record<number, string> = {
   99: '雷暴伴强冰雹',
 };
 
-function getDayRow(date: Date): number {
-  const value = date.getDay();
-  return value === 0 ? 6 : value - 1;
-}
-
 function dateToPath(date: string, suffix: string): string {
   const [year, month, day] = date.split('-');
   return `${year}/${month}/${day}.${suffix}`;
@@ -287,6 +351,13 @@ function formatDateKey(date: Date): string {
 function parseDateKey(date: string): Date {
   const [year, month, day] = date.split('-').map(Number);
   return new Date(year, month - 1, day);
+}
+
+function isValidDateKey(value: string, allowFuture = false): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = parseDateKey(value);
+  if (Number.isNaN(parsed.getTime()) || formatDateKey(parsed) !== value) return false;
+  return allowFuture || value <= formatDateKey(new Date());
 }
 
 function getPreviousDateKey(date: string): string {
@@ -315,16 +386,6 @@ function getYearProgress(date: string): number {
   return (elapsed / total) * 100;
 }
 
-function getLifeProgress(date: string): {progress: number; livedDays: number; remainingDays: number} {
-  const totalDays = diffDays(LIFE_START_DATE, LIFE_END_DATE) + 1;
-  const livedDays = Math.min(totalDays, Math.max(0, diffDays(LIFE_START_DATE, date) + 1));
-  return {
-    progress: (livedDays / totalDays) * 100,
-    livedDays,
-    remainingDays: Math.max(0, totalDays - livedDays),
-  };
-}
-
 function addDays(date: Date, days: number): Date {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
@@ -333,30 +394,123 @@ function addDays(date: Date, days: number): Date {
 
 function dateRange(start: string, end: string): string[] {
   const output: string[] = [];
+  if (!isValidDateKey(start, true) || !isValidDateKey(end, true) || start > end) return output;
   for (let cursor = parseDateKey(start); formatDateKey(cursor) <= end; cursor = addDays(cursor, 1)) {
     output.push(formatDateKey(cursor));
   }
   return output;
 }
 
-function getScopeDates(scope: ObjectiveTimeScope, availableDates: string[] = []): string[] {
+function getIsoWeekKey(dateKey: string): string {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const target = new Date(Date.UTC(year, month - 1, day));
+  const weekday = target.getUTCDay() || 7;
+  target.setUTCDate(target.getUTCDate() + 4 - weekday);
+  const weekYear = target.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(weekYear, 0, 1));
+  const week = Math.ceil((((target.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${weekYear}-W${String(week).padStart(2, '0')}`;
+}
+
+function getIsoWeekStart(weekKey: string): string {
+  const match = weekKey.match(/^(\d{4})-W(\d{2})$/);
+  if (!match) return '';
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  if (week < 1 || week > 53) return '';
+  const januaryFourth = new Date(Date.UTC(year, 0, 4));
+  const weekday = januaryFourth.getUTCDay() || 7;
+  const monday = new Date(januaryFourth);
+  monday.setUTCDate(januaryFourth.getUTCDate() - weekday + 1 + (week - 1) * 7);
+  return monday.toISOString().slice(0, 10);
+}
+
+function getReviewPeriodBounds(period: DatedReviewPeriod): PeriodBounds {
   const today = formatDateKey(new Date());
+  if (period.kind === 'day') {
+    const date = isValidDateKey(period.key) ? period.key : today;
+    return {start: date, naturalEnd: date, end: date, label: formatChineseDate(date)};
+  }
+  if (period.kind === 'week') {
+    const start = getIsoWeekStart(period.key) || getIsoWeekStart(getIsoWeekKey(today));
+    const naturalEnd = formatDateKey(addDays(parseDateKey(start), 6));
+    const end = naturalEnd > today ? today : naturalEnd;
+    return {
+      start,
+      naturalEnd,
+      end,
+      label: `${period.key} · ${Number(start.slice(5, 7))}月${Number(start.slice(8, 10))}日-${Number(naturalEnd.slice(5, 7))}月${Number(naturalEnd.slice(8, 10))}日`,
+    };
+  }
+  if (period.kind === 'month') {
+    const key = /^\d{4}-\d{2}$/.test(period.key) ? period.key : today.slice(0, 7);
+    const [year, month] = key.split('-').map(Number);
+    const naturalEnd = formatDateKey(new Date(year, month, 0));
+    const end = naturalEnd > today ? today : naturalEnd;
+    return {start: `${key}-01`, naturalEnd, end, label: `${year}年${month}月`};
+  }
+  const year = /^\d{4}$/.test(period.key) ? Number(period.key) : Number(today.slice(0, 4));
+  const naturalEnd = `${year}-12-31`;
+  const end = naturalEnd > today ? today : naturalEnd;
+  return {start: `${year}-01-01`, naturalEnd, end, label: `${year}年`};
+}
+
+function periodFromAnchor(kind: DatedReviewPeriodKind, anchorDate: string): DatedReviewPeriod {
+  const date = isValidDateKey(anchorDate) ? anchorDate : formatDateKey(new Date());
+  if (kind === 'day') return {kind, key: date};
+  if (kind === 'week') return {kind, key: getIsoWeekKey(date)};
+  if (kind === 'month') return {kind, key: date.slice(0, 7)};
+  return {kind, key: date.slice(0, 4)};
+}
+
+function shiftReviewPeriod(period: DatedReviewPeriod, amount: number): DatedReviewPeriod {
+  const bounds = getReviewPeriodBounds(period);
+  if (period.kind === 'day') return periodFromAnchor('day', formatDateKey(addDays(parseDateKey(bounds.start), amount)));
+  if (period.kind === 'week') return periodFromAnchor('week', formatDateKey(addDays(parseDateKey(bounds.start), amount * 7)));
+  if (period.kind === 'month') {
+    const [year, month] = period.key.split('-').map(Number);
+    const shifted = new Date(year, month - 1 + amount, 1);
+    return {kind: 'month', key: `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, '0')}`};
+  }
+  return {kind: 'year', key: String(Number(period.key) + amount)};
+}
+
+function isFutureReviewPeriod(period: DatedReviewPeriod): boolean {
+  return getReviewPeriodBounds(period).start > formatDateKey(new Date());
+}
+
+function getScopeDates(scope: ObjectiveTimeScope, availableDates: string[] = [], anchorDate?: string): string[] {
+  const today = formatDateKey(new Date());
+  const rangeEnd = /^\d{4}-\d{2}-\d{2}$/.test(anchorDate || '') ? anchorDate! : today;
+  if (scope.mode === 'period') return dateRange(scope.start, scope.end);
   if (scope.mode === 'recent') {
     const days = RANGE_DAYS[scope.range];
-    return dateRange(formatDateKey(addDays(parseDateKey(today), -(days - 1))), today);
+    return dateRange(formatDateKey(addDays(parseDateKey(rangeEnd), -(days - 1))), rangeEnd);
   }
   if (scope.mode === 'year') {
-    return dateRange(`${scope.year}-01-01`, `${scope.year}-12-31`);
+    const start = `${scope.year}-01-01`;
+    const end = [`${scope.year}-12-31`, rangeEnd].sort()[0];
+    return dateRange(start, end);
   }
-  const sorted = availableDates.filter(Boolean).sort();
+  const sorted = availableDates.filter((date) => Boolean(date) && date <= today).sort();
   if (sorted.length) return sorted;
   return dateRange(formatDateKey(addDays(parseDateKey(today), -29)), today);
 }
 
+function getScopedAvailableDates(scope: ObjectiveTimeScope, availableDates: string[], anchorDate?: string): string[] {
+  if (scope.mode === 'all') {
+    const today = formatDateKey(new Date());
+    return availableDates.filter((date) => date <= today).sort();
+  }
+  const scoped = new Set(getScopeDates(scope, availableDates, anchorDate));
+  return availableDates.filter((date) => scoped.has(date));
+}
+
 function scopeLabel(scope: ObjectiveTimeScope): string {
+  if (scope.mode === 'period') return scope.label || `${scope.start} 至 ${scope.end}`;
   if (scope.mode === 'recent') return OBJECTIVE_RANGE_LABELS[scope.range];
   if (scope.mode === 'year') return `${scope.year}年`;
-  return '全部历史';
+  return scope.label || '全部数据';
 }
 
 function formatCompactNumber(value: number, maximumFractionDigits = 1): string {
@@ -426,7 +580,9 @@ function parseGitCounts(analysis: DailyAnalysis | null): {total: number; auto: n
   ].filter(Boolean).join(' ');
 
   const total = extractFirstNumber(text, [
-    /commit_count\s*=\s*(\d+)/i,
+    /commit_count\s*[:=]?\s*(\d+)/i,
+    /当天\s*(\d+)\s*次提交/,
+    /(\d+)\s*次提交/,
     /(\d+)\s*个\s*commit/i,
     /(\d+)\s*次\s*commit/i,
     /目标日共\s*(\d+)/,
@@ -435,13 +591,15 @@ function parseGitCounts(analysis: DailyAnalysis | null): {total: number; auto: n
     /自动化\s*commit\s*占比\s*≈?\s*(\d+)\s*\/\s*(\d+)/,
     /其中\s*(\d+)\+?\s*个为\s*\[auto\]/i,
     /\[auto\][^，。；;]*(?:超过|约)\s*(\d+)/i,
-    /(\d+)\s*条\s*\[auto\]/i,
+    /其中\s*(\d+)\s*条?\s*为\s*\[auto\]/i,
+    /(\d+)\s*条?\s*\[auto\]/i,
   ]);
   const manual = extractFirstCount(text, [
     /剩余\s*(\d+)[-–]\d+\s*次手动/,
     /剩余\s*(\d+)\s*次手动/,
     /真正的人工推进只有[^。；;]*?(\d+|一|二|两|三|四|五|六|七|八|九|十)\s*条/,
     /人工\s*commit[^。；;]*?(\d+|一|二|两|三|四|五|六|七|八|九|十)\s*条/,
+    /(\d+|一|二|两|三|四|五|六|七|八|九|十)\s*条\s*手动\s*commit/i,
   ]);
   const inferredAuto = auto ?? (manual !== null && total ? Math.max(0, total - manual) : 0);
   const inferredManual = manual ?? (total ? Math.max(0, total - inferredAuto) : 0);
@@ -609,40 +767,37 @@ function formatDuration(seconds: unknown): string {
   return `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分钟`;
 }
 
-function formatSleepEntry(sleep: Record<string, unknown> | null): string {
-  const duration = Number(sleep?.sleepDuration || sleep?.durationMinutes);
-  if (Number.isFinite(duration) && duration > 0) {
-    return duration > 24 ? formatDuration(duration * 60) : formatDuration(duration * 3600);
-  }
-  const toMinute = (value: unknown): number | null => {
-    const time = String(value || '').match(/(\d{1,2}):(\d{2})/);
-    if (!time) return null;
-    return Number(time[1]) * 60 + Number(time[2]);
-  };
-  const start = toMinute(sleep?.sleepStart);
-  const end = toMinute(sleep?.sleepEnd);
-  if (start !== null && end !== null) {
-    const minutes = end >= start ? end - start : end + 1440 - start;
-    return formatDuration(minutes * 60);
-  }
-  return '';
-}
-
 function timeToMinute(value: unknown): number | null {
   if (!value) return null;
   const text = String(value);
-  const time = text.match(/(\d{1,2}):(\d{2})/);
+  const time = text.match(/(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?/);
   if (!time) return null;
   const hour = Number(time[1]);
   const minute = Number(time[2]);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
-  return Math.min(1439, Math.max(0, hour * 60 + minute));
+  const second = Number(time[3] || 0);
+  if (
+    !Number.isFinite(hour)
+    || !Number.isFinite(minute)
+    || !Number.isFinite(second)
+    || hour < 0
+    || hour > 24
+    || minute < 0
+    || minute > 59
+    || second < 0
+    || second >= 60
+    || (hour === 24 && (minute > 0 || second > 0))
+  ) return null;
+  return hour * 60 + minute + second / 60;
 }
 
-function minuteToLabel(minute: number): string {
-  const hour = Math.floor(minute / 60);
-  const rest = minute % 60;
-  return `${String(hour).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
+function minuteToLabel(minute: number, includeSeconds = false): string {
+  const totalSeconds = Math.max(0, Math.min(86400, Math.round(minute * 60)));
+  const hour = Math.floor(totalSeconds / 3600);
+  const rest = totalSeconds % 3600;
+  const minutes = Math.floor(rest / 60);
+  const seconds = rest % 60;
+  const base = `${String(hour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  return includeSeconds && seconds ? `${base}:${String(seconds).padStart(2, '0')}` : base;
 }
 
 function daysInYear(year: number): string[] {
@@ -660,36 +815,85 @@ function daysInYear(year: number): string[] {
 function pickInitialDate(dates: string[]): string {
   if (typeof window !== 'undefined') {
     const value = new URLSearchParams(window.location.search).get('date');
-    if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    if (value && isValidDateKey(value)) {
       return value;
     }
-    return formatDateKey(new Date());
   }
   return dates[dates.length - 1] || '';
 }
 
+function pickInitialReviewPeriod(fallbackDate: string): ReviewPeriod {
+  const fallback: DatedReviewPeriod = fallbackDate
+    ? periodFromAnchor('day', fallbackDate)
+    : {kind: 'day', key: ''};
+  if (typeof window === 'undefined') return fallback;
+  const params = new URLSearchParams(window.location.search);
+  const legacyView = params.get('view');
+  const rawKind = legacyView === 'year' ? 'year' : params.get('period');
+  if (legacyView === 'life' || rawKind === 'life') return {kind: 'life'};
+  if (!rawKind || !DATED_REVIEW_PERIOD_KINDS.includes(rawKind as DatedReviewPeriodKind)) return fallback;
+  const kind = rawKind as DatedReviewPeriodKind;
+  const paramName = kind === 'day' ? 'date' : kind;
+  const key = params.get(paramName);
+  if (!key) return fallback;
+  const candidate = {kind, key} as DatedReviewPeriod;
+  if (kind === 'day' && !isValidDateKey(key)) return fallback;
+  if (kind === 'week' && !getIsoWeekStart(key)) return fallback;
+  if (kind === 'month' && !/^\d{4}-(0[1-9]|1[0-2])$/.test(key)) return fallback;
+  if (kind === 'year' && !/^\d{4}$/.test(key)) return fallback;
+  return isFutureReviewPeriod(candidate) ? fallback : candidate;
+}
+
 async function fetchJson<T>(path: string): Promise<T | null> {
-  try {
-    const response = await fetch(path);
-    if (!response.ok) return null;
-    return JSON.parse(await response.text()) as T;
-  } catch {
-    return null;
-  }
+  const cached = jsonRequestCache.get(path);
+  if (cached) return cached as Promise<T | null>;
+
+  const request = (async (): Promise<T | null> => {
+    try {
+      const response = await fetch(path);
+      if (!response.ok) {
+        jsonRequestCache.delete(path);
+        return null;
+      }
+      const text = await response.text();
+      if (/^\s*<!doctype html/i.test(text) || text.includes('<div id="__docusaurus"></div>')) {
+        jsonRequestCache.delete(path);
+        return null;
+      }
+      return JSON.parse(text) as T;
+    } catch {
+      jsonRequestCache.delete(path);
+      return null;
+    }
+  })();
+  jsonRequestCache.set(path, request);
+  return request;
 }
 
 async function fetchText(path: string): Promise<string> {
-  try {
-    const response = await fetch(path);
-    if (!response.ok) return '';
-    const text = await response.text();
-    if (/^\s*<!doctype html/i.test(text) || text.includes('<div id="__docusaurus"></div>')) {
+  const cached = textRequestCache.get(path);
+  if (cached) return cached;
+
+  const request = (async (): Promise<string> => {
+    try {
+      const response = await fetch(path);
+      if (!response.ok) {
+        textRequestCache.delete(path);
+        return '';
+      }
+      const text = await response.text();
+      if (/^\s*<!doctype html/i.test(text) || text.includes('<div id="__docusaurus"></div>')) {
+        textRequestCache.delete(path);
+        return '';
+      }
+      return text;
+    } catch {
+      textRequestCache.delete(path);
       return '';
     }
-    return text;
-  } catch {
-    return '';
-  }
+  })();
+  textRequestCache.set(path, request);
+  return request;
 }
 
 async function fetchDailyAnalysis(date: string): Promise<DailyAnalysis | null> {
@@ -701,7 +905,26 @@ async function fetchDailyAnalysis(date: string): Promise<DailyAnalysis | null> {
   return fetchJson<DailyAnalysis>(`/data/daily-analysis/${dateToPath(date, 'json')}`);
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      results[index] = await mapper(items[index]);
+    }
+  }
+  await Promise.all(Array.from({length: Math.min(limit, items.length)}, () => worker()));
+  return results;
+}
+
 async function fetchWeather(date: string): Promise<unknown | null> {
+  const archived = await fetchJson(`/data/weather/${dateToPath(date, 'json')}`);
+  if (archived) return archived;
   const params = new URLSearchParams({
     latitude: String(HANGZHOU_LATITUDE),
     longitude: String(HANGZHOU_LONGITUDE),
@@ -737,6 +960,17 @@ function renderInlineMarkdown(text: string): React.ReactNode[] {
     }
     return <React.Fragment key={index}>{part}</React.Fragment>;
   });
+}
+
+function renderFollowUp(text: string): React.ReactNode {
+  const match = text.match(/^\*\*(明日动作|观察项)\*\*[：:]\s*(.*)$/);
+  if (!match) return renderInlineMarkdown(text);
+  return (
+    <>
+      {match[1] === '观察项' ? <strong>观察：</strong> : null}
+      {renderInlineMarkdown(match[2])}
+    </>
+  );
 }
 
 function normalizeImageSrc(src: string): string {
@@ -843,15 +1077,35 @@ function markdownToBlocks(markdown: string): React.ReactNode[] {
     .filter(Boolean);
 }
 
-function getMetricEntry(health: HealthData | null, metricName: string, date: string): Record<string, unknown> | null {
-  const metric = health?.data?.healthMetrics?.metrics?.find((item) => item.name === metricName);
-  return metric?.data?.find((item) => String(item.date || '').startsWith(date)) || null;
-}
+const MIND_TERM_LABELS: Record<string, string> = {
+  pleasant: '愉悦',
+  very_pleasant: '非常愉悦',
+  slightly_pleasant: '略愉悦',
+  neutral: '平静',
+  slightly_unpleasant: '略不愉悦',
+  unpleasant: '不愉悦',
+  happy: '开心',
+  confident: '自信',
+  calm: '平和',
+  satisfied: '满足',
+  grateful: '感恩',
+  anxious: '焦虑',
+  stressed: '有压力',
+  work: '工作',
+  self_care: '自我照顾',
+  family: '家庭',
+  health: '健康',
+  fitness: '运动',
+  money: '财务',
+  weather: '天气',
+};
 
 function recordTitle(record: DailyHealthTimelineRecord): string {
   if (record.type === 'sleep') return record.label || '睡眠';
   if (record.type === 'workout') return record.name || '运动';
   if (record.type === 'handwashing') return '洗手';
+  if (record.type === 'medication') return '用药记录';
+  if (record.type === 'state_of_mind') return '心境记录';
   return record.type || '健康';
 }
 
@@ -867,20 +1121,18 @@ function recordDetail(record: DailyHealthTimelineRecord): string {
   if (record.maxHeartRate) parts.push(`峰值 ${formatNumber(record.maxHeartRate)} bpm`);
   if (record.durationSeconds) parts.push(`${formatNumber(record.durationSeconds)} 秒`);
   if (record.status) parts.push(record.status);
+  if (record.valenceClassification) parts.push(MIND_TERM_LABELS[record.valenceClassification] || record.valenceClassification);
+  if (record.labels?.length) parts.push(record.labels.map((label) => MIND_TERM_LABELS[label] || label).join(' / '));
+  if (record.associations?.length) parts.push(`关联 ${record.associations.map((label) => MIND_TERM_LABELS[label] || label).join(' / ')}`);
   return parts.join(' · ');
-}
-
-function compactWorkoutDetail(detail: string, duration: number): string {
-  const parts = detail.split(' · ').filter(Boolean);
-  if (!parts.length) return duration ? `${formatNumber(duration)} 分钟` : '';
-  if (duration < 45) return parts[0] || '';
-  return parts.slice(0, 3).join(' · ');
 }
 
 function timelineType(type?: string): TimelineItem['type'] | null {
   if (type === 'sleep' || type === 'workout') {
     return type;
   }
+  if (type === 'medication') return 'medication';
+  if (type === 'state_of_mind') return 'mind';
   return null;
 }
 
@@ -908,63 +1160,134 @@ function bandIntensity(record: DailyHealthTimelineRecord): number {
   return 0.4;
 }
 
+function timelineBoundaryMinute(value: unknown, selectedDate: string | undefined): number | null {
+  const text = String(value || '');
+  const minute = timeToMinute(text);
+  if (minute === null) return null;
+  const date = text.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+  if (!selectedDate || !date) return minute;
+  if (date < selectedDate) return 0;
+  if (date > selectedDate) return 1440;
+  return minute;
+}
+
 function buildHealthTimeline(dailyHealth: DailyHealthData | null): TimelineModel {
   const selectedDate = dailyHealth?.date;
-  return (dailyHealth?.timeline || []).reduce<TimelineModel>((model, record) => {
-    if (selectedDate && String(record.start || '').includes('-') && !String(record.start).startsWith(selectedDate)) {
-      return model;
+  const exerciseValue = getNestedValue(dailyHealth?.summary, ['exerciseTime', 'totalMinutes']);
+  const exerciseNumber = Number(exerciseValue);
+  const model: TimelineModel = {
+    items: [],
+    bands: [],
+    sleep: [],
+    weather: [],
+    exerciseMinutes: exerciseValue !== undefined && exerciseValue !== null && Number.isFinite(exerciseNumber)
+      ? exerciseNumber
+      : null,
+    healthAvailable: Boolean(dailyHealth),
+    healthObservedUntil: null,
+    driveAvailable: false,
+  };
+  const sleepSegments: SleepSegment[] = [];
+
+  (dailyHealth?.timeline || []).forEach((record) => {
+    const startMinute = timelineBoundaryMinute(record.start, selectedDate);
+    const type = timelineType(record.type);
+    let endMinute = timelineBoundaryMinute(record.end, selectedDate);
+    if (startMinute === null) return;
+    if (endMinute === null && (type === 'medication' || type === 'mind')) endMinute = startMinute;
+    if (endMinute === null) return;
+    const startDate = String(record.start || '').slice(0, 10);
+    const endDate = String(record.end || '').slice(0, 10);
+    if (selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate) && /^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      if (endDate < selectedDate || startDate > selectedDate) return;
+    } else if (endMinute < startMinute) {
+      endMinute = 1440;
     }
-    const startMinute = timeToMinute(record.start);
-    const endMinute = timeToMinute(record.end);
-    if (startMinute === null || endMinute === null) return model;
+    if (type === 'medication' || type === 'mind') {
+      model.healthObservedUntil = Math.max(model.healthObservedUntil || 0, startMinute);
+      model.items.push({
+        type,
+        title: recordTitle(record),
+        detail: recordDetail(record),
+        startMinute,
+      });
+      return;
+    }
+    if (endMinute <= startMinute) {
+      const durationSeconds = Number(record.durationSeconds);
+      const durationMinutes = Number(record.durationMinutes);
+      const statedDuration = Number.isFinite(durationSeconds) && durationSeconds > 0
+        ? durationSeconds / 60
+        : Number.isFinite(durationMinutes) && durationMinutes > 0 ? durationMinutes : 0;
+      if (statedDuration > 0) endMinute = Math.min(1440, startMinute + statedDuration);
+    }
+    if (endMinute <= startMinute) return;
+    endMinute = Math.min(1440, endMinute);
+    model.healthObservedUntil = Math.max(model.healthObservedUntil || 0, endMinute);
 
     const band = bandType(record.type);
     if (band) {
       model.bands.push({
         type: band,
         startMinute,
-        endMinute: Math.max(startMinute + 5, endMinute),
+        endMinute,
         intensity: bandIntensity(record),
         title: recordTitle(record),
         detail: recordDetail(record),
       });
-      return model;
+      return;
     }
 
-    const type = timelineType(record.type);
-    if (!type) return model;
-    const duration = Math.max(5, endMinute - startMinute);
+    if (!type) return;
     if (type === 'sleep') {
-      model.sleep ||= {
-        startMinute,
-        endMinute: startMinute + duration,
-        detail: '',
-        segments: [],
-      };
-      model.sleep.startMinute = Math.min(model.sleep.startMinute, startMinute);
-      model.sleep.endMinute = Math.max(model.sleep.endMinute, startMinute + duration);
-      model.sleep.segments.push({
+      sleepSegments.push({
         stage: record.stage,
         label: record.label || '睡眠',
         startMinute,
-        endMinute: startMinute + duration,
+        endMinute,
       });
-      return model;
+      return;
     }
     model.items.push({
       type,
       title: recordTitle(record),
       detail: recordDetail(record),
       startMinute,
-      endMinute: startMinute + duration,
+      endMinute,
       stage: record.stage,
     });
-    return model;
-  }, {items: [], bands: [], sleep: null, weather: []});
+  });
+
+  sleepSegments
+    .sort((left, right) => left.startMinute - right.startMinute)
+    .forEach((segment) => {
+      const current = model.sleep.at(-1);
+      if (!current || segment.startMinute - current.endMinute > 60) {
+        model.sleep.push({
+          startMinute: segment.startMinute,
+          endMinute: segment.endMinute,
+          detail: '',
+          segments: [segment],
+        });
+        return;
+      }
+      current.startMinute = Math.min(current.startMinute, segment.startMinute);
+      current.endMinute = Math.max(current.endMinute, segment.endMinute);
+      current.segments.push(segment);
+    });
+  model.sleep.forEach((block) => {
+    block.detail = summarizeSleep(block);
+  });
+  return model;
 }
 
 function summarizeSleep(block: SleepBlock): string {
-  const minutes = block.endMinute - block.startMinute;
+  const minutes = Math.round(block.segments.reduce(
+    (total, segment) => segment.stage === 'awake'
+      ? total
+      : total + Math.max(0, segment.endMinute - segment.startMinute),
+    0,
+  ));
   return `${Math.floor(minutes / 60)}h${minutes % 60 ? `${minutes % 60}m` : ''}`;
 }
 
@@ -977,95 +1300,23 @@ function getSleepStageMinutes(block: SleepBlock): Record<string, number> {
 }
 
 const SLEEP_STAGE_ROWS = [
-  {key: 'awake', label: '清醒', className: 'sleepStageLabel_awake'},
-  {key: 'rem', label: '快速动眼', className: 'sleepStageLabel_rem'},
-  {key: 'core', label: '核心', className: 'sleepStageLabel_core'},
-  {key: 'deep', label: '深度', className: 'sleepStageLabel_deep'},
+  {key: 'awake', label: '清醒'},
+  {key: 'rem', label: '快速动眼'},
+  {key: 'core', label: '核心'},
+  {key: 'deep', label: '深度'},
 ];
 
-function SleepStageChart({
-  block,
-  compact = false,
-  onSegmentEnter,
-  onSegmentMove,
-}: {
-  block: SleepBlock;
-  compact?: boolean;
-  onSegmentEnter?: (event: React.MouseEvent<HTMLElement>, segment: SleepSegment) => void;
-  onSegmentMove?: (event: React.MouseEvent<HTMLElement>) => void;
-}): React.ReactNode {
-  const sortedSegments = block.segments.slice().sort((first, second) => first.startMinute - second.startMinute);
-  const totalMinutes = Math.max(1, block.endMinute - block.startMinute);
-  const stageMinutes = getSleepStageMinutes(block);
-
-  return (
-    <div className={`${styles.sleepStageChart} ${compact ? styles.sleepStageChartCompact : ''}`}>
-      <div className={styles.sleepStageLabels}>
-        {SLEEP_STAGE_ROWS.map((stage) => (
-          <span key={stage.key} className={styles[stage.className]}>
-            <strong>{stage.label}</strong>
-            {stageMinutes[stage.key] ? <small>{formatNumber(stageMinutes[stage.key])}m</small> : null}
-          </span>
-        ))}
-      </div>
-      <div className={styles.sleepStagePlot}>
-        {SLEEP_STAGE_ROWS.map((stage) => <i key={stage.key} className={styles.sleepStageGridLine} />)}
-        <div className={styles.sleepStageAxis}>
-          <span>{minuteToLabel(block.startMinute)}</span>
-          <span>{minuteToLabel(block.startMinute + Math.round(totalMinutes / 2))}</span>
-          <span>{minuteToLabel(block.endMinute)}</span>
-        </div>
-        {sortedSegments.map((segment, index) => {
-          const left = ((segment.startMinute - block.startMinute) / totalMinutes) * 100;
-          const width = Math.max(1.5, ((segment.endMinute - segment.startMinute) / totalMinutes) * 100);
-          const rowIndex = Math.max(0, SLEEP_STAGE_ROWS.findIndex((stage) => stage.key === segment.stage));
-          return (
-            <i
-              key={`${segment.startMinute}-${index}`}
-              className={`${styles.sleepStageSegment} ${segment.stage ? styles[`sleepStageSegment_${segment.stage}`] : ''}`}
-              style={{
-                left: `${left}%`,
-                top: `calc(${rowIndex * 25}% + 0.34rem)`,
-                width: `${width}%`,
-              }}
-              title={`${minuteToLabel(segment.startMinute)}-${minuteToLabel(segment.endMinute)} ${segment.label}`}
-              onMouseEnter={(event) => onSegmentEnter?.(event, segment)}
-              onMouseMove={onSegmentMove}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function buildTimelineModel({
-  sleep,
   dailyHealth,
   drive,
   weather,
 }: {
-  sleep: Record<string, unknown> | null;
   dailyHealth: DailyHealthData | null;
   drive: DriveLog | null;
   weather: unknown;
 }): TimelineModel {
   const model = buildHealthTimeline(dailyHealth);
-  const sleepStart = timeToMinute(sleep?.sleepStart);
-  const sleepEnd = timeToMinute(sleep?.sleepEnd);
-  if (!model.sleep && sleepStart !== null && sleepEnd !== null) {
-    model.sleep = {
-      startMinute: sleepStart,
-      endMinute: Math.max(sleepStart + 30, sleepEnd),
-      detail: '',
-      segments: [{
-        label: '睡眠',
-        startMinute: sleepStart,
-        endMinute: Math.max(sleepStart + 30, sleepEnd),
-      }],
-    };
-  }
-  if (model.sleep) model.sleep.detail = summarizeSleep(model.sleep);
+  model.driveAvailable = drive !== null;
 
   Object.entries(drive || {}).forEach(([time, item]) => {
     const minute = timeToMinute(time);
@@ -1119,185 +1370,6 @@ function buildTimelineModel({
   return model;
 }
 
-function ReflectionCalendar({
-  year,
-  dailyDates,
-  analysisDates,
-  selectedDate,
-  onSelect,
-  compact = false,
-  onToggleCompact,
-}: {
-  year: number;
-  dailyDates: Set<string>;
-  analysisDates: Set<string>;
-  selectedDate: string;
-  onSelect: (date: string) => void;
-  compact?: boolean;
-  onToggleCompact?: () => void;
-}) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [hover, setHover] = useState<CalendarHover | null>(null);
-  const {grid, monthLabels, elapsedDays, futureDays, elapsedPercent, activeDays, completeDays, numWeeks} = useMemo(() => {
-    const days = daysInYear(year);
-    const first = new Date(year, 0, 1);
-    const today = formatDateKey(new Date());
-    const weeks = Math.ceil((getDayRow(first) + days.length) / 7);
-    const columns: Array<Array<CalendarCell | null>> = Array.from({length: weeks}, () => Array.from({length: 7}, () => null));
-    const labels: Array<{label: string; col: number}> = [];
-    let previousMonth = -1;
-    let elapsedCount = 0;
-    let futureCount = 0;
-    let activeCount = 0;
-    let completeCount = 0;
-
-    days.forEach((date, index) => {
-      const cursor = new Date(year, 0, index + 1);
-      const row = getDayRow(cursor);
-      const col = Math.floor((getDayRow(first) + index) / 7);
-      const hasDaily = dailyDates.has(date);
-      const hasAnalysis = analysisDates.has(date);
-      const score = Number(hasDaily) + Number(hasAnalysis);
-      const isElapsed = date <= today;
-      if (isElapsed) elapsedCount += 1;
-      else futureCount += 1;
-      if (score > 0) activeCount += 1;
-      if (score === 2) completeCount += 1;
-      columns[col][row] = {date, score, hasDaily, hasAnalysis, isElapsed};
-
-      const month = cursor.getMonth();
-      if (month !== previousMonth) {
-        labels.push({label: MONTH_LABELS[month], col});
-        previousMonth = month;
-      }
-    });
-
-    return {
-      grid: columns,
-      monthLabels: labels,
-      elapsedDays: elapsedCount,
-      futureDays: futureCount,
-      elapsedPercent: (elapsedCount / days.length) * 100,
-      activeDays: activeCount,
-      completeDays: completeCount,
-      numWeeks: weeks,
-    };
-  }, [analysisDates, dailyDates, year]);
-
-  if (compact) {
-    return (
-      <section className={styles.calendarSummary} aria-label={`${year} 年日历摘要`}>
-        <div>
-          <strong>{selectedDate ? formatChineseDate(selectedDate) : `${year}年`}</strong>
-          <span>今年已经过去 {formatPercent(elapsedPercent)} · {activeDays} 天有记录 · {completeDays} 天完整</span>
-        </div>
-        <button type="button" onClick={onToggleCompact}>
-          展开日历
-        </button>
-      </section>
-    );
-  }
-
-  function handleEnter(event: React.MouseEvent<HTMLButtonElement>, cell: CalendarCell) {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setHover({
-      ...cell,
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    });
-  }
-
-  function handleMove(event: React.MouseEvent<HTMLButtonElement>) {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setHover((previous) => previous ? {...previous, x: event.clientX - rect.left, y: event.clientY - rect.top} : previous);
-  }
-
-  return (
-    <section ref={containerRef} className={styles.reflectionCalendar} aria-label={`${year} 年日历`} onMouseLeave={() => setHover(null)}>
-      <div className={styles.calendarBody}>
-        <div className={styles.weekdayColumn}>
-          <span className={styles.weekdaySpacer} aria-hidden="true" />
-          {WEEKDAY_LABELS.map((label) => (
-            <span key={label} className={styles.weekdayLabel}>周{label}</span>
-          ))}
-        </div>
-        <div className={styles.scrollArea}>
-          <div className={styles.calendarStack} style={{'--col-count': numWeeks} as React.CSSProperties}>
-            <div className={styles.monthHeader}>
-              {monthLabels.map((month) => (
-                <span key={`${month.label}-${month.col}`} className={styles.monthLabel} style={{'--col': month.col} as React.CSSProperties}>
-                  {month.label}
-                </span>
-              ))}
-            </div>
-            <div className={styles.calendarGrid}>
-              {grid.flatMap((column, columnIndex) =>
-                column.map((cell, rowIndex) => {
-                  if (!cell) {
-                    return <span key={`${columnIndex}-${rowIndex}`} className={styles.cellPlaceholder} />;
-                  }
-
-                  return (
-                    <button
-                      key={cell.date}
-                      type="button"
-                      aria-label={`${cell.date} ${cell.score ? '有三省数据' : '无数据'}`}
-                      title={cell.date}
-                      className={[
-                        styles.calendarCell,
-                        cell.isElapsed ? styles.calendarCellElapsed : styles.calendarCellFuture,
-                        selectedDate === cell.date ? styles.calendarCellSelected : '',
-                      ].join(' ')}
-                      onClick={() => onSelect(cell.date)}
-                      onMouseEnter={(event) => handleEnter(event, cell)}
-                      onMouseMove={handleMove}
-                    />
-                  );
-                }),
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      {hover ? (
-        <div
-          className={styles.calendarTooltip}
-          style={{
-            transform: `translate(calc(${hover.x}px - 50%), calc(${hover.y}px - 100% - 10px))`,
-          }}
-          role="tooltip"
-        >
-          <div className={styles.tooltipDate}>{formatChineseDate(hover.date)}</div>
-          <div className={styles.tooltipValue}>
-            {hover.score === 2 ? '日记与 AI 分析完整' : hover.score === 1 ? '已有部分三省数据' : '暂无三省数据'}
-          </div>
-          <div className={styles.tooltipMeta}>
-            <span>{hover.hasDaily ? '公开日记已保存' : '无公开日记'}</span>
-            <span>{hover.hasAnalysis ? 'AI 分析已生成' : '无 AI 分析'}</span>
-          </div>
-        </div>
-      ) : null}
-      <div className={styles.calendarFooter}>
-        <span className={styles.calendarProgress}>今年已经过去 {formatPercent(elapsedPercent)}</span>
-        <span className={styles.calendarMeta}>{elapsedDays} 天已过去 · {futureDays} 天未到来 · {activeDays} 天有记录 · {completeDays} 天完整</span>
-        {onToggleCompact ? (
-          <button type="button" className={styles.calendarCollapseButton} onClick={onToggleCompact}>
-            收起日历
-          </button>
-        ) : null}
-        <div className={styles.calendarLegend}>
-          <span>未来</span>
-          <i className={styles.calendarCellFuture} />
-          <i className={styles.calendarCellElapsed} />
-          <span>已过去</span>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function LifeCalendar(): React.ReactNode {
   const today = formatDateKey(new Date());
   const startYear = Number(LIFE_START_DATE.slice(0, 4));
@@ -1316,7 +1388,7 @@ function LifeCalendar(): React.ReactNode {
         </div>
         <div>
           <strong>{formatNumber(Math.max(0, totalDays - livedDays))}</strong>
-          <span>预计剩余日子</span>
+            <span>参照剩余日子</span>
         </div>
         <div>
           <strong>{formatNumber(progress, 1)}%</strong>
@@ -1331,10 +1403,10 @@ function LifeCalendar(): React.ReactNode {
         <div className={styles.lifeProgressLabels}>
           <span>出生</span>
           <strong>今天</strong>
-          <span>预期终点</span>
+          <span>100 岁参照</span>
         </div>
       </div>
-      <div className={styles.lifeYearMap}>
+      <div className={styles.lifeYearMap} aria-label={`${startYear} 至 ${endYear} 年人生年份进度`}>
         {years.map((year) => {
           const isPast = year < new Date().getFullYear();
           const isCurrent = year === new Date().getFullYear();
@@ -1353,15 +1425,6 @@ function LifeCalendar(): React.ReactNode {
           );
         })}
       </div>
-      <div className={styles.calendarFooter}>
-        <span>一格一年，压缩显示整个人生进度。</span>
-        <div className={styles.calendarLegend}>
-          <span>过去</span>
-          <i className={styles.lifeYearPast} />
-          <i className={styles.lifeYearCell} />
-          <span>未来</span>
-        </div>
-      </div>
     </section>
   );
 }
@@ -1377,6 +1440,8 @@ function InsightList({items}: {items: AnalysisInsight[]}): React.ReactNode {
       {item.expert_view ? <span className={styles.pill}>{item.expert_view}</span> : null}
       {item.summary ? <p className={styles.lead}>{item.summary}</p> : null}
       {item.positioning ? <p>{item.positioning}</p> : null}
+      {item.means ? <p><strong>说明：</strong>{item.means}</p> : null}
+      {item.not_means ? <p className={styles.boundary}><strong>不代表：</strong>{item.not_means}</p> : null}
       {item.evidence?.length ? (
         <ul>
           {item.evidence.map((value) => (
@@ -1385,205 +1450,284 @@ function InsightList({items}: {items: AnalysisInsight[]}): React.ReactNode {
         </ul>
       ) : null}
       {item.uncertainty ? <p className={styles.boundary}>边界：{item.uncertainty}</p> : null}
-      {item.professional_suggestion ? <p className={styles.action}>{item.professional_suggestion}</p> : null}
     </article>
   ));
 }
 
-function TimelinePanel({model}: {model: TimelineModel}): React.ReactNode {
-  const legend = [
-    ['移动', styles.timelineBand_movement],
-    ['负荷', styles.timelineBand_active_energy],
-    ['站立', styles.timelineBand_stand],
-    ['日照', styles.timelineBand_daylight],
-    ['爬楼', styles.timelineBand_stairs],
-    ['洗手', styles.timelineBand_handwashing],
-  ];
+type TimelineFlowEntry = TimelineItem & {key: string; completedTrip?: boolean};
 
+function getSleepStageSummary(block: SleepBlock): string {
+  const stages = getSleepStageMinutes(block);
+  const knownKeys = new Set(SLEEP_STAGE_ROWS.map((stage) => stage.key));
+  return [
+    ...SLEEP_STAGE_ROWS
+      .filter((stage) => stages[stage.key])
+      .map((stage) => `${stage.label} ${formatNumber(stages[stage.key])}m`),
+    ...Object.entries(stages)
+      .filter(([key, minutes]) => !knownKeys.has(key) && minutes > 0)
+      .map(([key, minutes]) => `${key || '未细分睡眠'} ${formatNumber(minutes)}m`),
+  ].join(' · ');
+}
+
+function buildTimelineFlowEntries(model: TimelineModel): TimelineFlowEntry[] {
+  const entries: TimelineFlowEntry[] = model.sleep.map((block, index) => ({
+    key: `sleep-${index}`,
+    type: 'sleep',
+    title: `睡眠 ${block.detail}`,
+    detail: getSleepStageSummary(block),
+    startMinute: block.startMinute,
+    endMinute: block.endMinute,
+  }));
+
+  model.items
+    .filter((item) => item.type !== 'drive')
+    .sort((left, right) => left.startMinute - right.startMinute)
+    .filter((item, index, values) => {
+      const previous = values[index - 1];
+      if (item.type !== 'medication' && item.type !== 'mind') return true;
+      return !previous
+        || item.type !== previous.type
+        || item.title !== previous.title
+        || item.detail !== previous.detail
+        || item.startMinute - previous.startMinute > 1;
+    })
+    .forEach((item, index) => {
+      entries.push({...item, key: `${item.type}-${item.startMinute}-${index}`});
+    });
+
+  const drives = model.items
+    .filter((item) => item.type === 'drive')
+    .sort((left, right) => left.startMinute - right.startMinute)
+    .filter((item, index, values) => {
+      const previous = values[index - 1];
+      return !previous
+        || item.title !== previous.title
+        || item.detail !== previous.detail
+        || item.startMinute - previous.startMinute > 2;
+    });
+  let openDrive: TimelineItem | null = null;
+  for (const [index, current] of drives.entries()) {
+    if (/上车/.test(current.title)) {
+      if (openDrive) {
+        entries.push({...openDrive, key: `drive-open-${openDrive.startMinute}-${index}`, title: '上车记录'});
+      }
+      openDrive = current;
+      continue;
+    }
+    if (/下车/.test(current.title) && openDrive && current.startMinute >= openDrive.startMinute) {
+      entries.push({
+        key: `drive-${openDrive.startMinute}-${current.startMinute}`,
+        type: 'drive',
+        title: '行程',
+        detail: [openDrive.detail, current.detail].filter(Boolean).join(' -> '),
+        startMinute: openDrive.startMinute,
+        endMinute: current.startMinute,
+        completedTrip: true,
+      });
+      openDrive = null;
+      continue;
+    }
+    entries.push({...current, key: `drive-point-${current.startMinute}-${index}`, title: /下车/.test(current.title) ? '下车记录' : current.title});
+  }
+  if (openDrive) entries.push({...openDrive, key: `drive-open-${openDrive.startMinute}-last`, title: '上车记录'});
+
+  model.weather.forEach((item, index) => entries.push({...item, key: `weather-${item.startMinute}-${index}`}));
+  return entries.sort((left, right) => left.startMinute - right.startMinute);
+}
+
+function TimelinePanel({model}: {model: TimelineModel}): React.ReactNode {
+  const flowItems = useMemo(() => buildTimelineFlowEntries(model), [model]);
   return (
     <section className={styles.timelinePanel}>
       <div className={styles.panelHead}>
         <div>
           <strong>24 小时客观轨迹</strong>
-          <small>天气、睡眠、运动、出行与行为切片</small>
-        </div>
-        <div className={styles.timelineLegend}>
-          {legend.map(([label, className]) => (
-            <span key={label}>
-              <i className={className} />
-              {label}
-            </span>
-          ))}
+          <small>{flowItems.length} 个关键记录 · {model.bands.length} 个行为切片</small>
         </div>
       </div>
-      <DayTimeline model={model} />
+      <CompactDayTimeline model={model} flowItems={flowItems} />
     </section>
   );
 }
 
-function DayTimeline({model}: {model: TimelineModel}): React.ReactNode {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [tooltip, setTooltip] = useState<TimelineTooltip | null>(null);
-  const hours = Array.from({length: 25}, (_, hour) => hour);
-  const eventLanes: Array<{key: string; label: string; types: TimelineItem['type'][]}> = [
-    {key: 'behavior', label: '行为', types: ['workout', 'drive']},
-  ];
-  const bandLanes: Array<{key: TimelineBand['type']; label: string}> = [
-    {key: 'movement', label: '移'},
-    {key: 'active_energy', label: '荷'},
-    {key: 'stand', label: '站'},
-    {key: 'daylight', label: '晒'},
-    {key: 'stairs', label: '楼'},
-    {key: 'handwashing', label: '洗'},
-  ];
-
-  function showTooltip(event: React.MouseEvent<HTMLElement>, text: React.ReactNode) {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setTooltip({
-      text,
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    });
+function CompactDayTimeline({model, flowItems}: {model: TimelineModel; flowItems: TimelineFlowEntry[]}): React.ReactNode {
+  const [showFullDay, setShowFullDay] = useState(false);
+  const sleepMinutes = Math.round(model.sleep.reduce(
+    (total, block) => total + block.segments.reduce(
+      (blockTotal, segment) => segment.stage === 'awake'
+        ? blockTotal
+        : blockTotal + Math.max(0, segment.endMinute - segment.startMinute),
+      0,
+    ),
+    0,
+  ));
+  const movementMinutes = model.bands
+    .filter((band) => band.type === 'movement')
+    .reduce((total, band) => total + Math.max(0, band.endMinute - band.startMinute), 0);
+  const tripCount = flowItems.filter((item) => item.completedTrip).length;
+  let observedMinutes = [
+    ...flowItems
+      .filter((item) => item.type !== 'sleep' && item.type !== 'weather')
+      .flatMap((item) => [item.startMinute, item.endMinute ?? item.startMinute]),
+    ...model.bands.flatMap((band) => [band.startMinute, band.endMinute]),
+  ].filter((minute) => Number.isFinite(minute));
+  if (!observedMinutes.length) {
+    observedMinutes = model.sleep.flatMap((block) => [block.startMinute, block.endMinute]);
   }
-
-  function moveTooltip(event: React.MouseEvent<HTMLElement>) {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setTooltip((previous) => previous ? {...previous, x: event.clientX - rect.left, y: event.clientY - rect.top} : previous);
+  let focusStart = observedMinutes.length ? Math.max(0, Math.floor((Math.min(...observedMinutes) - 60) / 60) * 60) : 0;
+  let focusEnd = observedMinutes.length ? Math.min(1440, Math.ceil((Math.max(...observedMinutes) + 60) / 60) * 60) : 1440;
+  if (focusEnd - focusStart < 360) {
+    const center = (focusStart + focusEnd) / 2;
+    focusStart = Math.max(0, Math.floor((center - 180) / 60) * 60);
+    focusEnd = Math.min(1440, focusStart + 360);
+    focusStart = Math.max(0, focusEnd - 360);
   }
+  const windowStart = showFullDay ? 0 : focusStart;
+  const windowEnd = showFullDay ? 1440 : focusEnd;
+  const windowMinutes = Math.max(1, windowEnd - windowStart);
+  const axisStep = windowMinutes > 1200 ? 240 : windowMinutes > 480 ? 120 : 60;
+  const axisMarks: number[] = [windowStart];
+  for (let minute = Math.ceil((windowStart + 1) / axisStep) * axisStep; minute < windowEnd; minute += axisStep) {
+    if (minute - windowStart >= axisStep * 0.65 && windowEnd - minute >= axisStep * 0.65) axisMarks.push(minute);
+  }
+  axisMarks.push(windowEnd);
+  const position = (minute: number) => Math.min(100, Math.max(0, ((minute - windowStart) / windowMinutes) * 100));
+  const segmentStyle = (start: number, end: number) => {
+    const clippedStart = Math.max(windowStart, start);
+    const clippedEnd = Math.min(windowEnd, Math.max(start + 1, end));
+    if (clippedEnd <= clippedStart) return null;
+    return {left: `${position(clippedStart)}%`, width: `${Math.max(0.7, position(clippedEnd) - position(clippedStart))}%`};
+  };
+  const densityRows: Array<{label: string; types: TimelineBand['type'][]}> = [
+    {label: '移动', types: ['movement']},
+    {label: '活动能量', types: ['active_energy']},
+    {label: '站立', types: ['stand']},
+    {label: '日照', types: ['daylight']},
+    {label: '爬楼', types: ['stairs']},
+    {label: '洗手', types: ['handwashing']},
+  ];
+  const allSleepSegments = model.sleep.flatMap((block) => block.segments);
+  const visibleSleepSegments = allSleepSegments.filter(
+    (segment) => segment.endMinute > windowStart && segment.startMinute < windowEnd,
+  );
+  const healthStatus = !model.healthAvailable
+    ? '健康数据缺失'
+    : model.healthObservedUntil === null ? '健康轨迹无记录' : `健康记录至 ${minuteToLabel(model.healthObservedUntil)}`;
 
   return (
-    <div ref={containerRef} className={styles.dayTimeline} onMouseLeave={() => setTooltip(null)}>
-      <div className={styles.timelineScale}>
-        {hours.map((hour) => (
-          <span
-            key={hour}
-            className={hour % 6 === 0 ? styles.timelineScaleMajor : styles.timelineScaleMinor}
-            style={{top: `${(hour / 24) * 100}%`}}
-          >
-            {String(hour).padStart(2, '0')}:00
-          </span>
-        ))}
-        {model.weather.map((item) => (
-          <div
-            key={`${item.type}-${item.startMinute}`}
-            className={styles.timelineWeatherMark}
-            style={{top: `${(item.startMinute / 1440) * 100}%`}}
-            onMouseEnter={(event) => showTooltip(event, `${minuteToLabel(item.startMinute)} ${item.title}${item.detail ? ` · ${item.detail}` : ''}`)}
-            onMouseMove={moveTooltip}
-          >
-            <strong>{item.title}</strong>
-            {item.detail ? <small>{item.detail}</small> : null}
-          </div>
-        ))}
-        {model.sleep ? (
-          <>
-            <span className={styles.timelineSleepBoundary} style={{top: `${(model.sleep.startMinute / 1440) * 100}%`}}>
-              {minuteToLabel(model.sleep.startMinute)}
-            </span>
-            <span className={styles.timelineSleepBoundary} style={{top: `${(model.sleep.endMinute / 1440) * 100}%`}}>
-              {minuteToLabel(model.sleep.endMinute)}
-            </span>
-          </>
-        ) : null}
+    <div className={styles.compactDayTimeline}>
+      <div className={styles.timelineSummaryStrip}>
+        <div><strong>{!model.healthAvailable ? '无数据' : sleepMinutes ? `${Math.floor(sleepMinutes / 60)}h${sleepMinutes % 60 ? `${sleepMinutes % 60}m` : ''}` : '无记录'}</strong><span>睡眠</span></div>
+        <div><strong>{model.exerciseMinutes === null ? '无数据' : `${formatNumber(model.exerciseMinutes)}m`}</strong><span>锻炼时间</span></div>
+        <div><strong>{!model.healthAvailable ? '无数据' : `${formatNumber(movementMinutes)}m`}</strong><span>移动片段</span></div>
+        <div><strong>{model.driveAvailable ? tripCount : '无数据'}</strong><span>完整行程</span></div>
       </div>
-      <div className={styles.timelineTrack}>
-        {eventLanes.map((lane) => (
-          <div key={lane.key} className={styles.timelineLane}>
-            {model.sleep ? (
-              <div
-                className={styles.sleepBlock}
-                style={{
-                  top: `${(model.sleep.startMinute / 1440) * 100}%`,
-                  height: `${Math.max(4, ((model.sleep.endMinute - model.sleep.startMinute) / 1440) * 100)}%`,
-                }}
-              >
-                <div className={styles.sleepBlockSummary}>
-                  <strong>睡眠 {model.sleep.detail}</strong>
-                </div>
-                <SleepStageChart
-                  block={model.sleep}
-                  compact
-                  onSegmentEnter={(event, segment) => {
-                    const minutes = Math.max(0, segment.endMinute - segment.startMinute);
-                    showTooltip(event, `${minuteToLabel(segment.startMinute)}-${minuteToLabel(segment.endMinute)} ${segment.label} · ${formatNumber(minutes)}m`);
-                  }}
-                  onSegmentMove={moveTooltip}
-                />
-              </div>
-            ) : null}
-            {model.items.filter((item) => lane.types.includes(item.type)).map((item, index) => {
-              const top = (item.startMinute / 1440) * 100;
-              const duration = item.endMinute ? item.endMinute - item.startMinute : 0;
-              const height = item.endMinute ? Math.max(2, (duration / 1440) * 100) : undefined;
-              const densityClass = item.type === 'workout'
-                ? duration >= 90
-                  ? styles.timelineEventFeatured
-                  : duration >= 40
-                    ? styles.timelineEventMedium
-                    : styles.timelineEventCompact
-                : '';
-              return (
-                <div
-                  key={`${item.type}-${item.startMinute}-${index}`}
-                  className={[
-                    styles.timelineEvent,
-                    styles.timelineEventMulti,
-                    styles[`timelineEvent_${item.type}`],
-                    densityClass,
-                  ].join(' ')}
-                  style={{top: `${top}%`, height: height ? `${height}%` : undefined}}
-                  onMouseEnter={(event) => showTooltip(event, `${minuteToLabel(item.startMinute)}${item.endMinute ? `-${minuteToLabel(item.endMinute)}` : ''} ${item.title}${item.detail ? ` · ${item.detail}` : ''}`)}
-                  onMouseMove={moveTooltip}
-                >
-                  <strong>{item.title}</strong>
-                  {item.detail ? (
-                    <span>{item.type === 'workout' ? compactWorkoutDetail(item.detail, duration) : item.detail}</span>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-        <div className={styles.timelineBandPanel}>
-          {bandLanes.map((lane) => (
-            <div key={lane.key} className={styles.timelineBandLane}>
-              <span>{lane.label}</span>
-              <div>
-                {model.bands.filter((band) => band.type === lane.key).map((band, index) => {
-                  const top = (band.startMinute / 1440) * 100;
-                  const height = Math.max(1.2, ((band.endMinute - band.startMinute) / 1440) * 100);
-                  return (
+
+      <div className={styles.timelineWindowHead}>
+        <div>
+          <strong>{showFullDay ? '完整一天' : '记录窗口'} · {minuteToLabel(windowStart)}-{minuteToLabel(windowEnd)}</strong>
+          <span>{healthStatus}</span>
+        </div>
+        <button
+          type="button"
+          aria-controls="daily-timeline-overview"
+          aria-pressed={showFullDay}
+          onClick={() => setShowFullDay((value) => !value)}
+        >
+          {showFullDay ? '聚焦记录' : '完整 24 小时'}
+        </button>
+      </div>
+
+      <div id="daily-timeline-overview" className={styles.timelineOverview}>
+        <div className={styles.timelineHorizontalAxis} aria-hidden="true">
+          {axisMarks.map((minute) => <span key={minute} style={{left: `${position(minute)}%`}}>{minuteToLabel(minute)}</span>)}
+        </div>
+        {allSleepSegments.length ? (
+          <details className={styles.timelineDensityDetails}>
+            <summary className={styles.timelineDensityRow} aria-label={`睡眠 ${allSleepSegments.length} 个阶段切片`}>
+              <span>睡眠</span>
+              <div aria-hidden="true">
+                {visibleSleepSegments.map((segment, index) => {
+                  const range = segmentStyle(segment.startMinute, segment.endMinute);
+                  return range ? (
                     <i
-                      key={`${band.type}-${band.startMinute}-${index}`}
-                      className={`${styles.timelineBand} ${styles[`timelineBand_${band.type}`]}`}
-                      style={{
-                        top: `${top}%`,
-                        height: `${height}%`,
-                        opacity: 0.28 + band.intensity * 0.55,
-                      }}
-                      title={band.detail || band.title}
-                      onMouseEnter={(event) => showTooltip(event, `${minuteToLabel(band.startMinute)}-${minuteToLabel(band.endMinute)} ${band.title}${band.detail ? ` · ${band.detail}` : ''}`)}
-                      onMouseMove={moveTooltip}
+                      key={`${segment.startMinute}-${index}`}
+                      className={segment.stage && ['awake', 'rem', 'core', 'deep'].includes(segment.stage)
+                        ? styles[`sleepStageSegment_${segment.stage}`]
+                        : styles.timelineDensitySleep}
+                      style={range}
+                      title={`${minuteToLabel(segment.startMinute, true)}-${minuteToLabel(segment.endMinute, true)} ${segment.label}`}
                     />
-                  );
+                  ) : null;
                 })}
               </div>
-            </div>
-          ))}
-        </div>
+            </summary>
+            <ol className={styles.timelineSliceList}>
+              {allSleepSegments.map((segment, index) => (
+                <li key={`${segment.startMinute}-${segment.endMinute}-${index}`}>
+                  <time>{minuteToLabel(segment.startMinute, true)}-{minuteToLabel(segment.endMinute, true)}</time>
+                  <span>{segment.label}</span>
+                </li>
+              ))}
+            </ol>
+          </details>
+        ) : null}
+        {densityRows.map((row) => {
+          const rowBands = model.bands.filter((band) => row.types.includes(band.type));
+          const visibleBands = rowBands.filter((band) => band.endMinute > windowStart && band.startMinute < windowEnd);
+          const totalMinutes = rowBands.reduce((total, band) => total + Math.max(0, band.endMinute - band.startMinute), 0);
+          if (!rowBands.length) {
+            return (
+              <div key={row.label} className={styles.timelineDensityRow}>
+                <span>{row.label}</span>
+                <div role="img" aria-label={`${row.label}无记录`} />
+              </div>
+            );
+          }
+          return (
+            <details key={row.label} className={styles.timelineDensityDetails}>
+              <summary className={styles.timelineDensityRow} aria-label={`${row.label} ${rowBands.length} 个切片，共 ${formatNumber(totalMinutes, 1)} 分钟`}>
+                <span>{row.label}</span>
+                <div aria-hidden="true">
+                  {visibleBands.map((band, index) => {
+                    const range = segmentStyle(band.startMinute, band.endMinute);
+                    return range ? (
+                      <i
+                        key={`${band.type}-${band.startMinute}-${index}`}
+                        className={styles[`timelineBand_${band.type}`]}
+                        style={{...range, opacity: 0.35 + band.intensity * 0.55}}
+                        title={`${minuteToLabel(band.startMinute, true)}-${minuteToLabel(band.endMinute, true)} ${band.detail || band.title}`}
+                      />
+                    ) : null;
+                  })}
+                </div>
+              </summary>
+              <ol className={styles.timelineSliceList}>
+                {rowBands.map((band, index) => (
+                  <li key={`${band.type}-${band.startMinute}-${band.endMinute}-${index}`}>
+                    <time>{minuteToLabel(band.startMinute, true)}-{minuteToLabel(band.endMinute, true)}</time>
+                    <span>{band.detail || band.title}</span>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          );
+        })}
       </div>
-      {tooltip ? (
-        <div
-          className={styles.timelineTooltip}
-          style={{
-            transform: `translate(calc(${tooltip.x}px + 10px), calc(${tooltip.y}px - 100% - 10px))`,
-          }}
-        >
-          {tooltip.text}
-        </div>
-      ) : null}
+
+      {flowItems.length ? (
+        <ol className={styles.timelineEventList}>
+          {flowItems.map((item) => (
+            <li key={item.key} className={styles[`timelineFlow_${item.type}`]}>
+              <time>{minuteToLabel(item.startMinute)}{item.endMinute !== undefined ? `-${minuteToLabel(item.endMinute)}` : ''}</time>
+              <div>
+                <strong>{item.title}</strong>
+                {item.detail ? <span>{item.detail}</span> : null}
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : <p className={styles.muted}>当日暂无可用的客观轨迹。</p>}
     </div>
   );
 }
@@ -1602,14 +1746,39 @@ function DailyDiary({
   );
 }
 
-function DailyAnalysisReport({analysis}: {analysis: DailyAnalysis | null}): React.ReactNode {
+function DailyAnalysisReport({
+  analysis,
+  selectedDate,
+  latestAnalysisDate,
+  onDateSelect,
+}: {
+  analysis: DailyAnalysis | null;
+  selectedDate: string;
+  latestAnalysisDate?: string;
+  onDateSelect: (date: string) => void;
+}): React.ReactNode {
+  const [showDetails, setShowDetails] = useState(false);
+
+  useEffect(() => {
+    setShowDetails(false);
+  }, [analysis, selectedDate]);
+
   if (!analysis) {
+    const isToday = selectedDate === formatDateKey(new Date());
     return (
       <section className={styles.analysisReport}>
         <div className={styles.dailyDiaryHead}>
           <span>AI 分析报告</span>
         </div>
-        <p className={styles.muted}>暂无 AI 分析报告。</p>
+        <div className={styles.emptyReport}>
+          <strong>{isToday ? '今天的数据仍在形成' : '这一天尚未生成分析'}</strong>
+          <p>{isToday ? '每日复盘会在次日数据完成后生成。' : '可切换到最近已经完成的复盘。'}</p>
+          {latestAnalysisDate && latestAnalysisDate !== selectedDate ? (
+            <button type="button" onClick={() => onDateSelect(latestAnalysisDate)}>
+              查看最新复盘 · {latestAnalysisDate.slice(5)}
+            </button>
+          ) : null}
+        </div>
       </section>
     );
   }
@@ -1628,6 +1797,7 @@ function DailyAnalysisReport({analysis}: {analysis: DailyAnalysis | null}): Reac
     <section className={styles.analysisReport}>
       <div className={styles.dailyDiaryHead}>
         <span>AI 分析报告</span>
+        {analysis.generatedAt ? <small>生成于 {analysis.generatedAt.replace('T', ' ').slice(0, 16)}</small> : null}
       </div>
 
       {analysis.legacy_report_markdown ? (
@@ -1636,65 +1806,195 @@ function DailyAnalysisReport({analysis}: {analysis: DailyAnalysis | null}): Reac
         <>
           {analysis.top_signals?.length ? (
             <div className={styles.reportBlock}>
-              <h3>今日判断</h3>
+              <h2>今日判断</h2>
               <div className={styles.reportSignals}>
                 {analysis.top_signals.map((signal, index) => (
                   <article key={index}>
                     <strong>{signal.area || '观察'}</strong>
                     <p>{signal.summary}</p>
+                    {signal.evidence?.[0] ? <small>{signal.evidence[0]}</small> : null}
+                    {signal.confidence ? <span>{signal.confidence}</span> : null}
                   </article>
                 ))}
               </div>
             </div>
           ) : null}
 
-          {insightGroups.map((group) => (
-            <div key={group.title} className={styles.reportBlock}>
-              <h3>{group.title}</h3>
-              <InsightList items={group.items} />
-            </div>
-          ))}
-
-          {analysis.cross_domain_insights?.length ? (
-            <div className={styles.reportBlock}>
-              <h3>跨板块洞察</h3>
-              {analysis.cross_domain_insights.map((item, index) => (
-                <article key={index} className={styles.insight}>
-                  <p>{item.summary}</p>
-                  {item.uncertainty ? <p className={styles.muted}>{item.uncertainty}</p> : null}
-                </article>
-              ))}
-            </div>
-          ) : null}
-
           {analysis.follow_ups?.length ? (
-            <div className={styles.reportBlock}>
-              <h3>接下来值得关注</h3>
+            <div className={`${styles.reportBlock} ${styles.reportActions}`}>
+              <h2>明日动作</h2>
               <ul>
                 {analysis.follow_ups.map((item) => (
-                  <li key={item}>{item}</li>
+                  <li key={item}>{renderFollowUp(item)}</li>
                 ))}
               </ul>
             </div>
           ) : null}
 
           {analysis.data_status?.length ? (
-            <div className={styles.reportBlock}>
-              <h3>数据状态</h3>
-              <ul className={styles.statusList}>
-                {analysis.data_status.map((item, index) => (
-                  <li key={index}>
-                    <strong>{item.area || '来源'}</strong>
-                    <span>{item.status || '未知'}</span>
-                    <p>{item.detail}</p>
-                  </li>
-                ))}
-              </ul>
+            <div className={styles.reportStatusSummary} aria-label="异常数据状态">
+              {analysis.data_status.map((item, index) => (
+                <span key={`${item.area}-${index}`} title={item.detail}>
+                  {item.area || '来源'} · {item.status || '未知'}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {insightGroups.length || analysis.cross_domain_insights?.length ? (
+            <div className={styles.reportDetailsRegion}>
+              <button
+                type="button"
+                className={styles.reportDetailsToggle}
+                aria-expanded={showDetails}
+                aria-controls="daily-analysis-details"
+                onClick={() => setShowDetails((value) => !value)}
+              >
+                {showDetails ? '收起完整分析' : '查看完整分析与证据'}
+              </button>
+              {showDetails ? (
+                <div id="daily-analysis-details" className={styles.reportDetailsBody}>
+                  {insightGroups.map((group) => (
+                    <div key={group.title} className={styles.reportBlock}>
+                      <h2>{group.title}</h2>
+                      <InsightList items={group.items} />
+                    </div>
+                  ))}
+                  {analysis.cross_domain_insights?.length ? (
+                    <div className={styles.reportBlock}>
+                      <h2>跨板块洞察</h2>
+                      {analysis.cross_domain_insights.map((item, index) => (
+                        <article key={index} className={styles.insight}>
+                          <p>{item.summary}</p>
+                          {item.evidence?.length ? <ul>{item.evidence.map((value) => <li key={value}>{value}</li>)}</ul> : null}
+                          {item.uncertainty ? <p className={styles.muted}>{item.uncertainty}</p> : null}
+                        </article>
+                      ))}
+                    </div>
+                  ) : null}
+                  {analysis.data_status?.length ? (
+                    <div className={styles.reportBlock}>
+                      <h2>数据状态明细</h2>
+                      <ul className={styles.statusList}>
+                        {analysis.data_status.map((item, index) => (
+                          <li key={index}>
+                            <strong>{item.area || '来源'}</strong>
+                            <span>{item.status || '未知'}</span>
+                            <p>{item.detail}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+              ) : <div id="daily-analysis-details" hidden />}
             </div>
           ) : null}
         </>
       )}
     </section>
+  );
+}
+
+function handleTabKey<T extends string>(
+  event: React.KeyboardEvent<HTMLButtonElement>,
+  keys: T[],
+  active: T,
+  onChange: (value: T) => void,
+) {
+  const direction = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+    ? 1
+    : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+      ? -1
+      : 0;
+  let nextIndex = keys.indexOf(active);
+  if (event.key === 'Home') nextIndex = 0;
+  else if (event.key === 'End') nextIndex = keys.length - 1;
+  else if (direction) nextIndex = (nextIndex + direction + keys.length) % keys.length;
+  else return;
+
+  event.preventDefault();
+  onChange(keys[nextIndex]);
+  const tablist = event.currentTarget.parentElement;
+  requestAnimationFrame(() => tablist?.querySelectorAll<HTMLElement>('[role="tab"]')[nextIndex]?.focus());
+}
+
+function handleChartPointKey(
+  event: React.KeyboardEvent<SVGGElement>,
+  index: number,
+  dates: string[],
+  onDateSelect: (date: string) => void,
+) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    onDateSelect(dates[index]);
+    return;
+  }
+  let nextIndex = index;
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = Math.min(dates.length - 1, index + 1);
+  else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = Math.max(0, index - 1);
+  else if (event.key === 'Home') nextIndex = 0;
+  else if (event.key === 'End') nextIndex = dates.length - 1;
+  else return;
+  event.preventDefault();
+  event.currentTarget.ownerSVGElement
+    ?.querySelectorAll<SVGGElement>('[data-chart-point]')[nextIndex]
+    ?.focus();
+}
+
+function DateNavigator({
+  date,
+  latestDate,
+  onChange,
+}: {
+  date: string;
+  latestDate?: string;
+  onChange: (date: string) => void;
+}): React.ReactNode {
+  const today = formatDateKey(new Date());
+  const previousDate = date ? formatDateKey(addDays(parseDateKey(date), -1)) : '';
+  const nextDate = date ? formatDateKey(addDays(parseDateKey(date), 1)) : '';
+
+  return (
+    <div className={styles.dateNavigator} aria-label="复盘日期">
+      <button
+        type="button"
+        className={styles.dateStepButton}
+        aria-label="前一天"
+        title="前一天"
+        disabled={!previousDate}
+        onClick={() => previousDate && onChange(previousDate)}
+      >
+        <span aria-hidden="true">←</span>
+      </button>
+      <input
+        type="date"
+        value={date}
+        max={today}
+        aria-label="选择复盘日期"
+        onChange={(event) => event.target.value && onChange(event.target.value)}
+      />
+      <button
+        type="button"
+        className={styles.dateStepButton}
+        aria-label="后一天"
+        title="后一天"
+        disabled={!nextDate || nextDate > today}
+        onClick={() => nextDate && nextDate <= today && onChange(nextDate)}
+      >
+        <span aria-hidden="true">→</span>
+      </button>
+      <button
+        type="button"
+        disabled={!latestDate || date === latestDate}
+        onClick={() => latestDate && onChange(latestDate)}
+      >
+        最新复盘
+      </button>
+      <button type="button" disabled={date === today} onClick={() => onChange(today)}>
+        今天实时
+      </button>
+    </div>
   );
 }
 
@@ -1709,8 +2009,10 @@ function DataDomainTabs({
     {key: 'health', label: '健康'},
     {key: 'career', label: '事业'},
     {key: 'finance', label: '财务'},
-    {key: 'life', label: '人生'},
+    {key: 'life', label: '生活'},
+    {key: 'compare', label: '对比'},
   ];
+  const keys = domains.map((domain) => domain.key);
 
   return (
     <div className={`${styles.filterTier} ${styles.dataDomainTier}`}>
@@ -1721,9 +2023,13 @@ function DataDomainTabs({
             key={domain.key}
             type="button"
             role="tab"
+            id={`objective-domain-tab-${domain.key}`}
+            aria-controls="objective-domain-panel"
             aria-selected={active === domain.key}
+            tabIndex={active === domain.key ? 0 : -1}
             className={active === domain.key ? styles.dataDomainTabActive : ''}
             onClick={() => onChange(domain.key)}
+            onKeyDown={(event) => handleTabKey(event, keys, active, onChange)}
           >
             {domain.label}
           </button>
@@ -1745,6 +2051,7 @@ function DailyDetailTabs({
     {key: 'timeline', label: '24小时轨迹'},
     {key: 'analysis', label: 'AI分析'},
   ];
+  const keys = tabs.map((tab) => tab.key);
 
   return (
     <div className={styles.dailyDetailTabs} role="tablist" aria-label="当日细节">
@@ -1753,9 +2060,13 @@ function DailyDetailTabs({
           key={tab.key}
           type="button"
           role="tab"
+          id={`daily-detail-tab-${tab.key}`}
+          aria-controls="daily-detail-panel"
           aria-selected={active === tab.key}
+          tabIndex={active === tab.key ? 0 : -1}
           className={active === tab.key ? styles.dailyDetailTabActive : ''}
           onClick={() => onChange(tab.key)}
+          onKeyDown={(event) => handleTabKey(event, keys, active, onChange)}
         >
           {tab.label}
         </button>
@@ -1776,6 +2087,7 @@ function FinanceTabs({
     {key: 'expense', label: '支出'},
     {key: 'investment', label: '投资'},
   ];
+  const keys = tabs.map((tab) => tab.key);
 
   return (
     <div className={styles.financeTabs} role="tablist" aria-label="财务数据分类">
@@ -1784,9 +2096,13 @@ function FinanceTabs({
           key={tab.key}
           type="button"
           role="tab"
+          id={`finance-tab-${tab.key}`}
+          aria-controls="finance-tab-panel"
           aria-selected={active === tab.key}
+          tabIndex={active === tab.key ? 0 : -1}
           className={active === tab.key ? styles.financeTabActive : ''}
           onClick={() => onChange(tab.key)}
+          onKeyDown={(event) => handleTabKey(event, keys, active, onChange)}
         >
           {tab.label}
         </button>
@@ -1799,25 +2115,46 @@ function scrollToChartPanel(id: string) {
   const target = document.getElementById(id);
   const scroller = target?.closest(`.${styles.healthChartsPanel}`);
   if (!target || !(scroller instanceof HTMLElement)) return;
+  const targetRect = target.getBoundingClientRect();
+  const scrollerRect = scroller.getBoundingClientRect();
+  const canScrollPanel = scroller.scrollHeight > scroller.clientHeight + 1
+    && getComputedStyle(scroller).overflowY !== 'visible';
+  if (!canScrollPanel) {
+    target.scrollIntoView({behavior: 'smooth', block: 'start'});
+    return;
+  }
   scroller.scrollTo({
-    top: target.offsetTop - scroller.offsetTop - 8,
+    top: scroller.scrollTop + targetRect.top - scrollerRect.top - 112,
     behavior: 'smooth',
   });
 }
 
+type ChartNavItem = {id: string; label: string; metricKeys?: string[]};
+const DEFAULT_HEALTH_CHART_ID = HEALTH_CHART_NAV[0]?.charts[0]?.id || '';
+
 function SubtabPicker({
   items,
   label,
-  renderMark,
+  onSelect,
+  selectedIds,
+  onToggle,
 }: {
-  items: Array<{id: string; label: string}>;
+  items: ChartNavItem[];
   label: string;
-  renderMark?: (item: {id: string; label: string}) => React.ReactNode;
+  onSelect?: (item: ChartNavItem) => void;
+  selectedIds?: ReadonlySet<string>;
+  onToggle?: (item: ChartNavItem) => void;
 }): React.ReactNode {
   const [expanded, setExpanded] = useState(false);
-  const handleClick = (id: string) => {
-    scrollToChartPanel(id);
-    setExpanded(false);
+  const handleClick = (item: ChartNavItem) => {
+    onToggle?.(item);
+    onSelect?.(item);
+    if (!onToggle) {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        scrollToChartPanel(item.id);
+      }));
+    }
+    if (!onToggle) setExpanded(false);
   };
 
   return (
@@ -1826,12 +2163,20 @@ function SubtabPicker({
         className={`${styles.healthChartSubtabs} ${expanded ? styles.healthChartSubtabsExpanded : ''}`}
         aria-label={label}
       >
-        {items.map((item) => (
-          <button key={item.id} type="button" onClick={() => handleClick(item.id)}>
-            {item.label}
-            {renderMark?.(item)}
-          </button>
-        ))}
+        {items.map((item) => {
+          const selected = selectedIds?.has(item.id) ?? false;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={selected ? styles.healthChartSubtabSelected : ''}
+              aria-pressed={onToggle ? selected : undefined}
+              onClick={() => handleClick(item)}
+            >
+              {item.label}
+            </button>
+          );
+        })}
       </nav>
       <button
         type="button"
@@ -1846,13 +2191,29 @@ function SubtabPicker({
   );
 }
 
-function HealthChartSubtabs(): React.ReactNode {
+function HealthChartSubtabs({
+  activeSection,
+  onSectionChange,
+}: {
+  activeSection: string;
+  onSectionChange: (section: string) => void;
+}): React.ReactNode {
   return (
-    <SubtabPicker
-      items={HEALTH_CHART_NAV.flatMap((section) => section.charts)}
-      label="健康图表跳转"
-      renderMark={(chart) => <HealthChartDeviationMark label={chart.label} />}
-    />
+    <div className={styles.healthNavigation}>
+      <div className={styles.healthSectionTabs} role="group" aria-label="健康图表分类">
+        {HEALTH_CHART_NAV.map((item) => (
+          <button
+            key={item.title}
+            type="button"
+            aria-pressed={item.title === activeSection}
+            className={item.title === activeSection ? styles.healthSectionTabActive : ''}
+            onClick={() => onSectionChange(item.title)}
+          >
+            {item.title}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1875,10 +2236,12 @@ function ObjectiveStatGrid({items}: {items: Array<{value: React.ReactNode; label
 
 function ObjectiveTooltip({tooltip}: {tooltip: ObjectiveChartTooltip | null}): React.ReactNode {
   if (!tooltip) return null;
-  return (
+  const left = Math.max(8, Math.min(tooltip.x + 12, window.innerWidth - 304));
+  const top = Math.max(90, tooltip.y - 12);
+  return ReactDOM.createPortal(
     <div
       className={styles.objectiveTooltip}
-      style={{left: tooltip.x, top: tooltip.y}}
+      style={{left, top}}
       role="tooltip"
     >
       <div className={styles.tooltipDate}>{tooltip.title}</div>
@@ -1887,7 +2250,8 @@ function ObjectiveTooltip({tooltip}: {tooltip: ObjectiveChartTooltip | null}): R
           <span key={line}>{line}</span>
         ))}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1897,6 +2261,7 @@ function ObjectiveBarLineChart({
   secondaryLabel,
   tertiaryLabel,
   formatValue = (value) => formatCompactNumber(value, 0),
+  formatSecondary,
   selectedDate,
   onDateSelect,
 }: {
@@ -1905,6 +2270,7 @@ function ObjectiveBarLineChart({
   secondaryLabel?: string;
   tertiaryLabel?: string;
   formatValue?: (value: number) => string;
+  formatSecondary?: (value: number) => string;
   selectedDate?: string;
   onDateSelect: (date: string) => void;
 }): React.ReactNode {
@@ -1912,10 +2278,13 @@ function ObjectiveBarLineChart({
   const chartHeight = 238;
   const labelHeight = 30;
   const plotHeight = chartHeight - labelHeight - 16;
-  const width = Math.max(520, points.length * 24);
-  const gap = points.length > 120 ? 3 : 7;
-  const barWidth = Math.max(3, Math.min(18, (width - gap * (points.length + 1)) / Math.max(1, points.length)));
+  const sidePadding = 24;
+  const minimumStep = points.length > 120 ? 8 : points.length > 60 ? 12 : points.length > 30 ? 18 : 24;
+  const width = Math.max(520, points.length * minimumStep + sidePadding * 2);
+  const step = (width - sidePadding * 2) / Math.max(1, points.length);
+  const barWidth = Math.max(3, Math.min(18, step * 0.62));
   const groupedBarWidth = tertiaryLabel ? Math.max(2, (barWidth - 2) / 3) : barWidth;
+  const xForIndex = (index: number) => sidePadding + index * step + (step - barWidth) / 2;
   const showSecondaryLine = Boolean(secondaryLabel && !tertiaryLabel);
   const maxValue = Math.max(1, ...points.flatMap((point) => [point.value, tertiaryLabel ? point.tertiary || 0 : 0, !showSecondaryLine ? point.secondary || 0 : 0]));
   const maxSecondary = Math.max(1, ...points.map((point) => point.secondary || 0));
@@ -1923,12 +2292,12 @@ function ObjectiveBarLineChart({
   const yForSecondary = (value: number) => plotHeight - (Math.max(0, value) / maxSecondary) * plotHeight;
   const linePoints = points
     .map((point, index) => {
-      const x = gap + index * (barWidth + gap) + barWidth / 2;
+      const x = xForIndex(index) + barWidth / 2;
       return `${x},${yForSecondary(point.secondary || 0)}`;
     })
     .join(' ');
   const selectedIndex = selectedDate ? points.findIndex((point) => point.date === selectedDate) : -1;
-  const selectedX = selectedIndex >= 0 ? gap + selectedIndex * (barWidth + gap) : null;
+  const selectedX = selectedIndex >= 0 ? xForIndex(selectedIndex) : null;
 
   if (!points.length) {
     return <div className={styles.financeEmptyPanel}>当前时间范围暂无数据</div>;
@@ -1936,10 +2305,10 @@ function ObjectiveBarLineChart({
 
   return (
     <div className={styles.objectiveChartScroll}>
-      <svg className={styles.objectiveChart} viewBox={`0 0 ${width} ${chartHeight}`} style={{width, height: chartHeight}} role="img">
+      <svg className={styles.objectiveChart} viewBox={`0 0 ${width} ${chartHeight}`} style={{width, height: chartHeight}} role="group" aria-label={`${valueLabel}趋势图`}>
         {selectedX !== null ? (
           <g className={styles.objectiveSelectedDate}>
-            <rect x={Math.max(0, selectedX - gap / 2)} y={0} width={barWidth + gap} height={plotHeight} rx={5} />
+            <rect x={Math.max(0, selectedX - (step - barWidth) / 2)} y={0} width={step} height={plotHeight} rx={5} />
             <line x1={selectedX + barWidth / 2} x2={selectedX + barWidth / 2} y1={0} y2={plotHeight + 18} />
             <text x={selectedX + barWidth / 2} y={plotHeight + 28} textAnchor="middle">
               {selectedDate?.slice(5)}
@@ -1955,25 +2324,30 @@ function ObjectiveBarLineChart({
           </g>
         ))}
         {points.map((point, index) => {
-          const x = gap + index * (barWidth + gap);
+          const x = xForIndex(index);
           const barHeight = Math.max(point.value ? 1 : 0, (point.value / maxValue) * plotHeight);
           const secondaryHeight = Math.max(point.secondary ? 1 : 0, ((point.secondary || 0) / maxValue) * plotHeight);
           const tertiaryHeight = Math.max(point.tertiary ? 1 : 0, ((point.tertiary || 0) / maxValue) * plotHeight);
           const showLabel = points.length <= 35 || index % Math.ceil(points.length / 18) === 0;
           const tooltipLines = [
             `${valueLabel}: ${formatValue(point.value)}`,
-            secondaryLabel ? `${secondaryLabel}: ${formatValue(point.secondary || 0)}` : '',
+            secondaryLabel ? `${secondaryLabel}: ${(formatSecondary || formatValue)(point.secondary || 0)}` : '',
             tertiaryLabel ? `${tertiaryLabel}: ${formatValue(point.tertiary || 0)}` : '',
           ].filter(Boolean);
           return (
             <g
               key={point.date}
               className={styles.objectiveChartPoint}
+              role="button"
+              data-chart-point
+              tabIndex={point.date === selectedDate || (selectedIndex < 0 && index === points.length - 1) ? 0 : -1}
+              aria-label={`${point.date}，${tooltipLines.join('，')}`}
               onClick={() => onDateSelect(point.date)}
+              onKeyDown={(event) => handleChartPointKey(event, index, points.map((item) => item.date), onDateSelect)}
               onMouseMove={(event) => setTooltip({x: event.clientX, y: event.clientY, title: point.date, lines: tooltipLines})}
               onMouseLeave={() => setTooltip(null)}
             >
-              <rect x={Math.max(0, x - gap / 2)} y={0} width={barWidth + gap} height={plotHeight + labelHeight} rx={5} className={styles.objectiveHoverBand} />
+              <rect x={Math.max(0, x - (step - barWidth) / 2)} y={0} width={step} height={plotHeight + labelHeight} rx={5} className={styles.objectiveHoverBand} />
               {tertiaryLabel ? (
                 <rect x={x + groupedBarWidth * 2 + 2} y={plotHeight - tertiaryHeight} width={groupedBarWidth} height={tertiaryHeight} rx={2} className={styles.objectiveBarTertiary} />
               ) : null}
@@ -1991,7 +2365,7 @@ function ObjectiveBarLineChart({
           <>
             <polyline points={linePoints} className={styles.objectiveLine} />
             {points.map((point, index) => {
-              const x = gap + index * (barWidth + gap) + barWidth / 2;
+              const x = xForIndex(index) + barWidth / 2;
               return <circle key={`${point.date}-line`} cx={x} cy={yForSecondary(point.secondary || 0)} r={2.4} className={styles.objectiveLineDot} />;
             })}
           </>
@@ -2015,13 +2389,16 @@ function TokenStackedBarChart({
   const chartHeight = 238;
   const labelHeight = 30;
   const plotHeight = chartHeight - labelHeight - 16;
-  const width = Math.max(520, points.length * 24);
-  const gap = points.length > 120 ? 3 : 7;
-  const barWidth = Math.max(5, Math.min(18, (width - gap * (points.length + 1)) / Math.max(1, points.length)));
+  const sidePadding = 24;
+  const minimumStep = points.length > 120 ? 8 : points.length > 60 ? 12 : points.length > 30 ? 18 : 24;
+  const width = Math.max(520, points.length * minimumStep + sidePadding * 2);
+  const step = (width - sidePadding * 2) / Math.max(1, points.length);
+  const barWidth = Math.max(5, Math.min(18, step * 0.62));
+  const xForIndex = (index: number) => sidePadding + index * step + (step - barWidth) / 2;
   const totals = points.map((point) => point.minimax + point.openai + point.anthropic);
   const maxValue = Math.max(1, ...totals);
   const selectedIndex = selectedDate ? points.findIndex((point) => point.date === selectedDate) : -1;
-  const selectedX = selectedIndex >= 0 ? gap + selectedIndex * (barWidth + gap) : null;
+  const selectedX = selectedIndex >= 0 ? xForIndex(selectedIndex) : null;
 
   if (!points.length) {
     return <div className={styles.financeEmptyPanel}>当前时间范围暂无数据</div>;
@@ -2029,10 +2406,10 @@ function TokenStackedBarChart({
 
   return (
     <div className={styles.objectiveChartScroll}>
-      <svg className={styles.objectiveChart} viewBox={`0 0 ${width} ${chartHeight}`} style={{width, height: chartHeight}} role="img">
+      <svg className={styles.objectiveChart} viewBox={`0 0 ${width} ${chartHeight}`} style={{width, height: chartHeight}} role="group" aria-label="AI 使用强度趋势图">
         {selectedX !== null ? (
           <g className={styles.objectiveSelectedDate}>
-            <rect x={Math.max(0, selectedX - gap / 2)} y={0} width={barWidth + gap} height={plotHeight} rx={5} />
+            <rect x={Math.max(0, selectedX - (step - barWidth) / 2)} y={0} width={step} height={plotHeight} rx={5} />
             <line x1={selectedX + barWidth / 2} x2={selectedX + barWidth / 2} y1={0} y2={plotHeight + 18} />
             <text x={selectedX + barWidth / 2} y={plotHeight + 28} textAnchor="middle">
               {selectedDate?.slice(5)}
@@ -2048,7 +2425,7 @@ function TokenStackedBarChart({
           </g>
         ))}
         {points.map((point, index) => {
-          const x = gap + index * (barWidth + gap);
+          const x = xForIndex(index);
           const total = point.minimax + point.openai + point.anthropic;
           let y = plotHeight;
           const showLabel = points.length <= 35 || index % Math.ceil(points.length / 18) === 0;
@@ -2067,11 +2444,16 @@ function TokenStackedBarChart({
             <g
               key={point.date}
               className={styles.objectiveChartPoint}
+              role="button"
+              data-chart-point
+              tabIndex={point.date === selectedDate || (selectedIndex < 0 && index === points.length - 1) ? 0 : -1}
+              aria-label={`${point.date}，${tooltipLines.join('，')}`}
               onClick={() => onDateSelect(point.date)}
+              onKeyDown={(event) => handleChartPointKey(event, index, points.map((item) => item.date), onDateSelect)}
               onMouseMove={(event) => setTooltip({x: event.clientX, y: event.clientY, title: point.date, lines: tooltipLines})}
               onMouseLeave={() => setTooltip(null)}
             >
-              <rect x={Math.max(0, x - gap / 2)} y={0} width={barWidth + gap} height={plotHeight + labelHeight} rx={5} className={styles.objectiveHoverBand} />
+              <rect x={Math.max(0, x - (step - barWidth) / 2)} y={0} width={step} height={plotHeight + labelHeight} rx={5} className={styles.objectiveHoverBand} />
               {segments.map((segment) => {
                 if (segment.value <= 0) return null;
                 const height = Math.max(1, (segment.value / maxValue) * plotHeight);
@@ -2117,7 +2499,7 @@ function ObjectiveChartCard({
     <section id={id} className={styles.objectiveChartCard}>
       <div className={styles.objectiveChartHead}>
         <div>
-          <h3>{title}</h3>
+          <h2>{title}</h2>
           {meta ? <span>{meta}</span> : null}
         </div>
         {legend?.length ? (
@@ -2134,6 +2516,43 @@ function ObjectiveChartCard({
       {children}
     </section>
   );
+}
+
+function DriveTimeChart({points}: {points: Array<{date: string; trips: Array<{start: number; end: number}>}>}): React.ReactNode {
+  if (!points.length) return <div className={styles.financeEmptyPanel}>当前时间范围暂无完整行程</div>;
+  const values = points.flatMap((point) => point.trips.flatMap((trip) => [trip.start, trip.end]));
+  const min = Math.max(0, Math.floor((Math.min(...values) - 30) / 30) * 30);
+  const max = Math.min(1440, Math.ceil((Math.max(...values) + 30) / 30) * 30);
+  const renderRange = (_params: unknown, api: {value: (index: number) => unknown; coord: (value: [number, number]) => number[]; style: () => object}) => {
+    const day = Number(api.value(0));
+    const start = Number(api.value(1));
+    const end = Number(api.value(2));
+    const tripIndex = Number(api.value(3));
+    const tripCount = Number(api.value(4));
+    const startPoint = api.coord([day, start]);
+    const endPoint = api.coord([day, end]);
+    const offset = (tripIndex - (tripCount - 1) / 2) * 7;
+    return {
+      type: 'rect',
+      shape: {x: startPoint[0] + offset - 3, y: startPoint[1], width: 6, height: Math.max(3, endPoint[1] - startPoint[1]), r: 3},
+      style: api.style(),
+    };
+  };
+  const option = {
+    backgroundColor: 'transparent',
+    color: ['#0a84ff'],
+    grid: {left: 52, right: 18, top: 42, bottom: 38, containLabel: true},
+    tooltip: {
+      trigger: 'item',
+      formatter: (item: {marker: string; value: [number, number, number, number, number]}) => `${item.marker}行程 ${item.value[3] + 1}<br/>${minuteToLabel(item.value[1])}–${minuteToLabel(item.value[2])} · ${formatNumber(item.value[2] - item.value[1], 0)} 分钟`,
+    },
+    xAxis: {type: 'category', data: points.map((point) => point.date), axisTick: {show: false}, axisLabel: {formatter: (date: string) => date.slice(5), color: '#6b7280'}},
+    yAxis: {type: 'value', inverse: true, min, max, interval: 60, name: '时间', nameTextStyle: {color: '#6b7280'}, axisLabel: {formatter: (value: number) => minuteToLabel(value), color: '#6b7280'}, splitLine: {lineStyle: {color: 'rgba(107,114,128,.14)'}}},
+    series: [
+      {name: '上下车区间', type: 'custom', renderItem: renderRange, encode: {x: 0, y: [1, 2]}, data: points.flatMap((point, dayIndex) => point.trips.map((trip, tripIndex) => [dayIndex, trip.start, trip.end, tripIndex, point.trips.length]))},
+    ],
+  };
+  return <ReactECharts option={option} style={{height: 320, width: '100%'}} opts={{renderer: 'canvas'}} notMerge />;
 }
 
 function DailyBasicInfo({date, weather}: {date: string; weather: unknown}): React.ReactNode {
@@ -2180,34 +2599,53 @@ function DailyYearHeatmap({
   year,
   selectedDate,
   dailyDates,
+  analysisDates,
   onDateSelect,
 }: {
   year: number;
   selectedDate: string;
   dailyDates: Set<string>;
+  analysisDates: Set<string>;
   onDateSelect: (date: string) => void;
 }): React.ReactNode {
   const {colorMode} = useColorMode();
   const isDark = colorMode === 'dark';
   const today = formatDateKey(new Date());
   const yearProgress = getYearProgress(selectedDate);
-  const lifeProgress = getLifeProgress(selectedDate);
   const diaryColor = isDark ? '#64d2ff' : '#0a84ff';
+  const analysisColor = isDark ? '#fbbf24' : '#d97706';
+  const completeColor = isDark ? '#4ade80' : '#16a34a';
   const pastEmptyColor = isDark ? 'rgba(148, 163, 184, 0.24)' : 'rgba(100, 116, 139, 0.18)';
   const futureColor = isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(100, 116, 139, 0.08)';
   const mutedLabelColor = isDark ? 'rgba(226, 232, 240, 0.68)' : 'rgba(51, 65, 85, 0.62)';
-  const {values, diaryDays, elapsedDays, futureDays} = useMemo(() => {
+  const {values, diaryOnlyDays, analysisOnlyDays, completeDays, emptyDays, futureDays} = useMemo(() => {
     const days = daysInYear(year);
     const today = formatDateKey(new Date());
-    let diaryCount = 0;
-    let elapsedCount = 0;
+    let diaryOnlyCount = 0;
+    let analysisOnlyCount = 0;
+    let completeCount = 0;
+    let emptyCount = 0;
     let futureCount = 0;
     const data = days.map((date) => {
       const hasDaily = dailyDates.has(date);
+      const hasAnalysis = analysisDates.has(date);
       const isElapsed = date <= today;
-      if (hasDaily) diaryCount += 1;
-      if (isElapsed) elapsedCount += 1;
-      else futureCount += 1;
+      let state = 0;
+      if (!isElapsed) {
+        futureCount += 1;
+      } else if (hasDaily && hasAnalysis) {
+        state = 4;
+        completeCount += 1;
+      } else if (hasDaily) {
+        state = 3;
+        diaryOnlyCount += 1;
+      } else if (hasAnalysis) {
+        state = 2;
+        analysisOnlyCount += 1;
+      } else {
+        state = 1;
+        emptyCount += 1;
+      }
       const day = Number(date.slice(8, 10));
       const month = Number(date.slice(5, 7));
       const lastDayOfMonth = new Date(year, month, 0).getDate();
@@ -2215,8 +2653,8 @@ function DailyYearHeatmap({
       const isToday = date === today;
       const shouldShowDayNumber = isElapsed && (isSelected || isToday || day === 1 || day === 15 || day === lastDayOfMonth);
       return {
-        value: [date, hasDaily ? 2 : isElapsed ? 1 : 0],
-        itemStyle: !hasDaily && !isElapsed ? {
+        value: [date, state],
+        itemStyle: !isElapsed ? {
           decal: {
             symbol: 'rect',
             dashArrayX: [1, 0],
@@ -2228,18 +2666,25 @@ function DailyYearHeatmap({
         label: shouldShowDayNumber ? {
           show: true,
           formatter: String(day),
-          color: isSelected || isToday ? hasDaily ? '#ffffff' : diaryColor : hasDaily ? '#ffffff' : mutedLabelColor,
+          color: state >= 2 ? '#ffffff' : isSelected || isToday ? diaryColor : mutedLabelColor,
           fontSize: isSelected || isToday ? 7 : 6,
           fontWeight: isSelected || isToday ? 900 : 760,
-          textBorderColor: hasDaily ? (isDark ? 'rgba(2, 6, 23, 0.32)' : 'rgba(10, 132, 255, 0.36)') : 'transparent',
-          textBorderWidth: hasDaily ? 1.2 : 0,
+          textBorderColor: state >= 2 ? (isDark ? 'rgba(2, 6, 23, 0.32)' : 'rgba(15, 23, 42, 0.24)') : 'transparent',
+          textBorderWidth: state >= 2 ? 1.2 : 0,
         } : undefined,
         disabled: !isElapsed,
       };
     });
 
-    return {values: data, diaryDays: diaryCount, elapsedDays: elapsedCount, futureDays: futureCount};
-  }, [dailyDates, diaryColor, isDark, mutedLabelColor, selectedDate, year]);
+    return {
+      values: data,
+      diaryOnlyDays: diaryOnlyCount,
+      analysisOnlyDays: analysisOnlyCount,
+      completeDays: completeCount,
+      emptyDays: emptyCount,
+      futureDays: futureCount,
+    };
+  }, [analysisDates, dailyDates, diaryColor, isDark, mutedLabelColor, selectedDate, year]);
   const option = useMemo(() => ({
     backgroundColor: 'transparent',
     visualMap: {
@@ -2247,8 +2692,10 @@ function DailyYearHeatmap({
       show: false,
       dimension: 1,
       pieces: [
-        {value: 2, label: '有日记', color: diaryColor},
-        {value: 1, label: '过去无日记', color: pastEmptyColor},
+        {value: 4, label: '日记与分析', color: completeColor},
+        {value: 3, label: '仅日记', color: diaryColor},
+        {value: 2, label: '仅分析', color: analysisColor},
+        {value: 1, label: '过去无记录', color: pastEmptyColor},
         {value: 0, label: '未来', color: futureColor},
       ],
     },
@@ -2256,7 +2703,17 @@ function DailyYearHeatmap({
       trigger: 'item',
       formatter: (params: {value?: [string, number]}) => {
         const date = params.value?.[0] || '';
-        const state = dailyDates.has(date) ? '有日记' : date > today ? '未来' : '无日记';
+        const hasDaily = dailyDates.has(date);
+        const hasAnalysis = analysisDates.has(date);
+        const state = date > today
+          ? '未来'
+          : hasDaily && hasAnalysis
+            ? '日记与 AI 分析完整'
+            : hasDaily
+              ? '仅有日记'
+              : hasAnalysis
+                ? '仅有 AI 分析'
+                : '暂无记录';
         return `<b>${formatChineseDate(date)}</b><br/>${state}`;
       },
     },
@@ -2295,7 +2752,7 @@ function DailyYearHeatmap({
         silent: true,
       } : undefined,
     }],
-  }), [dailyDates, diaryColor, futureColor, isDark, pastEmptyColor, selectedDate, today, values, year]);
+  }), [analysisColor, analysisDates, completeColor, dailyDates, diaryColor, futureColor, isDark, pastEmptyColor, selectedDate, today, values, year]);
   const onEvents = {
     click: (params: {value?: [string, number]; data?: {disabled?: boolean}}) => {
       const date = params.value?.[0];
@@ -2304,13 +2761,12 @@ function DailyYearHeatmap({
   };
 
   return (
-    <section className={styles.dailyYearHeatmap} aria-label={`${year} 年日记热力图`}>
+    <section className={styles.dailyYearHeatmap} aria-label={`${year} 年复盘记录`}>
       <div className={styles.dailyYearHeatmapHead}>
-        <strong>{year} 年日记</strong>
+        <strong>{year} 年记录</strong>
         <div className={styles.dailyYearHeatmapProgress}>
           <span>
-            今年已过去 {formatPercent(yearProgress)} · 人生已过去 {formatPercent(lifeProgress.progress)}
-            （过去 {formatNumber(lifeProgress.livedDays)} 天 / 还剩 {formatNumber(lifeProgress.remainingDays)} 天）
+            年度进度 {formatPercent(yearProgress)}
           </span>
           <i><b style={{width: `${yearProgress}%`}} /></i>
         </div>
@@ -2320,7 +2776,7 @@ function DailyYearHeatmap({
           <ReactECharts
             option={option}
             style={{height: 104, width: '100%'}}
-            opts={{renderer: 'svg'}}
+            opts={{renderer: 'canvas'}}
             notMerge
             lazyUpdate
             onEvents={onEvents}
@@ -2328,104 +2784,165 @@ function DailyYearHeatmap({
         )}
       </BrowserOnly>
       <div className={styles.dailyYearHeatmapLegend}>
-        <span>{diaryDays} 天有日记 · {elapsedDays - diaryDays} 天过去无日记 · {futureDays} 天未到来</span>
-        <span><i className={styles.dailyYearHeatmapLegendDiary} />有日记</span>
-        <span><i className={styles.dailyYearHeatmapLegendPastEmpty} />过去无日记</span>
+        <span>{completeDays} 天完整 · {diaryOnlyDays} 天仅日记 · {analysisOnlyDays} 天仅分析 · {emptyDays} 天无记录 · {futureDays} 天未到来</span>
+        <span><i className={styles.dailyYearHeatmapLegendComplete} />完整</span>
+        <span><i className={styles.dailyYearHeatmapLegendDiary} />仅日记</span>
+        <span><i className={styles.dailyYearHeatmapLegendAnalysis} />仅分析</span>
+        <span><i className={styles.dailyYearHeatmapLegendPastEmpty} />无记录</span>
         <span><i className={styles.dailyYearHeatmapLegendFuture} />未来</span>
       </div>
     </section>
   );
 }
 
-function ObjectiveTimeControls({
-  scope,
+function ReviewPeriodControls({
+  period,
   onChange,
 }: {
-  scope: ObjectiveTimeScope;
-  onChange: (scope: ObjectiveTimeScope) => void;
+  period: ReviewPeriod;
+  onChange: (kind: ReviewPeriodKind) => void;
 }): React.ReactNode {
-  const years = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016];
+  const kinds = Object.keys(REVIEW_PERIOD_LABELS) as ReviewPeriodKind[];
 
   return (
-    <div className={styles.objectiveTimeControls} aria-label="客观数据时间范围">
-      <div className={styles.objectiveTimeModes}>
-        {(['recent', 'year', 'all'] as const).map((mode) => (
+    <div className={styles.objectiveTimeControls} role="tablist" aria-label="查看范围">
+      <div className={styles.objectiveTimeOptions}>
+        {kinds.map((kind) => (
           <button
-            key={mode}
+            key={kind}
             type="button"
-            className={scope.mode === mode ? styles.objectiveTimeActive : ''}
-            onClick={() => {
-              if (mode === 'recent') onChange({mode, range: scope.mode === 'recent' ? scope.range : '7d'});
-              if (mode === 'year') onChange({mode, year: scope.mode === 'year' ? scope.year : new Date().getFullYear()});
-              if (mode === 'all') onChange({mode});
-            }}
+            role="tab"
+            id={`review-period-tab-${kind}`}
+            aria-controls="review-period-panel"
+            aria-selected={period.kind === kind}
+            tabIndex={period.kind === kind ? 0 : -1}
+            className={period.kind === kind ? styles.objectiveTimeActive : ''}
+            onClick={() => onChange(kind)}
+            onKeyDown={(event) => handleTabKey(event, kinds, period.kind, onChange)}
           >
-            {mode === 'recent' ? '近况' : mode === 'year' ? '年度' : '历史'}
+            {REVIEW_PERIOD_LABELS[kind]}
           </button>
         ))}
       </div>
-      {scope.mode !== 'all' ? <span className={styles.objectiveTimeDivider} aria-hidden="true" /> : null}
-      {scope.mode === 'recent' ? (
-        <div className={styles.objectiveTimeOptions}>
-          {(Object.keys(OBJECTIVE_RANGE_LABELS) as Array<'7d' | '30d' | '90d' | '1y'>).map((range) => (
-            <button
-              key={range}
-              type="button"
-              className={scope.range === range ? styles.objectiveTimeActive : ''}
-              onClick={() => onChange({mode: 'recent', range})}
-            >
-              {OBJECTIVE_RANGE_LABELS[range]}
-            </button>
-          ))}
-        </div>
+    </div>
+  );
+}
+
+function PeriodNavigator({
+  period,
+  latestDate,
+  onChange,
+}: {
+  period: DatedReviewPeriod;
+  latestDate?: string;
+  onChange: (period: DatedReviewPeriod) => void;
+}): React.ReactNode {
+  const today = formatDateKey(new Date());
+  if (period.kind === 'day') {
+    return (
+      <DateNavigator
+        date={period.key}
+        latestDate={latestDate}
+        onChange={(date) => onChange({kind: 'day', key: date})}
+      />
+    );
+  }
+
+  const previous = shiftReviewPeriod(period, -1);
+  const next = shiftReviewPeriod(period, 1);
+  const current = periodFromAnchor(period.kind, today);
+  const unit = REVIEW_PERIOD_LABELS[period.kind];
+  const nextDisabled = isFutureReviewPeriod(next);
+  const currentLabel = period.kind === 'week' ? '本周' : period.kind === 'month' ? '本月' : '今年';
+  const years = Array.from(
+    {length: Number(today.slice(0, 4)) - REVIEW_START_YEAR + 1},
+    (_, index) => Number(today.slice(0, 4)) - index,
+  );
+
+  return (
+    <div className={styles.dateNavigator} aria-label={`选择复盘${unit}`}>
+      <button
+        type="button"
+        className={styles.dateStepButton}
+        aria-label={`上一${unit}`}
+        title={`上一${unit}`}
+        onClick={() => onChange(previous)}
+      >
+        <span aria-hidden="true">←</span>
+      </button>
+      {period.kind === 'week' ? (
+        <input
+          type="week"
+          value={period.key}
+          max={getIsoWeekKey(today)}
+          aria-label="选择复盘周"
+          onChange={(event) => event.target.value && onChange({kind: 'week', key: event.target.value})}
+        />
       ) : null}
-      {scope.mode === 'year' ? (
-        <div className={styles.objectiveTimeOptions}>
-          {years.map((year) => (
-            <button
-              key={year}
-              type="button"
-              className={scope.year === year ? styles.objectiveTimeActive : ''}
-              onClick={() => onChange({mode: 'year', year})}
-            >
-              {year}
-            </button>
-          ))}
-        </div>
+      {period.kind === 'month' ? (
+        <input
+          type="month"
+          value={period.key}
+          max={today.slice(0, 7)}
+          aria-label="选择复盘月"
+          onChange={(event) => event.target.value && onChange({kind: 'month', key: event.target.value})}
+        />
       ) : null}
+      {period.kind === 'year' ? (
+        <select
+          value={period.key}
+          aria-label="选择复盘年"
+          onChange={(event) => onChange({kind: 'year', key: event.target.value})}
+        >
+          {years.map((year) => <option key={year} value={year}>{year} 年</option>)}
+        </select>
+      ) : null}
+      <button
+        type="button"
+        className={styles.dateStepButton}
+        aria-label={`下一${unit}`}
+        title={`下一${unit}`}
+        disabled={nextDisabled}
+        onClick={() => !nextDisabled && onChange(next)}
+      >
+        <span aria-hidden="true">→</span>
+      </button>
+      <button type="button" disabled={period.key === current.key} onClick={() => onChange(current)}>
+        {currentLabel}
+      </button>
     </div>
   );
 }
 
 function HealthChartsPanel({
-  selectedDate,
-  onDateSelect,
-  timeScope,
-  setTimeScope,
+  selectedChartIds,
+  onChartToggle,
 }: {
-  selectedDate: string;
-  onDateSelect: (date: string) => void;
-  timeScope: ObjectiveTimeScope;
-  setTimeScope: (scope: ObjectiveTimeScope) => void;
+  selectedChartIds: string[];
+  onChartToggle: (item: ChartNavItem | ChartNavItem[]) => void;
 }): React.ReactNode {
-  const sections = HEALTH_CHART_NAV.map((section) => section.title);
+  const [activeSection, setActiveSection] = useState(HEALTH_CHART_NAV[0]?.title || '体重');
+  const handleSectionChange = (sectionTitle: string) => {
+    setActiveSection(sectionTitle);
+    const charts = HEALTH_CHART_NAV.find((section) => section.title === sectionTitle)?.charts || [];
+    if (charts.length) onChartToggle(charts);
+  };
+
   return (
     <>
-      <HealthProvider
-        onDateSelect={onDateSelect}
-        selectedDate={selectedDate}
-        scope={timeScope as HealthTimeScope}
-        setScope={(nextScope) => setTimeScope(nextScope as ObjectiveTimeScope)}
+      <HealthChartSubtabs
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+      />
+      <div
+        id="health-section-panel"
+        className={styles.healthChartsGrid}
+        aria-label="已选健康图表"
       >
-        <HealthChartSubtabs />
-        <div className={styles.healthChartsGrid}>
-          {sections.map((section) => (
-            <section key={section} className={styles.healthChartSection}>
-              <HealthSection name={section} />
-            </section>
-          ))}
-        </div>
-      </HealthProvider>
+        <section className={styles.healthChartSection}>
+          <HealthChartSelection chartIds={selectedChartIds} />
+        </section>
+      </div>
     </>
   );
 }
@@ -2438,6 +2955,7 @@ const CAREER_CHART_NAV = [
 const LIFE_CHART_NAV = [
   {id: 'life-reading-time', label: '阅读时长'},
   {id: 'life-rhythm', label: '生活节奏'},
+  {id: 'life-drive-time', label: '上下车时间'},
 ];
 
 function CareerDataPanel({
@@ -2445,7 +2963,7 @@ function CareerDataPanel({
   onDateSelect,
   timeScope,
 }: {
-  selectedDate: string;
+  selectedDate?: string;
   onDateSelect: (date: string) => void;
   timeScope: ObjectiveTimeScope;
 }): React.ReactNode {
@@ -2464,27 +2982,30 @@ function CareerDataPanel({
         })),
         fetchJson<Manifest>('/data/daily-analysis/index.json'),
       ]);
-      const dates = manifest?.dates || [];
-      const analysisList = await Promise.all(dates.map(async (date) => {
+      const dates = getScopedAvailableDates(timeScope, manifest?.dates || [], selectedDate);
+      const analysisList = await mapWithConcurrency(dates, 4, async (date) => {
         const analysis = await fetchDailyAnalysis(date);
         return analysis ? [date, analysis] as const : null;
-      }));
+      });
       if (cancelled) return;
       setLlmPayloads(llmLoaded.filter((item): item is {id: string; label: string; payload: LLMSummaryPayload} => Boolean(item)));
-      setAnalyses(Object.fromEntries(analysisList.filter((item): item is readonly [string, DailyAnalysis] => Boolean(item))));
+      setAnalyses((previous) => ({
+        ...previous,
+        ...Object.fromEntries(analysisList.filter((item): item is readonly [string, DailyAnalysis] => Boolean(item))),
+      }));
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedDate, timeScope]);
 
   const allDates = useMemo(() => {
     const dates = new Set<string>(Object.keys(analyses));
     llmPayloads.forEach((vendor) => Object.keys(vendor.payload.daily_token_usage || {}).forEach((date) => dates.add(date)));
     return [...dates].sort();
   }, [analyses, llmPayloads]);
-  const axisDates = useMemo(() => getScopeDates(timeScope, allDates), [allDates, timeScope]);
+  const axisDates = useMemo(() => getScopeDates(timeScope, allDates, selectedDate), [allDates, selectedDate, timeScope]);
   const tokenPoints = useMemo<TokenStackPoint[]>(() => axisDates.map((date) => {
     const [minimax, openai, anthropic] = LLM_VENDOR_CONFIGS.map((vendor) =>
       Number(llmPayloads.find((item) => item.id === vendor.id)?.payload.daily_token_usage?.[date] || 0));
@@ -2561,51 +3082,59 @@ function FinanceDataPanel({
   onDateSelect,
   timeScope,
 }: {
-  date: string;
+  date?: string;
   onDateSelect: (date: string) => void;
   timeScope: ObjectiveTimeScope;
 }): React.ReactNode {
   const [activeTab, setActiveTab] = useState<FinanceTab>('investment');
+  const effectiveDate = date || formatDateKey(new Date());
 
   return (
     <>
       <FinanceTabs active={activeTab} onChange={setActiveTab} />
-      {activeTab === 'income' ? (
-        <div className={styles.financeEmptyPanel}>
-          <strong>收入数据</strong>
-          <p>暂未接入收入流水数据。</p>
-        </div>
-      ) : null}
-      {activeTab === 'expense' ? (
-        <div className={styles.financeEmptyPanel}>
-          <strong>支出数据</strong>
-          <p>暂未接入支出流水数据。</p>
-        </div>
-      ) : null}
-      {activeTab === 'investment' ? (
-        <div className={styles.embeddedDashboardStack}>
-          <section className={styles.embeddedDashboardSection}>
-            <h3>总资产趋势</h3>
-            <FinanceAssetsTrend date={date} onDateSelect={onDateSelect} timeScope={timeScope} />
-          </section>
-          <section className={styles.embeddedDashboardSection}>
-            <h3>投资持仓</h3>
-            <AlipayInvestDashboard date={date} />
-          </section>
-          <section className={styles.embeddedDashboardSection}>
-            <h3>指数账户</h3>
-            <AccountAssetsDashboard dataUrl="/data/account-assets/index.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
-          </section>
-          <section className={styles.embeddedDashboardSection}>
-            <h3>个股账户</h3>
-            <AccountAssetsDashboard dataUrl="/data/account-assets/stock.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
-          </section>
-          <section className={styles.embeddedDashboardSection}>
-            <h3>港股打新</h3>
-            <HKIPOCharts dataUrl="/data/hk-ipo/data.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
-          </section>
-        </div>
-      ) : null}
+      <div
+        id="finance-tab-panel"
+        className={styles.financeTabPanel}
+        role="tabpanel"
+        aria-labelledby={`finance-tab-${activeTab}`}
+      >
+        {activeTab === 'income' ? (
+          <div className={styles.financeEmptyPanel}>
+            <strong>收入数据</strong>
+            <p>暂未接入收入流水数据。</p>
+          </div>
+        ) : null}
+        {activeTab === 'expense' ? (
+          <div className={styles.financeEmptyPanel}>
+            <strong>支出数据</strong>
+            <p>暂未接入支出流水数据。</p>
+          </div>
+        ) : null}
+        {activeTab === 'investment' ? (
+          <div className={styles.embeddedDashboardStack}>
+            <section className={styles.embeddedDashboardSection}>
+              <h2>总资产趋势</h2>
+              <FinanceAssetsTrend date={effectiveDate} onDateSelect={onDateSelect} timeScope={timeScope} />
+            </section>
+            <section className={styles.embeddedDashboardSection}>
+              <h2>投资持仓</h2>
+              <AlipayInvestDashboard date={effectiveDate} timeScope={timeScope} />
+            </section>
+            <section className={styles.embeddedDashboardSection}>
+              <h2>指数账户</h2>
+              <AccountAssetsDashboard date={effectiveDate} dataUrl="/data/account-assets/index.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
+            </section>
+            <section className={styles.embeddedDashboardSection}>
+              <h2>个股账户</h2>
+              <AccountAssetsDashboard date={effectiveDate} dataUrl="/data/account-assets/stock.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
+            </section>
+            <section className={styles.embeddedDashboardSection}>
+              <h2>港股打新</h2>
+              <HKIPOCharts date={effectiveDate} dataUrl="/data/hk-ipo/data.json" onDateSelect={onDateSelect} timeScope={timeScope} compact />
+            </section>
+          </div>
+        ) : null}
+      </div>
     </>
   );
 }
@@ -2615,7 +3144,7 @@ function LifeDataPanel({
   onDateSelect,
   timeScope,
 }: {
-  selectedDate: string;
+  selectedDate?: string;
   onDateSelect: (date: string) => void;
   timeScope: ObjectiveTimeScope;
 }): React.ReactNode {
@@ -2623,18 +3152,29 @@ function LifeDataPanel({
   const [dailyDates, setDailyDates] = useState<string[]>([]);
   const [analysisDates, setAnalysisDates] = useState<string[]>([]);
   const [analyses, setAnalyses] = useState<Record<string, DailyAnalysis>>({});
+  const [driveSummaries, setDriveSummaries] = useState<Record<string, DriveDaySummary>>({});
   const [loading, setLoading] = useState(true);
+  const anchorYear = (selectedDate || formatDateKey(new Date())).slice(0, 4);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const [readingIndex, dailyManifest, analysisManifest] = await Promise.all([
+      const [readingIndex, dailyManifest, analysisManifest, driveManifest] = await Promise.all([
         fetchJson<{activeYears?: string[]; exportedAt?: string}>('/data/reading/index.json'),
         fetchJson<Manifest>('/data/daily/index.json'),
         fetchJson<Manifest>('/data/daily-analysis/index.json'),
+        fetchJson<Manifest>('/data/drive/index.json'),
       ]);
-      const readingYears = await Promise.all((readingIndex?.activeYears || []).map(async (year) =>
+      const activeYears = readingIndex?.activeYears || [];
+      const requestedYears = timeScope.mode === 'all'
+        ? activeYears
+        : timeScope.mode === 'year'
+          ? activeYears.filter((year) => Number(year) === timeScope.year)
+          : timeScope.mode === 'period'
+            ? activeYears.filter((year) => year >= timeScope.start.slice(0, 4) && year <= timeScope.end.slice(0, 4))
+          : activeYears.filter((year) => year === anchorYear);
+      const readingYears = await Promise.all(requestedYears.map(async (year) =>
         fetchJson<ReadingYearPayload>(`/data/reading/${year}.json`)));
       const mergedReading: Record<string, number> = {};
       readingYears.forEach((yearData) => {
@@ -2642,35 +3182,51 @@ function LifeDataPanel({
           mergedReading[date] = (mergedReading[date] || 0) + Number(value.seconds || 0);
         });
       });
-      const dates = analysisManifest?.dates || [];
-      const analysisList = await Promise.all(dates.map(async (date) => {
+      const allAnalysisDates = analysisManifest?.dates || [];
+      const dates = getScopedAvailableDates(timeScope, allAnalysisDates, selectedDate);
+      const analysisList = await mapWithConcurrency(dates, 4, async (date) => {
         const analysis = await fetchDailyAnalysis(date);
         return analysis ? [date, analysis] as const : null;
-      }));
+      });
+      const driveDates = getScopedAvailableDates(timeScope, driveManifest?.dates || [], selectedDate);
+      const driveList = await mapWithConcurrency(driveDates, 4, async (date) => {
+        const log = await fetchJson<DriveLog>(`/data/drive/${dateToPath(date, 'json')}`);
+        return log ? [date, summarizeDriveLog(log)] as const : null;
+      });
       if (cancelled) return;
-      setReadingDaily(mergedReading);
+      setReadingDaily((previous) => ({...previous, ...mergedReading}));
       setDailyDates(dailyManifest?.dates || []);
-      setAnalysisDates(dates);
-      setAnalyses(Object.fromEntries(analysisList.filter((item): item is readonly [string, DailyAnalysis] => Boolean(item))));
+      setAnalysisDates(allAnalysisDates);
+      setDriveSummaries((previous) => ({...previous, ...Object.fromEntries(driveList.filter((item): item is readonly [string, DriveDaySummary] => Boolean(item)))}));
+      setAnalyses((previous) => ({
+        ...previous,
+        ...Object.fromEntries(analysisList.filter((item): item is readonly [string, DailyAnalysis] => Boolean(item))),
+      }));
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [anchorYear, selectedDate, timeScope]);
 
-  const allDates = useMemo(() => [...new Set([...Object.keys(readingDaily), ...dailyDates, ...analysisDates])].sort(), [analysisDates, dailyDates, readingDaily]);
-  const axisDates = useMemo(() => getScopeDates(timeScope, allDates), [allDates, timeScope]);
+  const allDates = useMemo(() => [...new Set([...Object.keys(readingDaily), ...dailyDates, ...analysisDates, ...Object.keys(driveSummaries)])].sort(), [analysisDates, dailyDates, driveSummaries, readingDaily]);
+  const axisDates = useMemo(() => getScopeDates(timeScope, allDates, selectedDate), [allDates, selectedDate, timeScope]);
+  const dailyDateSet = useMemo(() => new Set(dailyDates), [dailyDates]);
+  const analysisDateSet = useMemo(() => new Set(analysisDates), [analysisDates]);
   const readingPoints = useMemo<ObjectivePoint[]>(() => axisDates.map((date) => ({
     date,
     value: Number(readingDaily[date] || 0),
-    secondary: dailyDates.includes(date) ? 1 : 0,
-  })), [axisDates, dailyDates, readingDaily]);
+    secondary: dailyDateSet.has(date) ? 1 : 0,
+  })), [axisDates, dailyDateSet, readingDaily]);
   const rhythmPoints = useMemo<ObjectivePoint[]>(() => axisDates.map((date) => ({
     date,
-    value: dailyDates.includes(date) ? 1 : 0,
-    secondary: analysisDates.includes(date) ? getAnalysisCompleteness(analyses[date]) : 0,
-  })), [analyses, analysisDates, axisDates, dailyDates]);
+    value: dailyDateSet.has(date) ? 1 : 0,
+    secondary: analysisDateSet.has(date) ? getAnalysisCompleteness(analyses[date]) : 0,
+  })), [analyses, analysisDateSet, axisDates, dailyDateSet]);
+  const driveTimePoints = useMemo(() => axisDates.flatMap((date) => {
+    const summary = driveSummaries[date];
+    return summary?.tripRanges.length ? [{date, trips: summary.tripRanges}] : [];
+  }), [axisDates, driveSummaries]);
   const totalReadSeconds = readingPoints.reduce((sum, point) => sum + point.value, 0);
   const readingDays = readingPoints.filter((point) => point.value > 0).length;
   const diaryDays = rhythmPoints.filter((point) => point.value > 0).length;
@@ -2702,9 +3258,17 @@ function LifeDataPanel({
             valueLabel="阅读"
             secondaryLabel="日记"
             formatValue={formatHoursFromSeconds}
+            formatSecondary={(value) => value ? '有' : '无'}
             selectedDate={selectedDate}
             onDateSelect={onDateSelect}
           />
+        </ObjectiveChartCard>
+        <ObjectiveChartCard
+          id="life-drive-time"
+          title="上下车时间"
+          meta="每段柱表示一次上车–下车区间；仅展示成功配对的完整行程"
+        >
+          <DriveTimeChart points={driveTimePoints} />
         </ObjectiveChartCard>
         <ObjectiveChartCard
           id="life-rhythm"
@@ -2728,26 +3292,810 @@ function LifeDataPanel({
   );
 }
 
+type CompareMode = 'relative' | 'zscore' | 'raw';
+type CompareMetric = {
+  id: string;
+  domain: '健康' | '事业' | '财务' | '生活';
+  label: string;
+  unit: string;
+  aggregate: 'average' | 'sum';
+  values: Map<string, number>;
+};
+
+const COMPARE_COLORS = ['#0a84ff', '#16a34a', '#f59e0b', '#db2777'];
+const COMPARE_PRESETS = [
+  {label: '恢复与工作', ids: ['health-sleep', 'health-hrv', 'health-rhr', 'career-ai']},
+  {label: '活动与情绪', ids: ['health-steps', 'health-exercise', 'health-daylight', 'health-mood']},
+  {label: '工作与生活', ids: ['career-ai', 'life-reading', 'life-diary', 'health-sleep']},
+  {label: '资产结构', ids: ['finance-index', 'finance-stock', 'finance-alipay', 'finance-caitong']},
+];
+
+function seriesMap(points: Array<[string, number]> | undefined): Map<string, number> {
+  return new Map((points || []).filter(([, value]) => Number.isFinite(value)));
+}
+
+function averageSeries(points: Array<[string, number]>): Map<string, number> {
+  const grouped = new Map<string, number[]>();
+  points.forEach(([date, value]) => grouped.set(date, [...(grouped.get(date) || []), value]));
+  return new Map([...grouped].map(([date, values]) => [date, values.reduce((sum, value) => sum + value, 0) / values.length]));
+}
+
+function dateBucket(date: string, monthly: boolean): string {
+  return monthly ? `${date.slice(0, 7)}-01` : date;
+}
+
+function aggregateMetric(metric: CompareMetric, monthly: boolean): Map<string, number> {
+  const buckets = new Map<string, number[]>();
+  metric.values.forEach((value, date) => {
+    const key = dateBucket(date, monthly);
+    buckets.set(key, [...(buckets.get(key) || []), value]);
+  });
+  return new Map([...buckets].map(([date, values]) => [
+    date,
+    metric.aggregate === 'sum'
+      ? values.reduce((total, value) => total + value, 0)
+      : values.reduce((total, value) => total + value, 0) / values.length,
+  ]));
+}
+
+function pearsonCorrelation(left: number[], right: number[]): number | null {
+  if (left.length !== right.length || left.length < 2) return null;
+  const leftMean = left.reduce((sum, value) => sum + value, 0) / left.length;
+  const rightMean = right.reduce((sum, value) => sum + value, 0) / right.length;
+  let numerator = 0;
+  let leftSquared = 0;
+  let rightSquared = 0;
+  left.forEach((value, index) => {
+    const leftDelta = value - leftMean;
+    const rightDelta = right[index] - rightMean;
+    numerator += leftDelta * rightDelta;
+    leftSquared += leftDelta ** 2;
+    rightSquared += rightDelta ** 2;
+  });
+  const denominator = Math.sqrt(leftSquared * rightSquared);
+  return denominator ? numerator / denominator : null;
+}
+
+function percentile(values: number[], ratio: number): number {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((left, right) => left - right);
+  const position = (sorted.length - 1) * ratio;
+  const lower = Math.floor(position);
+  const upper = Math.ceil(position);
+  return sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower);
+}
+
+function CrossDomainComparison({timeScope, selectedDate}: {timeScope: ObjectiveTimeScope; selectedDate?: string}) {
+  const {colorMode} = useColorMode();
+  const [metrics, setMetrics] = useState<CompareMetric[]>([]);
+  const [selectedIds, setSelectedIds] = useState(['health-steps', 'health-weight', 'career-ai', 'finance-assets']);
+  const [mode, setMode] = useState<CompareMode>('zscore');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void (async () => {
+      const [health, llmPayloads, readingIndex, investManifest, indexAccount, stockAccount, dailyManifest, analysisManifest, driveManifest] = await Promise.all([
+        loadHealthChartHistory(),
+        Promise.all(LLM_VENDOR_CONFIGS.map((vendor) => fetchJson<LLMSummaryPayload>(vendor.path))),
+        fetchJson<{activeYears?: string[]}>('/data/reading/index.json'),
+        fetchJson<InvestManifest>('/data/invest/index.json'),
+        fetchJson<AccountHistoryPayload>('/data/account-assets/index.json'),
+        fetchJson<AccountHistoryPayload>('/data/account-assets/stock.json'),
+        fetchJson<Manifest>('/data/daily/index.json'),
+        fetchJson<Manifest>('/data/daily-analysis/index.json'),
+        fetchJson<Manifest>('/data/drive/index.json'),
+      ]);
+      const activeYears = readingIndex?.activeYears || [];
+      const readingPayloads = await Promise.all(activeYears.map((year) => fetchJson<ReadingYearPayload>(`/data/reading/${year}.json`)));
+      const investEntries = await Promise.all((investManifest?.dates || []).map(async (date) => {
+        const [year, month, day] = date.split('-');
+        const [alipay, caitong] = await Promise.all([
+          fetchJson<InvestAssetPayload>(`/data/invest/${year}/${month}/${day}/alipay.json`),
+          fetchJson<InvestAssetPayload>(`/data/invest/${year}/${month}/${day}/caitong.json`),
+        ]);
+        return {date, alipay: investTotalAssets(alipay), caitong: investTotalAssets(caitong)};
+      }));
+      const driveEntries = await mapWithConcurrency(driveManifest?.dates || [], 4, async (date) => {
+        const log = await fetchJson<DriveLog>(`/data/drive/${dateToPath(date, 'json')}`);
+        return log ? [date, summarizeDriveLog(log)] as const : null;
+      });
+      if (cancelled) return;
+
+      const tokenValues = new Map<string, number>();
+      llmPayloads.forEach((payload) => Object.entries(payload?.daily_token_usage || {}).forEach(([date, value]) => {
+        tokenValues.set(date, (tokenValues.get(date) || 0) + Number(value || 0));
+      }));
+      const vendorTokenValues = LLM_VENDOR_CONFIGS.map((vendor, index) => ({
+        id: vendor.id,
+        label: vendor.label,
+        values: new Map(Object.entries(llmPayloads[index]?.daily_token_usage || {}).map(([date, value]) => [date, Number(value || 0)])),
+      }));
+      const readingValues = new Map<string, number>();
+      readingPayloads.forEach((payload) => Object.entries(payload?.daily || {}).forEach(([date, value]) => {
+        readingValues.set(date, (readingValues.get(date) || 0) + Number(value.seconds || 0) / 3600);
+      }));
+      const accountMaps = [indexAccount, stockAccount].map((payload) => new Map(
+        (payload?.portfolio?.history || []).flatMap((point) => {
+          const date = accountPointDate(point);
+          return date && typeof point.totalAssets === 'number' ? [[date, point.totalAssets] as const] : [];
+        }),
+      ));
+      accountMaps.push(new Map(investEntries.flatMap(({date, alipay}) => typeof alipay === 'number' ? [[date, alipay] as const] : [])));
+      accountMaps.push(new Map(investEntries.flatMap(({date, caitong}) => typeof caitong === 'number' ? [[date, caitong] as const] : [])));
+      const financeDates = [...new Set(accountMaps.flatMap((map) => [...map.keys()]))].sort();
+      const latestValues = accountMaps.map(() => 0);
+      const assetValues = new Map<string, number>();
+      financeDates.forEach((date) => {
+        accountMaps.forEach((map, index) => {
+          const value = map.get(date);
+          if (typeof value === 'number') latestValues[index] = value;
+        });
+        if (latestValues.every((value) => value > 0)) assetValues.set(date, latestValues.reduce((sum, value) => sum + value, 0));
+      });
+      const healthData = health as HealthData | null;
+      const moodValues = averageSeries((healthData?.state_of_mind || []).map(([date, value]) => [date, value]));
+      const diaryValues = new Map((dailyManifest?.dates || []).map((date) => [date, 1]));
+      const analysisValues = new Map((analysisManifest?.dates || []).map((date) => [date, 1]));
+      const driveMinutes = new Map(driveEntries.flatMap((item) => item ? [[item[0], item[1].minutes] as const] : []));
+      const driveTrips = new Map(driveEntries.flatMap((item) => item ? [[item[0], item[1].trips] as const] : []));
+      setMetrics([
+        {id: 'health-steps', domain: '健康', label: '每日步数', unit: '步', aggregate: 'average', values: seriesMap(healthData?.steps)},
+        {id: 'health-weight', domain: '健康', label: '体重', unit: '斤', aggregate: 'average', values: new Map((healthData?.weight || []).map(([date, value]) => [date, value * 2]))},
+        {id: 'health-fat', domain: '健康', label: '体脂率', unit: '%', aggregate: 'average', values: seriesMap(healthData?.fat)},
+        {id: 'health-exercise', domain: '健康', label: '运动时长', unit: '分钟', aggregate: 'average', values: seriesMap(healthData?.exercise)},
+        {id: 'health-sleep', domain: '健康', label: '睡眠时长', unit: '小时', aggregate: 'average', values: new Map((healthData?.sleep || []).map(([date, total]) => [date, total]))},
+        {id: 'health-hrv', domain: '健康', label: 'HRV', unit: 'ms', aggregate: 'average', values: seriesMap(healthData?.hrv)},
+        {id: 'health-rhr', domain: '健康', label: '静息心率', unit: 'bpm', aggregate: 'average', values: seriesMap(healthData?.rhr)},
+        {id: 'health-daylight', domain: '健康', label: '日晒时间', unit: '分钟', aggregate: 'average', values: seriesMap(healthData?.daylight)},
+        {id: 'health-mindful', domain: '健康', label: '正念时长', unit: '分钟', aggregate: 'average', values: seriesMap(healthData?.mindful)},
+        {id: 'health-mood', domain: '健康', label: '愉悦度', unit: '', aggregate: 'average', values: moodValues},
+        {id: 'career-ai', domain: '事业', label: 'AI 使用', unit: 'token', aggregate: 'sum', values: tokenValues},
+        ...vendorTokenValues.map((vendor): CompareMetric => ({id: `career-${vendor.id}`, domain: '事业', label: vendor.label, unit: 'token', aggregate: 'sum', values: vendor.values})),
+        {id: 'finance-assets', domain: '财务', label: '总资产', unit: '元', aggregate: 'average', values: assetValues},
+        {id: 'finance-index', domain: '财务', label: '指数账户', unit: '元', aggregate: 'average', values: accountMaps[0]},
+        {id: 'finance-stock', domain: '财务', label: '个股账户', unit: '元', aggregate: 'average', values: accountMaps[1]},
+        {id: 'finance-alipay', domain: '财务', label: '支付宝', unit: '元', aggregate: 'average', values: accountMaps[2]},
+        {id: 'finance-caitong', domain: '财务', label: '财通', unit: '元', aggregate: 'average', values: accountMaps[3]},
+        {id: 'life-reading', domain: '生活', label: '阅读时长', unit: '小时', aggregate: 'sum', values: readingValues},
+        {id: 'life-diary', domain: '生活', label: '日记记录', unit: '天', aggregate: 'sum', values: diaryValues},
+        {id: 'life-analysis', domain: '生活', label: 'AI 分析', unit: '天', aggregate: 'sum', values: analysisValues},
+        {id: 'life-drive-minutes', domain: '生活', label: '行车时长', unit: '分钟', aggregate: 'sum', values: driveMinutes},
+        {id: 'life-drive-trips', domain: '生活', label: '完整行程', unit: '次', aggregate: 'sum', values: driveTrips},
+      ]);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const scopedMetrics = useMemo(() => metrics.map((metric) => {
+    const dates = getScopeDates(timeScope, [...metric.values.keys()], selectedDate);
+    const allowed = new Set(dates);
+    return {...metric, values: new Map([...metric.values].filter(([date]) => allowed.has(date)))};
+  }), [metrics, selectedDate, timeScope]);
+  const monthly = timeScope.mode === 'all' || timeScope.mode === 'year' || (timeScope.mode === 'recent' && timeScope.range === '1y');
+  const selected = selectedIds.flatMap((id) => {
+    const metric = scopedMetrics.find((item) => item.id === id);
+    return metric ? [{...metric, values: aggregateMetric(metric, monthly)}] : [];
+  });
+  const allDates = [...new Set(selected.flatMap((metric) => [...metric.values.keys()]))].sort();
+  const transformed = selected.map((metric) => {
+    const values = [...metric.values.values()];
+    const baselineValues = values.filter((value) => value !== 0).slice(0, 7);
+    const baseline = baselineValues.length ? baselineValues.reduce((sum, value) => sum + value, 0) / baselineValues.length : 0;
+    const mean = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    const deviation = Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / Math.max(1, values.length));
+    return allDates.map((date) => {
+      const raw = metric.values.get(date);
+      if (raw === undefined) return null;
+      if (mode === 'relative') return baseline ? raw / baseline * 100 : null;
+      if (mode === 'zscore') return deviation ? (raw - mean) / deviation : 0;
+      return raw;
+    });
+  });
+  const comparedValues = transformed.flatMap((values) => values.filter((value): value is number => value !== null && Number.isFinite(value)));
+  const robustMin = percentile(comparedValues, 0.05);
+  const robustMax = percentile(comparedValues, 0.95);
+  const robustPadding = Math.max(0.1, (robustMax - robustMin) * 0.12);
+  const focusRange = (() => {
+    if (!selectedDate || timeScope.mode === 'all') return null;
+    if (monthly) {
+      const month = `${selectedDate.slice(0, 7)}-01`;
+      return [month, month] as const;
+    }
+    if (timeScope.mode === 'period') return [timeScope.start, timeScope.end] as const;
+    if (timeScope.mode === 'recent' && timeScope.range === '90d') {
+      return [formatDateKey(addDays(parseDateKey(selectedDate), -6)), selectedDate] as const;
+    }
+    return [selectedDate, selectedDate] as const;
+  })();
+  const markAreas = [
+    ...(focusRange ? [[{xAxis: focusRange[0], itemStyle: {color: 'rgba(10,132,255,.09)'}}, {xAxis: focusRange[1]}]] : []),
+    ...(mode === 'zscore' ? [[{yAxis: -1, itemStyle: {color: 'rgba(22,163,74,.06)'}}, {yAxis: 1}]] : []),
+  ];
+  const chartOption = {
+    backgroundColor: 'transparent',
+    color: COMPARE_COLORS,
+    animationDuration: 250,
+    grid: {left: 44, right: 18, top: 38, bottom: 38, containLabel: true},
+    legend: {top: 0, textStyle: {color: colorMode === 'dark' ? '#d1d5db' : '#374151'}},
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: Array<{seriesIndex: number; axisValue: string; marker: string; value?: number}>) => {
+        const date = params[0]?.axisValue || '';
+        return [date, ...params.map((item) => {
+          const metric = selected[item.seriesIndex];
+          const raw = metric?.values.get(date);
+          const rawLabel = raw === undefined ? '暂无' : `${formatCompactNumber(raw, 1)} ${metric.unit}`;
+          const compared = item.value === undefined ? '' : mode === 'relative' ? ` · ${item.value.toFixed(1)}` : mode === 'zscore' ? ` · ${item.value.toFixed(2)}σ` : '';
+          return `${item.marker}${metric.label}：${rawLabel}${compared}`;
+        })].join('<br/>');
+      },
+    },
+    xAxis: {type: 'category', data: allDates, axisLabel: {formatter: (date: string) => monthly ? date.slice(0, 7) : date.slice(5), color: '#6b7280'}, axisTick: {show: false}},
+    yAxis: mode === 'raw'
+      ? selected.map((_, index) => ({type: 'value', show: index === 0, scale: true, splitLine: {show: index === 0}, axisLabel: {color: '#6b7280'}}))
+      : {type: 'value', min: robustMin - robustPadding, max: robustMax + robustPadding, scale: true, axisLabel: {formatter: mode === 'relative' ? '{value}' : '{value}σ', color: '#6b7280'}, splitLine: {lineStyle: {color: 'rgba(107,114,128,.14)'}}},
+    series: selected.map((metric, index) => ({
+      name: metric.label,
+      type: 'line',
+      yAxisIndex: mode === 'raw' ? index : 0,
+      data: transformed[index],
+      connectNulls: false,
+      showSymbol: allDates.length <= 31,
+      symbolSize: 5,
+      lineStyle: {width: 2.4},
+      markArea: index === 0 && markAreas.length ? {silent: true, label: {show: false}, data: markAreas} : undefined,
+    })),
+  };
+  const results = selected.map((metric) => {
+    const entries = [...metric.values].sort(([left], [right]) => left.localeCompare(right));
+    const first = entries[0];
+    const last = entries.at(-1);
+    const delta = first && last ? last[1] - first[1] : null;
+    return {metric, first, last, delta, coverage: allDates.length ? entries.length / allDates.length : 0};
+  });
+  const correlations = selected.flatMap((left, leftIndex) => selected.slice(leftIndex + 1).flatMap((right) => {
+    const common = [...left.values.keys()].filter((date) => right.values.has(date));
+    if (common.length < 14) return [];
+    const value = pearsonCorrelation(common.map((date) => left.values.get(date)!), common.map((date) => right.values.get(date)!));
+    return value === null ? [] : [{left: left.label, right: right.label, value, samples: common.length}];
+  })).sort((left, right) => Math.abs(right.value) - Math.abs(left.value));
+  const toggleMetric = (id: string) => setSelectedIds((current) => current.includes(id)
+    ? current.filter((item) => item !== id)
+    : current.length < 4 ? [...current, id] : current);
+
+  return (
+    <div className={styles.comparePanel}>
+      <div className={styles.compareToolbar}>
+        <div className={styles.comparePresets} aria-label="对比预设">
+          {COMPARE_PRESETS.map((preset) => <button key={preset.label} type="button" onClick={() => setSelectedIds(preset.ids)}>{preset.label}</button>)}
+        </div>
+        <div className={styles.compareMetricPicker} aria-label="选择对比指标">
+          {(['健康', '事业', '财务', '生活'] as const).map((domain) => (
+            <div key={domain}><span>{domain}</span>{metrics.filter((metric) => metric.domain === domain).map((metric) => (
+              <label key={metric.id}><input type="checkbox" checked={selectedIds.includes(metric.id)} disabled={!selectedIds.includes(metric.id) && selectedIds.length >= 4} onChange={() => toggleMetric(metric.id)} />{metric.label}</label>
+            ))}</div>
+          ))}
+        </div>
+        <div className={styles.compareModes} role="group" aria-label="对比口径">
+          {([['relative', '相对变化'], ['zscore', '标准化偏离'], ['raw', '原始数值']] as Array<[CompareMode, string]>).map(([key, label]) => <button key={key} type="button" aria-pressed={mode === key} className={mode === key ? styles.compareModeActive : ''} onClick={() => setMode(key)}>{label}</button>)}
+        </div>
+      </div>
+      <ObjectiveChartCard id="cross-domain-comparison" title="跨领域趋势对比" meta={`${monthly ? '按月' : '按日'} · 蓝色背景为当前复盘区间 · 绿色带为个人常态 ±1σ`}>
+        {loading ? <div className={styles.financeEmptyPanel}>正在加载对比数据...</div> : selected.length ? <ReactECharts option={chartOption} style={{height: 340, width: '100%'}} opts={{renderer: 'canvas'}} notMerge /> : <div className={styles.financeEmptyPanel}>请选择至少一项指标</div>}
+      </ObjectiveChartCard>
+      <div className={styles.compareResults}>
+        <h3>周期结果</h3>
+        <div className={styles.compareTableWrap}><table><thead><tr><th>指标</th><th>起点</th><th>终点</th><th>变化</th><th>覆盖率</th></tr></thead><tbody>{results.map(({metric, first, last, delta, coverage}) => <tr key={metric.id}><th>{metric.domain} · {metric.label}</th><td>{first ? `${formatCompactNumber(first[1], 1)} ${metric.unit}` : '暂无'}</td><td>{last ? `${formatCompactNumber(last[1], 1)} ${metric.unit}` : '暂无'}</td><td>{delta === null ? '暂无' : `${delta >= 0 ? '+' : ''}${formatCompactNumber(delta, 1)} ${metric.unit}`}</td><td>{formatNumber(coverage * 100, 0)}%</td></tr>)}</tbody></table></div>
+      </div>
+      <div className={styles.compareCorrelations}>
+        <h3>同期关联</h3>
+        {correlations.length ? correlations.slice(0, 4).map((item) => <p key={`${item.left}-${item.right}`}>{item.left} / {item.right}<strong>r = {item.value.toFixed(2)}</strong><span>{item.samples} 个共同样本</span></p>) : <p>共同样本不足 14 个，暂不计算相关系数。</p>}
+        <small>相关只描述同期变化，不代表因果关系。</small>
+      </div>
+    </div>
+  );
+}
+
 function ObjectiveDataPanel({
   selectedDate,
   onDateSelect,
   timeScope,
-  setTimeScope,
+  selectedHealthChartIds,
+  onHealthChartToggle,
 }: {
-  selectedDate: string;
+  selectedDate?: string;
   onDateSelect: (date: string) => void;
   timeScope: ObjectiveTimeScope;
-  setTimeScope: (scope: ObjectiveTimeScope) => void;
+  selectedHealthChartIds: string[];
+  onHealthChartToggle: (item: ChartNavItem | ChartNavItem[]) => void;
 }): React.ReactNode {
   const [activeDomain, setActiveDomain] = useState<DataDomain>('health');
 
   return (
     <section className={styles.healthChartsPanel}>
       <DataDomainTabs active={activeDomain} onChange={setActiveDomain} />
-      {activeDomain === 'health' ? <HealthChartsPanel selectedDate={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} setTimeScope={setTimeScope} /> : null}
-      {activeDomain === 'career' ? <CareerDataPanel selectedDate={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
-      {activeDomain === 'finance' ? <FinanceDataPanel date={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
-      {activeDomain === 'life' ? <LifeDataPanel selectedDate={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
+      <div
+        id="objective-domain-panel"
+        className={styles.objectiveDomainPanel}
+        role="tabpanel"
+        aria-labelledby={`objective-domain-tab-${activeDomain}`}
+      >
+        {activeDomain === 'health' ? <HealthChartsPanel selectedChartIds={selectedHealthChartIds} onChartToggle={onHealthChartToggle} /> : null}
+        {activeDomain === 'career' ? <CareerDataPanel selectedDate={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
+        {activeDomain === 'finance' ? <FinanceDataPanel date={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
+        {activeDomain === 'life' ? <LifeDataPanel selectedDate={selectedDate} onDateSelect={onDateSelect} timeScope={timeScope} /> : null}
+        {activeDomain === 'compare' ? <CrossDomainComparison selectedDate={selectedDate} timeScope={timeScope} /> : null}
+      </div>
+    </section>
+  );
+}
+
+function AuthoredReviewContent({review}: {review: AuthoredPeriodReview}): React.ReactNode {
+  const [Content, setContent] = useState<React.ComponentType<unknown> | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [review]);
+
+  useEffect(() => {
+    if (!expanded) {
+      setContent(null);
+      setFailed(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setContent(null);
+    setFailed(false);
+    review.load()
+      .then((module) => {
+        if (!cancelled) setContent(() => module.default);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [expanded, review]);
+
+  if (!expanded) {
+    return (
+      <div className={styles.periodReviewAuthoredIntro}>
+        <p>{review.summary}</p>
+        <button type="button" onClick={() => setExpanded(true)}>展开完整总结</button>
+      </div>
+    );
+  }
+
+  if (failed) {
+    return (
+      <div className={styles.periodReviewNotice} role="status">
+        <strong>总结正文加载失败</strong>
+        <a href={review.href}>单独阅读这篇总结</a>
+      </div>
+    );
+  }
+  if (!Content) return <div className={styles.periodReviewLoading} role="status">正在加载总结...</div>;
+  return (
+    <div className={`${styles.periodReviewDocument} theme-doc-markdown markdown`}>
+      <button type="button" className={styles.periodReviewCollapse} onClick={() => setExpanded(false)}>收起完整总结</button>
+      <Content />
+    </div>
+  );
+}
+
+type AccountHistoryPoint = {
+  fullDate?: string;
+  date?: string;
+  totalAssets?: number;
+};
+
+type AccountHistoryPayload = {
+  portfolio?: {history?: AccountHistoryPoint[]};
+};
+
+type InvestManifest = {dates?: string[]};
+type InvestAssetPayload = {
+  holdingAmountSum?: number;
+  assetRecords?: Array<{field?: string; name?: string; amount?: number | null}>;
+};
+
+type PeriodObjectiveExternalSummary = {
+  health: {primary: string; secondary: string; coverage: string};
+  career: {primary: string; secondary: string; coverage: string};
+  finance: {primary: string; secondary: string; coverage: string};
+  life: {primary: string; secondary: string; coverage: string};
+  signals: Array<{tone: 'warning' | 'positive' | 'data'; label: string}>;
+};
+
+function periodDate(date: string, bounds: PeriodBounds): boolean {
+  return date >= bounds.start && date <= bounds.end;
+}
+
+function formatCompactMoney(value: number): string {
+  const absolute = Math.abs(value);
+  if (absolute >= 10000) return `${formatNumber(value / 10000, 1)}万`;
+  return formatNumber(value, 0);
+}
+
+function periodComparison(current: number, previous: number, label = '较上一周期'): {text: string; ratio: number | null} {
+  if (!Number.isFinite(previous) || previous === 0) return {text: `${label}暂无可比数据`, ratio: null};
+  const ratio = (current - previous) / Math.abs(previous);
+  return {text: `${label} ${ratio >= 0 ? '+' : ''}${formatNumber(ratio * 100, 0)}%`, ratio};
+}
+
+function accountPointDate(point: AccountHistoryPoint): string {
+  return point.fullDate || point.date || '';
+}
+
+function investTotalAssets(payload: InvestAssetPayload | null): number | undefined {
+  const totalAsset = payload?.assetRecords?.find((record) =>
+    record.field === 'totalAsset' || record.name === '总资产' || record.name === '总资产(人民币)')?.amount;
+  return typeof totalAsset === 'number' ? totalAsset : payload?.holdingAmountSum;
+}
+
+function investHistoryPayload(entries: Array<{date: string; value?: number}>): AccountHistoryPayload {
+  return {
+    portfolio: {
+      history: entries
+        .filter((entry): entry is {date: string; value: number} => typeof entry.value === 'number')
+        .map((entry) => ({fullDate: entry.date, totalAssets: entry.value})),
+    },
+  };
+}
+
+function summarizeAccountPeriod(payloads: Array<AccountHistoryPayload | null>, bounds: PeriodBounds) {
+  let startAssets = 0;
+  let endAssets = 0;
+  let accounts = 0;
+  let latestDate = '';
+  payloads.forEach((payload) => {
+    const history = (payload?.portfolio?.history || [])
+      .filter((point) => /^\d{4}-\d{2}-\d{2}$/.test(accountPointDate(point)) && Number.isFinite(point.totalAssets))
+      .sort((left, right) => accountPointDate(left).localeCompare(accountPointDate(right)));
+    const end = history.filter((point) => accountPointDate(point) <= bounds.end).at(-1);
+    const start = history.filter((point) => accountPointDate(point) < bounds.start).at(-1)
+      || history.find((point) => periodDate(accountPointDate(point), bounds));
+    if (!start || !end || typeof start.totalAssets !== 'number' || typeof end.totalAssets !== 'number') return;
+    startAssets += start.totalAssets;
+    endAssets += end.totalAssets;
+    accounts += 1;
+    latestDate = [latestDate, accountPointDate(end)].sort().at(-1) || latestDate;
+  });
+  return {startAssets, endAssets, accounts, latestDate};
+}
+
+function PeriodObjectiveSummary({
+  bounds,
+  analyses,
+  dailyCount,
+  analysisCount,
+}: {
+  bounds: PeriodBounds;
+  analyses: Array<{date: string; analysis: DailyAnalysis}>;
+  dailyCount: number;
+  analysisCount: number;
+}): React.ReactNode {
+  const [summary, setSummary] = useState<PeriodObjectiveExternalSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const periodDays = diffDays(bounds.start, bounds.end) + 1;
+  const previousBounds = useMemo<PeriodBounds>(() => ({
+    start: formatDateKey(addDays(parseDateKey(bounds.start), -periodDays)),
+    naturalEnd: formatDateKey(addDays(parseDateKey(bounds.start), -1)),
+    end: formatDateKey(addDays(parseDateKey(bounds.start), -1)),
+    label: '上一周期',
+  }), [bounds.start, periodDays]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void (async () => {
+      const years = Array.from(
+        {length: Number(bounds.end.slice(0, 4)) - Number(previousBounds.start.slice(0, 4)) + 1},
+        (_, index) => String(Number(previousBounds.start.slice(0, 4)) + index),
+      );
+      const [health, llmPayloads, securitiesPayloads, investManifest, readingPayloads, driveManifest] = await Promise.all([
+        loadHealthChartHistory(),
+        Promise.all(LLM_VENDOR_CONFIGS.map((vendor) => fetchJson<LLMSummaryPayload>(vendor.path))),
+        Promise.all([
+          fetchJson<AccountHistoryPayload>('/data/account-assets/index.json'),
+          fetchJson<AccountHistoryPayload>('/data/account-assets/stock.json'),
+        ]),
+        fetchJson<InvestManifest>('/data/invest/index.json'),
+        Promise.all(years.map((year) => fetchJson<ReadingYearPayload>(`/data/reading/${year}.json`))),
+        fetchJson<Manifest>('/data/drive/index.json'),
+      ]);
+      if (cancelled) return;
+
+      const investDates = (investManifest?.dates || []).filter((date) => date <= bounds.end);
+      const investEntries = await Promise.all(investDates.map(async (date) => {
+        const [year, month, day] = date.split('-');
+        const [alipay, caitong] = await Promise.all([
+          fetchJson<InvestAssetPayload>(`/data/invest/${year}/${month}/${day}/alipay.json`),
+          fetchJson<InvestAssetPayload>(`/data/invest/${year}/${month}/${day}/caitong.json`),
+        ]);
+        return {date, alipay: investTotalAssets(alipay), caitong: investTotalAssets(caitong)};
+      }));
+      if (cancelled) return;
+      const accountPayloads = [
+        ...securitiesPayloads,
+        investHistoryPayload(investEntries.map(({date, alipay}) => ({date, value: alipay}))),
+        investHistoryPayload(investEntries.map(({date, caitong}) => ({date, value: caitong}))),
+      ];
+      const driveDates = (driveManifest?.dates || []).filter((date) => periodDate(date, bounds) || periodDate(date, previousBounds));
+      const driveEntries = await mapWithConcurrency(driveDates, 4, async (date) => {
+        const log = await fetchJson<DriveLog>(`/data/drive/${dateToPath(date, 'json')}`);
+        return log ? [date, summarizeDriveLog(log)] as const : null;
+      });
+      if (cancelled) return;
+      const currentDrive = driveEntries.filter((item): item is readonly [string, DriveDaySummary] => Boolean(item) && periodDate(item![0], bounds));
+
+      const stepMap = new Map((health?.steps || []).filter(([date]) => periodDate(date, bounds)));
+      const previousStepMap = new Map((health?.steps || []).filter(([date]) => periodDate(date, previousBounds)));
+      const exerciseMap = new Map((health?.exercise || []).filter(([date]) => periodDate(date, bounds)));
+      const stepValues = [...stepMap.values()];
+      const exerciseMinutes = [...exerciseMap.values()].reduce((total, value) => total + value, 0);
+      const tokenByDate = new Map<string, number>();
+      const previousTokenByDate = new Map<string, number>();
+      llmPayloads.forEach((payload) => Object.entries(payload?.daily_token_usage || {}).forEach(([date, value]) => {
+        if (periodDate(date, bounds)) tokenByDate.set(date, (tokenByDate.get(date) || 0) + Number(value || 0));
+        if (periodDate(date, previousBounds)) previousTokenByDate.set(date, (previousTokenByDate.get(date) || 0) + Number(value || 0));
+      }));
+      const accountPeriod = summarizeAccountPeriod(accountPayloads, bounds);
+      const previousAccountPeriod = summarizeAccountPeriod(accountPayloads, previousBounds);
+      const readingByDate = new Map<string, number>();
+      const previousReadingByDate = new Map<string, number>();
+      readingPayloads.forEach((payload) => Object.entries(payload?.daily || {}).forEach(([date, value]) => {
+        if (periodDate(date, bounds)) readingByDate.set(date, (readingByDate.get(date) || 0) + Number(value.seconds || 0));
+        if (periodDate(date, previousBounds)) previousReadingByDate.set(date, (previousReadingByDate.get(date) || 0) + Number(value.seconds || 0));
+      }));
+      const readingSeconds = [...readingByDate.values()].reduce((total, value) => total + value, 0);
+      const previousReadingSeconds = [...previousReadingByDate.values()].reduce((total, value) => total + value, 0);
+      const averageSteps = stepValues.length ? stepValues.reduce((total, value) => total + value, 0) / stepValues.length : 0;
+      const previousStepValues = [...previousStepMap.values()];
+      const previousAverageSteps = previousStepValues.length ? previousStepValues.reduce((total, value) => total + value, 0) / previousStepValues.length : 0;
+      const totalTokens = [...tokenByDate.values()].reduce((total, value) => total + value, 0);
+      const previousTotalTokens = [...previousTokenByDate.values()].reduce((total, value) => total + value, 0);
+      const healthChange = periodComparison(averageSteps, previousAverageSteps);
+      const careerChange = periodComparison(totalTokens, previousTotalTokens);
+      const financeChange = periodComparison(accountPeriod.endAssets, previousAccountPeriod.endAssets, '较上周期末');
+      const lifeChange = periodComparison(readingSeconds, previousReadingSeconds);
+      const signals: PeriodObjectiveExternalSummary['signals'] = [
+        ...(healthChange.ratio !== null && healthChange.ratio <= -0.2 ? [{tone: 'warning' as const, label: `活动量明显下降：${healthChange.text}`} ] : []),
+        ...(healthChange.ratio !== null && healthChange.ratio >= 0.2 ? [{tone: 'positive' as const, label: `活动量明显提高：${healthChange.text}`} ] : []),
+        ...(careerChange.ratio !== null && Math.abs(careerChange.ratio) >= 0.5 ? [{tone: 'data' as const, label: `AI 使用波动较大：${careerChange.text}`} ] : []),
+        ...(financeChange.ratio !== null && Math.abs(financeChange.ratio) >= 0.03 ? [{tone: financeChange.ratio < 0 ? 'warning' as const : 'positive' as const, label: `总资产变化：${financeChange.text}`} ] : []),
+        ...(lifeChange.ratio !== null && lifeChange.ratio <= -0.3 ? [{tone: 'warning' as const, label: `阅读投入下降：${lifeChange.text}`} ] : []),
+      ].slice(0, 3);
+
+      setSummary({
+        health: {
+          primary: stepValues.length ? `日均 ${formatNumber(stepValues.reduce((total, value) => total + value, 0) / stepValues.length, 0)} 步` : '暂无步数',
+          secondary: exerciseMap.size ? `运动 ${formatNumber(exerciseMinutes, 0)} 分钟` : '暂无运动记录',
+          coverage: `${healthChange.text} · ${stepMap.size}/${periodDays} 天有步数`,
+        },
+        career: {
+          primary: tokenByDate.size ? `${formatCompactNumber(totalTokens, 1)} token` : '暂无 AI 用量',
+          secondary: `${tokenByDate.size} 天使用 AI`,
+          coverage: `${careerChange.text} · Git 覆盖 ${analysisCount}/${periodDays} 天`,
+        },
+        finance: {
+          primary: accountPeriod.accounts ? `${formatCompactMoney(accountPeriod.endAssets)} 证券资产` : '暂无证券资产',
+          secondary: accountPeriod.accounts
+            ? `周期 ${accountPeriod.endAssets - accountPeriod.startAssets >= 0 ? '+' : ''}${formatCompactMoney(accountPeriod.endAssets - accountPeriod.startAssets)}`
+            : '暂无周期变化',
+          coverage: accountPeriod.accounts ? `${financeChange.text} · ${accountPeriod.accounts} 个账户 · 截至 ${accountPeriod.latestDate.slice(5)}` : '账户数据未覆盖该周期',
+        },
+        life: {
+          primary: readingByDate.size ? `${formatHoursFromSeconds(readingSeconds)} 阅读` : '暂无阅读记录',
+          secondary: currentDrive.length
+            ? `行车 ${formatNumber(currentDrive.reduce((sum, [, value]) => sum + value.minutes, 0), 0)} 分钟 · ${currentDrive.reduce((sum, [, value]) => sum + value.trips, 0)} 次`
+            : `${readingByDate.size} 天阅读`,
+          coverage: `${lifeChange.text} · 出行覆盖 ${currentDrive.length}/${periodDays} 天 · ${dailyCount} 天日记`,
+        },
+        signals,
+      });
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [analysisCount, bounds.end, bounds.naturalEnd, bounds.start, dailyCount, periodDays, previousBounds]);
+
+  const gitCounts = useMemo(() => analyses.reduce((total, item) => {
+    const counts = parseGitCounts(item.analysis);
+    return {manual: total.manual + counts.manual, total: total.total + counts.total};
+  }, {manual: 0, total: 0}), [analyses]);
+  const rows = summary ? [
+    {label: '健康', ...summary.health},
+    {label: '事业', ...summary.career, secondary: gitCounts.total ? `人工 ${gitCounts.manual} / 总 ${gitCounts.total} 次提交` : summary.career.secondary},
+    {label: '财务', ...summary.finance},
+    {label: '生活', ...summary.life},
+  ] : [];
+
+  return (
+    <section className={styles.periodObjectiveSummary} aria-label="周期客观数据摘要">
+      <header>
+        <h3>客观数据摘要</h3>
+        <span>{formatChineseDate(bounds.start)} 至 {formatChineseDate(bounds.end)}</span>
+      </header>
+      {loading ? <div className={styles.periodObjectiveSummaryLoading} role="status">正在汇总客观数据...</div> : <>
+        <div className={styles.periodObjectiveSummaryRows}>
+          {rows.map((row) => (
+            <article key={row.label}>
+              <span>{row.label}</span>
+              <strong>{row.primary}</strong>
+              <b>{row.secondary}</b>
+              <small>{row.coverage}</small>
+            </article>
+          ))}
+        </div>
+        {summary?.signals.length ? (
+          <div className={styles.periodObjectiveSignals} aria-label="本周期最值得关注">
+            <strong>本周期最值得关注</strong>
+            {summary.signals.map((signal) => <p key={signal.label} data-tone={signal.tone}>{signal.label}</p>)}
+          </div>
+        ) : null}
+      </>}
+    </section>
+  );
+}
+
+function PeriodReviewPanel({
+  period,
+  bounds,
+  dailyDates,
+  analysisDates,
+  onDateSelect,
+}: {
+  period: Exclude<DatedReviewPeriod, {kind: 'day'}>;
+  bounds: PeriodBounds;
+  dailyDates: string[];
+  analysisDates: string[];
+  onDateSelect: (date: string) => void;
+}): React.ReactNode {
+  const [analyses, setAnalyses] = useState<Array<{date: string; analysis: DailyAnalysis}>>([]);
+  const [loading, setLoading] = useState(true);
+  const periodAnalysisDates = useMemo(
+    () => analysisDates.filter((date) => date >= bounds.start && date <= bounds.end),
+    [analysisDates, bounds.end, bounds.start],
+  );
+  const periodDailyDates = useMemo(
+    () => dailyDates.filter((date) => date >= bounds.start && date <= bounds.end),
+    [bounds.end, bounds.start, dailyDates],
+  );
+  const reviewKey = `${period.kind}:${period.key}`;
+  const authoredReview = AUTHORED_PERIOD_REVIEWS[reviewKey];
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void mapWithConcurrency(periodAnalysisDates, 4, async (date) => {
+      const analysis = await fetchDailyAnalysis(date);
+      return analysis ? {date, analysis} : null;
+    }).then((items) => {
+      if (!cancelled) setAnalyses(items.filter((item): item is {date: string; analysis: DailyAnalysis} => Boolean(item)));
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [periodAnalysisDates]);
+
+  const signals = useMemo(() => {
+    const seen = new Set<string>();
+    return [...analyses]
+      .sort((left, right) => right.date.localeCompare(left.date))
+      .flatMap(({date, analysis}) => (analysis.top_signals || []).map((signal) => ({date, signal})))
+      .filter(({signal}) => {
+        const summary = signal.summary?.trim();
+        if (!summary || seen.has(summary)) return false;
+        seen.add(summary);
+        return true;
+      })
+      .slice(0, 6);
+  }, [analyses]);
+  const followUps = useMemo(() => {
+    const seen = new Set<string>();
+    return [...analyses]
+      .sort((left, right) => right.date.localeCompare(left.date))
+      .flatMap(({date, analysis}) => (analysis.follow_ups || []).map((text) => ({date, text})))
+      .filter(({text}) => {
+        const normalized = text.replace(/^\*\*(?:明日动作|观察项)\*\*[：:]\s*/, '').trim();
+        if (!normalized || seen.has(normalized)) return false;
+        seen.add(normalized);
+        return true;
+      })
+      .slice(0, 4);
+  }, [analyses]);
+  const recordDates = useMemo(
+    () => [...new Set([...periodDailyDates, ...periodAnalysisDates])].sort().reverse().slice(0, 12),
+    [periodAnalysisDates, periodDailyDates],
+  );
+  const periodName = period.kind === 'week' ? '周' : period.kind === 'month' ? '月度' : '年度';
+
+  return (
+    <section className={`${styles.dailyDetailPanel} ${styles.periodReviewPanel}`}>
+      <header className={styles.periodReviewHead}>
+        <div>
+          <span>{periodName}复盘</span>
+          <h2>{authoredReview?.title || bounds.label}</h2>
+        </div>
+        {authoredReview ? <a href={authoredReview.href}>单独阅读</a> : null}
+        <p>
+          {formatChineseDate(bounds.start)} 至 {formatChineseDate(bounds.naturalEnd)}
+          {bounds.end < bounds.naturalEnd ? ` · 数据截至 ${formatChineseDate(bounds.end)}` : ''}
+          {' · '}{periodDailyDates.length} 天日记 · {periodAnalysisDates.length} 天 AI 分析
+        </p>
+      </header>
+
+      <PeriodObjectiveSummary
+        bounds={bounds}
+        analyses={analyses}
+        dailyCount={periodDailyDates.length}
+        analysisCount={periodAnalysisDates.length}
+      />
+
+      {authoredReview ? <AuthoredReviewContent review={authoredReview} /> : (
+        <div className={styles.periodReviewBody}>
+          <div className={styles.periodReviewNotice}>
+            <strong>尚无独立{periodName}总结</strong>
+            <span>以下内容来自该周期内已有的每日记录与结构化分析。</span>
+          </div>
+
+          <div className={styles.periodReviewStats}>
+            <div><strong>{diffDays(bounds.start, bounds.naturalEnd) + 1}</strong><span>周期天数</span></div>
+            <div><strong>{periodDailyDates.length}</strong><span>日记天数</span></div>
+            <div><strong>{periodAnalysisDates.length}</strong><span>AI 分析天数</span></div>
+          </div>
+
+          {loading ? <div className={styles.periodReviewLoading} role="status">正在汇总周期记录...</div> : null}
+          {!loading && signals.length ? (
+            <section className={styles.periodReviewSection}>
+              <h3>关键判断</h3>
+              <div className={styles.periodSignalList}>
+                {signals.map(({date, signal}) => (
+                  <button key={`${date}-${signal.summary}`} type="button" onClick={() => onDateSelect(date)}>
+                    <span>{date.slice(5)} · {signal.area || '综合'}</span>
+                    <strong>{signal.summary}</strong>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {!loading && followUps.length ? (
+            <section className={styles.periodReviewSection}>
+              <h3>持续关注</h3>
+              <ul>
+                {followUps.map(({date, text}) => (
+                  <li key={`${date}-${text}`}><button type="button" onClick={() => onDateSelect(date)}>{renderFollowUp(text)}</button></li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <section className={styles.periodReviewSection}>
+            <h3>每日记录</h3>
+            {recordDates.length ? (
+              <div className={styles.periodRecordList}>
+                {recordDates.map((date) => (
+                  <button key={date} type="button" onClick={() => onDateSelect(date)}>
+                    <strong>{formatChineseDate(date)}</strong>
+                    <span>{periodDailyDates.includes(date) ? '日记' : ''}{periodDailyDates.includes(date) && periodAnalysisDates.includes(date) ? ' · ' : ''}{periodAnalysisDates.includes(date) ? 'AI 分析' : ''}</span>
+                  </button>
+                ))}
+              </div>
+            ) : <p className={styles.muted}>该周期暂无日记或 AI 分析记录。</p>}
+          </section>
+        </div>
+      )}
     </section>
   );
 }
@@ -2756,6 +4104,8 @@ function DailyDetailPanel({
   date,
   year,
   dailyDates,
+  analysisDates,
+  latestAnalysisDate,
   weather,
   diary,
   analysis,
@@ -2766,6 +4116,8 @@ function DailyDetailPanel({
   date: string;
   year: number;
   dailyDates: Set<string>;
+  analysisDates: Set<string>;
+  latestAnalysisDate?: string;
   weather: unknown;
   diary: string;
   analysis: DailyAnalysis | null;
@@ -2782,17 +4134,35 @@ function DailyDetailPanel({
 
   return (
     <section className={styles.dailyDetailPanel}>
-      <DailyYearHeatmap year={year} selectedDate={date} dailyDates={dailyDates} onDateSelect={onDateSelect} />
+      <DailyYearHeatmap
+        year={year}
+        selectedDate={date}
+        dailyDates={dailyDates}
+        analysisDates={analysisDates}
+        onDateSelect={onDateSelect}
+      />
       <DailyBasicInfo date={date} weather={weather} />
       <DailyDetailTabs active={activeTab} onChange={setActiveTab} />
-      <div className={styles.dailyDetailBody}>
+      <div
+        id="daily-detail-panel"
+        className={styles.dailyDetailBody}
+        role="tabpanel"
+        aria-labelledby={`daily-detail-tab-${activeTab}`}
+      >
         {loading ? (
-          <section className={styles.dailyLoading}>正在加载当日数据...</section>
+          <section className={styles.dailyLoading} role="status" aria-live="polite">正在加载当日数据...</section>
         ) : (
           <>
             {activeTab === 'diary' ? <DailyDiary diary={diary} /> : null}
             {activeTab === 'timeline' ? <TimelinePanel model={timelineModel} /> : null}
-            {activeTab === 'analysis' ? <DailyAnalysisReport analysis={analysis} /> : null}
+            {activeTab === 'analysis' ? (
+              <DailyAnalysisReport
+                analysis={analysis}
+                selectedDate={date}
+                latestAnalysisDate={latestAnalysisDate}
+                onDateSelect={onDateSelect}
+              />
+            ) : null}
           </>
         )}
       </div>
@@ -2809,9 +4179,16 @@ function DailyContext({
   loading,
   onDateSelect,
   timeScope,
-  setTimeScope,
+  selectedHealthChartIds,
+  onHealthChartToggle,
   year,
   dailyDates,
+  analysisDates,
+  allDailyDates,
+  allAnalysisDates,
+  latestAnalysisDate,
+  period,
+  periodBounds,
 }: {
   date: string;
   weather: unknown;
@@ -2821,53 +4198,127 @@ function DailyContext({
   loading: boolean;
   onDateSelect: (date: string) => void;
   timeScope: ObjectiveTimeScope;
-  setTimeScope: (scope: ObjectiveTimeScope) => void;
+  selectedHealthChartIds: string[];
+  onHealthChartToggle: (item: ChartNavItem | ChartNavItem[]) => void;
   year: number;
   dailyDates: Set<string>;
+  analysisDates: Set<string>;
+  allDailyDates: string[];
+  allAnalysisDates: string[];
+  latestAnalysisDate?: string;
+  period: DatedReviewPeriod;
+  periodBounds: PeriodBounds;
 }): React.ReactNode {
   return (
     <section className={styles.dailyContext}>
-      <div className={styles.dailyContextLeft}>
-        <ObjectiveDataPanel selectedDate={date} onDateSelect={onDateSelect} timeScope={timeScope} setTimeScope={setTimeScope} />
-      </div>
       <div className={styles.dailyContextRight}>
-        <DailyDetailPanel
-          date={date}
-          year={year}
-          dailyDates={dailyDates}
-          weather={weather}
-          diary={diary}
-          analysis={analysis}
-          timelineModel={timelineModel}
-          loading={loading}
+        {period.kind === 'day' ? (
+          <div className={styles.standaloneObjectiveSummary}>
+            <PeriodObjectiveSummary
+              bounds={periodBounds}
+              analyses={analysis ? [{date, analysis}] : []}
+              dailyCount={dailyDates.has(date) ? 1 : 0}
+              analysisCount={analysisDates.has(date) ? 1 : 0}
+            />
+          </div>
+        ) : null}
+        {period.kind === 'day' ? (
+          <DailyDetailPanel
+            date={date}
+            year={year}
+            dailyDates={dailyDates}
+            analysisDates={analysisDates}
+            latestAnalysisDate={latestAnalysisDate}
+            weather={weather}
+            diary={diary}
+            analysis={analysis}
+            timelineModel={timelineModel}
+            loading={loading}
+            onDateSelect={onDateSelect}
+          />
+        ) : (
+          <PeriodReviewPanel
+            period={period}
+            bounds={periodBounds}
+            dailyDates={allDailyDates}
+            analysisDates={allAnalysisDates}
+            onDateSelect={onDateSelect}
+          />
+        )}
+      </div>
+      <div className={styles.dailyContextLeft}>
+        <ObjectiveDataPanel
+          selectedDate={date}
           onDateSelect={onDateSelect}
+          timeScope={timeScope}
+          selectedHealthChartIds={selectedHealthChartIds}
+          onHealthChartToggle={onHealthChartToggle}
         />
       </div>
     </section>
   );
 }
 
+function DashboardSkeleton(): React.ReactNode {
+  return (
+    <section className={styles.dashboardSkeleton} aria-label="正在加载三省数据" aria-busy="true">
+      <div>
+        <span />
+        <i />
+        <i />
+        <i />
+      </div>
+      <div>
+        <span />
+        <b />
+        <i />
+        <i />
+      </div>
+    </section>
+  );
+}
+
 export default function DailyReflectionDashboard({initialYear, children}: DailyReflectionDashboardProps): React.JSX.Element {
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  const [allDates, setAllDates] = useState<string[]>([]);
   const [dailyDates, setDailyDates] = useState<string[]>([]);
   const [analysisDates, setAnalysisDates] = useState<string[]>([]);
   const [selectedYear, setSelectedYear] = useState(initialYear);
-  const [viewMode, setViewMode] = useState<'year' | 'life'>('year');
-  const [calendarExpanded, setCalendarExpanded] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('');
+  const [reviewPeriod, setReviewPeriod] = useState<ReviewPeriod>({kind: 'day', key: ''});
+  const [selectedHealthChartIds, setSelectedHealthChartIds] = useState<string[]>(DEFAULT_HEALTH_CHART_ID ? [DEFAULT_HEALTH_CHART_ID] : []);
   const [diary, setDiary] = useState('');
   const [analysis, setAnalysis] = useState<DailyAnalysis | null>(null);
   const [weather, setWeather] = useState<unknown>(null);
   const [drive, setDrive] = useState<DriveLog | null>(null);
-  const [health, setHealth] = useState<HealthData | null>(null);
   const [dailyHealth, setDailyHealth] = useState<DailyHealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [dailyLoading, setDailyLoading] = useState(false);
-  const [timeScope, setTimeScope] = useState<ObjectiveTimeScope>({mode: 'recent', range: '7d'});
+  const [initialDailyLoaded, setInitialDailyLoaded] = useState(false);
+  const [loadedDailyDate, setLoadedDailyDate] = useState('');
+  const urlReadyRef = useRef(false);
+  const restoringHistoryRef = useRef(false);
+  const lastDatedAnchorRef = useRef('');
+  const latestAnalysisDate = analysisDates.at(-1);
+  const latestDailyDate = dailyDates.at(-1);
+  const fallbackAnchorDate = latestAnalysisDate || latestDailyDate || formatDateKey(new Date());
+  const periodBounds = useMemo(
+    () => reviewPeriod.kind === 'life' ? null : getReviewPeriodBounds(reviewPeriod),
+    [reviewPeriod],
+  );
+  const selectedDate = reviewPeriod.kind !== 'life' && reviewPeriod.key && periodBounds
+    ? periodBounds.end
+    : '';
+  const activeAnchorDate = selectedDate || lastDatedAnchorRef.current || fallbackAnchorDate;
+  const timeScope = useMemo<ObjectiveTimeScope>(() => {
+    if (reviewPeriod.kind === 'life') return {mode: 'all', label: '全部历史'};
+    if (reviewPeriod.kind === 'year') return {mode: 'all', label: '多年'};
+    if (reviewPeriod.kind === 'day') return {mode: 'recent', range: '7d'};
+    if (reviewPeriod.kind === 'week') return {mode: 'recent', range: '30d'};
+    return {mode: 'recent', range: '1y'};
+  }, [reviewPeriod]);
 
   useEffect(() => {
     let mounted = true;
+    const requestedPeriod = pickInitialReviewPeriod('');
+    if (requestedPeriod.kind === 'life' || requestedPeriod.key) setReviewPeriod(requestedPeriod);
     Promise.all([
       fetchJson<Manifest>('/data/daily/index.json'),
       fetchJson<Manifest>('/data/daily-analysis/index.json'),
@@ -2880,9 +4331,13 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
         const initialDate = pickInitialDate(nextAnalysisDates.length ? nextAnalysisDates : merged);
         setDailyDates(nextDailyDates);
         setAnalysisDates(nextAnalysisDates);
-        setAllDates(merged);
-        setSelectedDate(initialDate);
-        setSelectedYear(initialYear || Number(initialDate.slice(0, 4)) || new Date().getFullYear());
+        const initialPeriod = pickInitialReviewPeriod(initialDate);
+        const initialAnchor = initialPeriod.kind === 'life'
+          ? lastDatedAnchorRef.current || initialDate || formatDateKey(new Date())
+          : getReviewPeriodBounds(initialPeriod).end;
+        lastDatedAnchorRef.current = initialAnchor;
+        setReviewPeriod(initialPeriod);
+        setSelectedYear(initialYear || Number(initialAnchor.slice(0, 4)) || new Date().getFullYear());
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -2893,18 +4348,28 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
   }, [initialYear]);
 
   useEffect(() => {
-    if (!selectedDate) return;
+    if (reviewPeriod.kind !== 'life' && reviewPeriod.key && periodBounds) {
+      lastDatedAnchorRef.current = periodBounds.end;
+    }
+  }, [periodBounds, reviewPeriod]);
+
+  useEffect(() => {
+    if (!selectedDate || reviewPeriod.kind !== 'day' || loadedDailyDate === selectedDate) return;
     let cancelled = false;
     const [selectedYearPart, selectedMonth, selectedDay] = selectedDate.split('-');
     setSelectedYear(Number(selectedYearPart));
 
     setDailyLoading(true);
+    setDiary('');
+    setAnalysis(null);
+    setWeather(null);
+    setDrive(null);
+    setDailyHealth(null);
     Promise.all([
       fetchText(`/data/daily/${dateToPath(selectedDate, 'md')}`),
       fetchDailyAnalysis(selectedDate),
       fetchWeather(selectedDate),
       fetchJson<DriveLog>(`/data/drive/${selectedYearPart}/${selectedMonth}/${selectedDay}.json`),
-      fetchJson<HealthData>(`/data/health/${selectedYearPart}/${selectedMonth}.json`),
       fetchJson<DailyHealthData>(`/data/health/${selectedYearPart}/${selectedMonth}/${selectedDay}.json`),
     ])
       .then(([
@@ -2912,7 +4377,6 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
         analysisJson,
         weatherJson,
         driveJson,
-        healthJson,
         dailyHealthJson,
       ]) => {
         if (cancelled) return;
@@ -2920,22 +4384,54 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
         setAnalysis(analysisJson);
         setWeather(weatherJson);
         setDrive(driveJson);
-        setHealth(healthJson);
         setDailyHealth(dailyHealthJson);
       })
       .finally(() => {
-        if (!cancelled) setDailyLoading(false);
+        if (!cancelled) {
+          setDailyLoading(false);
+          setInitialDailyLoaded(true);
+          setLoadedDailyDate(selectedDate);
+        }
       });
     return () => {
       cancelled = true;
     };
+  }, [loadedDailyDate, reviewPeriod.kind, selectedDate]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || (reviewPeriod.kind !== 'life' && !reviewPeriod.key)) return;
+    const url = new URL(window.location.href);
+    ['view', 'period', 'date', 'week', 'month', 'year'].forEach((key) => url.searchParams.delete(key));
+    url.searchParams.set('period', reviewPeriod.kind);
+    if (reviewPeriod.kind !== 'life') {
+      const key = reviewPeriod.kind === 'day' ? 'date' : reviewPeriod.kind;
+      url.searchParams.set(key, reviewPeriod.key);
+    }
+    if (restoringHistoryRef.current) {
+      restoringHistoryRef.current = false;
+      urlReadyRef.current = true;
+      return;
+    }
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    if (urlReadyRef.current) window.history.pushState(window.history.state, '', nextUrl);
+    else window.history.replaceState(window.history.state, '', nextUrl);
+    urlReadyRef.current = true;
+  }, [reviewPeriod]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handlePopState = () => {
+      restoringHistoryRef.current = true;
+      setReviewPeriod(pickInitialReviewPeriod(lastDatedAnchorRef.current || fallbackAnchorDate));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [fallbackAnchorDate]);
+
+  useEffect(() => {
+    if (selectedDate) setSelectedYear(Number(selectedDate.slice(0, 4)));
   }, [selectedDate]);
 
-  const years = [2024, 2025, 2026];
-  const yearDates = useMemo(
-    () => allDates.filter((date) => String(selectedYear) === date.slice(0, 4)),
-    [allDates, selectedYear],
-  );
   const dailyDateSet = useMemo(
     () => new Set(dailyDates.filter((date) => String(selectedYear) === date.slice(0, 4))),
     [dailyDates, selectedYear],
@@ -2944,20 +4440,53 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
     () => new Set(analysisDates.filter((date) => String(selectedYear) === date.slice(0, 4))),
     [analysisDates, selectedYear],
   );
-  const sleep = getMetricEntry(health, 'sleep_analysis', selectedDate);
   const timelineModel = useMemo(
-    () => buildTimelineModel({sleep, dailyHealth, drive, weather}),
-    [dailyHealth, drive, sleep, weather],
+    () => buildTimelineModel({dailyHealth, drive, weather}),
+    [dailyHealth, drive, weather],
   );
-  const handleSelectYear = (year: number, latest?: string) => {
-    setViewMode('year');
-    setSelectedYear(year);
-    setCalendarExpanded(false);
-    if (latest) setSelectedDate(latest);
+  const handleDateSelect = (date: string) => {
+    if (!isValidDateKey(date)) return;
+    if (date !== loadedDailyDate) {
+      setDailyLoading(true);
+      setDiary('');
+      setAnalysis(null);
+      setWeather(null);
+      setDrive(null);
+      setDailyHealth(null);
+    }
+    lastDatedAnchorRef.current = date;
+    setReviewPeriod({kind: 'day', key: date});
   };
-  const handleSelectLife = () => {
-    setViewMode('life');
-    setCalendarExpanded(true);
+  const handlePeriodChange = (period: DatedReviewPeriod) => {
+    if (isFutureReviewPeriod(period)) return;
+    lastDatedAnchorRef.current = getReviewPeriodBounds(period).end;
+    setReviewPeriod(period);
+  };
+  const handlePeriodKindChange = (kind: ReviewPeriodKind) => {
+    if (kind === 'life') {
+      setReviewPeriod({kind: 'life'});
+      return;
+    }
+    if (kind === 'day') {
+      handleDateSelect(activeAnchorDate);
+      return;
+    }
+    handlePeriodChange(periodFromAnchor(kind, activeAnchorDate));
+  };
+  const handleTimeScopeChange = (scope: ObjectiveTimeScope) => {
+    if (scope.mode === 'all') {
+      setReviewPeriod({kind: 'life'});
+      return;
+    }
+    if (scope.mode === 'year') handlePeriodChange({kind: 'year', key: String(scope.year)});
+    if (scope.mode === 'period') {
+      const days = diffDays(scope.start, scope.end) + 1;
+      const kind: DatedReviewPeriodKind = days === 1 ? 'day' : days <= 7 ? 'week' : 'month';
+      handlePeriodChange(periodFromAnchor(kind, scope.end));
+    }
+  };
+  const handleHealthChartToggle = (item: ChartNavItem | ChartNavItem[]) => {
+    setSelectedHealthChartIds((Array.isArray(item) ? item : [item]).map((chart) => chart.id));
   };
 
   return (
@@ -2966,66 +4495,86 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
         <div className={styles.dashboardHeaderText}>
           <h1>三省吾身</h1>
         </div>
-        <ObjectiveTimeControls scope={timeScope} onChange={setTimeScope} />
-      </header>
-
-      {(viewMode === 'life' || calendarExpanded) ? (
-        <section className={styles.calendarShell}>
-          <div className={styles.calendarTopline}>
-            <div>
-              <span>{viewMode === 'life' ? '人生日历' : '年度日历'}</span>
-              {viewMode === 'life' ? <h2>一生</h2> : null}
-            </div>
-            <div className={styles.yearSwitch}>
-              {years.map((year) => {
-                const latest = allDates.filter((date) => date.startsWith(`${year}-`)).at(-1);
-                return (
-                  <button
-                    key={year}
-                    type="button"
-                    className={viewMode === 'year' && year === selectedYear ? styles.yearSelected : ''}
-                    onClick={() => handleSelectYear(year, latest)}
-                  >
-                    {year}
-                  </button>
-                );
-              })}
-              <button type="button" className={viewMode === 'life' ? styles.yearSelected : ''} onClick={handleSelectLife}>
-                人生
-              </button>
+        <div className={styles.dashboardHeaderActions}>
+          <div className={styles.headerTimeRow}>
+            <span className={styles.headerTimeLabel}>查看范围</span>
+            <ReviewPeriodControls period={reviewPeriod} onChange={handlePeriodKindChange} />
+          </div>
+          <div className={styles.headerTimeRow}>
+            <span className={styles.headerTimeLabel}>定位时间<small className={styles.headerTimeLabelScope}>趋势 {scopeLabel(timeScope)}</small></span>
+            <div className={styles.headerTimeLocation}>
+              {reviewPeriod.kind !== 'life' ? (
+                <PeriodNavigator period={reviewPeriod} latestDate={latestAnalysisDate} onChange={handlePeriodChange} />
+              ) : <div className={styles.headerTimeValue}>全部历史</div>}
+              <span className={styles.headerTrendScope}>趋势 {scopeLabel(timeScope)}</span>
             </div>
           </div>
-          {viewMode === 'life' ? (
-            <LifeCalendar />
-          ) : selectedYear ? (
-            <ReflectionCalendar
-              year={selectedYear}
-              dailyDates={dailyDateSet}
-              analysisDates={analysisDateSet}
-              selectedDate={selectedDate}
-              onToggleCompact={() => setCalendarExpanded((value) => !value)}
-              onSelect={(date) => {
-                setSelectedDate(date);
-                setCalendarExpanded(false);
-              }}
-            />
-          ) : (
-            <p className={styles.muted}>正在加载日历...</p>
-          )}
-        </section>
-      ) : null}
-
-      {viewMode === 'life' ? (
-        <div ref={contentRef} className={styles.lifeContent}>
-          {children}
         </div>
-      ) : (
-        <>
-          {loading && !selectedDate ? (
-            <section className={styles.dailyLoading}>
-              正在加载数据...
-            </section>
-          ) : (
+      </header>
+
+      <div
+        id="review-period-panel"
+        className={styles.reviewPeriodPanel}
+        role="tabpanel"
+        aria-labelledby={`review-period-tab-${reviewPeriod.kind}`}
+      >
+        <HealthProvider
+          onDateSelect={handleDateSelect}
+          selectedDate={reviewPeriod.kind === 'life' ? undefined : selectedDate}
+          scope={timeScope as HealthTimeScope}
+          setScope={(nextScope) => handleTimeScopeChange(nextScope as ObjectiveTimeScope)}
+        >
+        {reviewPeriod.kind === 'life' ? (
+          <section className={styles.lifeContext}>
+            <aside className={`${styles.dailyContextLeft} ${styles.lifeDataColumn}`}>
+              <ObjectiveDataPanel
+                selectedDate={undefined}
+                onDateSelect={handleDateSelect}
+                timeScope={timeScope}
+                selectedHealthChartIds={selectedHealthChartIds}
+                onHealthChartToggle={handleHealthChartToggle}
+              />
+            </aside>
+            <div className={styles.lifeRightColumn}>
+              <div className={styles.lifeHealthSummary}>
+                <PeriodObjectiveSummary
+                  bounds={{
+                    start: HEALTH_HISTORY_START_DATE,
+                    naturalEnd: formatDateKey(new Date()),
+                    end: formatDateKey(new Date()),
+                    label: '全部历史',
+                  }}
+                  analyses={[]}
+                  dailyCount={dailyDates.length}
+                  analysisCount={analysisDates.length}
+                />
+              </div>
+              <section className={`${styles.lifeOverviewColumn} ${styles.calendarShell}`}>
+                <div className={styles.calendarTopline}>
+                  <div>
+                    <span>人生进度</span>
+                    <h2>时间位置</h2>
+                    <p className={styles.lifeRouteSummary}>1992 至今 · 以 100 岁为参照</p>
+                  </div>
+                </div>
+                <LifeCalendar />
+              </section>
+              <section className={styles.lifeRouteColumn}>
+                <div className={styles.calendarTopline}>
+                  <div>
+                    <span>目标与里程碑</span>
+                    <h2>人生路线</h2>
+                    <p className={styles.lifeRouteSummary}>2030 目标 · 2026-2029 当前阶段 · 2014-2025 年度里程碑</p>
+                  </div>
+                </div>
+                <div className={styles.lifeContent}>{children}</div>
+              </section>
+            </div>
+          </section>
+        ) : (
+          loading || (reviewPeriod.kind === 'day' && selectedDate ? !initialDailyLoaded : false) ? (
+            <DashboardSkeleton />
+          ) : selectedDate && periodBounds ? (
             <DailyContext
               date={selectedDate}
               weather={weather}
@@ -3033,17 +4582,25 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
               analysis={analysis}
               timelineModel={timelineModel}
               loading={dailyLoading}
-              onDateSelect={setSelectedDate}
+              onDateSelect={handleDateSelect}
               timeScope={timeScope}
-              setTimeScope={setTimeScope}
+              selectedHealthChartIds={selectedHealthChartIds}
+              onHealthChartToggle={handleHealthChartToggle}
               year={selectedYear || new Date().getFullYear()}
               dailyDates={dailyDateSet}
+              analysisDates={analysisDateSet}
+              allDailyDates={dailyDates}
+              allAnalysisDates={analysisDates}
+              latestAnalysisDate={latestAnalysisDate}
+              period={reviewPeriod}
+              periodBounds={periodBounds}
             />
-          )}
-
-          <div ref={contentRef} className={styles.contentAnchor} />
-        </>
-      )}
+          ) : (
+            <p className={styles.dailyLoading} role="status">暂无可用的复盘数据。</p>
+          )
+        )}
+        </HealthProvider>
+      </div>
     </div>
   );
 }

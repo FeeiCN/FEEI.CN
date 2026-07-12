@@ -1,26 +1,38 @@
 .wrap {
+  display: grid;
+  gap: 0.75rem;
   width: 100%;
   margin: 0.2rem 0 0.75rem;
 }
 
 
 .loading {
+  display: grid;
+  place-items: center;
   text-align: center;
-  padding: 3rem 0;
-  color: #94a3b8;
+  min-height: 240px;
+  color: var(--ifm-color-content-secondary);
+  font-size: 0.9rem;
+}
+
+.statsLoading {
+  display: grid;
+  place-items: center;
+  min-height: 15rem;
+  color: var(--ifm-color-content-secondary);
   font-size: 0.9rem;
 }
 
 .noData {
   text-align: center;
   padding: 3rem 0;
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
   font-size: 0.9rem;
 }
 
 .floatingStack {
   position: fixed;
-  bottom: 1.5rem;
+  bottom: max(1rem, env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -55,11 +67,12 @@
 
 .floatingLoading {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
   padding: 0 0.4rem;
 }
 
 .floatingBtn {
+  min-height: 2rem;
   padding: 0.28rem 0.9rem;
   border-radius: 999px;
   border: none;
@@ -77,9 +90,15 @@
 }
 
 .floatingBtnActive {
-  background: var(--ifm-color-primary);
+  background: #075ea8;
   color: #fff !important;
   font-weight: 600;
+}
+
+.floatingBtn:focus-visible,
+.scopeBtn:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
 }
 
 .scopeControls {
@@ -113,6 +132,7 @@
 
 .scopeBtn {
   flex: 0 0 auto;
+  min-height: 2rem;
   padding: 0.24rem 0.62rem;
   border: 0;
   border-radius: 999px;
@@ -131,7 +151,7 @@
 }
 
 .scopeBtnActive {
-  background: var(--ifm-color-primary);
+  background: #075ea8;
   color: #fff !important;
   font-weight: 650;
 }
@@ -139,7 +159,7 @@
 .scopeLoading {
   flex: 0 0 auto;
   padding: 0 0.35rem;
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
   font-size: 0.75rem;
 }
 
@@ -153,7 +173,7 @@
 .dashCard {
   background: var(--ifm-card-background-color, #f8fafc);
   border: 1px solid var(--ifm-color-emphasis-200, #e2e8f0);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 0.875rem;
   display: flex;
   flex-direction: column;
@@ -192,9 +212,9 @@
 
 .dashCardLabel {
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
 }
 
 .dashCardChange {
@@ -223,7 +243,7 @@
 }
 
 .dashCardChangePeriod {
-  opacity: 0.45;
+  opacity: 0.9;
   font-size: 0.66rem;
   margin-left: 3px;
 }
@@ -245,14 +265,14 @@
 
 .dashCardUnit {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
   min-width: 1.2em;
   line-height: 1;
 }
 
 .dashCardRange {
   font-size: 0.68rem;
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
   margin-top: 0.1rem;
 }
 
@@ -262,9 +282,9 @@
 
 .dateRange {
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
   margin-bottom: 0.75rem;
-  letter-spacing: 0.03em;
+  letter-spacing: 0;
 }
 
 .lastUpdated {
@@ -286,7 +306,7 @@
   scroll-margin-top: 12rem;
   background: var(--ifm-card-background-color, #f8fafc);
   border: 1px solid var(--ifm-color-emphasis-200, #e2e8f0);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 0.72rem 0.78rem 0.62rem;
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
@@ -311,8 +331,8 @@
 .sectionGroup {
   font-size: 0.7rem;
   font-weight: 700;
-  color: #94a3b8;
-  letter-spacing: 0.12em;
+  color: var(--ifm-color-content-secondary);
+  letter-spacing: 0;
   text-transform: uppercase;
   margin: 1.5rem 0 0.5rem;
   padding-bottom: 0.25rem;
@@ -324,12 +344,49 @@
   align-items: center;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #94a3b8;
-  letter-spacing: 0.08em;
+  color: #64748b;
+  letter-spacing: 0;
   text-transform: uppercase;
   margin-bottom: 0.22rem;
 }
 
+[data-theme='dark'] .sectionTitle {
+  color: #cbd5e1;
+}
+
+.chartPlaceholder {
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.08), transparent),
+    var(--ifm-color-emphasis-100, #f1f5f9);
+  background-size: 220% 100%, 100% 100%;
+  animation: healthChartLoading 1.2s ease-in-out infinite;
+}
+
+.chartEmpty {
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--ifm-color-emphasis-100, #f1f5f9);
+  color: var(--ifm-color-content-secondary);
+  font-size: 0.8rem;
+}
+
+@keyframes healthChartLoading {
+  from {
+    background-position: 180% 0, 0 0;
+  }
+
+  to {
+    background-position: -80% 0, 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chartPlaceholder {
+    animation: none;
+  }
+}
 
 .analysis {
   margin: 1.5rem 0;
@@ -341,11 +398,11 @@
 .analysisGate {
   text-align: center;
   padding: 2rem 1rem;
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
   font-size: 0.85rem;
   background: var(--ifm-card-background-color, #f8fafc);
   border: 1px dashed var(--ifm-color-emphasis-200, #e2e8f0);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .analysisGateTitle {
@@ -357,7 +414,7 @@
 .analysisSection {
   background: var(--ifm-card-background-color, #f8fafc);
   border: 1px solid var(--ifm-color-emphasis-200, #e2e8f0);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 1rem;
 }
 
@@ -372,14 +429,14 @@
 .analysisSectionLabel {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #94a3b8;
-  letter-spacing: 0.08em;
+  color: var(--ifm-color-content-secondary);
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .analysisSectionHint {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
 }
 
 .insightList {
@@ -418,15 +475,15 @@
   color: #fff;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   line-height: 1.4;
 }
 
-.insightTagCorrelation { background: #16a34a; }
-.insightTagLag { background: #0d9488; }
-.insightTagCluster { background: #f59e0b; }
-.insightTagTrend { background: #0891b2; }
-.insightTagCoverage { background: #94a3b8; }
+.insightTagCorrelation { background: #15803d; }
+.insightTagLag { background: #0f766e; }
+.insightTagCluster { background: #a16207; }
+.insightTagTrend { background: #0e7490; }
+.insightTagCoverage { background: #64748b; }
 
 .clusterGrid {
   display: grid;
@@ -452,7 +509,7 @@
 
 .clusterCount {
   font-size: 0.68rem;
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
 }
 
 .clusterProfile {
@@ -471,7 +528,7 @@
 }
 
 .clusterRowLabel {
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
 }
 
 .clusterRowValue {
@@ -505,7 +562,7 @@
 }
 
 .partialSep {
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
   font-weight: 400;
 }
 
@@ -519,20 +576,20 @@
 }
 
 .partialArrow {
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
 }
 
 .partialStable {
-  color: #16a34a;
+  color: #15803d;
 }
 
 .partialDropped {
-  color: #f59e0b;
+  color: #a16207;
 }
 
 .partialConfounders {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--ifm-color-content-secondary);
 }
 
 .anomalyList {
@@ -570,7 +627,7 @@
 
 .anomalyScore {
   font-size: 0.72rem;
-  color: #f59e0b;
+  color: #a16207;
   font-weight: 600;
 }
 
@@ -590,11 +647,11 @@
 }
 
 .anomalyChipUp {
-  background: #ef4444;
+  background: #b91c1c;
 }
 
 .anomalyChipDown {
-  background: #3b82f6;
+  background: #1d4ed8;
 }
 
 .workoutDetail {
@@ -616,7 +673,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--ifm-color-emphasis-700);
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
 }
 
 .workoutDetailClose {
@@ -658,7 +715,7 @@
   margin-left: 0.26rem;
   border-radius: 999px;
   background: rgba(245, 158, 11, 0.14);
-  color: #d97706;
+  color: #a16207;
   font-size: 0.62rem;
   font-weight: 900;
   line-height: 1;
@@ -667,7 +724,7 @@
 
 .deviationMarkWarning {
   background: rgba(239, 68, 68, 0.14);
-  color: #dc2626;
+  color: #b91c1c;
 }
 
 @media (max-width: 767px) {
@@ -677,6 +734,11 @@
 
   .dashGrid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .floatingBtn,
+  .scopeBtn {
+    min-height: 44px;
   }
 
   .grid {

@@ -46,6 +46,11 @@ for (const month of monthsToExport) {
   }
 }
 
+const historyFile = path.join(healthDir, 'history.json');
+if (fs.existsSync(path.join(repoRoot, historyFile)) && !isPathClean(historyFile)) {
+  changedFiles.push(historyFile);
+}
+
 if (changedFiles.length === 0) {
   console.log('No changes to commit.');
   process.exit(0);

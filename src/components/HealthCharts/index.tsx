@@ -1,12 +1,12 @@
-import React, {useContext, useEffect, useMemo, useState} from 'react';
+import React, {useContext, useEffect, useMemo, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
-import {transform, computeDashboard, getDateRange, filterByTimeRange, type HealthData, type DashCard} from './transform';
+import {transform, computeDashboard, getDateRange, type HealthData, type DashCard} from './transform';
 import {
-  YEARS, RANGE_DAYS, RANGE_LABELS, EMPTY, getAvailableMonthMap,
-  YearCtx, type RecentRange, type TimeScope, type YearCtxType,
+  RANGE_DAYS, RANGE_LABELS, EMPTY, getAvailableMonthMap,
+  YearCtx, type RecentRange, type TimeScope,
 } from './index-shared';
 import styles from './styles.module.css';
 
@@ -25,6 +25,81 @@ type DeviationSeries = {name: string; points: DeviationPoint[]};
 const HEALTH_CHART_COLORS = ['#16a34a', '#f97316', '#ef4444', '#0d9488', '#db2777', '#eab308', '#64748b'];
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const MIN_BASELINE_SAMPLES = 4;
+const HEALTH_FETCH_CONCURRENCY = 3;
+const ECHARTS_RENDERER_OPTIONS = {renderer: 'canvas' as const, useDirtyRect: false};
+const HEALTH_MONTH_CACHE_LIMIT = 12;
+const CURRENT_MONTH_CACHE_TTL_MS = 60_000;
+const healthMonthCache = new Map<string, {data: HealthData; cachedAt: number}>();
+const healthMonthRequestCache = new Map<string, Promise<HealthData | null>>();
+let healthHistoryCache: HealthData | null = null;
+let healthHistoryRequestCache: Promise<HealthData | null> | null = null;
+
+type HealthHistoryPayload = {
+  data?: HealthData;
+};
+
+export function loadHealthChartHistory(): Promise<HealthData | null> {
+  if (healthHistoryCache) return Promise.resolve(healthHistoryCache);
+  if (healthHistoryRequestCache) return healthHistoryRequestCache;
+
+  healthHistoryRequestCache = fetch('/data/health/history.json', {cache: 'no-store'})
+    .then(async (response) => {
+      if (!response.ok) return null;
+      const payload = await response.json() as HealthHistoryPayload;
+      if (!payload.data || !Array.isArray(payload.data.steps)) return null;
+      healthHistoryCache = payload.data;
+      return payload.data;
+    })
+    .catch(() => null)
+    .finally(() => {
+      healthHistoryRequestCache = null;
+    });
+  return healthHistoryRequestCache;
+}
+
+function readCachedHealthMonth(key: string, currentKey: string): HealthData | null {
+  const cached = healthMonthCache.get(key);
+  if (!cached || (key === currentKey && Date.now() - cached.cachedAt > CURRENT_MONTH_CACHE_TTL_MS)) {
+    if (cached) healthMonthCache.delete(key);
+    return null;
+  }
+  healthMonthCache.delete(key);
+  healthMonthCache.set(key, cached);
+  return cached.data;
+}
+
+function cacheHealthMonth(key: string, data: HealthData) {
+  healthMonthCache.delete(key);
+  healthMonthCache.set(key, {data, cachedAt: Date.now()});
+  while (healthMonthCache.size > HEALTH_MONTH_CACHE_LIMIT) {
+    const oldestKey = healthMonthCache.keys().next().value as string | undefined;
+    if (!oldestKey) break;
+    healthMonthCache.delete(oldestKey);
+  }
+}
+
+function fetchHealthMonth(key: string, currentKey: string): Promise<HealthData | null> {
+  const cached = readCachedHealthMonth(key, currentKey);
+  if (cached) return Promise.resolve(cached);
+
+  const inFlight = healthMonthRequestCache.get(key);
+  if (inFlight) return inFlight;
+
+  const [year, month] = key.split('-');
+  const request = fetch(`/data/health/${year}/${month}.json`, {
+    cache: key === currentKey ? 'no-store' : 'default',
+  })
+    .then(async (response) => {
+      if (!response.ok) return null;
+      const data = transform(await response.json());
+      cacheHealthMonth(key, data);
+      return data;
+    })
+    .catch(() => null)
+    .finally(() => healthMonthRequestCache.delete(key));
+  healthMonthRequestCache.set(key, request);
+  return request;
+}
 
 function cc(isDark: boolean): CC {
   return {
@@ -39,7 +114,7 @@ function xCat(c: CC, data: [string, number][], interval?: number) {
   const isLong = n > 400;
   const auto = interval ?? (n <= 30 ? 0 : isLong ? Math.max(1, Math.floor(n / 14)) : 13);
   const fmt = n <= 30
-    ? formatMonthDayWeekday
+    ? formatMonthDay
     : isLong ? (v: string) => v?.slice(0, 7) ?? '' : (v: string) => v?.slice(5) ?? '';
   return {
     type: 'category',
@@ -52,6 +127,11 @@ function xCat(c: CC, data: [string, number][], interval?: number) {
 
 function xAxisFromDates(c: CC, dates: string[], interval?: number) {
   return xCat(c, dates.map((date) => [date, 0] as [string, number]), interval);
+}
+
+function formatMonthDay(value: string | number) {
+  const raw = typeof value === 'number' ? new Date(value).toISOString().slice(0, 10) : value;
+  return raw && raw.length >= 10 ? raw.slice(5, 10) : raw?.toString() ?? '';
 }
 
 function formatMonthDayWeekday(value: string | number) {
@@ -124,6 +204,22 @@ function parseDate(date: string): Date {
   return new Date(year, month - 1, day);
 }
 
+function isValidDateKey(value: string | undefined): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = parseDate(value);
+  return Number.isFinite(parsed.getTime()) && dateKey(parsed) === value;
+}
+
+function selectedDateOrToday(selectedDate?: string): string {
+  return isValidDateKey(selectedDate) ? selectedDate : dateKey(new Date());
+}
+
+function cappedYearEnd(year: number, selectedDate?: string): string {
+  const endOfYear = `${year}-12-31`;
+  const cap = selectedDateOrToday(selectedDate);
+  return cap < endOfYear ? cap : endOfYear;
+}
+
 function buildDateRange(start: string, end: string): string[] {
   const result: string[] = [];
   const cursor = parseDate(start);
@@ -136,21 +232,37 @@ function buildDateRange(start: string, end: string): string[] {
 }
 
 function collectHealthDates(data: HealthData): string[] {
-  return Object.keys(data)
-    .filter((key) => key !== 'lastUpdated')
-    .flatMap((key) => (data[key as keyof HealthData] as unknown[])
-      .map((entry) => Array.isArray(entry) && typeof entry[0] === 'string' ? entry[0] : null)
-      .filter((date): date is string => Boolean(date)),
-    )
-    .sort();
+  const dates = new Set<string>();
+  for (const key of Object.keys(EMPTY) as Array<keyof HealthData>) {
+    if (key === 'lastUpdated') continue;
+    for (const entry of data[key] as unknown[]) {
+      if (Array.isArray(entry) && isValidDateKey(typeof entry[0] === 'string' ? entry[0] : undefined)) {
+        dates.add(entry[0]);
+      }
+    }
+  }
+  return [...dates].sort();
 }
 
-function getScopeAxisDates(scope: TimeScope, data: HealthData): string[] {
+function hasHealthData(data: HealthData): boolean {
+  return (Object.keys(EMPTY) as Array<keyof HealthData>).some(
+    (key) => key !== 'lastUpdated' && (data[key] as unknown[]).length > 0,
+  );
+}
+
+function getScopeAxisDates(scope: TimeScope, data: HealthData, selectedDate?: string): string[] {
+  if (scope.mode === 'period') {
+    return isValidDateKey(scope.start) && isValidDateKey(scope.end) && scope.start <= scope.end
+      ? buildDateRange(scope.start, scope.end)
+      : [];
+  }
   if (scope.mode === 'year') {
-    return buildDateRange(`${scope.year}-01-01`, `${scope.year}-12-31`);
+    const start = `${scope.year}-01-01`;
+    const end = cappedYearEnd(scope.year, selectedDate);
+    return end < start ? [] : buildDateRange(start, end);
   }
   if (scope.mode === 'recent') {
-    const end = dateKey(new Date());
+    const end = selectedDateOrToday(selectedDate);
     const start = parseDate(end);
     start.setDate(start.getDate() - RANGE_DAYS[scope.range] + 1);
     return buildDateRange(dateKey(start), end);
@@ -194,13 +306,13 @@ function alignTwo(
 
 // Dynamic y-axis range from actual data with optional padding
 function dynGoal(arr: [string, number][], pct: number, minCount = 5): number | null {
-  if (arr.length < minCount) return null;
-  const vals = arr.map(([, v]) => v).sort((a, b) => a - b);
+  const vals = arr.map(([, v]) => v).filter(Number.isFinite).sort((a, b) => a - b);
+  if (vals.length < minCount) return null;
   return Math.round(vals[Math.floor(vals.length * pct)]);
 }
 
 function dynRange(arr: [string, number][], pad = 2, conv?: (v: number) => number) {
-  const vals = arr.map(([, v]) => conv ? conv(v) : v);
+  const vals = arr.map(([, v]) => conv ? conv(v) : v).filter(Number.isFinite);
   if (!vals.length) return {};
   return {min: Math.floor(Math.min(...vals) - pad), max: Math.ceil(Math.max(...vals) + pad)};
 }
@@ -396,12 +508,16 @@ function sleepOpt(isDark: boolean, D: HealthData) {
 
 function wristTempOpt(isDark: boolean, D: HealthData) {
   const c = cc(isDark);
-  const vals = D.wrist_temp.map(([, v]) => v);
-  const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
+  const wristTemp = D.wrist_temp.filter(([, value]) => Number.isFinite(value));
+  const vals = wristTemp.map(([, value]) => value);
+  const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
   return {
     ...base(isDark), ...baseTip(),
-    xAxis: xCat(c, D.wrist_temp),
-    yAxis: yVal(c, {unit: '°C', min: Math.floor(avg * 10 - 5) / 10, max: Math.ceil(avg * 10 + 5) / 10}),
+    xAxis: xCat(c, wristTemp),
+    yAxis: yVal(c, {
+      unit: '°C',
+      ...(avg === null ? {} : {min: Math.floor(avg * 10 - 5) / 10, max: Math.ceil(avg * 10 + 5) / 10}),
+    }),
     series: [areaLine('睡眠腕温', vals, '#f97316')],
   };
 }
@@ -743,14 +859,17 @@ function workoutTimelineOpt(isDark: boolean, D: HealthData) {
       type: 'category',
       data: dates,
       axisTick: {show: false},
-      axisLabel: {color: c.label, fontSize: 10, interval: 0, formatter: formatMonthDayWeekday},
+      axisLabel: {color: c.label, fontSize: 10, interval: 0, formatter: formatMonthDay},
       axisLine: {lineStyle: {color: c.axis}},
       splitLine: {lineStyle: {color: c.split}},
     },
     yAxis: {type: 'value', name: '分钟', nameTextStyle: {color: c.label, fontSize: 9}, axisLabel: {color: c.label, fontSize: 10}, splitLine: {lineStyle: {color: c.split}}},
     series: types.map((type) => ({
       name: type, type: 'scatter',
-      symbolSize: (val: [string, string, number, number, number]) => Math.max(8, Math.sqrt(val[3]) * 1.4),
+      symbolSize: (val: [string, string, number, number, number]) => {
+        const calories = Number(val?.[3]);
+        return Number.isFinite(calories) ? Math.max(8, Math.sqrt(Math.max(0, calories)) * 1.4) : 8;
+      },
       data: D.workouts.filter(([, n]) => n === type).map(([date, , dur, kcal, hr]) => ({value: [date, type, dur, kcal, hr], name: type})),
       itemStyle: {color: WORKOUT_COLORS[type] ?? '#94a3b8', opacity: 0.85},
       encode: {x: 0, y: 2},
@@ -945,7 +1064,7 @@ function stateOfMindOpt(isDark: boolean, D: HealthData) {
     xAxis: {
       type: 'category',
       data: dates,
-      axisLabel: {color: c.label, fontSize: 10, formatter: formatMonthDayWeekday},
+      axisLabel: {color: c.label, fontSize: 10, formatter: formatMonthDay},
       axisLine: {lineStyle: {color: c.axis}}, splitLine: {lineStyle: {color: c.split}},
     },
     yAxis: {
@@ -1086,7 +1205,7 @@ function addWeekends(option: object, isDark: boolean): object {
 }
 
 function addSelectedDateHighlight(option: object, selectedDate: string | undefined, isDark: boolean): object {
-  if (!selectedDate) return option;
+  if (!isValidDateKey(selectedDate)) return option;
   const opt = option as Record<string, unknown>;
   const series = opt.series as Record<string, unknown>[] | undefined;
   if (!series?.length) return option;
@@ -1440,6 +1559,23 @@ function isDecorativeSeries(series: Record<string, unknown>): boolean {
   return series.silent === true && tooltip.show === false && lineStyle.opacity === 0;
 }
 
+function hasFiniteChartPoint(raw: unknown): boolean {
+  const value = raw && typeof raw === 'object' && !Array.isArray(raw) && 'value' in raw
+    ? (raw as {value?: unknown}).value
+    : raw;
+  if (typeof value === 'number') return Number.isFinite(value);
+  return Array.isArray(value) && value.some((item) => typeof item === 'number' && Number.isFinite(item));
+}
+
+function optionHasData(option: object): boolean {
+  const series = (option as {series?: unknown}).series;
+  if (!Array.isArray(series)) return false;
+  return series.some((raw) => {
+    const data = asRecord(raw).data;
+    return Array.isArray(data) && data.some(hasFiniteChartPoint);
+  });
+}
+
 function applyHealthChartStyle(option: object, isDark: boolean): object {
   const opt = option as Record<string, unknown>;
   const c = cc(isDark);
@@ -1481,7 +1617,7 @@ function applyHealthChartStyle(option: object, isDark: boolean): object {
 }
 
 function isDateString(value: unknown): value is string {
-  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  return typeof value === 'string' && isValidDateKey(value);
 }
 
 function remapIndexedSeriesData(data: unknown[], oldDates: string[], axisDates: string[]): unknown[] {
@@ -1679,7 +1815,7 @@ function buildSeriesDeviation(series: DeviationSeries, selectedDate: string): He
 }
 
 function computeOptionDeviation(option: object, selectedDate: string | undefined): HealthDeviation | null {
-  if (!selectedDate) return null;
+  if (!isValidDateKey(selectedDate)) return null;
   const deviations = extractChartSeries(option)
     .map((series) => buildSeriesDeviation(series, selectedDate))
     .filter((item): item is HealthDeviation => Boolean(item))
@@ -1692,7 +1828,9 @@ function computeOptionDeviation(option: object, selectedDate: string | undefined
   };
 }
 
-const SECTIONS = [
+type OptionFn = (isDark: boolean, D: HealthData, isMobile?: boolean) => object;
+
+const SECTIONS: Array<{title: string; charts: Array<{label: string; opt: OptionFn}>}> = [
   {title: '体重', charts: [
     {label: '体重 & 体脂率', opt: bodyOpt},
   ]},
@@ -1738,7 +1876,22 @@ const SECTIONS = [
   ]},
 ];
 
-type OptionFn = (isDark: boolean, D: HealthData, isMobile?: boolean) => object;
+const HEALTH_CHART_METRIC_KEYS: Record<string, string[]> = {
+  '体重 & 体脂率': ['weight', 'fat'],
+  '每日步数 & 距离': ['steps'],
+  '运动时长': ['exercise'],
+  '爬楼层数': ['flights'],
+  '活跃热量 & 基础代谢': ['active_energy'],
+  '站立时间 & 站立小时数': ['stand_time'],
+  '睡眠结构': ['sleep_total', 'sleep_deep', 'sleep_rem'],
+  '静息心率 & HRV': ['rhr', 'hrv'],
+  '心肺恢复速率': ['cardio_recovery'],
+  '呼吸频率 & 血氧饱和度': ['resp_rate', 'spo2'],
+  '步行速度 & 步长': ['walking_hr'],
+  '日晒时间': ['daylight'],
+  '正念时长': ['mindful'],
+  '愉悦度走势': ['mood'],
+};
 
 function slugifyChartLabel(label: string): string {
   return label
@@ -1757,8 +1910,14 @@ export const HEALTH_CHART_NAV = SECTIONS.map((section) => ({
   charts: section.charts.map((chart) => ({
     label: chart.label,
     id: healthChartAnchorId(chart.label),
+    metricKeys: HEALTH_CHART_METRIC_KEYS[chart.label] || [],
   })),
 }));
+
+const HEALTH_CHART_REGISTRY = new Map(SECTIONS.flatMap((section) => section.charts.map((chart) => [
+  healthChartAnchorId(chart.label),
+  chart,
+] as const)));
 
 export function HealthChartDeviationMark({label}: {label: string}): React.ReactNode {
   const {data, axisDates, selectedDate, loading} = useContext(YearCtx);
@@ -1788,33 +1947,123 @@ export function HealthChartDeviationMark({label}: {label: string}): React.ReactN
 
 // ── year / data context ───────────────────────────────────────────────────────
 
-function mergeData(all: Record<string, HealthData>): HealthData {
-  const keys = Object.keys(all).sort();
-  if (keys.length === 0) return EMPTY;
-  if (keys.length === 1) return all[keys[0]];
+function mergeData(all: Record<string, HealthData>, keys: string[]): HealthData {
+  const loadedKeys = keys.filter((key) => all[key]).sort();
+  if (loadedKeys.length === 0) return EMPTY;
+  if (loadedKeys.length === 1) return all[loadedKeys[0]];
   const result = {} as Record<string, unknown[]>;
   for (const key of Object.keys(EMPTY) as Array<keyof HealthData>) {
     if (key === 'lastUpdated') continue;
-    const merged = keys.flatMap((k) => all[k][key] as [string, ...number[]][]);
+    const merged = loadedKeys.flatMap((monthKey) => all[monthKey][key] as [string, ...number[]][]);
     result[key] = merged.sort((a, b) => (a[0] as string).localeCompare(b[0] as string));
   }
   // Pick the latest exportedAt across all loaded months
-  const latestDate = keys.map((k) => all[k].lastUpdated).filter(Boolean).sort().at(-1) ?? null;
+  const latestDate = loadedKeys.map((key) => all[key].lastUpdated).filter(Boolean).sort().at(-1) ?? null;
   return {...result, lastUpdated: latestDate} as HealthData;
 }
 
-function mergeDataByYear(all: Record<string, HealthData>, year: number, months: number[]): HealthData {
-  const keys = months.map((m) => `${year}-${String(m).padStart(2, '0')}`).filter((k) => all[k]);
-  if (keys.length === 0) return EMPTY;
-  if (keys.length === 1) return all[keys[0]];
-  const result = {} as Record<string, unknown[]>;
+function getVisibleHealthYears(availableMonths: Record<number, number[]>, selectedDate?: string): number[] {
+  const capYear = Number(selectedDateOrToday(selectedDate).slice(0, 4));
+  return Object.keys(availableMonths).map(Number).filter((year) => year <= capYear).sort((a, b) => a - b);
+}
+
+function monthKeysThroughDate(year: number, months: number[], selectedDate?: string): string[] {
+  const cap = selectedDateOrToday(selectedDate);
+  const capYear = Number(cap.slice(0, 4));
+  const capMonth = Number(cap.slice(5, 7));
+  if (year > capYear) return [];
+  const maxMonth = year === capYear ? capMonth : 12;
+  return months
+    .filter((month) => month <= maxMonth)
+    .map((month) => `${year}-${String(month).padStart(2, '0')}`);
+}
+
+function getTargetMonthKeys(scope: TimeScope, availableMonths: Record<number, number[]>, selectedDate?: string): string[] {
+  if (scope.mode === 'period') {
+    if (!isValidDateKey(scope.start) || !isValidDateKey(scope.end) || scope.start > scope.end) return [];
+    const keys: string[] = [];
+    const cursor = parseDate(`${scope.start.slice(0, 7)}-01`);
+    const end = parseDate(`${scope.end.slice(0, 7)}-01`);
+    while (cursor <= end) {
+      const year = cursor.getFullYear();
+      const month = cursor.getMonth() + 1;
+      if (availableMonths[year]?.includes(month)) keys.push(`${year}-${String(month).padStart(2, '0')}`);
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return keys;
+  }
+
+  if (scope.mode === 'year') {
+    return monthKeysThroughDate(scope.year, availableMonths[scope.year] ?? [], selectedDate);
+  }
+
+  if (scope.mode === 'all') {
+    return [];
+  }
+
+  const endDate = parseDate(selectedDateOrToday(selectedDate));
+  const start = new Date(endDate);
+  start.setDate(start.getDate() - RANGE_DAYS[scope.range] + 1);
+  const keys: string[] = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+  while (cursor <= end) {
+    const year = cursor.getFullYear();
+    const month = cursor.getMonth() + 1;
+    if (availableMonths[year]?.includes(month)) keys.push(`${year}-${String(month).padStart(2, '0')}`);
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return keys;
+}
+
+function filterDataByDateRange(data: HealthData, start: string, end: string): HealthData {
+  const result = {} as Record<string, unknown>;
   for (const key of Object.keys(EMPTY) as Array<keyof HealthData>) {
     if (key === 'lastUpdated') continue;
-    const merged = keys.flatMap((k) => all[k][key] as [string, ...number[]][]);
-    result[key] = merged.sort((a, b) => (a[0] as string).localeCompare(b[0] as string));
+    const values = data[key] as unknown as Array<[string, ...unknown[]]>;
+    result[key] = values.filter(([date]) => {
+      const itemStart = start.slice(0, date.length);
+      const itemEnd = end.slice(0, date.length);
+      return date >= itemStart && date <= itemEnd;
+    });
   }
-  const latestDate = keys.map((k) => all[k].lastUpdated).filter(Boolean).sort().at(-1) ?? null;
-  return {...result, lastUpdated: latestDate} as HealthData;
+  return {...result, lastUpdated: data.lastUpdated} as HealthData;
+}
+
+async function fetchHealthMonths(keys: string[], signal: AbortSignal): Promise<Record<string, HealthData>> {
+  const result: Record<string, HealthData> = {};
+  const now = new Date();
+  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  let nextIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (!signal.aborted) {
+      const key = keys[nextIndex++];
+      if (!key) return;
+      const data = await fetchHealthMonth(key, currentKey);
+      if (data) result[key] = data;
+    }
+  }
+
+  const workerCount = Math.min(HEALTH_FETCH_CONCURRENCY, keys.length);
+  await Promise.all(Array.from({length: workerCount}, () => worker()));
+  return result;
+}
+
+function retainTargetMonths(
+  previous: Record<string, HealthData>,
+  targetKeys: string[],
+  loaded: Record<string, HealthData> = {},
+): Record<string, HealthData> {
+  const next: Record<string, HealthData> = {};
+  for (const key of targetKeys) {
+    const value = loaded[key] ?? previous[key];
+    if (value) next[key] = value;
+  }
+  const previousKeys = Object.keys(previous);
+  const nextKeys = Object.keys(next);
+  if (previousKeys.length === nextKeys.length && nextKeys.every((key) => previous[key] === next[key])) return previous;
+  return next;
 }
 
 function extractDateFromChartEvent(params: unknown): string | null {
@@ -1942,90 +2191,85 @@ function HealthProviderInner({
 }) {
   const [internalScope, setInternalScope] = useState<TimeScope>({mode: 'recent', range: '7d'});
   const [allData, setAllData] = useState<Record<string, HealthData>>({});
+  const [historyData, setHistoryData] = useState<HealthData | null>(healthHistoryCache);
   const [loading, setLoading] = useState(true);
+  const [settledTarget, setSettledTarget] = useState('');
   const scope = controlledScope ?? internalScope;
   const setScope = setControlledScope ?? setInternalScope;
   const availableMonths = useMemo(() => getAvailableMonthMap(), []);
+  const targetMonthKeys = useMemo(
+    () => getTargetMonthKeys(scope, availableMonths, selectedDate),
+    [availableMonths, scope, selectedDate],
+  );
+  const targetSignature = scope.mode === 'all' ? 'all-history' : targetMonthKeys.join(',');
 
   useEffect(() => {
+    const controller = new AbortController();
     let cancelled = false;
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1;
 
-    // Determine which month keys (YYYY-MM) to load
-    let targetMonthKeys: string[] = [];
-    if (scope.mode === 'year') {
-      targetMonthKeys = availableMonths[scope.year]?.map((m) => `${scope.year}-${String(m).padStart(2, '0')}`) ?? [];
-    } else if (scope.mode === 'all') {
-      targetMonthKeys = Object.entries(availableMonths)
-        .flatMap(([y, months]) => months.map((m) => `${y}-${String(m).padStart(2, '0')}`))
-        .sort();
-    } else {
-      // recent: walk back `range` days and collect every month key on the way
-      const days = RANGE_DAYS[scope.range];
-      const today = new Date();
-      const start = new Date(today);
-      start.setDate(start.getDate() - days);
-      const keys: string[] = [];
-      const cur = new Date(start.getFullYear(), start.getMonth(), 1);
-      const end = new Date(today.getFullYear(), today.getMonth(), 1);
-      while (cur <= end) {
-        const y = cur.getFullYear();
-        const m = cur.getMonth() + 1;
-        const key = `${y}-${String(m).padStart(2, '0')}`;
-        if (availableMonths[y]?.includes(m)) keys.push(key);
-        cur.setMonth(cur.getMonth() + 1);
-      }
-      targetMonthKeys = keys;
+    if (scope.mode === 'all') {
+      setLoading(true);
+      void loadHealthChartHistory()
+        .then((loaded) => {
+          if (!cancelled) setHistoryData(loaded);
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setLoading(false);
+            setSettledTarget(targetSignature);
+          }
+        });
+      return () => {
+        cancelled = true;
+        controller.abort();
+      };
     }
 
-    const missingKeys = targetMonthKeys.filter((k) => !allData[k]);
+    const missingKeys = targetMonthKeys.filter((key) => !allData[key]);
     if (missingKeys.length === 0) {
+      setAllData((previous) => retainTargetMonths(previous, targetMonthKeys));
       setLoading(false);
-      return () => { cancelled = true; };
+      setSettledTarget(targetSignature);
+      return () => controller.abort();
     }
 
     setLoading(true);
-    let done = 0;
-    missingKeys.forEach((key) => {
-      const isCurrent = key === `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-      const [y, m] = key.split('-');
-      fetch(`/data/health/${y}/${m}.json`, {
-        cache: isCurrent ? 'no-store' : 'default',
+    void fetchHealthMonths(missingKeys, controller.signal)
+      .then((loaded) => {
+        if (!cancelled) setAllData((previous) => retainTargetMonths(previous, targetMonthKeys, loaded));
       })
-        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-        .then((raw) => {
-          if (cancelled) return;
-          const d = transform(raw);
-          setAllData((prev) => ({...prev, [key]: d}));
-        })
-        .catch(() => {})
-        .finally(() => {
-          if (!cancelled && ++done === missingKeys.length) setLoading(false);
-        });
-    });
-    return () => { cancelled = true; };
-  }, [scope, availableMonths]);
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+          setSettledTarget(targetSignature);
+        }
+      });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [scope.mode, targetMonthKeys, targetSignature]);
 
   const data = useMemo(() => {
+    if (scope.mode === 'all') return historyData ?? EMPTY;
+    const merged = mergeData(allData, targetMonthKeys);
+    if (scope.mode === 'period') {
+      if (!isValidDateKey(scope.start) || !isValidDateKey(scope.end) || scope.start > scope.end) return EMPTY;
+      return filterDataByDateRange(merged, scope.start, scope.end);
+    }
     if (scope.mode === 'year') {
-      const months = availableMonths[scope.year] ?? [];
-      const merged = mergeDataByYear(allData, scope.year, months);
-      return merged;
+      return filterDataByDateRange(merged, `${scope.year}-01-01`, cappedYearEnd(scope.year, selectedDate));
     }
-    if (scope.mode === 'all') {
-      const merged = mergeData(allData);
-      return merged;
-    }
-    // recent: merge current year data and filter
-    const currentYear = new Date().getFullYear();
-    const currentMonths = availableMonths[currentYear] ?? [];
-    const merged = mergeDataByYear(allData, currentYear, currentMonths);
-    return filterByTimeRange(merged, RANGE_DAYS[scope.range]);
-  }, [scope, allData, availableMonths]);
-  const axisDates = useMemo(() => getScopeAxisDates(scope, data), [scope, data]);
+    const end = selectedDateOrToday(selectedDate);
+    const start = parseDate(end);
+    start.setDate(start.getDate() - RANGE_DAYS[scope.range] + 1);
+    return filterDataByDateRange(merged, dateKey(start), end);
+  }, [allData, historyData, scope, selectedDate, targetMonthKeys]);
+  const axisDates = useMemo(() => getScopeAxisDates(scope, data, selectedDate), [scope, data, selectedDate]);
 
-  return <YearCtx.Provider value={{scope, setScope, data, axisDates, loading, availableMonths, onDateSelect, selectedDate}}>{children}</YearCtx.Provider>;
+  const scopeLoading = loading || settledTarget !== targetSignature;
+
+  return <YearCtx.Provider value={{scope, setScope, data, axisDates, loading: scopeLoading, availableMonths, onDateSelect, selectedDate}}>{children}</YearCtx.Provider>;
 }
 
 // ── inner components ──────────────────────────────────────────────────────────
@@ -2128,7 +2372,7 @@ function Sparkline({values, dates, color, uid, unit, rangeMin, rangeMax}: {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  good: '#22c55e', warn: '#f59e0b', bad: '#ef4444', neutral: '#94a3b8',
+  good: '#15803d', warn: '#a16207', bad: '#b91c1c', neutral: '#64748b',
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -2141,7 +2385,7 @@ const STATUS_CLASS: Record<string, string> = {
 
 function DashCardComp({card}: {card: DashCard}) {
   const color = STATUS_COLOR[card.rangeStatus];
-  const changeColor = card.changeGood === true ? '#22c55e' : card.changeGood === false ? '#ef4444' : '#94a3b8';
+  const changeColor = card.changeGood === true ? '#15803d' : card.changeGood === false ? '#b91c1c' : '#64748b';
   const arrow = card.changeDir === 'up' ? '↑' : card.changeDir === 'down' ? '↓' : null;
   return (
     <div className={`${styles.dashCard} ${STATUS_CLASS[card.rangeStatus]}`}>
@@ -2170,45 +2414,51 @@ function DashCardComp({card}: {card: DashCard}) {
 }
 
 function FloatingBar() {
-  const {scope, setScope, availableMonths, loading} = useContext(YearCtx);
-  const years = [...new Set(Object.keys(availableMonths).map(Number))].sort((a, b) => b - a);
+  const {scope, setScope, availableMonths, loading, selectedDate} = useContext(YearCtx);
+  const years = getVisibleHealthYears(availableMonths, selectedDate).reverse();
 
   return ReactDOM.createPortal(
     <div className={styles.floatingStack}>
-      <div className={styles.floatingBar}>
+      <div className={styles.floatingBar} role="group" aria-label="健康数据范围模式">
         {(['recent', 'year', 'all'] as const).map((mode) => (
           <button
             key={mode}
+            type="button"
             className={`${styles.floatingBtn} ${scope.mode === mode ? styles.floatingBtnActive : ''}`}
+            aria-pressed={scope.mode === mode}
             onClick={() => {
               if (mode === 'recent') setScope({mode, range: scope.mode === 'recent' ? scope.range : '30d'});
               if (mode === 'year') setScope({mode, year: scope.mode === 'year' ? scope.year : (years[0] ?? new Date().getFullYear())});
               if (mode === 'all') setScope({mode});
             }}
-          >{mode === 'recent' ? '近况' : mode === 'year' ? '年度' : '历史'}</button>
+          >{mode === 'recent' ? '最近' : mode === 'year' ? '按年' : '全部记录'}</button>
         ))}
       </div>
-      <div className={`${styles.floatingBar} ${styles.floatingOptionBar}`}>
+      <div className={`${styles.floatingBar} ${styles.floatingOptionBar}`} role="group" aria-label="健康数据范围选项">
         {scope.mode === 'recent' && (Object.keys(RANGE_DAYS) as RecentRange[]).map((r) => (
           <button
             key={r}
+            type="button"
             className={`${styles.floatingBtn} ${scope.range === r ? styles.floatingBtnActive : ''}`}
+            aria-pressed={scope.range === r}
             onClick={() => setScope({mode: 'recent', range: r})}
           >{RANGE_LABELS[r]}</button>
         ))}
         {scope.mode === 'year' && years.map((y) => (
           <button
             key={y}
+            type="button"
             className={`${styles.floatingBtn} ${scope.year === y ? styles.floatingBtnActive : ''}`}
+            aria-pressed={scope.year === y}
             onClick={() => setScope({mode: 'year', year: y})}
           >{y}</button>
         ))}
         {scope.mode === 'all' && (
-          <button className={`${styles.floatingBtn} ${styles.floatingBtnActive}`} onClick={() => setScope({mode: 'all'})}>
+          <button type="button" className={`${styles.floatingBtn} ${styles.floatingBtnActive}`} aria-pressed="true" onClick={() => setScope({mode: 'all'})}>
             全部历史
           </button>
         )}
-        {loading && <span className={styles.floatingLoading}>…</span>}
+        {loading && <span className={styles.floatingLoading} role="status" aria-live="polite">加载中…</span>}
       </div>
     </div>,
     document.body,
@@ -2216,33 +2466,35 @@ function FloatingBar() {
 }
 
 function ScopeControlsInner() {
-  const {scope, setScope, availableMonths, loading} = useContext(YearCtx);
-  const years = [...new Set(Object.keys(availableMonths).map(Number))].sort((a, b) => b - a);
+  const {scope, setScope, availableMonths, loading, selectedDate} = useContext(YearCtx);
+  const years = getVisibleHealthYears(availableMonths, selectedDate).reverse();
 
   return (
     <div className={styles.scopeControls} aria-label="健康数据时间范围">
-      <div className={styles.scopeBar}>
+      <div className={styles.scopeBar} role="group" aria-label="健康数据范围模式">
         {(['recent', 'year', 'all'] as const).map((mode) => (
           <button
             key={mode}
             type="button"
             className={`${styles.scopeBtn} ${scope.mode === mode ? styles.scopeBtnActive : ''}`}
+            aria-pressed={scope.mode === mode}
             onClick={() => {
               if (mode === 'recent') setScope({mode, range: scope.mode === 'recent' ? scope.range : '30d'});
               if (mode === 'year') setScope({mode, year: scope.mode === 'year' ? scope.year : (years[0] ?? new Date().getFullYear())});
               if (mode === 'all') setScope({mode});
             }}
           >
-            {mode === 'recent' ? '近况' : mode === 'year' ? '年度' : '历史'}
+            {mode === 'recent' ? '最近' : mode === 'year' ? '按年' : '全部记录'}
           </button>
         ))}
       </div>
-      <div className={`${styles.scopeBar} ${styles.scopeOptionBar}`}>
+      <div className={`${styles.scopeBar} ${styles.scopeOptionBar}`} role="group" aria-label="健康数据范围选项">
         {scope.mode === 'recent' && (Object.keys(RANGE_DAYS) as RecentRange[]).map((range) => (
           <button
             key={range}
             type="button"
             className={`${styles.scopeBtn} ${scope.range === range ? styles.scopeBtnActive : ''}`}
+            aria-pressed={scope.range === range}
             onClick={() => setScope({mode: 'recent', range})}
           >
             {RANGE_LABELS[range]}
@@ -2253,17 +2505,18 @@ function ScopeControlsInner() {
             key={year}
             type="button"
             className={`${styles.scopeBtn} ${scope.mode === 'year' && scope.year === year ? styles.scopeBtnActive : ''}`}
+            aria-pressed={scope.mode === 'year' && scope.year === year}
             onClick={() => setScope({mode: 'year', year})}
           >
             {year}
           </button>
         ))}
         {scope.mode === 'all' && (
-          <button type="button" className={`${styles.scopeBtn} ${styles.scopeBtnActive}`} onClick={() => setScope({mode: 'all'})}>
+          <button type="button" className={`${styles.scopeBtn} ${styles.scopeBtnActive}`} aria-pressed="true" onClick={() => setScope({mode: 'all'})}>
             全部历史
           </button>
         )}
-        {loading && <span className={styles.scopeLoading}>…</span>}
+        {loading && <span className={styles.scopeLoading} role="status" aria-live="polite">加载中…</span>}
       </div>
     </div>
   );
@@ -2271,6 +2524,14 @@ function ScopeControlsInner() {
 
 function StatsInner() {
   const {scope, data, availableMonths, loading} = useContext(YearCtx);
+  if (loading) {
+    return (
+      <>
+        <FloatingBar />
+        <div className={styles.statsLoading} role="status" aria-live="polite">健康摘要加载中…</div>
+      </>
+    );
+  }
   const dashboard = computeDashboard(data);
   const dateRange = getDateRange(data);
   const noData = !loading && scope.mode === 'year' && !(scope.year in availableMonths);
@@ -2301,27 +2562,77 @@ function StatsInner() {
   );
 }
 
-function SectionInner({name}: {name: string}) {
-  const {data, axisDates, loading, scope, availableMonths, onDateSelect, selectedDate} = useContext(YearCtx);
-  const {colorMode} = useColorMode();
-  const isDark = colorMode === 'dark';
-  const theme = isDark ? 'dark' : undefined;
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+function LazyHealthChart({
+  label,
+  optionBuilder,
+  data,
+  axisDates,
+  isDark,
+  isMobile,
+  selectedDate,
+  onDateSelect,
+}: {
+  label: string;
+  optionBuilder: OptionFn;
+  data: HealthData;
+  axisDates: string[];
+  isDark: boolean;
+  isMobile: boolean;
+  selectedDate?: string;
+  onDateSelect?: (date: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [shouldRender, setShouldRender] = useState(false);
+  const height = chartHeight(label, isMobile);
 
   useEffect(() => {
-    const handle = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handle);
-    return () => window.removeEventListener('resize', handle);
+    const node = containerRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setShouldRender(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry], activeObserver) => {
+        if (!entry.isIntersecting) return;
+        setShouldRender(true);
+        activeObserver.disconnect();
+      },
+      {rootMargin: '480px 0px', threshold: 0.01},
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
   }, []);
 
-  const noData = !loading && scope.mode === 'year' && !(scope.year in availableMonths);
-  if (noData) return <div className={styles.noData}>暂无 {scope.year} 年数据</div>;
-  if (loading && data.steps.length === 0) return <div className={styles.loading}>加载中…</div>;
+  const chartState = useMemo<{status: 'ready'; option: Record<string, unknown>} | {status: 'empty'} | null>(() => {
+    if (!shouldRender) return null;
+    const sourceOption = optionBuilder(isDark, data, isMobile);
+    if (!optionHasData(sourceOption)) return {status: 'empty'};
+    const rawOption = alignCalendarRange(
+      alignDateCategoryAxes(sourceOption, axisDates),
+      axisDates,
+    );
+    const styledOption = applyHealthChartStyle(
+      addSelectedDateHighlight(
+        addWeekends(addTodayLatestHighlight(rawOption, isDark), isDark),
+        selectedDate,
+        isDark,
+      ),
+      isDark,
+    ) as Record<string, unknown>;
+    return {status: 'ready', option: {...styledOption, animation: axisDates.length <= 90}};
+  }, [axisDates, data, isDark, isMobile, optionBuilder, selectedDate, shouldRender]);
 
-  const displayData = data;
-  const opts = {renderer: 'svg' as const};
-  const sec = SECTIONS.find((s) => s.title === name);
-  if (!sec) return null;
+  const chartEvents = useMemo(() => {
+    if (!onDateSelect || chartState?.status !== 'ready') return undefined;
+    const {option} = chartState;
+    return {
+      click: (params: unknown) => {
+        const date = extractDateFromChartEvent(params) || extractDateFromChartOption(option, params);
+        if (date) onDateSelect(date);
+      },
+    };
+  }, [chartState, onDateSelect]);
 
   function bindChartClick(chart: ChartLike) {
     const previous = zrenderClickHandlers.get(chart);
@@ -2337,35 +2648,87 @@ function SectionInner({name}: {name: string}) {
   }
 
   return (
-    <div className={styles.wrap}>
-      {sec.charts.map(({label, opt}: {label: string; opt: OptionFn}) => {
-        const rawOption = alignCalendarRange(alignDateCategoryAxes(opt(isDark, displayData, isMobile), axisDates), axisDates);
-        const option = applyHealthChartStyle(addSelectedDateHighlight(addWeekends(addTodayLatestHighlight(rawOption, isDark), isDark), selectedDate, isDark), isDark) as Record<string, unknown>;
-        const chartEvents = onDateSelect
-          ? {
-              click: (params: unknown) => {
-                const date = extractDateFromChartEvent(params) || extractDateFromChartOption(option, params);
-                if (date) onDateSelect(date);
-              },
-            }
-          : undefined;
-
-        return (
-          <div key={label} id={healthChartAnchorId(label)} className={styles.section}>
-            <div className={styles.sectionTitle}>{label}</div>
-            <ReactECharts
-              option={option}
-            theme={theme}
-            style={{height: chartHeight(label, isMobile)}}
-            opts={opts}
-            onEvents={chartEvents}
-            onChartReady={bindChartClick}
-          />
-          </div>
-        );
-      })}
+    <div
+      ref={containerRef}
+      id={healthChartAnchorId(label)}
+      className={styles.section}
+      role="img"
+      aria-label={`${label}图表${chartState?.status === 'empty' ? '，当前时间范围暂无数据' : ''}`}
+    >
+      <div className={styles.sectionTitle}>{label}</div>
+      {chartState?.status === 'ready' ? (
+        <ReactECharts
+          option={chartState.option}
+          theme={isDark ? 'dark' : undefined}
+          style={{height}}
+          opts={ECHARTS_RENDERER_OPTIONS}
+          notMerge
+          lazyUpdate
+          onEvents={chartEvents}
+          onChartReady={bindChartClick}
+        />
+      ) : chartState?.status === 'empty' ? (
+        <div className={styles.chartEmpty} style={{height}}>当前时间范围暂无数据</div>
+      ) : (
+        <div className={styles.chartPlaceholder} style={{height}} aria-hidden="true" />
+      )}
     </div>
   );
+}
+
+function ChartCollectionInner({charts}: {charts: Array<{label: string; opt: OptionFn}>}) {
+  const {data, axisDates, loading, scope, availableMonths, onDateSelect, selectedDate} = useContext(YearCtx);
+  const {colorMode} = useColorMode();
+  const isDark = colorMode === 'dark';
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)');
+    const handle = (event: MediaQueryListEvent) => setIsMobile(event.matches);
+    setIsMobile(media.matches);
+    media.addEventListener('change', handle);
+    return () => media.removeEventListener('change', handle);
+  }, []);
+
+  if (loading) {
+    const reservedHeight = charts.length * (chartHeight('', isMobile) + 42) + Math.max(0, charts.length - 1) * 12;
+    return <div className={styles.loading} style={{minHeight: reservedHeight}} role="status" aria-live="polite">健康图表加载中…</div>;
+  }
+  const noData = !hasHealthData(data);
+  if (noData) {
+    const label = scope.mode === 'year' && !(scope.year in availableMonths) ? `${scope.year} 年` : '当前时间范围';
+    return <div className={styles.noData}>暂无 {label}健康数据</div>;
+  }
+
+  return (
+    <div className={styles.wrap} aria-busy={loading}>
+      {charts.map(({label, opt}: {label: string; opt: OptionFn}) => (
+        <LazyHealthChart
+          key={label}
+          label={label}
+          optionBuilder={opt}
+          data={data}
+          axisDates={axisDates}
+          isDark={isDark}
+          isMobile={isMobile}
+          selectedDate={selectedDate}
+          onDateSelect={onDateSelect}
+        />
+      ))}
+    </div>
+  );
+}
+
+function SectionInner({name}: {name: string}) {
+  const section = SECTIONS.find((item) => item.title === name);
+  return section ? <ChartCollectionInner charts={section.charts} /> : null;
+}
+
+function ChartSelectionInner({chartIds}: {chartIds: string[]}) {
+  const charts = chartIds
+    .map((id) => HEALTH_CHART_REGISTRY.get(id))
+    .filter((chart): chart is {label: string; opt: OptionFn} => Boolean(chart));
+  return charts.length ? <ChartCollectionInner charts={charts} /> : null;
 }
 
 // ── exports ───────────────────────────────────────────────────────────────────
@@ -2414,6 +2777,14 @@ export function HealthSection({name}: {name: string}) {
   return (
     <BrowserOnly fallback={<div style={{minHeight: 240}} />}>
       {() => <SectionInner name={name} />}
+    </BrowserOnly>
+  );
+}
+
+export function HealthChartSelection({chartIds}: {chartIds: string[]}) {
+  return (
+    <BrowserOnly fallback={<div style={{minHeight: 240}} />}>
+      {() => <ChartSelectionInner chartIds={chartIds} />}
     </BrowserOnly>
   );
 }

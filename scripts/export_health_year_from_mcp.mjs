@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {buildHealthChartHistory} from './build_health_chart_history.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defaultTargetRoot = path.join(repoRoot, 'static', 'data', 'health');
@@ -283,6 +284,8 @@ async function main() {
   } finally {
     await client.close();
   }
+
+  await buildHealthChartHistory({healthRoot: targetRoot});
 }
 
 class McpClient {

@@ -2,6 +2,12 @@ import {useEffect, useMemo, useState} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
+import {
+  fetchJsonCached,
+  filterByFinanceTimeScope,
+  latestDateKey,
+  type FinanceTimeScope,
+} from '@site/src/components/financeShared';
 import styles from './styles.module.css';
 
 type Trade = {
@@ -41,26 +47,19 @@ type IPOPayload = {
   rows: IPORow[];
 };
 
-type TimeScope =
-  | {mode: 'recent'; range: '7d' | '30d' | '90d' | '1y'}
-  | {mode: 'year'; year: number}
-  | {mode: 'all'};
-const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
-
-function dateInScope(date: string, latest: string | null, scope?: TimeScope): boolean {
-  if (!scope || scope.mode === 'all') return true;
-  if (scope.mode === 'year') return date.startsWith(`${scope.year}-`);
-  if (!latest) return true;
-  const cutoff = new Date(`${latest}T00:00:00`);
-  cutoff.setDate(cutoff.getDate() - RANGE_DAYS[scope.range]);
-  return date >= cutoff.toISOString().slice(0, 10);
-}
-
-function filterPayloadByScope(payload: IPOPayload, scope?: TimeScope): IPOPayload {
-  if (!scope || scope.mode === 'all') return payload;
-  const latest = payload.trades.map((trade) => trade.date).sort().at(-1) || null;
-  const trades = payload.trades.filter((trade) => dateInScope(trade.date, latest, scope));
-  const rows = payload.rows.filter((row) => dateInScope(row.tradeDate.slice(0, 10), latest, scope));
+function filterPayloadByScope(
+  payload: IPOPayload,
+  scope?: FinanceTimeScope,
+  endDate?: string,
+): IPOPayload {
+  if ((!scope || scope.mode === 'all') && !endDate) return payload;
+  const dates = [
+    ...payload.trades.map((trade) => trade.date),
+    ...payload.rows.map((row) => row.tradeDate.slice(0, 10)),
+  ];
+  const rangeEnd = endDate || latestDateKey(dates, (date) => date);
+  const trades = filterByFinanceTimeScope(payload.trades, (trade) => trade.date, scope, rangeEnd);
+  const rows = filterByFinanceTimeScope(payload.rows, (row) => row.tradeDate.slice(0, 10), scope, rangeEnd);
   return {
     ...payload,
     trades,
@@ -392,16 +391,21 @@ function Skeleton() {
 
 function Dashboard({
   payload,
+  date,
   onDateSelect,
   timeScope,
   compact = false,
 }: {
   payload: IPOPayload;
+  date?: string;
   onDateSelect?: (date: string) => void;
-  timeScope?: TimeScope;
+  timeScope?: FinanceTimeScope;
   compact?: boolean;
 }) {
-  const scopedPayload = useMemo(() => filterPayloadByScope(payload, timeScope), [payload, timeScope]);
+  const scopedPayload = useMemo(
+    () => filterPayloadByScope(payload, timeScope, date),
+    [date, payload, timeScope],
+  );
   return (
     <div>
       <IPOChart trades={scopedPayload.trades} onDateSelect={onDateSelect} />
@@ -419,14 +423,16 @@ function Dashboard({
 function HKIPOInner({
   trades,
   dataUrl,
+  date,
   onDateSelect,
   timeScope,
   compact,
 }: {
   trades?: Trade[];
   dataUrl?: string;
+  date?: string;
   onDateSelect?: (date: string) => void;
-  timeScope?: TimeScope;
+  timeScope?: FinanceTimeScope;
   compact?: boolean;
 }) {
   const fallbackPayload = useMemo(() => buildPayloadFromTrades(trades ?? []), [trades]);
@@ -437,16 +443,17 @@ function HKIPOInner({
   useEffect(() => {
     if (!dataUrl) {
       setPayload(fallbackPayload);
+      setError(null);
       setLoading(false);
       return;
     }
 
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     (async () => {
       try {
-        const response = await fetch(dataUrl, {cache: 'no-store'});
-        if (!response.ok) throw new Error('暂无港股打新数据');
-        const json = (await response.json()) as IPOPayload;
+        const json = await fetchJsonCached<IPOPayload>(dataUrl);
         if (cancelled) return;
         setPayload(json);
       } catch (e) {
@@ -465,25 +472,44 @@ function HKIPOInner({
   if (loading) return <Skeleton />;
   if (error) return <div className={styles.error}>{error}</div>;
 
-  return <Dashboard payload={payload} onDateSelect={onDateSelect} timeScope={timeScope} compact={compact} />;
+  return (
+    <Dashboard
+      payload={payload}
+      date={date}
+      onDateSelect={onDateSelect}
+      timeScope={timeScope}
+      compact={compact}
+    />
+  );
 }
 
 export default function HKIPOCharts({
   trades,
   dataUrl,
+  date,
   onDateSelect,
   timeScope,
   compact,
 }: {
   trades?: Trade[];
   dataUrl?: string;
+  date?: string;
   onDateSelect?: (date: string) => void;
-  timeScope?: TimeScope;
+  timeScope?: FinanceTimeScope;
   compact?: boolean;
 }) {
   return (
     <BrowserOnly fallback={<div style={{minHeight: 320}} />}>
-      {() => <HKIPOInner trades={trades} dataUrl={dataUrl} onDateSelect={onDateSelect} timeScope={timeScope} compact={compact} />}
+      {() => (
+        <HKIPOInner
+          trades={trades}
+          dataUrl={dataUrl}
+          date={date}
+          onDateSelect={onDateSelect}
+          timeScope={timeScope}
+          compact={compact}
+        />
+      )}
     </BrowserOnly>
   );
 }

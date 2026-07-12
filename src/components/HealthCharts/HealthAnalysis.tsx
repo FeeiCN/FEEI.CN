@@ -21,7 +21,7 @@ import {
   type Anomaly,
   type Counterfactual,
 } from './analyze';
-import {YearCtx} from './index-shared';
+import {YearCtx, type TimeScope} from './index-shared';
 import styles from './styles.module.css';
 
 const INSIGHT_TAG_LABEL: Record<Insight['category'], string> = {
@@ -51,12 +51,36 @@ const INSIGHT_TAG_CLASS: Record<Insight['category'], string> = {
 const MAX_METRICS_HEATMAP = 16;
 const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
 
-function analysisEnabled(scope: {mode: string; range?: string; year?: number}): {enabled: boolean; days: number} {
+function dateKeyUtcTime(value: string): number | null {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const time = Date.UTC(year, month - 1, day);
+  const parsed = new Date(time);
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day
+    ? time
+    : null;
+}
+
+function inclusivePeriodDays(start: string, end: string): number {
+  const startTime = dateKeyUtcTime(start);
+  const endTime = dateKeyUtcTime(end);
+  if (startTime === null || endTime === null || endTime < startTime) return 0;
+  return Math.floor((endTime - startTime) / 86_400_000) + 1;
+}
+
+function analysisEnabled(scope: TimeScope): {enabled: boolean; days: number} {
   if (scope.mode === 'recent' && scope.range) {
     return {enabled: true, days: RANGE_DAYS[scope.range] ?? 30};
   }
   if (scope.mode === 'year') {
     return {enabled: true, days: 366};
+  }
+  if (scope.mode === 'period') {
+    const days = inclusivePeriodDays(scope.start, scope.end);
+    return {enabled: days > 0, days};
   }
   return {enabled: false, days: 0};
 }
@@ -317,7 +341,7 @@ export function HealthAnalysis() {
       <div className={styles.analysis}>
         <div className={styles.analysisGate}>
           <div className={styles.analysisGateTitle}>关联分析在更短时段内更有意义</div>
-          <div>请切换到「近况 / 年度」粒度后查看。</div>
+          <div>请切换到「最近 / 按年」粒度后查看。</div>
         </div>
       </div>
     );

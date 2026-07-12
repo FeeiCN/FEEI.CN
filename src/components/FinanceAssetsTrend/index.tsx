@@ -2,6 +2,13 @@ import {useEffect, useMemo, useState} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
+import {
+  fetchJsonCached,
+  filterByFinanceTimeScope,
+  getInclusiveRangeStart,
+  latestDateKey,
+  type FinanceTimeScope,
+} from '@site/src/components/financeShared';
 import styles from './styles.module.css';
 
 type HistoryPoint = {
@@ -29,11 +36,6 @@ type InvestPayload = {
   }>;
 };
 
-type TimeScope =
-  | {mode: 'recent'; range: '7d' | '30d' | '90d' | '1y'}
-  | {mode: 'year'; year: number}
-  | {mode: 'all'};
-
 type TrendPoint = {
   date: string;
   indexAssets: number | null;
@@ -51,7 +53,7 @@ type TrendPoint = {
 type FinanceAssetsTrendProps = {
   date?: string;
   onDateSelect?: (date: string) => void;
-  timeScope?: TimeScope;
+  timeScope?: FinanceTimeScope;
 };
 
 type AssetKey = 'totalAssets' | 'indexAssets' | 'stockAssets' | 'alipayAssets' | 'caitongAssets';
@@ -60,7 +62,6 @@ type ChangeInfo = {
   ratio: number | null;
 };
 
-const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
 const ASSET_ROWS: Array<{label: string; assetKey: AssetKey; deltaKey: keyof TrendPoint}> = [
   {label: '指数账户', assetKey: 'indexAssets', deltaKey: 'indexDelta'},
   {label: '个股账户', assetKey: 'stockAssets', deltaKey: 'stockDelta'},
@@ -70,9 +71,7 @@ const ASSET_ROWS: Array<{label: string; assetKey: AssetKey; deltaKey: keyof Tren
 
 async function fetchJson<T>(path: string): Promise<T | null> {
   try {
-    const response = await fetch(path, {cache: 'no-store'});
-    if (!response.ok) return null;
-    return JSON.parse(await response.text()) as T;
+    return await fetchJsonCached<T>(path);
   } catch {
     return null;
   }
@@ -94,15 +93,30 @@ function normalizeHistory(history: HistoryPoint[] | undefined): Map<string, numb
   return new Map(entries);
 }
 
-function filterByScope(items: TrendPoint[], scope?: TimeScope): TrendPoint[] {
-  if (!scope || scope.mode === 'all') return items;
-  if (scope.mode === 'year') return items.filter((item) => item.date.startsWith(`${scope.year}-`));
-  const latest = items.map((item) => item.date).sort().at(-1);
-  if (!latest) return [];
-  const cutoff = new Date(`${latest}T00:00:00`);
-  cutoff.setDate(cutoff.getDate() - RANGE_DAYS[scope.range]);
-  const cutoffKey = cutoff.toISOString().slice(0, 10);
-  return items.filter((item) => item.date >= cutoffKey);
+function filterByScope(items: TrendPoint[], scope?: FinanceTimeScope, endDate?: string): TrendPoint[] {
+  return filterByFinanceTimeScope(items, (item) => item.date, scope, endDate);
+}
+
+function getInvestDates(
+  dates: string[],
+  scope?: FinanceTimeScope,
+  endDate?: string,
+): string[] {
+  const sortedDates = [...new Set(dates)].sort();
+  if (scope?.mode === 'all') return sortedDates;
+  const scopeEnd = scope?.mode === 'period' ? scope.end : endDate;
+  const cappedDates = filterByFinanceTimeScope(sortedDates, (item) => item, undefined, scopeEnd);
+  if (!scope) return cappedDates;
+  const rangeEnd = scope.mode === 'period' ? scope.end : endDate || cappedDates.at(-1);
+  const rangeStart = scope.mode === 'year'
+    ? `${scope.year}-01-01`
+    : scope.mode === 'period'
+      ? scope.start
+      : rangeEnd && getInclusiveRangeStart(rangeEnd, scope.range);
+  if (!rangeStart || (rangeEnd && rangeEnd < rangeStart)) return [];
+  const scopedDates = filterByFinanceTimeScope(cappedDates, (item) => item, scope, rangeEnd);
+  const previousDate = cappedDates.filter((item) => item < rangeStart).at(-1);
+  return previousDate ? [previousDate, ...scopedDates] : scopedDates;
 }
 
 function formatCompactMoney(value: number | null | undefined): string {
@@ -424,6 +438,7 @@ function FinanceAssetsTrendClient({date, onDateSelect, timeScope}: FinanceAssets
   const [points, setPoints] = useState<TrendPoint[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -438,20 +453,32 @@ function FinanceAssetsTrendClient({date, onDateSelect, timeScope}: FinanceAssets
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([
-      fetchJson<AccountAssetsPayload>('/data/account-assets/index.json'),
-      fetchJson<AccountAssetsPayload>('/data/account-assets/stock.json'),
-      fetchJson<InvestManifest>('/data/invest/index.json'),
-    ])
-      .then(async ([indexPayload, stockPayload, investManifest]) => {
+    setError(null);
+    (async () => {
+      try {
+        const [indexPayload, stockPayload, investManifest] = await Promise.all([
+          fetchJson<AccountAssetsPayload>('/data/account-assets/index.json'),
+          fetchJson<AccountAssetsPayload>('/data/account-assets/stock.json'),
+          fetchJson<InvestManifest>('/data/invest/index.json'),
+        ]);
+        if (!indexPayload && !stockPayload && !investManifest) {
+          throw new Error('总资产趋势数据加载失败');
+        }
+        const indexHistory = normalizeHistory(indexPayload?.portfolio?.history);
+        const stockHistory = normalizeHistory(stockPayload?.portfolio?.history);
+        const investDates = investManifest?.dates || [];
+        const rangeEnd = date || latestDateKey(
+          [...indexHistory.keys(), ...stockHistory.keys(), ...investDates],
+          (item) => item,
+        ) || undefined;
         const investEntries = await Promise.all(
-          (investManifest?.dates || []).map(async (date) => {
+          getInvestDates(investDates, timeScope, rangeEnd).map(async (investDate) => {
             const [alipayPayload, caitongPayload] = await Promise.all([
-              fetchJson<InvestPayload>(dateToInvestPath(date, 'alipay')),
-              fetchJson<InvestPayload>(dateToInvestPath(date, 'caitong')),
+              fetchJson<InvestPayload>(dateToInvestPath(investDate, 'alipay')),
+              fetchJson<InvestPayload>(dateToInvestPath(investDate, 'caitong')),
             ]);
             return {
-              date,
+              date: investDate,
               alipay: investTotalAssets(alipayPayload),
               caitong: investTotalAssets(caitongPayload),
             };
@@ -469,21 +496,26 @@ function FinanceAssetsTrendClient({date, onDateSelect, timeScope}: FinanceAssets
             .map((entry) => [entry.date, entry.caitong] as const),
         );
         setPoints(buildTrendPoints(
-          normalizeHistory(indexPayload?.portfolio?.history),
-          normalizeHistory(stockPayload?.portfolio?.history),
+          indexHistory,
+          stockHistory,
           alipayHistory,
           caitongHistory,
         ));
-      })
-      .finally(() => {
+      } catch (loadError) {
+        if (!cancelled) {
+          setPoints([]);
+          setError(loadError instanceof Error ? loadError.message : '总资产趋势数据加载失败');
+        }
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [date, timeScope]);
 
-  const scopedPoints = useMemo(() => filterByScope(points, timeScope), [points, timeScope]);
+  const scopedPoints = useMemo(() => filterByScope(points, timeScope, date), [date, points, timeScope]);
   const selectedPoint = useMemo(
     () => scopedPoints.find((point) => point.date === selectedDate) || scopedPoints.at(-1),
     [scopedPoints, selectedDate],
@@ -505,6 +537,7 @@ function FinanceAssetsTrendClient({date, onDateSelect, timeScope}: FinanceAssets
   };
 
   if (loading) return <div className={styles.skeleton} />;
+  if (error) return <p className={styles.empty}>{error}</p>;
   if (!scopedPoints.length) return <p className={styles.empty}>暂无总资产趋势数据。</p>;
 
   return (

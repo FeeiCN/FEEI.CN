@@ -6,6 +6,7 @@
   --muted: #6b7280;
   --soft: #f5f5f7;
   --accent: #0a84ff;
+  --accent-button: #0066cc;
   --accent-soft: rgba(10, 132, 255, 0.12);
   --calendar-empty: #e8eaed;
   --calendar-partial: #9bd2ff;
@@ -32,12 +33,69 @@
   min-width: 0;
 }
 
+.dashboardHeaderActions {
+  display: grid;
+  justify-items: end;
+  gap: 0.38rem;
+  width: min(43rem, 100%);
+  min-width: 0;
+}
+
+.headerTimeRow {
+  display: grid;
+  grid-template-columns: 4.2rem minmax(0, 1fr);
+  gap: 0.42rem;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.headerTimeLabel {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.headerTimeLabelScope {
+  display: none;
+}
+
+.headerTimeValue {
+  display: flex;
+  align-items: center;
+  min-height: 2.65rem;
+  padding: 0.38rem 0.72rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 760;
+}
+
+.headerTimeLocation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 0.42rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.headerTrendScope {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
 .dashboardHeader h1 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(1.8rem, 4vw, 2.75rem);
+  font-size: 2.5rem;
   font-weight: 860;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   line-height: 1.05;
 }
 
@@ -49,6 +107,7 @@
   --muted: #a1a1aa;
   --soft: #111113;
   --accent: #64d2ff;
+  --accent-button: #0b6380;
   --accent-soft: rgba(100, 210, 255, 0.14);
   --calendar-empty: #27272a;
   --calendar-partial: #1d4f72;
@@ -58,11 +117,103 @@
   --shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
 }
 
+.dateNavigator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  width: 100%;
+  max-width: 100%;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+}
+
+.dateNavigator button {
+  min-height: 2.25rem;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.38rem 0.66rem;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.dateNavigator button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.dateNavigator {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dateNavigator::-webkit-scrollbar {
+  display: none;
+}
+
+.dateNavigator input,
+.dateNavigator select {
+  flex: 1 1 8.6rem;
+  min-width: 8.6rem;
+  min-height: 2.25rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.32rem 0.48rem;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.76rem;
+  color-scheme: light;
+}
+
+[data-theme='dark'] .dateNavigator input,
+[data-theme='dark'] .dateNavigator select {
+  color-scheme: dark;
+}
+
+.dateStepButton {
+  width: 2.25rem;
+  padding: 0 !important;
+  font-size: 1rem !important;
+}
+
+.dateNavigator button:focus-visible,
+.dateNavigator input:focus-visible,
+.dateNavigator select:focus-visible,
+.dataDomainTabs button:focus-visible,
+.financeTabs button:focus-visible,
+.objectiveTimeControls button:focus-visible,
+.healthSectionTabs button:focus-visible,
+.healthChartSubtabs button:focus-visible,
+.periodSignalList button:focus-visible,
+.periodRecordList button:focus-visible,
+.periodReviewSection li button:focus-visible,
+.periodReviewAuthoredIntro button:focus-visible,
+.periodReviewCollapse:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  outline-offset: 2px;
+}
+
+.dateNavigator button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.reviewPeriodPanel {
+  min-width: 0;
+}
+
 .calendarTopline span {
   color: var(--accent);
   font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -83,6 +234,12 @@
   padding: 0.85rem 1rem;
 }
 
+.calendarShell > *,
+.calendarTopline {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .dailyContext {
   position: relative;
   display: grid;
@@ -98,7 +255,66 @@
   backdrop-filter: none;
 }
 
+.lifeContext {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(18rem, 5fr) minmax(0, 6fr);
+  gap: 1rem;
+  align-items: start;
+  margin-top: 0.42rem;
+}
+
+.lifeDataColumn {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.lifeRightColumn {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  gap: 0.95rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.lifeOverviewColumn {
+  display: grid;
+  gap: 0.95rem;
+  min-width: 0;
+}
+
+.lifeHealthSummary {
+  min-width: 0;
+}
+
+.standaloneObjectiveSummary,
+.lifeHealthSummary {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.standaloneObjectiveSummary .periodObjectiveSummary,
+.lifeHealthSummary .periodObjectiveSummary {
+  border-bottom: 0;
+}
+
+.lifeRouteColumn {
+  display: grid;
+  gap: 0.95rem;
+  min-width: 0;
+}
+
+.lifeContext .lifeContent {
+  min-width: 0;
+  margin-top: 0;
+}
+
 .dailyContextLeft {
+  grid-column: 1;
+  grid-row: 1;
   display: grid;
   gap: 0.55rem;
   min-width: 0;
@@ -106,6 +322,8 @@
 }
 
 .dailyContextRight {
+  grid-column: 2;
+  grid-row: 1;
   display: grid;
   gap: 0.95rem;
   min-width: 0;
@@ -121,6 +339,377 @@
   background: var(--surface);
   box-shadow: 0 14px 40px rgba(15, 23, 42, 0.045);
   backdrop-filter: blur(18px);
+}
+
+.periodReviewPanel {
+  align-content: start;
+}
+
+.periodReviewHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 0.25rem 0.7rem;
+  align-items: start;
+  padding: 0.82rem 0.9rem 0.72rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-strong);
+}
+
+.periodReviewHead > div {
+  min-width: 0;
+}
+
+.periodReviewHead span {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 820;
+}
+
+.periodReviewHead h2 {
+  margin: 0.12rem 0 0;
+  color: var(--text);
+  font-size: 1.08rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.periodReviewPanel h2::before,
+.periodReviewPanel h3::before,
+.periodReviewPanel h4::before {
+  content: none !important;
+}
+
+.periodReviewHead > a {
+  align-self: center;
+  font-size: 0.72rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.periodReviewHead p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.periodReviewBody {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+  padding: 0.82rem 0.9rem 1rem;
+}
+
+.periodReviewNotice {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.62rem 0.72rem;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.periodReviewNotice strong {
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.periodReviewStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--line);
+}
+
+.periodReviewStats div {
+  min-width: 0;
+  padding: 0.55rem 0.4rem;
+  text-align: center;
+}
+
+.periodReviewStats div + div {
+  border-left: 1px solid var(--line);
+}
+
+.periodReviewStats strong,
+.periodReviewStats span {
+  display: block;
+}
+
+.periodObjectiveSummary {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.72rem 0.9rem 0.82rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.periodObjectiveSummary > header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.65rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.periodObjectiveSummary h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.periodObjectiveSummary header span {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.periodObjectiveSummaryRows {
+  border-block: 1px solid var(--line);
+}
+
+.periodObjectiveSummaryRows article {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) max-content;
+  gap: 0.12rem 0.55rem;
+  align-items: baseline;
+  min-width: 0;
+  padding: 0.46rem 0;
+}
+
+.periodObjectiveSummaryRows article + article {
+  border-top: 1px solid var(--line);
+}
+
+.periodObjectiveSummaryRows article > span {
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.periodObjectiveSummaryRows strong,
+.periodObjectiveSummaryRows b {
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.periodObjectiveSummaryRows b {
+  font-weight: 680;
+  text-align: right;
+}
+
+.periodObjectiveSummaryRows small {
+  grid-column: 2 / -1;
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.periodObjectiveSummaryLoading {
+  min-height: 7rem;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.periodObjectiveSignals {
+  display: grid;
+  gap: 0.28rem;
+  padding-top: 0.58rem;
+}
+
+.periodObjectiveSignals > strong {
+  font-size: 0.72rem;
+}
+
+.periodObjectiveSignals p {
+  margin: 0;
+  padding: 0.38rem 0.48rem;
+  border-left: 3px solid var(--muted);
+  background: color-mix(in srgb, var(--muted) 6%, transparent);
+  color: var(--text);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.periodObjectiveSignals p[data-tone='warning'] { border-left-color: #ef4444; }
+.periodObjectiveSignals p[data-tone='positive'] { border-left-color: #16a34a; }
+.periodObjectiveSignals p[data-tone='data'] { border-left-color: #f59e0b; }
+
+.periodReviewStats strong {
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.periodReviewStats span {
+  margin-top: 0.08rem;
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.periodReviewLoading {
+  padding: 1rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.periodReviewAuthoredIntro {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem 0.9rem 1.1rem;
+}
+
+.periodReviewAuthoredIntro p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+.periodReviewAuthoredIntro button {
+  justify-self: start;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.42rem 0.7rem;
+  background: var(--surface-strong);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 760;
+}
+
+.periodReviewAuthoredIntro button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.periodReviewSection {
+  min-width: 0;
+}
+
+.periodReviewSection h3 {
+  margin: 0 0 0.38rem;
+  color: var(--text);
+  font-size: 0.84rem;
+}
+
+.periodReviewSection ul {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.periodReviewSection li {
+  border-bottom: 1px solid var(--line);
+}
+
+.periodReviewSection li button {
+  width: 100%;
+  border: 0;
+  padding: 0.46rem 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.74rem;
+  line-height: 1.48;
+  text-align: left;
+}
+
+.periodSignalList,
+.periodRecordList {
+  display: grid;
+  min-width: 0;
+}
+
+.periodSignalList button,
+.periodRecordList button {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 0.48rem 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.periodSignalList button:hover,
+.periodRecordList button:hover,
+.periodReviewSection li button:hover {
+  color: var(--accent);
+}
+
+.periodSignalList span,
+.periodRecordList span {
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.periodSignalList strong,
+.periodRecordList strong {
+  min-width: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.periodReviewDocument {
+  min-width: 0;
+  padding: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.periodReviewCollapse {
+  position: sticky;
+  top: calc(var(--ifm-navbar-height) + 0.5rem);
+  z-index: 3;
+  float: right;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.38rem 0.62rem;
+  background: var(--surface-strong);
+  color: var(--text);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 760;
+}
+
+.periodReviewCollapse:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.periodReviewDocument h2 {
+  margin-top: 1.35rem;
+  font-size: 1.12rem;
+}
+
+.periodReviewDocument h3 {
+  font-size: 0.98rem;
+}
+
+.periodReviewDocument h4 {
+  font-size: 0.88rem;
+}
+
+.periodReviewDocument img {
+  height: auto;
+  max-width: 100%;
 }
 
 .dailyYearHeatmap {
@@ -147,7 +736,7 @@
   color: var(--text);
   font-size: 0.76rem;
   font-weight: 840;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .dailyYearHeatmapProgress {
@@ -190,6 +779,22 @@
 
 .dailyYearHeatmapLegendDiary {
   background: var(--accent);
+}
+
+.dailyYearHeatmapLegendAnalysis {
+  background: #d97706;
+}
+
+[data-theme='dark'] .dailyYearHeatmapLegendAnalysis {
+  background: #fbbf24;
+}
+
+.dailyYearHeatmapLegendComplete {
+  background: #16a34a;
+}
+
+[data-theme='dark'] .dailyYearHeatmapLegendComplete {
+  background: #4ade80;
 }
 
 .dailyYearHeatmapLegendPastEmpty {
@@ -266,7 +871,7 @@
   white-space: nowrap;
   color: var(--text);
   font-size: 1rem;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
 }
 
 .dailyDateBlock {
@@ -464,7 +1069,7 @@
 }
 
 .dailyDetailTabActive {
-  background: var(--accent) !important;
+  background: var(--accent-button) !important;
   color: #fff !important;
   box-shadow: 0 8px 22px rgba(10, 132, 255, 0.18);
 }
@@ -509,34 +1114,12 @@
 
 .panelHead strong {
   font-size: 0.98rem;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .panelHead small {
   color: var(--muted);
   font-size: 0.7rem;
-}
-
-.timelineLegend {
-  display: flex !important;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.28rem 0.5rem;
-  color: var(--muted);
-  font-size: 0.62rem;
-}
-
-.timelineLegend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.22rem;
-  white-space: nowrap;
-}
-
-.timelineLegend i {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
 }
 
 .dailyDiary {
@@ -582,24 +1165,25 @@
   color: rgba(180, 83, 9, 0.9);
   font-size: 0.66rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .dailyDiaryHead strong {
   font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'BiauKai', serif;
   font-size: 1.05rem;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 .healthChartsPanel {
   display: grid;
   gap: 0.5rem;
+  align-content: start;
   margin-top: 0.2rem;
   padding: 0.78rem 0.9rem 1rem;
   box-shadow: 0 12px 36px rgba(15, 23, 42, 0.035);
   backdrop-filter: blur(18px);
-  height: calc(100vh - var(--ifm-navbar-height) - 7.8rem);
+  max-height: calc(100vh - var(--ifm-navbar-height) - 7.8rem);
   min-height: 34rem;
   overflow: auto;
   scrollbar-width: thin;
@@ -617,13 +1201,13 @@
   color: var(--muted);
   font-size: 0.66rem;
   font-weight: 820;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   text-align: right;
 }
 
 .dataDomainTabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.2rem;
   padding: 0.18rem;
   border: 1px solid var(--line);
@@ -631,6 +1215,29 @@
   background: var(--surface);
   backdrop-filter: blur(18px);
 }
+
+.comparePanel { display: grid; gap: 0.7rem; min-width: 0; }
+.compareToolbar { display: grid; gap: 0.6rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--line); }
+.comparePresets { display: flex; flex-wrap: wrap; gap: 0.28rem; }
+.comparePresets button { min-height: 2rem; border: 1px solid var(--line); border-radius: 6px; padding: 0.3rem 0.55rem; background: var(--surface-strong); color: var(--text); cursor: pointer; font: inherit; font-size: 0.68rem; font-weight: 740; }
+.comparePresets button:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); color: var(--accent); }
+.compareMetricPicker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.7rem; }
+.compareMetricPicker > div { display: flex; flex-wrap: wrap; gap: 0.3rem 0.5rem; align-content: start; min-width: 0; }
+.compareMetricPicker > div > span { flex: 0 0 100%; color: var(--muted); font-size: 0.66rem; font-weight: 820; }
+.compareMetricPicker label { display: inline-flex; gap: 0.24rem; align-items: center; color: var(--text); font-size: 0.7rem; white-space: nowrap; }
+.compareMetricPicker input { accent-color: var(--accent-button); }
+.compareModes { display: inline-grid; grid-template-columns: repeat(3, max-content); justify-self: start; gap: 0.12rem; padding: 0.16rem; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-strong); }
+.compareModes button { min-height: 2rem; border: 0; border-radius: 5px; padding: 0.3rem 0.58rem; background: transparent; color: var(--muted); cursor: pointer; font: inherit; font-size: 0.7rem; font-weight: 760; }
+.compareModeActive { background: var(--accent-button) !important; color: #fff !important; }
+.compareResults, .compareCorrelations { min-width: 0; padding: 0.72rem 0.78rem; border-top: 1px solid var(--line); }
+.compareResults h3, .compareCorrelations h3 { margin: 0 0 0.55rem; font-size: 0.82rem; }
+.comparePanel h2::before, .comparePanel h3::before { content: none !important; }
+.compareTableWrap { min-width: 0; overflow-x: auto; }
+.compareResults table { width: 100%; min-width: 36rem; margin: 0; font-size: 0.68rem; }
+.compareResults th, .compareResults td { padding: 0.42rem 0.5rem; border-color: var(--line); white-space: nowrap; }
+.compareCorrelations p { display: grid; grid-template-columns: minmax(0, 1fr) max-content max-content; gap: 0.5rem; margin: 0; padding: 0.34rem 0; color: var(--text); font-size: 0.7rem; }
+.compareCorrelations p + p { border-top: 1px solid var(--line); }
+.compareCorrelations span, .compareCorrelations small { color: var(--muted); }
 
 .dataDomainTier {
   position: sticky;
@@ -663,7 +1270,7 @@
 }
 
 .dataDomainTabActive {
-  background: var(--accent) !important;
+  background: var(--accent-button) !important;
   color: #fff !important;
   box-shadow: 0 8px 22px rgba(10, 132, 255, 0.18);
 }
@@ -698,49 +1305,35 @@
 }
 
 .financeTabActive {
-  background: var(--accent) !important;
+  background: var(--accent-button) !important;
   color: #fff !important;
   box-shadow: 0 8px 22px rgba(10, 132, 255, 0.18);
 }
 
 .objectiveTimeControls {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.16rem;
+  width: 100%;
+  display: block;
   min-width: 0;
   max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-  justify-self: end;
-  padding: 0.16rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
-  backdrop-filter: blur(18px);
 }
 
-.objectiveTimeControls::-webkit-scrollbar {
-  display: none;
-}
-
-.objectiveTimeModes,
 .objectiveTimeOptions {
   display: flex;
   align-items: center;
   gap: 0.12rem;
-  flex: 0 0 auto;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 0.16rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-strong);
+  scrollbar-width: none;
 }
 
-.objectiveTimeDivider {
-  flex: 0 0 auto;
-  width: 1px;
-  height: 1rem;
-  margin: 0 0.08rem;
-  background: var(--line);
+.objectiveTimeOptions::-webkit-scrollbar {
+  display: none;
 }
 
-.objectiveTimeModes button,
 .objectiveTimeOptions button {
   flex: 0 0 auto;
   border: 0;
@@ -755,26 +1348,104 @@
   white-space: nowrap;
 }
 
-.objectiveTimeModes button:hover,
 .objectiveTimeOptions button:hover {
   color: var(--accent);
   background: var(--accent-soft);
 }
 
 .objectiveTimeActive {
-  background: var(--accent) !important;
+  background: var(--accent-button) !important;
+  color: #fff !important;
+}
+
+.objectiveDomainPanel,
+.financeTabPanel {
+  display: grid;
+  gap: 0.55rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.objectiveScopeStatus {
+  display: flex;
+  gap: 0.35rem;
+  align-items: baseline;
+  justify-content: flex-end;
+  min-width: 0;
+  padding: 0 0.2rem;
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.objectiveScopeStatus strong {
+  color: var(--text);
+  font-size: 0.68rem;
+}
+
+.healthNavigation {
+  position: sticky;
+  top: 3.15rem;
+  z-index: 4;
+  display: grid;
+  gap: 0.2rem;
+  align-content: start;
+  padding: 0.25rem 0 0.36rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.healthSectionTabs {
+  display: flex;
+  gap: 0.22rem;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.healthSectionTabs::-webkit-scrollbar {
+  display: none;
+}
+
+.healthSectionTabs button {
+  flex: 0 0 auto;
+  min-height: 1.85rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.28rem 0.55rem;
+  background: var(--surface-strong);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.healthSectionTabs button:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  color: var(--accent);
+}
+
+.healthSectionTabActive {
+  border-color: var(--accent-button) !important;
+  background: var(--accent-button) !important;
   color: #fff !important;
 }
 
 .subtabPicker {
-  position: sticky;
-  top: 3.2rem;
-  z-index: 4;
+  position: static;
   display: grid;
   gap: 0.16rem;
   padding: 0.22rem 0 0.34rem;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 0;
   background: var(--surface);
+}
+
+.objectiveDomainPanel > .subtabPicker {
+  position: sticky;
+  top: 3.15rem;
+  z-index: 4;
+  border-bottom: 1px solid var(--line);
 }
 
 .healthChartSubtabs {
@@ -802,9 +1473,11 @@
 
 .healthChartSubtabs button {
   flex: 0 0 auto;
-  min-height: 1.55rem;
+  display: grid;
+  gap: 0.12rem;
+  min-height: 2.15rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 6px;
   padding: 0.26rem 0.56rem;
   background: var(--surface-strong);
   color: var(--muted);
@@ -813,6 +1486,7 @@
   font-size: 0.68rem;
   font-weight: 720;
   line-height: 1.15;
+  text-align: left;
   white-space: nowrap;
 }
 
@@ -826,6 +1500,13 @@
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
   color: var(--accent);
   background: var(--accent-soft);
+}
+
+.healthChartSubtabSelected {
+  border-color: color-mix(in srgb, var(--accent) 72%, var(--line)) !important;
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .subtabExpandButton {
@@ -861,6 +1542,7 @@
 .healthChartsGrid {
   display: grid;
   gap: 0.7rem;
+  min-height: 300px;
 }
 
 .healthChartSection {
@@ -884,11 +1566,11 @@
   min-width: 0;
 }
 
-.embeddedDashboardSection h3 {
+.embeddedDashboardSection h2 {
   margin: 0;
   color: var(--text);
   font-size: 0.9rem;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .objectiveChartStack {
@@ -983,12 +1665,12 @@
   min-width: 0;
 }
 
-.objectiveChartHead h3 {
+.objectiveChartHead h2 {
   margin: 0;
   color: var(--text);
   font-size: 0.88rem;
   font-weight: 840;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .objectiveChartHead span {
@@ -1062,7 +1744,7 @@
   background: var(--calendar-tooltip-bg);
   box-shadow: 0 16px 42px rgba(15, 23, 42, 0.18);
   color: var(--calendar-tooltip-text);
-  transform: translate(12px, calc(-100% - 12px));
+  transform: translateY(-100%);
   pointer-events: none;
 }
 
@@ -1212,7 +1894,7 @@
   font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'BiauKai', serif;
   font-size: 1rem;
   line-height: 1.66;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 .dailyDiary .markdown p {
@@ -1316,6 +1998,56 @@
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(245, 245, 247, 0.42));
 }
 
+.analysisReport .dailyDiaryHead {
+  padding-left: 0;
+}
+
+.dailyDiaryHead small {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.emptyReport {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 9rem;
+  align-content: center;
+  justify-items: start;
+  padding: 0.8rem;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+}
+
+.emptyReport strong {
+  font-size: 0.9rem;
+}
+
+.emptyReport p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.emptyReport button,
+.reportDetailsToggle {
+  min-height: 2.25rem;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.42rem 0.7rem;
+  background: var(--accent-button);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 760;
+}
+
+.emptyReport button:hover,
+.reportDetailsToggle:hover {
+  filter: brightness(0.94);
+}
+
 [data-theme='dark'] .analysisReport {
   background: linear-gradient(135deg, rgba(39, 39, 42, 0.68), rgba(17, 17, 19, 0.5));
 }
@@ -1325,16 +2057,35 @@
   gap: 0.35rem;
 }
 
-.reportBlock h3 {
+.reportBlock h2 {
   margin: 0;
   color: var(--accent);
   font-size: 0.82rem;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
+}
+
+.analysisReport h2,
+.objectiveChartHead h2,
+.embeddedDashboardSection h2,
+.calendarTopline h2 {
+  counter-increment: none;
+}
+
+.analysisReport h2::before,
+.objectiveChartHead h2::before,
+.embeddedDashboardSection h2::before,
+.calendarTopline h2::before {
+  content: none !important;
 }
 
 .reportBlock ul {
   margin: 0.2rem 0 0;
   padding-left: 1.1rem;
+}
+
+.reportBlock li {
+  margin: 0.25rem 0;
+  line-height: 1.5;
 }
 
 .reportSignals {
@@ -1344,7 +2095,7 @@
 
 .reportSignals article {
   padding: 0.55rem;
-  border-radius: 14px;
+  border-radius: 8px;
   background: var(--soft);
 }
 
@@ -1353,157 +2104,288 @@
   font-size: 0.78rem;
 }
 
-.dayTimeline {
-  position: relative;
-  display: grid;
-  grid-template-columns: 5.6rem minmax(0, 1fr);
-  gap: 0.65rem;
-  min-height: 36rem;
+.reportSignals p {
+  margin: 0.24rem 0;
+  line-height: 1.48;
 }
 
-.timelineScale {
-  position: relative;
+.reportSignals small {
+  display: block;
   color: var(--muted);
   font-size: 0.68rem;
+  line-height: 1.4;
 }
 
-.timelineScale span {
-  position: absolute;
-  left: 0;
-  transform: translateY(-50%);
+.reportSignals span {
+  display: inline-block;
+  margin-top: 0.28rem;
+  padding: 0.08rem 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 0.62rem;
 }
 
-.timelineSleepBoundary {
-  right: 0;
-  left: auto !important;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  color: rgba(10, 132, 255, 0.72);
-  font-size: 0.54rem !important;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  box-shadow: none;
+.reportActions {
+  padding: 0.65rem 0.72rem;
+  border-left: 3px solid #16a34a;
+  background: color-mix(in srgb, #16a34a 7%, var(--surface-strong));
 }
 
-.timelineSleepBoundary::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -0.46rem;
-  width: 0.34rem;
-  height: 1px;
-  background: rgba(88, 86, 214, 0.32);
+.reportStatusSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
 }
 
-.timelineScaleMajor {
-  opacity: 1;
-  font-size: 0.68rem;
+.reportStatusSummary span {
+  padding: 0.2rem 0.42rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-size: 0.66rem;
 }
 
-.timelineScaleMinor {
-  opacity: 0.42;
-  font-size: 0.56rem;
+.reportDetailsRegion,
+.reportDetailsBody {
+  display: grid;
+  gap: 0.7rem;
 }
 
-.timelineWeatherMark {
-  position: absolute;
-  right: 0;
-  max-width: 3.2rem;
-  transform: translateY(-50%);
-  display: inline-flex;
-  gap: 0.18rem;
-  align-items: baseline;
-  padding: 0.05rem 0.16rem;
-  border-radius: 999px;
+.reportDetailsToggle {
+  justify-self: start;
+  background: var(--surface-strong);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.reportDetailsToggle:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
   color: var(--accent);
-  line-height: 1.15;
-  cursor: help;
-  transition: transform 120ms ease, background 120ms ease;
+  filter: none;
 }
 
-.timelineWeatherMark:hover {
-  background: rgba(10, 132, 255, 0.14);
-  transform: translateY(-50%) scale(1.04);
+.compactDayTimeline {
+  display: grid;
+  gap: 0.72rem;
+  min-width: 0;
 }
 
-.timelineWeatherMark strong,
-.timelineWeatherMark small {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.timelineSummaryStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-block: 1px solid var(--line);
+}
+
+.timelineSummaryStrip div {
+  min-width: 0;
+  padding: 0.48rem 0.36rem;
+  text-align: center;
+}
+
+.timelineSummaryStrip div + div {
+  border-left: 1px solid var(--line);
+}
+
+.timelineSummaryStrip strong,
+.timelineSummaryStrip span {
+  display: block;
+}
+
+.timelineSummaryStrip strong {
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.timelineSummaryStrip span {
+  margin-top: 0.08rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.timelineWindowHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.timelineWindowHead > div {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.timelineWindowHead strong {
+  color: var(--text);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.timelineWindowHead span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.timelineWindowHead button {
+  min-height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.3rem 0.55rem;
+  background: var(--surface-strong);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 720;
+}
+
+.timelineWindowHead button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.timelineWindowHead button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.timelineOverview {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+  padding-top: 1rem;
+}
+
+.timelineHorizontalAxis {
+  position: relative;
+  height: 0.8rem;
+  margin-left: 4.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.timelineHorizontalAxis span {
+  position: absolute;
+  top: -1.05rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
   white-space: nowrap;
 }
 
-.timelineWeatherMark strong {
-  font-size: 0.58rem;
+.timelineHorizontalAxis span:first-child {
+  transform: none;
 }
 
-.timelineWeatherMark small {
-  color: var(--accent);
-  opacity: 0.7;
-  font-size: 0.54rem;
+.timelineHorizontalAxis span:last-child {
+  transform: translateX(-100%);
 }
 
-.timelineTrack {
-  position: relative;
+.timelineDensityRow {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(7rem, 0.62fr);
-  gap: 0.65rem;
-  min-height: 33rem;
-  border-top: 1px solid var(--line);
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0,
-      transparent calc(12.5% - 1px),
-      var(--line) calc(12.5% - 1px),
-      var(--line) 12.5%
-    );
+  grid-template-columns: 4.25rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+  min-width: 0;
 }
 
-.timelineBandPanel {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.16rem;
-  min-height: inherit;
+.timelineDensityDetails {
+  min-width: 0;
 }
 
-.timelineBandLane {
-  position: relative;
-  min-height: inherit;
-  border-left: 1px solid rgba(15, 23, 42, 0.05);
+.timelineDensityDetails > summary {
+  min-height: 2rem;
+  cursor: pointer;
+  list-style: none;
 }
 
-.timelineBandLane > span {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: block;
+.timelineDensityDetails > summary::-webkit-details-marker {
+  display: none;
+}
+
+.timelineDensityDetails > summary > span::after {
+  content: '\203A';
+  display: inline-block;
+  margin-left: 0.2rem;
   color: var(--muted);
-  opacity: 0.72;
-  font-size: 0.52rem;
-  font-weight: 700;
-  writing-mode: vertical-rl;
-  transform: translate(-0.18rem, 0.25rem);
+  transform-origin: center;
+  transition: transform 120ms ease;
 }
 
-.timelineBandLane > div {
+.timelineDensityDetails[open] > summary > span::after {
+  transform: rotate(90deg);
+}
+
+.timelineDensityDetails > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.timelineDensityRow > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 720;
+  text-align: right;
+}
+
+.timelineDensityRow > div {
+  position: relative;
+  height: 1.35rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(to right, transparent 0, transparent calc(25% - 1px), var(--line) calc(25% - 1px), var(--line) 25%),
+    var(--surface-strong);
+}
+
+.timelineSliceList {
+  display: grid;
+  max-height: 12rem;
+  gap: 0;
+  margin: 0.3rem 0 0.15rem 4.75rem;
+  padding: 0;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.timelineSliceList li {
+  display: grid;
+  grid-template-columns: 7.25rem minmax(0, 1fr);
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.3rem 0.2rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.timelineSliceList time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.timelineSliceList span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.timelineDensityRow i {
   position: absolute;
-  inset: 0 0 0 0.18rem;
+  top: 0.18rem;
+  bottom: 0.18rem;
+  min-width: 2px;
+  border-radius: 3px;
 }
 
-.timelineBand {
-  position: absolute;
-  left: 0.24rem;
-  right: 0.24rem;
-  border-radius: 999px;
-  cursor: help;
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.timelineBand:hover {
-  opacity: 1 !important;
-  transform: scaleX(1.6);
+.timelineDensitySleep {
+  background: rgba(88, 86, 214, 0.72);
 }
 
 .timelineBand_movement {
@@ -1530,301 +2412,6 @@
   background: #30d158;
 }
 
-.timelineLane {
-  position: relative;
-  min-height: inherit;
-  border-left: 1px solid var(--line);
-}
-
-.timelineEvent {
-  position: absolute;
-  left: 0.7rem;
-  right: auto;
-  width: min(62%, 20rem);
-  min-height: 1.28rem;
-  padding: 0.26rem 0.48rem;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface-strong);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.045);
-  overflow: hidden;
-  cursor: help;
-  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
-}
-
-.timelineEvent:hover {
-  z-index: 5;
-  transform: translateX(2px);
-  filter: saturate(1.05);
-  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.12);
-}
-
-.timelineEventMulti {
-  left: 0.45rem;
-  padding: 0.22rem 0.42rem;
-  border-radius: 8px;
-}
-
-.timelineEventFeatured {
-  width: min(70%, 23rem);
-}
-
-.timelineEventMedium {
-  width: min(54%, 17rem);
-}
-
-.timelineEventCompact {
-  width: min(40%, 11.5rem);
-  min-height: 0.92rem;
-  padding-block: 0.12rem;
-}
-
-.sleepBlock {
-  position: absolute;
-  left: 0;
-  right: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 0.32rem;
-  align-items: stretch;
-  min-height: 3.8rem;
-  padding: 0.32rem 0.38rem 0.38rem;
-  border: 1px solid rgba(88, 86, 214, 0.1);
-  border-radius: 0;
-  background: transparent;
-  overflow: hidden;
-  transition: border-color 140ms ease, box-shadow 140ms ease;
-}
-
-.sleepBlock:hover {
-  border-color: rgba(88, 86, 214, 0.28);
-  box-shadow: inset 0 0 0 999px rgba(88, 86, 214, 0.018);
-}
-
-.sleepBlockSummary {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.sleepBlockSummary strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sleepBlockSummary strong {
-  font-size: 0.72rem;
-  letter-spacing: -0.04em;
-}
-
-.timelineTooltip {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 20;
-  width: max-content;
-  max-width: min(26rem, 82vw);
-  padding: 0.45rem 0.55rem;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--calendar-tooltip-bg);
-  color: var(--calendar-tooltip-text);
-  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.16);
-  font-size: 0.72rem;
-  line-height: 1.45;
-  white-space: pre-line;
-  pointer-events: none;
-}
-
-.sleepStageChart {
-  display: grid;
-  grid-template-columns: 4.6rem minmax(0, 1fr);
-  gap: 0.42rem;
-  align-items: stretch;
-}
-
-.sleepStageChartCompact {
-  grid-template-columns: 2.54rem minmax(0, 1fr);
-  gap: 0.22rem;
-  min-height: 0;
-}
-
-.sleepStageLabels {
-  display: grid;
-  grid-template-rows: repeat(4, 1fr);
-  height: 8.4rem;
-  color: var(--muted);
-  font-size: 0.66rem;
-  font-weight: 700;
-}
-
-.sleepStageLabels span {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 0.05rem;
-  position: relative;
-  padding-left: 0.22rem;
-}
-
-.sleepStageLabels span::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  width: 2px;
-  height: 1.05rem;
-  background: currentColor;
-  opacity: 0.8;
-}
-
-.sleepStageLabels strong {
-  font-size: inherit;
-  font-weight: inherit;
-}
-
-.sleepStageLabels small {
-  color: var(--muted);
-  font-size: 0.58rem;
-  font-weight: 600;
-  opacity: 0.76;
-}
-
-.sleepStageChartCompact .sleepStageLabels,
-.sleepStageChartCompact .sleepStagePlot {
-  height: 100%;
-  min-height: 3.55rem;
-}
-
-.sleepStageChartCompact .sleepStageLabels {
-  color: rgba(107, 114, 128, 0.76);
-  font-size: 0.48rem;
-  font-weight: 500;
-}
-
-.sleepStageChartCompact .sleepStageLabels small {
-  font-size: 0.46rem;
-  opacity: 0.68;
-}
-
-.sleepStageChartCompact .sleepStagePlot {
-  border-color: transparent;
-  border-radius: 0;
-  background:
-    linear-gradient(to right, transparent 0, transparent calc(33.333% - 1px), rgba(15, 23, 42, 0.05) calc(33.333% - 1px), rgba(15, 23, 42, 0.05) 33.333%, transparent 33.333%, transparent calc(66.666% - 1px), rgba(15, 23, 42, 0.05) calc(66.666% - 1px), rgba(15, 23, 42, 0.05) 66.666%, transparent 66.666%),
-    transparent;
-}
-
-[data-theme='dark'] .sleepStageChartCompact .sleepStagePlot {
-  border-color: transparent;
-  background:
-    linear-gradient(to right, transparent 0, transparent calc(33.333% - 1px), rgba(255, 255, 255, 0.06) calc(33.333% - 1px), rgba(255, 255, 255, 0.06) 33.333%, transparent 33.333%, transparent calc(66.666% - 1px), rgba(255, 255, 255, 0.06) calc(66.666% - 1px), rgba(255, 255, 255, 0.06) 66.666%, transparent 66.666%),
-    transparent;
-}
-
-[data-theme='dark'] .sleepStageChartCompact .sleepStageGridLine {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.sleepStageChartCompact .sleepStageAxis {
-  display: none;
-}
-
-.sleepStageChartCompact .sleepStageSegment {
-  cursor: help;
-  box-shadow: none;
-  opacity: 0.88;
-}
-
-.sleepStageChartCompact .sleepStageSegment:hover {
-  z-index: 3;
-  opacity: 1;
-  filter: saturate(1.12);
-}
-
-.sleepStageLabel_awake {
-  color: #ff8a80 !important;
-}
-
-.sleepStageLabel_rem {
-  color: #55c2df !important;
-}
-
-.sleepStageLabel_core {
-  color: #2f80ed !important;
-}
-
-.sleepStageLabel_deep {
-  color: #3930a3 !important;
-}
-
-.sleepStagePlot {
-  position: relative;
-  height: 8.4rem;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background:
-    linear-gradient(to right, transparent 0, transparent calc(33.333% - 1px), var(--line) calc(33.333% - 1px), var(--line) 33.333%, transparent 33.333%, transparent calc(66.666% - 1px), var(--line) calc(66.666% - 1px), var(--line) 66.666%, transparent 66.666%),
-    rgba(245, 245, 247, 0.48);
-  overflow: hidden;
-}
-
-.sleepStageGridLine {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--line);
-}
-
-.sleepStageChartCompact .sleepStageGridLine {
-  background: rgba(15, 23, 42, 0.055);
-}
-
-.sleepStageGridLine:nth-child(1) {
-  top: 25%;
-}
-
-.sleepStageGridLine:nth-child(2) {
-  top: 50%;
-}
-
-.sleepStageGridLine:nth-child(3) {
-  top: 75%;
-}
-
-.sleepStageGridLine:nth-child(4) {
-  display: none;
-}
-
-.sleepStageAxis {
-  position: absolute;
-  left: 0.42rem;
-  right: 0.42rem;
-  bottom: 0.24rem;
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  opacity: 0.62;
-  font-size: 0.58rem;
-  pointer-events: none;
-}
-
-.sleepStageSegment {
-  position: absolute;
-  height: calc(25% - 0.82rem);
-  min-width: 0.28rem;
-  border-radius: 999px;
-  background: rgba(88, 86, 214, 0.72);
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.62),
-    0 10px 22px rgba(15, 23, 42, 0.1);
-}
-
 .sleepStageSegment_deep {
   background: #3930a3;
 }
@@ -1841,125 +2428,78 @@
   background: #ff8a80;
 }
 
-.timelineEvent strong,
-.timelineEvent span {
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.timelineEventList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
 }
 
-.timelineEvent strong {
-  font-size: 0.74rem;
+.timelineEventList li {
+  display: grid;
+  grid-template-columns: 5.8rem minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.42rem 0.35rem 0.42rem 0.55rem;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--line);
 }
 
-.timelineEvent span {
+.timelineEventList time {
   color: var(--muted);
-  font-size: 0.62rem;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
 }
 
-.timelineEvent_sleep {
-  background: rgba(88, 86, 214, 0.12);
-  border-color: rgba(88, 86, 214, 0.24);
+.timelineEventList div,
+.timelineEventList strong,
+.timelineEventList span {
+  min-width: 0;
 }
 
-.timelineEvent_sleep_deep {
-  background: rgba(52, 199, 89, 0.2);
-  border-color: rgba(52, 199, 89, 0.34);
+.timelineEventList strong,
+.timelineEventList span {
+  display: block;
+  line-height: 1.4;
 }
 
-.timelineEvent_sleep_core {
-  background: rgba(88, 86, 214, 0.15);
-  border-color: rgba(88, 86, 214, 0.3);
+.timelineEventList strong {
+  color: var(--text);
+  font-size: 0.82rem;
 }
 
-.timelineEvent_sleep_rem {
-  background: rgba(191, 90, 242, 0.16);
-  border-color: rgba(191, 90, 242, 0.3);
+.timelineEventList span {
+  margin-top: 0.08rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
 }
 
-.timelineEvent_sleep_awake {
-  background: rgba(255, 204, 0, 0.18);
-  border-color: rgba(255, 204, 0, 0.32);
+.timelineFlow_sleep {
+  border-left-color: #5856d6 !important;
 }
 
-.timelineEvent_workout {
-  z-index: 3;
-  padding-left: 0.64rem;
-  border-color: rgba(255, 149, 0, 0.34);
-  background: linear-gradient(90deg, rgba(255, 149, 0, 0.18), rgba(255, 149, 0, 0.075));
-  box-shadow: none;
+.timelineFlow_workout {
+  border-left-color: #ff3b30 !important;
 }
 
-.timelineEvent_workout::before {
-  content: '';
-  position: absolute;
-  top: 0.18rem;
-  bottom: 0.18rem;
-  left: 0.22rem;
-  width: 3px;
-  border-radius: 999px;
-  background: #ff9500;
+.timelineFlow_drive {
+  border-left-color: #0a84ff !important;
 }
 
-.timelineEvent_workout:hover {
-  background: linear-gradient(90deg, rgba(255, 149, 0, 0.24), rgba(255, 149, 0, 0.1));
-  box-shadow: 0 12px 28px rgba(255, 149, 0, 0.1);
+.timelineFlow_weather {
+  border-left-color: #ff9f0a !important;
 }
 
-.timelineEvent_movement {
-  z-index: 2;
-  background: rgba(10, 132, 255, 0.12);
-  border-color: rgba(10, 132, 255, 0.24);
+.timelineFlow_medication {
+  border-left-color: #30d158 !important;
 }
 
-.timelineEvent_stand {
-  z-index: 1;
-  background: rgba(52, 199, 89, 0.12);
-  border-color: rgba(52, 199, 89, 0.24);
-}
-
-.timelineEvent_daylight {
-  background: rgba(255, 214, 10, 0.18);
-  border-color: rgba(255, 214, 10, 0.34);
-}
-
-.timelineEvent_stairs {
-  background: rgba(175, 82, 222, 0.13);
-  border-color: rgba(175, 82, 222, 0.25);
-}
-
-.timelineEvent_active_energy {
-  z-index: 1;
-  background: rgba(255, 59, 48, 0.12);
-  border-color: rgba(255, 59, 48, 0.24);
-}
-
-.timelineEvent_drive {
-  background: rgba(255, 149, 0, 0.14);
-  border-color: rgba(255, 149, 0, 0.26);
-}
-
-.timelineEvent_weather {
-  left: 0.7rem;
-  right: auto;
-  min-width: 4.6rem;
-  min-height: 1.2rem;
-  padding: 0.18rem 0.36rem;
-  border-radius: 999px;
-  background: rgba(10, 132, 255, 0.1);
-  border-color: rgba(10, 132, 255, 0.22);
-  box-shadow: none;
-}
-
-.timelineEvent_weather strong,
-.timelineEvent_weather span {
-  display: inline;
-  font-size: 0.62rem;
-}
-
-.timelineEvent_weather strong::after {
-  content: ' · ';
+.timelineFlow_mind {
+  border-left-color: #af52de !important;
 }
 
 .calendarTopline {
@@ -1973,238 +2513,19 @@
 
 .calendarTopline h2 {
   margin: 0.05rem 0 0;
-  font-size: clamp(1.35rem, 3vw, 1.8rem);
-  letter-spacing: -0.04em;
+  font-size: 1.6rem;
+  letter-spacing: 0;
 }
 
-.yearSwitch {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  padding: 0.2rem;
-  border-radius: 999px;
-  background: var(--soft);
-}
-
-.yearSwitch button {
-  border: 0;
-  border-radius: 999px;
-  padding: 0.28rem 0.62rem;
-  background: transparent;
+.lifeRouteSummary {
+  margin: 0.24rem 0 0;
   color: var(--muted);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.86rem;
-}
-
-.yearSelected {
-  background: var(--surface-strong) !important;
-  color: var(--text) !important;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-}
-
-.reflectionCalendar {
-  --cell-size: 9px;
-  --cell-gap: 2px;
-  --label-col: 34px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.calendarSummary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem;
-  min-width: 0;
-}
-
-.calendarSummary div {
-  display: grid;
-  gap: 0.12rem;
-  min-width: 0;
-}
-
-.calendarSummary strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text);
-  font-size: 0.96rem;
-  letter-spacing: -0.02em;
-}
-
-.calendarSummary span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
-  font-size: 0.74rem;
-}
-
-.calendarSummary button,
-.calendarCollapseButton {
-  flex: 0 0 auto;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.34rem 0.68rem;
-  background: var(--surface-strong);
-  color: var(--text);
-  cursor: pointer;
-  font: inherit;
   font-size: 0.76rem;
-  font-weight: 750;
-}
-
-.calendarSummary button:hover,
-.calendarCollapseButton:hover {
-  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
-  color: var(--accent);
-}
-
-.calendarBody {
-  display: flex;
-  align-items: stretch;
-  gap: 0.45rem;
-  width: 100%;
-}
-
-.weekdayColumn {
-  display: grid;
-  grid-template-rows: 16px repeat(7, var(--cell-size));
-  gap: var(--cell-gap);
-  width: var(--label-col);
-  flex: 0 0 var(--label-col);
-}
-
-.weekdaySpacer {
-  display: block;
-}
-
-.weekdayLabel {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 0.25rem;
-  color: var(--muted);
-  font-size: 0.6rem;
-  line-height: 1;
-}
-
-.scrollArea {
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 0.1rem;
-  scrollbar-width: thin;
-}
-
-.calendarStack {
-  display: grid;
-  grid-template-columns: repeat(var(--col-count, 53), var(--cell-size));
-  grid-template-rows: 16px repeat(7, var(--cell-size));
-  gap: var(--cell-gap);
-  width: max-content;
-  min-width: 100%;
-}
-
-.monthHeader {
-  grid-column: 1 / -1;
-  grid-row: 1;
-  display: grid;
-  grid-template-columns: subgrid;
-  overflow: hidden;
-}
-
-.monthLabel {
-  grid-column-start: calc(var(--col) + 1);
-  align-self: end;
-  justify-self: start;
-  color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.calendarGrid {
-  grid-column: 1 / -1;
-  grid-row: 2 / span 7;
-  display: grid;
-  grid-template-columns: subgrid;
-  grid-template-rows: subgrid;
-  grid-auto-flow: column;
-}
-
-.calendarCell,
-.cellPlaceholder {
-  width: var(--cell-size);
-  height: var(--cell-size);
-  border: 0;
-  border-radius: 2.5px;
-  padding: 0;
-}
-
-.calendarCell {
-  cursor: pointer;
-  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
-}
-
-.calendarCell:hover {
-  transform: scale(1.32);
-  filter: brightness(1.08);
-}
-
-.calendarCellEmpty,
-.calendarCellFuture {
-  background: var(--calendar-empty);
-}
-
-.calendarCellPartial {
-  background: var(--calendar-partial);
-}
-
-.calendarCellComplete,
-.calendarCellElapsed {
-  background: var(--calendar-complete);
-}
-
-.calendarCellSelected {
-  box-shadow: 0 0 0 2px var(--surface-strong), 0 0 0 4px var(--accent);
-}
-
-.cellPlaceholder {
-  background: transparent;
-}
-
-.calendarTooltip {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 10;
-  min-width: 13rem;
-  padding: 0.7rem 0.8rem;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--calendar-tooltip-bg);
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.16);
-  color: var(--calendar-tooltip-text);
-  pointer-events: none;
+  line-height: 1.45;
 }
 
 .tooltipDate {
   font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.tooltipValue {
-  margin-top: 0.25rem;
-  font-size: 0.95rem;
   font-weight: 800;
 }
 
@@ -2214,46 +2535,6 @@
   margin-top: 0.45rem;
   color: var(--muted);
   font-size: 0.74rem;
-}
-
-.calendarFooter {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 0.4rem 0.7rem;
-  color: var(--muted);
-  font-size: 0.74rem;
-}
-
-.calendarProgress {
-  color: var(--text);
-  font-weight: 800;
-}
-
-.calendarMeta {
-  color: var(--muted);
-}
-
-.calendarCollapseButton {
-  margin-left: auto;
-}
-
-.calendarCollapseButton + .calendarLegend {
-  margin-left: 0;
-}
-
-.calendarLegend {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-left: auto;
-}
-
-.calendarLegend i {
-  width: 0.7rem;
-  height: 0.7rem;
-  border-radius: 2px;
 }
 
 .lifeContent {
@@ -2284,14 +2565,14 @@
 }
 
 .lifeStats strong {
-  font-size: clamp(1rem, 2.2vw, 1.35rem);
-  letter-spacing: -0.05em;
+  font-size: 1.2rem;
+  letter-spacing: 0;
 }
 
 .lifeStats span {
   margin-top: 0.12rem;
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.8rem;
 }
 
 .lifeProgress {
@@ -2330,28 +2611,28 @@
   align-items: center;
   justify-content: space-between;
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.76rem;
 }
 
 .lifeProgressLabels strong {
   color: var(--text);
-  font-size: 0.72rem;
+  font-size: 0.8rem;
 }
 
 .lifeYearMap {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(1.55rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(2rem, 1fr));
   gap: 0.26rem;
 }
 
 .lifeYearCell {
-  min-height: 1.15rem;
+  min-height: 1.35rem;
   border-radius: 6px;
   background: var(--calendar-empty);
   color: var(--muted);
   text-align: center;
-  font-size: 0.55rem;
-  line-height: 1.15rem;
+  font-size: 0.75rem;
+  line-height: 1.35rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2461,14 +2742,168 @@
   margin-top: 0.5rem;
   padding: 1.4rem;
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 8px;
   background: var(--surface);
   color: var(--muted);
   text-align: center;
   box-shadow: 0 12px 36px rgba(15, 23, 42, 0.035);
 }
 
+.dashboardSkeleton {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  min-height: 64rem;
+  margin-top: 0.42rem;
+}
+
+.dashboardSkeleton > div {
+  display: grid;
+  grid-template-rows: 2.5rem 7rem repeat(2, 11rem);
+  gap: 0.7rem;
+  align-content: start;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.dashboardSkeleton span,
+.dashboardSkeleton i,
+.dashboardSkeleton b {
+  display: block;
+  border-radius: 6px;
+  background:
+    linear-gradient(100deg, transparent 0%, color-mix(in srgb, var(--surface-strong) 75%, transparent) 45%, transparent 72%),
+    color-mix(in srgb, var(--muted) 9%, var(--soft));
+  background-size: 220% 100%, 100% 100%;
+  animation: markdownImageLoading 1.2s ease-in-out infinite;
+}
+
+.dashboardSkeleton span {
+  width: 58%;
+}
+
+@media (max-width: 1200px) {
+  .dashboardHeader {
+    grid-template-columns: 1fr;
+    padding-right: 0;
+  }
+
+  .dashboardHeaderActions {
+    justify-items: start;
+    width: 100%;
+  }
+
+  .dailyContext,
+  .lifeContext,
+  .dashboardSkeleton {
+    grid-template-columns: 1fr;
+  }
+
+  .dailyContextRight {
+    grid-column: 1;
+    grid-row: 1;
+    order: -1;
+  }
+
+  .dailyContextLeft {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .lifeDataColumn {
+    grid-column: 1;
+    grid-row: 3;
+    order: 0;
+  }
+
+  .lifeRightColumn {
+    display: contents;
+  }
+
+  .lifeHealthSummary {
+    grid-column: 1;
+    grid-row: 1;
+    order: -2;
+  }
+
+  .lifeOverviewColumn {
+    grid-column: 1;
+    grid-row: 2;
+    order: -1;
+  }
+
+  .lifeRouteColumn {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
+  .healthChartsPanel {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .dailyBasicInfo {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .dailyWeather {
+    grid-template-columns: 2.35rem minmax(0, 1fr);
+    justify-self: stretch;
+    width: 100%;
+    padding-top: 0.5rem;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .weatherMetrics {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+    padding-left: 0;
+  }
+
+  .dashboardSkeleton {
+    min-height: 70rem;
+  }
+}
+
 @media (max-width: 900px) {
+  .headerTimeLabelScope {
+    display: block;
+    margin-top: 0.12rem;
+    color: var(--muted);
+    font-size: 0.62rem;
+    font-weight: 700;
+  }
+
+  .headerTrendScope {
+    display: none;
+  }
+
+  .headerTimeLocation {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .compareMetricPicker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .compareCorrelations p {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+
+  .compareCorrelations p span {
+    grid-column: 1 / -1;
+  }
+
   .calendarShell {
     grid-template-columns: 1fr;
   }
@@ -2477,6 +2912,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     margin-bottom: 0;
   }
 
@@ -2484,32 +2920,110 @@
     grid-template-columns: 1fr;
   }
 
-  .dailyContext {
-    grid-template-columns: 1fr;
+  .dailyContext,
+  .lifeContext {
     gap: 0.45rem;
   }
 
   .healthChartsPanel {
-    height: auto;
-    min-height: 0;
-    max-height: none;
+    padding: 0.62rem;
   }
 
   .dashboardHeader {
-    grid-template-columns: 1fr;
     gap: 0.5rem;
   }
 
+  .dashboardHeader h1 {
+    font-size: 2rem;
+  }
+
+  .dateNavigator {
+    width: 100%;
+  }
+
+  .dateNavigator input,
+  .dateNavigator select {
+    flex: 1 1 8rem;
+    min-width: 7.8rem;
+    min-height: 2.5rem;
+  }
+
+  .dateNavigator button,
+  .dateStepButton,
+  .dailyDetailTabs button,
+  .dataDomainTabs button,
+  .financeTabs button,
+  .objectiveTimeOptions button,
+  .healthSectionTabs button,
+  .healthChartSubtabs button {
+    min-height: 44px;
+  }
+
+  .objectiveTimeOptions button {
+    min-width: 44px;
+    min-height: 44px;
+    padding-inline: 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  .dateNavigator button,
+  .dateNavigator input,
+  .dateNavigator select {
+    min-height: 44px;
+  }
+
+  .dateNavigator button {
+    min-width: 44px;
+  }
+
+  .dateStepButton {
+    flex: 0 0 44px;
+    width: 44px;
+  }
+
+  .headerTimeLabel,
+  .periodReviewHead span,
+  .periodReviewHead p,
+  .periodReviewStats span,
+  .periodSignalList span,
+  .periodRecordList span {
+    font-size: 0.8rem;
+  }
+
+  .periodReviewNotice {
+    font-size: 0.8rem;
+  }
+
+  .periodReviewNotice strong {
+    font-size: 0.86rem;
+  }
+
+  .periodReviewSection li button {
+    font-size: 0.82rem;
+  }
+
+  .periodSignalList strong,
+  .periodRecordList strong {
+    font-size: 0.84rem;
+  }
+
+  .dateNavigator input,
+  .dateNavigator select,
+  .reportDetailsToggle,
+  .emptyReport button {
+    min-height: 44px;
+  }
+
   .objectiveTimeControls {
-    justify-self: start;
+    width: 100%;
   }
 
   .dataDomainTier {
     top: 0;
   }
 
-  .healthChartSubtabs {
-    top: 3.2rem;
+  .healthNavigation {
+    top: 3rem;
   }
 
   .dailyBasicInfo {
@@ -2539,24 +3053,96 @@
     padding-left: 0;
   }
 
+  .dailyYearHeatmapHead {
+    grid-template-columns: 1fr;
+  }
+
+  .dailyYearHeatmapProgress {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .dailyYearHeatmapProgress span {
+    overflow: visible;
+    white-space: normal;
+    text-align: left;
+  }
+
+  .dailyYearHeatmapLegend {
+    justify-content: flex-start;
+  }
+
+  .dailyYearHeatmapLegend > span:first-child {
+    flex-basis: 100%;
+    white-space: normal;
+    line-height: 1.4;
+  }
+
+  .objectiveStatGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .objectiveChartHead {
+    flex-direction: column;
+  }
+
+  .objectiveLegend {
+    justify-content: flex-start;
+  }
+
+  .subtabExpandButton {
+    width: 44px;
+    height: 44px;
+  }
+
   .panelHead {
     grid-template-columns: 1fr;
   }
 
-  .timelineLegend {
-    justify-content: flex-start;
+  .timelineSummaryStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .dayTimeline {
-    min-height: 30rem;
+  .timelineSummaryStrip div:nth-child(3) {
+    border-left: 0;
   }
 
-  .timelineTrack {
-    min-height: 27rem;
+  .timelineSummaryStrip div:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
   }
 
-  .reflectionCalendar {
-    --cell-size: 9px;
-    --cell-gap: 2px;
+  .timelineWindowHead button {
+    min-height: 44px;
+  }
+
+  .timelineDensityRow {
+    grid-template-columns: 3.85rem minmax(0, 1fr);
+    gap: 0.38rem;
+  }
+
+  .timelineDensityDetails > summary {
+    min-height: 44px;
+  }
+
+  .timelineHorizontalAxis {
+    margin-left: 4.23rem;
+  }
+
+  .timelineSliceList {
+    margin-left: 0;
+  }
+
+  .timelineSliceList li {
+    grid-template-columns: 7rem minmax(0, 1fr);
+  }
+
+  .timelineEventList li {
+    grid-template-columns: 4.9rem minmax(0, 1fr);
+    gap: 0.45rem;
+  }
+
+  .dashboardSkeleton {
+    gap: 0.55rem;
+    min-height: 86rem;
   }
 }

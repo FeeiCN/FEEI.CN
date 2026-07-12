@@ -37,6 +37,7 @@ export type RecentRange = keyof typeof RANGE_DAYS;
 export type TimeScope =
   | {mode: 'recent'; range: RecentRange}
   | {mode: 'year'; year: number}
+  | {mode: 'period'; start: string; end: string; label?: string}
   | {mode: 'all'};
 
 export const EMPTY: HealthData = {

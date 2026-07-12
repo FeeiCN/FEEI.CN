@@ -2,6 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {useColorMode} from '@docusaurus/theme-common';
 import ReactECharts from 'echarts-for-react';
+import {filterByFinanceTimeScope, type FinanceTimeScope} from '@site/src/components/financeShared';
 import styles from './styles.module.css';
 
 type HistoryPoint = {
@@ -25,25 +26,16 @@ type PortfolioData = {
   holdings: Holding[];
 };
 
-type TimeScope =
-  | {mode: 'recent'; range: '7d' | '30d' | '90d' | '1y'}
-  | {mode: 'year'; year: number}
-  | {mode: 'all'};
-const RANGE_DAYS: Record<string, number> = {'7d': 7, '30d': 30, '90d': 90, '1y': 365};
-
 function getItemDate(item: {date: string; fullDate?: string}): string {
   return item.fullDate || item.date;
 }
 
-function filterByScope<T extends {date: string; fullDate?: string}>(items: T[], scope?: TimeScope): T[] {
-  if (!scope || scope.mode === 'all') return items;
-  if (scope.mode === 'year') return items.filter((item) => getItemDate(item).startsWith(`${scope.year}-`));
-  const latest = items.map(getItemDate).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)).sort().at(-1);
-  if (!latest) return [];
-  const cutoff = new Date(`${latest}T00:00:00`);
-  cutoff.setDate(cutoff.getDate() - RANGE_DAYS[scope.range]);
-  const cutoffKey = cutoff.toISOString().slice(0, 10);
-  return items.filter((item) => getItemDate(item) >= cutoffKey);
+function filterByScope<T extends {date: string; fullDate?: string}>(
+  items: T[],
+  scope?: FinanceTimeScope,
+  endDate?: string,
+): T[] {
+  return filterByFinanceTimeScope(items, getItemDate, scope, endDate);
 }
 
 function buildLineOption(data: PortfolioData, isDark: boolean, isMobile: boolean) {
@@ -319,13 +311,15 @@ function getAxisLabelFromChartParams(params: unknown): string | null {
 
 function Charts({
   data,
+  endDate,
   onDateSelect,
   timeScope,
   compact = false,
 }: {
   data: PortfolioData;
+  endDate?: string;
   onDateSelect?: (date: string) => void;
-  timeScope?: TimeScope;
+  timeScope?: FinanceTimeScope;
   compact?: boolean;
 }) {
   const {colorMode} = useColorMode();
@@ -339,8 +333,8 @@ function Charts({
     return () => window.removeEventListener('resize', handle);
   }, []);
   const scopedData = useMemo(
-    () => ({...data, history: filterByScope(data.history, timeScope)}),
-    [data, timeScope],
+    () => ({...data, history: filterByScope(data.history, timeScope, endDate)}),
+    [data, endDate, timeScope],
   );
 
   const dateEvents = onDateSelect
@@ -404,18 +398,28 @@ function Charts({
 
 export default function PortfolioCharts({
   data,
+  endDate,
   onDateSelect,
   timeScope,
   compact,
 }: {
   data: PortfolioData;
+  endDate?: string;
   onDateSelect?: (date: string) => void;
-  timeScope?: TimeScope;
+  timeScope?: FinanceTimeScope;
   compact?: boolean;
 }) {
   return (
     <BrowserOnly fallback={<div style={{minHeight: 620}} />}>
-      {() => <Charts data={data} onDateSelect={onDateSelect} timeScope={timeScope} compact={compact} />}
+      {() => (
+        <Charts
+          data={data}
+          endDate={endDate}
+          onDateSelect={onDateSelect}
+          timeScope={timeScope}
+          compact={compact}
+        />
+      )}
     </BrowserOnly>
   );
 }

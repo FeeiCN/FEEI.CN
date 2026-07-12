@@ -77,7 +77,15 @@ const emphasisClassNameMap: Record<Emphasis, string> = {
 
 export function AnnualReviewTable({children}: AnnualReviewTableProps): ReactNode {
   return (
-    <div className={styles.wrap}>
+    <div
+      className={styles.wrap}
+      role="region"
+      aria-label="年度复盘路线表"
+      tabIndex={0}
+      onScroll={(event) => {
+        event.currentTarget.style.setProperty('--annual-review-scroll-x', `${event.currentTarget.scrollLeft}px`);
+      }}
+    >
       <table className={styles.table}>
         <thead>
           <tr>

@@ -1,247 +1,203 @@
 ---
 slug: /ai-skill
 icon: stack-icon
+description: Skill 应封装经过验证的重复方法：从登录回跳修复提炼 repo-bugfix，并用触发描述、权限边界、未知 Bug 验收和版本回归保证可复用性。
+content_type: tutorial
+last_reviewed: '2026-07-10'
 ---
 
-# Skill
+# AI Skill
 
-**Skill 本质上是用可重复方式完成特定任务的工具。** 它把经验、流程、脚本、资源和判断标准固化下来，让 AI 不只是临时回答，而是能够稳定复用一套工作方法。Skill 通常包括：指令、脚本、资源、判断标准——像写给新员工的入职指南，把岗位经验从个人记忆迁移为可复用的组织资产。
+前一篇 [ReAct 模式](/react-agent-loop) 用测试和源码证据定位了登录回跳 Bug：登录入口把目标页面写入 `session['return_to']`，回调却读取 `session['next_path']`，于是取到默认值 `/`。修复时统一会话键、补回归测试、运行项目验证并检查差异，结果得到外部证据确认。
 
-岗位经验是大模型时代最稀缺、最具有复利效用的资产。单次 Prompt 容易随着上下文消失，Skill 则可以像代码一样被开发、复用、测试、发布和演进。优秀员工的日常工作方法应尽量抽象为 Skill，让经验不再随着人员变化而流失，也让更多人能借助 AI 达到更高水平的产出。
+这次把已经奏效的修复方法提炼成 `repo-bugfix` Skill，不再展开 Agent 如何逐步选择行动。以后遇到根因未知的新 Bug，Agent 可以复用同一套质量要求，同时仍根据新证据决定具体读取和修改哪些文件。
 
-从更长的时间尺度看，文明进步的关键不只是创造知识，也包括防止知识失传。创造一直存在，遗忘也一直存在。很多知识、工艺、经验和判断在产生之后没有被稳定保存，而是随着时间、人员变化和组织更替逐渐消失。古希腊的科学与工程知识、亚历山大图书馆的大量文献、中国古代未能完整传承的工艺和技术，都说明知识失传比知识创造更常见。
+Skill 只收录经过验证、值得重复的方法。登录回跳案例可以产生候选流程；候选流程还要通过未参与编写的新 Bug 验收，才能成为可依赖的版本。
 
-企业内部同样如此。很多组织的问题并不是没人知道，而是知道的人离开了：专家离职，关键系统无人维护，架构设计背景无人了解，历史事故的真实原因只存在于少数人的记忆里。人员流动一旦发生，组织记忆就会断层，新人只能重新踩坑、重新摸索、重新建立判断。
+## 判断是否值得创建
 
-个人层面也会发生知识失传。阅读之后遗忘，学习之后不用，经验没有记录，洞察没有沉淀，都是认知资产在流失。读书笔记、Issue 体系、年度总结、知识库和 Life OS，本质上都是对抗遗忘的工具。它们让想法不只停留在当时的灵感里，而是进入一个未来还能被检索、复盘和继续使用的结构中。
+先检查任务是否同时满足四个条件：
 
-语言、文字、印刷术、学校、图书馆、Git、Wiki 和 AI Memory 的共同目标，都是让知识活得更久。知识的价值不仅取决于质量，也取决于保存时间。一个洞察如果只存在一天，价值很有限；如果能被保存、传播、复用和持续修正，它就可能在很长时间里不断放大。
+- **会重复出现**：输入和根因会变化，但任务目标长期相似，例如持续处理仓库中的可复现 Bug。
+- **存在稳定步骤**：多个成功案例都经历复现、缩小范围、最小修改、回归测试、运行验证和差异检查。
+- **结果可以验收**：测试退出码、类型检查、构建结果和 Git 差异能从模型之外判断任务是否完成。
+- **权限可以收窄**：任务可以限定在当前仓库，不需要生产凭证、部署权限或不受控的外部操作。
 
-AI 时代真正重要的变化，是 Skill、Workflow、Decision Pattern 和 Memory 开始被数字化。过去组织记忆主要存在于人脑，专家离职意味着经验消失；现在经验可以沉淀为 Skill，流程可以沉淀为 Workflow，判断可以沉淀为 Decision Pattern，长期上下文可以沉淀为 Memory。Agent 由此可能成为组织长期记忆的新载体。
+一次性问题、仍在频繁变化的流程、只能靠主观感受判断的结果，都适合先保留为任务笔记。首次成功也只说明方法值得继续测试，不能直接证明它适用于同类任务。
 
-**Skill 的价值不只是提升单次任务效率，更是在保存经验、传承判断和延长知识寿命。** 它把原本依赖个人记忆和口耳相传的工作方法，转化成可以版本管理、测试、复用和迭代的组织资产。文明是一部持续对抗遗忘的历史，AI Skill 则是这种历史在组织和个人工作中的新形态。
-
-## Skill 与相邻概念的边界
-
-**Skill 不等于 Prompt。** Prompt 是会话级一次性指令，会话结束就消失；Skill 是文件系统级可复用资源，可以跨会话、跨项目、跨人存在。同样的信息，写在单次 Prompt 里只能用一次，固化成 Skill 后可以被反复调用、迭代、版本管理。
-
-**Skill 不等于 MCP。** MCP（Model Context Protocol）解决的是工具连接问题——让模型能调用 GitHub、BigQuery、企业内部 API 这些外部能力。Skill 解决的是流程教学问题——把"遇到这类任务应该按什么步骤、参考什么文档、用什么脚本"这件事教给模型。两者互补：MCP 提供工具，Skill 教工作流。
-
-**Skill 不等于 Subagent。** Subagent 创建一个独立的、有自己上下文和工具集的子代理；Skill 不创建代理，只是给当前代理一份操作手册。Skill 也可以选择**在子 agent 里运行**（Claude Code 的 `context: fork` 前置字段）——把 Skill 内容作为子 agent 的 prompt，隔离主对话历史。
-
-| 概念 | 解决什么 | 载体 | 跨会话复用 |
-|------|----------|------|------------|
-| Prompt | 单次任务指令 | 消息文本 | 否 |
-| Skill | 流程教学、工作流、经验沉淀 | 文件系统 | 是 |
-| MCP | 工具/数据连接 | 协议 | 是 |
-| Subagent | 隔离的独立代理 | 进程 | 是 |
-
-## Anthropic Agent Skills 的工程实现
-
-[Anthropic Agent Skills](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) 是上述 Skill 概念的具体工程实现。理解它的设计有助于把抽象的"Skill"落到实处。
-
-### 三阶段渐进式披露
-
-Skill 的核心机制是**按需加载**，避免一次性占用上下文窗口：
-
-**第一阶段：元数据（始终加载）。** 每个 Skill 有一个 YAML frontmatter 描述，包含 name 和 description，加起来约 100 token。启动时所有 Skill 的元数据注入系统提示词，让 Claude 知道有哪些 Skill 可用、什么时候该调用。
-
-**第二阶段：指令（触发时加载）。** SKILL.md 的正文内容，包含具体工作流、最佳实践、操作步骤。Claude 判断某个 Skill 与当前任务匹配时，通过 bash 读取 SKILL.md，正文才进入上下文窗口。
-
-**第三阶段：资源与脚本（按需访问）。** Skill 目录里可以放任意 markdown 参考文件、可执行脚本、数据集、模板。这些文件不被加载进上下文，Claude 通过 bash 访问——脚本只输出进上下文，代码本身不消耗 token。
+`repo-bugfix` 的复用单位是修复纪律，不是登录模块知识。下面这些内容应保留：
 
 ```text
-my-skill/
-├── SKILL.md              # 主要指令（触发时加载）
-├── reference.md          # API 参考（按需加载）
-├── examples.md           # 示例（按需加载）
-└── scripts/
-    └── validate.py       # 工具脚本（执行不加载）
+复现故障 → 限定相关范围 → 最小修改 → 补回归测试
+          → 运行验证 → 检查完整 diff → 提交结果
 ```
 
-**这套机制让 Skill 可以"无限"打包内容而不爆炸上下文。** 一个 Skill 可以附带几百页的 API 文档、完整的数据库 schema、大量历史案例——只要不被实际读取，就不占 token。代价是 Claude 每次需要时必须重新读文件，所以文件结构要清晰、命名要可读，避免 Claude 用 `head -100` 预览导致信息不全。
+`return_to`、`next_path`、`src/auth/login.ts`、`src/auth/callback.ts` 等事故细节不进入主流程。把这些名字写死后，Skill 在新的缓存、表单或权限 Bug 上会沿着错误方向搜索。
 
-### Skill 放在哪里
+## 建立最小目录
 
-Skill 的存放位置决定谁能用：
+[Agent Skills 官方规范](https://agentskills.io/specification) 规定，一个 Skill 至少是包含 `SKILL.md` 的目录；`scripts/` 和 `references/` 都是可选资源。不同 Agent 实现的安装位置可能不同，先在普通工作目录中完成和验证内容，再放入当前实现识别的 Skill 根目录。
 
-| 位置 | 路径 | 适用范围 |
-|------|------|----------|
-| Enterprise | 通过 managed settings 部署 | 全组织 |
-| Personal | `~/.claude/skills/<name>/SKILL.md` | 当前用户所有项目 |
-| Project | `.claude/skills/<name>/SKILL.md` | 当前项目 |
-| Plugin | `<plugin>/skills/<name>/SKILL.md` | 启用了该插件的场合 |
+```text
+repo-bugfix/
+├── SKILL.md
+├── scripts/
+│   └── check-diff.sh
+└── references/
+    └── repository-conventions.md
+```
 
-企业级 > 个人 > 项目，插件用 `plugin-name:skill-name` 命名空间避免冲突。**项目级 Skill 应当提交到版本控制**——它是项目知识的一部分，新成员 clone 仓库就自动获得。
+可以先创建目录：
 
-### 触发方式
+```bash
+mkdir -p repo-bugfix/scripts repo-bugfix/references
+```
 
-**自动触发**：Claude 根据 description 判断是否匹配当前任务，匹配时自动加载 SKILL.md。**手动触发**：用户在 Claude Code 输入 `/skill-name` 直接调用，类似 slash command。
+`SKILL.md` 保存每次都要遵守的短流程；脚本承载确定、可执行的机械检查；参考资料保存仓库约定和较长说明。一个文件已经能讲清时，只创建 `SKILL.md`。目录扩展应由真实重复需求推动。
 
-**Custom commands 已合并入 Skills。** 旧的 `.claude/commands/deploy.md` 文件和新的 `.claude/skills/deploy/SKILL.md` 目录都产生 `/deploy`，功能等价。Skills 是超集，额外提供 supporting files、frontmatter 字段控制、子 agent 执行等能力。旧命令文件继续工作。
+## 写好触发描述和主流程
 
-**frontmatter 关键字段**：
+规范要求 `SKILL.md` 的 front matter 至少包含 `name` 和 `description`。`description` 同时回答“做什么”和“什么时候使用”，因为 Agent 会根据这些信息发现相关 Skill。`Helps fix bugs` 范围过宽，也缺少触发场景和完成要求。
 
-- **`description`**：必填，说明 Skill 做什么+何时用，**必须用第三人称**（"Processes Excel files..." 而不是 "I can help..."）
-- **`disable-model-invocation: true`**：禁止 Claude 自动触发，只允许用户手动 `/`
-- **`user-invocable: false`**：禁止用户触发，只让 Claude 后台调用
-- **`allowed-tools` / `disallowed-tools`**：技能激活时限制工具池
-- **`model` / `effort`**：技能激活时切换模型或推理强度
+下面是一份最小可用的 `SKILL.md`：
 
-**`!`command`` 动态上下文注入**：在 SKILL.md 里写 `` !`git diff HEAD` ``，Skill 加载前先执行命令，命令输出替换占位符。**这让 Skill 可以引用实时数据**——当前 diff、最新 benchmark、当前任务状态——而 Skill 文档本身保持不变。
+```md
+---
+name: repo-bugfix
+description: Diagnoses and fixes reproducible bugs in existing code repositories. Use when expected and actual behavior differ, a local test fails, or a user requests a minimal verified patch. Excludes deployments, production incidents, and tasks requiring secrets.
+compatibility: Requires Git and the repository's documented validation commands. Operates only inside the current repository.
+metadata:
+  version: "0.1.0"
+---
 
-**`context: fork` 子 agent 执行**：把 Skill 内容作为子 agent 的 prompt 在隔离上下文里运行。主对话历史不进入子 agent，Skill 完成后只把结果返回。**适合"运行一次性的复杂分析任务而不污染主对话上下文"**。
+# Repository Bug Fix
 
-### 三种使用形态
+## Required inputs
 
-| 形态 | 用途 | 限制 |
-|------|------|------|
-| **Claude Code** | 个人/项目/企业级 Skill，文件系统管理 | 全功能，本地网络 |
-| **claude.ai** | 上传 zip 包，个人级 | 网络访问视设置而定 |
-| **Claude API** | 程序化使用 `container.skills` 参数 | 无网络访问、无运行时包安装 |
+- Record expected behavior, actual behavior, and available reproduction steps.
+- Read the repository's local instructions before changing files.
+- Treat the current dirty worktree as user-owned state.
 
-## 创建 Skill
+## Workflow
 
-**Skill 的创建可以通过 Chat 完成**：
+1. Reproduce the bug with the narrowest existing test or command. Record the command, exit code, and relevant output.
+2. Limit investigation to the failing path and its nearest callers, state transitions, and tests. Expand only when evidence requires it.
+3. Make the smallest change that addresses the demonstrated cause. Preserve unrelated user changes.
+4. Add or update a regression test for the reproduced behavior. Confirm it fails before the fix and passes after it; report when a safe pre-fix run is unavailable.
+5. Run the focused regression, then the repository's documented broader checks.
+6. Run `scripts/check-diff.sh`, inspect the full diff, and remove unrelated changes or generated artifacts created by this task.
 
-1. 发起新聊天，说明想创建什么 Skill。
-2. 附上理解、参考资料、案例和期望输出。
-3. 回答 AI 的澄清问题。
-4. 生成 Skill 后测试并完善。
-5. 在真实任务中反复使用，持续迭代。
+## Boundaries
 
-**更结构化的方法是 Claude A 写 + Claude B 用**：
+- Read and write only inside the current repository.
+- Do not read credential files, secret stores, or production data.
+- Do not deploy, push, send messages, or call external systems. Stop and hand off those requests.
+- Do not use destructive Git commands to clean an existing worktree.
 
-- **Claude A**（专家）：和你一起设计 Skill，把领域知识、流程、约束写成 SKILL.md
-- **Claude B**（用户）：在真实任务里使用这个 Skill，观察它在哪里做对、在哪里卡住
-- **迭代循环**：把观察结果带回 Claude A，针对性改进
+## Stop conditions
 
-这个循环和前面 AI技能.md 自进化思想一致，但更具体——Claude A 知道怎么写好的 Agent 指令，Claude B 暴露真实使用中的盲点。
+- Stop as blocked when the bug cannot be reproduced with the available environment.
+- Stop and request direction when the fix requires credentials, production access, deployment, or a broader product decision.
+- Do not claim success while required tests fail or completion evidence is missing.
 
-## 创作规范
+## Final report
 
-**Concise 是核心。** 上下文窗口是公共资源：系统提示、对话历史、其他 Skill 的元数据、用户请求都在抢空间。**默认假设 Claude 已经够聪明**，每条规则都要问"Claude 真的需要这条吗？"。把"PDF 是什么"留给模型，把"用 pdfplumber 而不是 pypdf"写进 Skill。
+Report the reproduced behavior, verified root cause, changed files, regression test, validation commands and results, remaining risk, and any skipped check.
+```
 
-**自由度假说匹配任务脆弱性**：
+这份主文件只定义稳定流程。它不会规定先搜索哪个文件，也不会嵌入完整的 [ReAct 循环](/react-agent-loop)、[Plan-and-Execute 算法](/plan-and-execute-loop) 或 [Harness](/harness-engineering) 状态机。Agent 运行时负责选择行动和维护状态，Skill 只提供反复验证过的做事方法与验收要求。
 
-- **高自由**（文本指令）：多解、依赖上下文、启发式判断。例如"做代码审查"
-- **中自由**（伪代码+参数）：有推荐模式，但允许变化。例如"按这个模板生成报告"
-- **低自由**（精确脚本+固定参数）：操作脆弱、必须按固定顺序。例如"运行 `python scripts/migrate.py --verify --backup`，不要加任何 flag"
+## 把机械动作放进脚本
 
-**反模式**：
+当同一组确定性命令反复被遗漏或写错时，再增加脚本。下面的 `scripts/check-diff.sh` 只读取 Git 状态，不修改文件：
 
-- 深层嵌套引用（`SKILL.md` → `advanced.md` → `details.md`）——Claude 经常会用 `head -100` 预览嵌套文件，导致信息缺失。**保持引用一层深**
-- 超过 100 行的参考文件没目录——Claude 预览时看不到全貌
-- voodoo constants（`TIMEOUT = 47  # 为什么是 47？`）——每个魔法值都要有说明
-- 时间敏感信息（"2025 年 8 月之前用旧 API"）——用 `<details>` 折叠"old patterns"区
-- Windows 路径（`scripts\helper.py`）——所有平台都用 `/`
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-**description 是触发关键**：100 token 决定 Claude 是否在 100+ 可用 Skill 里选中这个。必须同时说清**做什么**和**何时用**，且用第三人称（注入系统提示词会破坏人称一致性）。"Processes Excel files and generates reports" 优于 "I can help you process Excel files"。
+git rev-parse --show-toplevel >/dev/null
+git diff --check
+git diff --cached --check
+git status --short
+git diff --stat
+git diff --cached --stat
+```
 
-**scripts solve, don't punt**：脚本要处理错误而不是抛给 Claude。`try/except FileNotFoundError` 比直接 `open(path).read()` 更可靠——Claude 看见错误时不知道该建文件还是该报错。
+为脚本增加执行权限后，可以独立运行：
 
-**plan-validate-execute 模式**：复杂任务先让 Claude 写出 plan 文件，验证脚本检查 plan，再执行，最后验证。**这和 Harness 思想一致**——在模型之外强制验证，避免幻觉结论污染后续。
+```bash
+chmod +x repo-bugfix/scripts/check-diff.sh
+repo-bugfix/scripts/check-diff.sh
+```
 
-## 安全考虑
+脚本只能证明差异格式有效，并展示文件范围和统计。它无法判断某一行是否服务当前 Bug，Agent 仍要读取完整 diff，并对照任务范围逐项检查。
 
-**Skill 可以让 Claude 调用任意工具、执行任意脚本、访问任意文件。** 这也是最大的安全风险。
+测试、类型检查和构建命令因仓库而异，先从项目自己的 `AGENTS.md`、`CONTRIBUTING.md`、包管理配置或 CI 配置中确认。把已经验证的选择顺序写入 `references/repository-conventions.md`：
 
-- 恶意 Skill 可调用工具做危险操作（删除文件、外发数据、读取密钥）
-- 依赖外部 URL 的 Skill 可能被投毒（fetched content 可能含恶意指令，参考 [AI安全文档对间接 prompt injection 的分析](/ai-security)）
-- 信任被破坏的 Skill 在升级时可能被植入后门
+```md
+# Repository conventions
 
-**只从可信源安装 Skill**——自己创建、官方提供、或经审计的来源。把 Skill 视为"安装第三方软件"而不是"复制一段文字"。
+## Validation order
 
-## Claude.ai 上的 Projects 与 Skills：消费者场景的 Skill 落地
+1. Run the narrow regression for the changed behavior.
+2. Run checks required by the nearest repository instructions.
+3. Run the broader build or test gate required before delivery.
+4. Record commands, exit codes, skipped checks, and reasons.
 
-上面讨论的 Anthropic Agent Skills 是面向开发者的工程实现，需要懂 Agent 框架和文件结构。**Claude.ai 平台上的 Projects 与 Skills 是面向消费者用户的轻量化入口**——不需要懂技术，只需要建好项目和写好工作流。
+## Generated files
 
-### Projects：把上下文一次配好
+Do not edit generated output directly. Identify its source and use the documented generator.
+```
 
-每次开新对话都重新解释"我的角色、写作风格、品牌规范"是 Claude 使用的最大浪费源。**Projects 把上下文封装到一个持久化容器**：上传知识文件（品牌指南、过往作品、人物画像等）+ 写一次系统提示（角色定义、上下文、输出标准）。这个 Project 内的所有对话自动继承这套上下文，**从"每次从零开始"变成"Claude 已经知道你是谁"**。
+参考资料保存变化较慢、只在特定仓库需要的信息。主文件通过相对路径指向它，避免层层跳转。某条规则能够由脚本稳定检查后，应把检查放进脚本，让正文只说明何时运行以及如何解释结果。
 
-### Skills：把工作流一次写好
+## 让权限边界真正生效
 
-如果说 Projects 是"Claude 已经知道你是谁"，**Skills 就是"Claude 已经知道怎么帮你做事"**。每个 Skill 是一个保存的工作流，包含输入格式、步骤、输出标准、质检要求，保存后用一句话就能触发。
+写在 `SKILL.md` 里的边界可以指导模型，无法单独形成安全隔离。宿主运行时仍要限制文件系统、工具、网络和凭证，并在部署、推送、删除和外部消息等副作用前执行授权检查。
 
-### 5+2 个 Skill 配方
+`repo-bugfix` 应采用以下运行边界：
 
-下面 5 个是日常高频场景的最小集合，覆盖了大多数专业工作：
+- 文件读写根目录固定为当前仓库，解析真实路径后拒绝越界访问。
+- `.env`、密钥目录、凭证存储和生产数据不进入模型上下文。
+- 只提供完成当前修复所需的搜索、读取、编辑和本地验证工具。
+- 部署、推送、网络请求和外部通知不属于该 Skill 的工具集合。
+- 工具输出仍按未验证观察处理；只有测试、Schema、退出码和差异检查通过后，才提交为完成证据。
 
-1. **Meeting Summary Writer**：粘贴原始会议笔记 → 自动提取决策、行动项（带负责人和截止日期）、未解问题、写 3 句执行摘要。500 字以内，行动项用 bullet，负责人加粗
-2. **Email Drafter**：描述场景和收件人 → 自动写两版（一版直接、一版委婉），200 字以内，带主题行和具体 CTA
-3. **Content Repurposer**：粘贴长文 → 自动产出 5 条 X 帖子（各带强 hook）、1 条 LinkedIn、3 个邮件主题、1 段 Slack 摘要。每条独立成篇
-4. **Proposal Builder**：描述客户、项目、预算范围 → 自动生成结构化提案（执行摘要、问题陈述、解决方案、里程碑、报价、下一步）。2 页内可扫读
-5. **Weekly Review Generator**：粘贴原始周笔记 → 自动分类整理（成就、项目状态、关键洞察、下周重点、风险和阻塞）。一页内
+官方规范包含可选的 `allowed-tools` 字段，并明确标记其为实验能力、不同 Agent 实现的支持程度可能不同。因此本文不依赖这个字段完成授权；实际权限以宿主沙箱和执行策略为准。
 
-补充 2 个完成关键库：
+## 用未见过的 Bug 验收
 
-6. **Research Briefing**：给主题 → 自动出研究摘要（关键发现、数据点、来源质量评估、so-what 含义）
-7. **Presentation Outliner**：给主题、听众、时间限制 → 自动出大纲（每页一个核心信息、建议可视化、演讲备注、强开场结尾）
+Skill 的验收任务不能参与它的编写。登录回跳案例已经出现在正文和指令中，只能作为训练样例。准备一个根因未知、文件位置不同的保留案例，例如：
 
-**这 7 个 Skill 每个节省 15-45 分钟/次。** 每个 Skill 一周用 2 次，等于每周节省 3-10 小时——而且是"以后每周都省"。
+```text
+期望：用户只修改昵称后，原有时区保持 Asia/Shanghai
+实际：保存资料后，时区被重置为 UTC
+约束：只能修改当前仓库，不得读取生产数据或部署
+```
 
-### Project 三层级
+在未提示具体文件和根因的情况下运行 `repo-bugfix`，按以下标准验收：
 
-**Basic 和 Living 之间的差距是巨大的。** 前者是"通用助手偶尔记得你是谁"，后者是"个人化团队成员完全懂你的业务"。
+1. `description` 能让 Agent 判断该任务适用 `repo-bugfix`。
+2. 修改前先用测试或最小操作复现，保存命令、退出码和实际结果。
+3. 搜索范围由新证据驱动，没有套用登录案例的文件名和会话键。
+4. 补丁只修改根因所需代码，并补充能捕获旧行为的回归测试。
+5. 聚焦测试和仓库要求的更广验证均通过；无法运行的检查被明确报告。
+6. 完整 diff 没有无关改动、生产凭证、生成产物或意外副作用。
 
-| 层级 | 配置 | 价值 |
-|---|---|---|
-| **Basic** | 系统提示 + 2-3 个文件 | 30% 价值，10 分钟搭建 |
-| **Optimized** | 详细系统提示 + 5-10 个文件（含最佳作品范例）| 70% 价值，30-45 分钟搭建 |
-| **Living** | 在 Optimized 基础上每月新增作品、定期优化系统提示、季度更新竞品分析 | 100% 价值，每周 15 分钟维护 |
+只在当前案例成功仍不够。继续选择不同模块、不同错误类型的保留任务，并重跑已经通过的旧任务。新版本应在扩大适用范围的同时保住原有结果；若它开始搜索固定文件或跳过复现，说明指令过拟合了登录案例。
 
-**从 Basic 到 Living 不是一次性升级，是持续迭代。** Project 应该是"活文档"——业务变了、风格进化了、读者画像更新了，Project 也要同步更新。
+## 用失败证据迭代版本
 
-### System Prompt 五段式结构
+每次失败先判断应该修改哪一层：
 
-大多数系统提示太模糊。**让 Claude 输出稳定可靠的五段式结构**：
+- **触发错误**：补充 `description` 中的任务信号或排除项。
+- **步骤遗漏**：修改 `SKILL.md` 的稳定流程或停止条件。
+- **命令反复写错**：修正脚本，并为脚本增加可重复检查。
+- **仓库知识过时**：更新参考资料，不扩大主流程。
+- **权限越界**：先修宿主策略，再补 Skill 中的显式提醒。
 
-1. **角色与专长**：「你是拥有 10 年 SaaS 营销经验的 B2B 内容策略师，专攻 VP 级决策者的长篇 thought leadership 内容。」
-2. **业务上下文**：「你在 [公司] 工作，[公司] 是面向中型工程团队的项目管理平台。主要竞品是 [列表]。差异化是 [什么]。读者关心 [具体成果]，不关心 [他们不关心的事]。」
-3. **输出标准**：「每篇内容必须以具体、非显而易见的洞察开头。用数据支持论点。除非行业标准，否则不用术语。主动语态。对话式但权威。每个段落必须有教学、证明或推进论点的作用。」
-4. **禁止事项**：「不要用'在这个快节奏的时代''发挥协同效应''不言而喻'等表达。不要以'然而''此外'开头段落。不要以通用 CTA 结尾。不要假设读者了解我们的产品——始终提供上下文。」
-5. **重复性指令**：「每次都提供 3 个标题选项。每次都包含 meta description。每次都标注需要引用的声明。分析竞品时同时记录其优势和弱点。」
+一次只针对已复现的失败做最小修改，然后运行两组测试：触发该修改的新保留案例，以及此前已经通过的回归案例。新版本只有在目标失败消失、旧任务没有退化、权限边界未放宽时才被接受。
 
-**这个详细程度决定 Claude 是"通用助手"还是"输出你同事以为是你写的"水平的助手。**
+版本号可以保存在 `metadata.version`，Git 记录保存实际差异和评审历史。可以采用常见的版本约定：措辞修正增加补丁版本；新增兼容步骤或可选资源增加次版本；输入、输出或权限契约发生不兼容变化时增加主版本。版本号只标识变更，验证记录才说明这个版本是否值得使用。
 
-### Projects + Skills 组合
-
-**真正的力量来自 Projects 和 Skills 的组合使用。** Projects 提供上下文（你是谁、什么风格、什么标准），Skills 提供工作流（做什么、怎么做、输出什么）。当你在 Content Creation Project 内调用 Content Repurposer Skill 时，Claude 同时有上下文和工作流——**输出不是通用的，而是精确匹配你的标准**。
-
-这种"上下文 + 工作流"的分离是一种工程原则：
-- 上下文是**身份**——什么让你是你
-- 工作流是**动作**——你要做什么
-- 两者独立维护、独立更新、独立复用于不同场景
-
-## Skill 自进化
-
-**Skill 的真正价值，不只是能被写出来，还在于能不能持续变好。** 现有 Skill 自进化最大的缺陷，是只基于单条轨迹更新：个人场景影响有限，企业级场景却会因为大量重复任务和边界 case 变得极其不稳定，甚至出现"越优化越差"的情况。把 bad case 直接喂给 Skill 改写，和只拿坏样本改 Prompt 本质上是同一种过拟合。
-
-要让 Skill 真正进化，核心不是多改，而是建立验证和选择机制。可以把现有实践粗略分成三类：
-
-### Trace2Skill
-
-先看够多，再写文档。这个路径更像归纳法：先跑大量轨迹，区分成功和失败集，再让不同的分析者并行提案，最后把多次出现的补丁归纳成通用原则。它的优点是一次成型、效率高、Skill 简洁可读；缺点是没有显式验证机制，合并质量决定上限。
-
-### EvoSkill
-
-有验证才有方向，不验证就是盲目进化。这个路径引入执行者、提案者和搭建者三种角色，围绕一个固定容量的前沿集合做自然选择：新 Skill 必须在验证集上跑赢精英池里最弱者，才有资格进入正式版本。失败记录会进入历史库，反过来帮助后续提案更聪明。它的优点是可解释性强，每个 Skill 都能对应到明确的失败模式；缺点是每轮只改一处，收敛较慢。
-
-### SkillOpt
-
-把 Skill 看成外部可训练参数，用训练范式来优化文本。它和深度学习的对应关系很强：Skill 文本像权重，文本重构像梯度更新，优化器 Agent 像 Adam 或 SGD，学习率像每步允许编辑的数量，Minibatch 像轨迹分组反思，动量像 Epoch 级慢更新，验证集 Early Stop 则决定新版本是否真的更好。它的优点是可控性最强，每个组件都有明确解释；缺点是组件复杂，强依赖稳定的验证集和打分函数。
-
-这三类方法可以组合使用：Trace2Skill 先快速生成基线，EvoSkill 持续扩充技能库，SkillOpt 对核心瓶颈做精细打磨。它们背后的共同点是同一条结论：**可验证性决定了迭代速度的天花板。** 没有验证机制，就只能靠人体感；有验证机制，数据飞轮才会转起来，Skill 才能从一次性的文档变成真正能进化的资产。
-
-## Skill、做事原则和道
-
-**三者不是同一层面的东西：**
-
-**Skill 是操作层。** 完成某类任务的固定方法、流程和工具——可学习、可传授、可标准化。换个人执行，结果应该基本一致。
-
-**做事原则是判断层。** 在没有既定方法时，用来做取舍和决策的准则，比如"先做最重要的事""不确定时先验证再投入"。它比 Skill 更抽象，但仍然是可以言说的规则。
-
-**道是认知层。** 对事物本质的理解和直觉，难以直接教给别人，只能通过大量实践自行体悟。"道可道，非常道"——能被完整表达成规则的，已经不是道本身。
-
-**Skill 可以被 AI 固化和复用，做事原则可以被 AI 参考，但道无法被 AI 替代。** 这正是为什么岗位经验是大模型时代最稀缺资产——Skill 和原则可以被迁移，深层的判断力和对复杂情境的感知却只能靠人积累。
+完成后的 `repo-bugfix` 应满足以下条件：目录通过当前 Agent 实现的格式检查；触发描述能覆盖目标 Bug 并排除生产操作；主流程只含已验证方法；脚本可独立运行；参考资料来源明确；至少一个未见过的 Bug 和既有回归案例通过相同验收标准。

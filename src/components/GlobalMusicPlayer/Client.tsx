@@ -14,15 +14,14 @@ import {
   MusicIcon,
 } from '@site/src/components/ItsHoverIcon';
 import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useControlledIconAnimation';
+import {
+  dispatchMusicPlayerState,
+  musicPlayerPlayEventName,
+} from './playerEvents';
+import type {MusicPlayerPlayDetail} from './playerEvents';
 
 type APlayerConstructor = new (options: APlayerOptions) => APlayerInstance;
 const babyMusicManifestUrl = '/music/baby-music/manifest.json';
-const musicPlayerPlayEventName = 'feei:music-player-play';
-// Emitted by the player whenever the active track changes (manual switch,
-// auto-advance on `ended`, programmatic list.switch). Surfaces the new
-// groupId + trackIndex so the music library page can keep its "now playing"
-// highlight in sync without polling the player.
-const musicPlayerStateEventName = 'feei:music-player-state';
 const initialMusicGroups = [...siteMusicGroups, ...buildAllDerivedGroups(siteMusicGroups)];
 const fullScreenLyricLineHeight = 48;
 const playerStateStorageKey = 'feei-global-music-player-state-v1';
@@ -36,16 +35,6 @@ type StoredGroupPlayback = {
 type StoredPlayerState = {
   activeGroupId?: string;
   groups?: Record<string, StoredGroupPlayback>;
-};
-
-type MusicPlayerPlayDetail = {
-  groupId?: string;
-  trackIndex?: number;
-};
-
-type MusicPlayerStateDetail = {
-  groupId: string;
-  trackIndex: number;
 };
 
 type ExtendedAPlayer = APlayerInstance & {
@@ -193,12 +182,7 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
   };
 
   const dispatchPlayerState = (groupId: string, trackIndex: number) => {
-    if (typeof window === 'undefined') return;
-    window.dispatchEvent(
-      new CustomEvent<MusicPlayerStateDetail>(musicPlayerStateEventName, {
-        detail: {groupId, trackIndex},
-      }),
-    );
+    dispatchMusicPlayerState({groupId, trackIndex});
   };
 
   const playRequestedTrack = (group: PlaylistGroup | undefined, trackIndex?: number) => {
@@ -290,7 +274,7 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
       if (!requestedGroup) return;
       requestedTrackIndexRef.current = detail?.trackIndex;
       shouldAutoplayOnNextMountRef.current = true;
-      shouldKeepListOpenOnNextMountRef.current = true;
+      shouldKeepListOpenOnNextMountRef.current = detail?.showList !== false;
       setIsGroupPanelOpen(false);
       setIsPlayerVisible(true);
       if (requestedGroup.id === activeGroup?.id && _player) {

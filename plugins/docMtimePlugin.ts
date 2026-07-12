@@ -15,7 +15,13 @@ function toPosixPath(filePath: string): string {
 }
 
 function collectDocFiles(dirPath: string): string[] {
-  const entries = fs.readdirSync(dirPath, {withFileTypes: true});
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dirPath, {withFileTypes: true});
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw error;
+  }
   const files: string[] = [];
 
   for (const entry of entries) {
@@ -100,11 +106,17 @@ export default function docMtimePlugin(context: LoadContext): Plugin {
       const docFiles = collectDocFiles(docsDir);
 
       for (const docFile of docFiles) {
+        let fileMtime: number;
+        try {
+          fileMtime = fs.statSync(docFile).mtimeMs;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+          throw error;
+        }
         const relativePath = toPosixPath(path.relative(siteDir, docFile));
         const sourceKey = `@site/${relativePath}`;
         const gitLastUpdatedAt = getGitLastUpdatedAt(siteDir, relativePath);
         const revisionCount = getGitRevisionCount(siteDir, relativePath);
-        const fileMtime = fs.statSync(docFile).mtimeMs;
 
         metadata[sourceKey] = {
           updatedAt: gitLastUpdatedAt ?? fileMtime,

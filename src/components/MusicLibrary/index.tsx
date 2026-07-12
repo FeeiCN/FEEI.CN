@@ -12,21 +12,17 @@ import type {
   PlaylistGroup,
   PlaylistManifestGroup,
 } from '@site/src/components/GlobalMusicPlayer/playlist';
+import {
+  dispatchMusicPlayerPlay,
+  musicPlayerStateEventName,
+} from '@site/src/components/GlobalMusicPlayer/playerEvents';
+import type {
+  MusicPlayerPlayDetail,
+  MusicPlayerStateDetail,
+} from '@site/src/components/GlobalMusicPlayer/playerEvents';
 import styles from './styles.module.css';
 
 const babyMusicManifestUrl = '/music/baby-music/manifest.json';
-const musicPlayerPlayEventName = 'feei:music-player-play';
-const musicPlayerStateEventName = 'feei:music-player-state';
-
-type MusicPlayerPlayDetail = {
-  groupId: string;
-  trackIndex?: number;
-};
-
-type MusicPlayerStateDetail = {
-  groupId: string;
-  trackIndex: number;
-};
 
 type TrackLocation = {groupId: string; index: number};
 
@@ -142,7 +138,7 @@ function MusicLibraryClient() {
   }, [flatTracks.length, highlightedIndex]);
 
   const playFromGlobalPlayer = useCallback((detail: MusicPlayerPlayDetail) => {
-    window.dispatchEvent(new CustomEvent<MusicPlayerPlayDetail>(musicPlayerPlayEventName, {detail}));
+    dispatchMusicPlayerPlay(detail);
     setCurrentTrackKey(`${detail.groupId}:${detail.trackIndex ?? 0}`);
   }, []);
 

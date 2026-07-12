@@ -9,6 +9,7 @@ on:
       - 'src/**'
       - 'static/**'
       - 'plugins/**'
+      - 'scripts/check_docs_quality.mjs'
       - 'docusaurus.config.ts'
       - 'sidebars.ts'
       - 'package.json'
@@ -122,10 +123,23 @@ jobs:
           echo "new_head=$new_head"
           echo "deployed_head=${deployed_head:-none}"
 
+          quality_base="$old_head"
+          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
+            quality_base="$deployed_head"
+          fi
+          echo "quality_base=$quality_base"
+
+          group_end "Prepare repository"
+
+          group_start "Check docs quality"
+          npm run check:docs -- --base="$quality_base"
+          group_end "Check docs quality"
+
+          group_start "Prepare static assets"
           # media/music 由独立共享目录提供。构建前移除仓库中的链接，避免
           # Docusaurus 把数 GB 媒体复制到 staging，发布时再挂回。
           rm -rf static/media static/music
-          group_end "Prepare repository"
+          group_end "Prepare static assets"
 
           group_start "Sync shared data"
           mkdir -p "$data_root"

@@ -146,7 +146,7 @@ const favoriteTracks: Audio[] = [
   localTrack('灰色头像', '许嵩', '灰色头像-许嵩.mp3'),
   localTrack('纸短情长', '烟把儿', '纸短情长.mp3'),
   localTrack('一生所爱', '卢冠廷&莫文蔚', '一生所爱-卢冠廷莫文蔚.mp3'),
-  localTrack('平凡之路', '后会无期', '平凡之路.mp3'),
+  localTrack('平凡之路', '朴树', '平凡之路.mp3'),
   localTrack('漫步人生路', '邓丽君', '漫步人生路-邓丽君.mp3'),
   localTrack('盛夏的果实', '莫文蔚', '盛夏的果实-莫文蔚.mp3'),
   localTrack('小手拉大手', '梁静茹', '小手拉大手-梁静茹.mp3'),

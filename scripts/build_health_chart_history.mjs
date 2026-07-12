@@ -1,26 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import ts from 'typescript';
 import {fileURLToPath, pathToFileURL} from 'node:url';
+import {transform} from './health_chart_transform.generated.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), '..');
 const defaultHealthRoot = path.join(repoRoot, 'static', 'data', 'health');
-const transformSourcePath = path.join(repoRoot, 'src', 'components', 'HealthCharts', 'transform.ts');
-
-async function loadTransform() {
-  const source = fs.readFileSync(transformSourcePath, 'utf8');
-  const output = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-    },
-    fileName: transformSourcePath,
-  }).outputText;
-  const moduleUrl = `data:text/javascript;base64,${Buffer.from(output).toString('base64')}`;
-  const module = await import(moduleUrl);
-  return module.transform;
-}
 
 function healthMonthFiles(healthRoot) {
   return fs.readdirSync(healthRoot, {withFileTypes: true})
@@ -83,7 +68,6 @@ export async function buildHealthChartHistory({healthRoot = defaultHealthRoot} =
   const monthFiles = healthMonthFiles(resolvedRoot);
   if (!monthFiles.length) throw new Error(`No monthly health files found in ${resolvedRoot}`);
 
-  const transform = await loadTransform();
   const months = monthFiles.map(({key, file}) => ({
     key,
     data: filterToNominalMonth(transform(JSON.parse(fs.readFileSync(file, 'utf8'))), key),

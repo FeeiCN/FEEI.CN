@@ -33,22 +33,82 @@ const healthMonthCache = new Map<string, {data: HealthData; cachedAt: number}>()
 const healthMonthRequestCache = new Map<string, Promise<HealthData | null>>();
 let healthHistoryCache: HealthData | null = null;
 let healthHistoryRequestCache: Promise<HealthData | null> | null = null;
+let sleepScoreCache: HealthData['sleep_score'] | null = null;
+let sleepScoreRequestCache: Promise<HealthData['sleep_score']> | null = null;
+const sleepScoreDetailCache = new Map<string, SleepScoreDetailPayload>();
+const sleepScoreDetailRequests = new Map<string, Promise<SleepScoreDetailPayload | null>>();
 
 type HealthHistoryPayload = {
   data?: HealthData;
 };
 
+type SleepScoreHistoryPayload = {
+  scores?: HealthData['sleep_score'];
+};
+
+type SleepScoreDetailPayload = {
+  score?: number;
+  classification?: string;
+  components?: {
+    duration?: {score?: number; maximum?: number; detail?: string};
+    bedtime?: {score?: number; maximum?: number; detail?: string};
+    interruptions?: {score?: number; maximum?: number; detail?: string};
+  };
+};
+
+function loadSleepScoreDetail(date: string): Promise<SleepScoreDetailPayload | null> {
+  const cached = sleepScoreDetailCache.get(date);
+  if (cached) return Promise.resolve(cached);
+  const pending = sleepScoreDetailRequests.get(date);
+  if (pending) return pending;
+  const [year, month, day] = date.split('-');
+  const request = fetch(`/data/sleep-score/${year}/${month}/${day}.json`, {cache: 'force-cache'})
+    .then(async (response) => {
+      if (!response.ok) return null;
+      const payload = await response.json() as SleepScoreDetailPayload;
+      sleepScoreDetailCache.set(date, payload);
+      return payload;
+    })
+    .catch(() => null)
+    .finally(() => { sleepScoreDetailRequests.delete(date); });
+  sleepScoreDetailRequests.set(date, request);
+  return request;
+}
+
+function sleepScoreTooltip(date: string, total: number, values: Map<string, number>, detail?: SleepScoreDetailPayload | null): string {
+  const classification = detail?.classification || (total >= 90 ? '非常高' : total >= 80 ? '高' : total >= 60 ? '一般' : '偏低');
+  const components = detail?.components;
+  return `${date}<br/>睡眠评分：${total} · ${classification}<br/>时长：${values.get('睡眠时长') ?? 0}/50${components?.duration?.detail ? ` · ${components.duration.detail}` : ''}<br/>入睡时间：${values.get('入睡时间') ?? 0}/30${components?.bedtime?.detail ? ` · ${components.bedtime.detail}` : ''}<br/>睡眠中断：${values.get('睡眠中断') ?? 0}/20${components?.interruptions?.detail ? ` · ${components.interruptions.detail}` : ''}`;
+}
+
+function loadSleepScoreHistory(): Promise<HealthData['sleep_score']> {
+  if (sleepScoreCache) return Promise.resolve(sleepScoreCache);
+  if (sleepScoreRequestCache) return sleepScoreRequestCache;
+  sleepScoreRequestCache = fetch('/data/sleep-score/index.json', {cache: 'no-store'})
+    .then(async (response) => {
+      if (!response.ok) return [];
+      const payload = await response.json() as SleepScoreHistoryPayload;
+      sleepScoreCache = Array.isArray(payload.scores) ? payload.scores : [];
+      return sleepScoreCache;
+    })
+    .catch(() => [])
+    .finally(() => { sleepScoreRequestCache = null; });
+  return sleepScoreRequestCache;
+}
+
 export function loadHealthChartHistory(): Promise<HealthData | null> {
   if (healthHistoryCache) return Promise.resolve(healthHistoryCache);
   if (healthHistoryRequestCache) return healthHistoryRequestCache;
 
-  healthHistoryRequestCache = fetch('/data/health/history.json', {cache: 'no-store'})
-    .then(async (response) => {
+  healthHistoryRequestCache = Promise.all([
+    fetch('/data/health/history.json', {cache: 'no-store'}),
+    loadSleepScoreHistory(),
+  ]).then(async ([response, sleepScores]) => {
       if (!response.ok) return null;
       const payload = await response.json() as HealthHistoryPayload;
       if (!payload.data || !Array.isArray(payload.data.steps)) return null;
-      healthHistoryCache = payload.data;
-      return payload.data;
+      healthHistoryCache = {...payload.data, sleep_score: sleepScores};
+      return healthHistoryCache;
     })
     .catch(() => null)
     .finally(() => {
@@ -502,6 +562,37 @@ function sleepOpt(isDark: boolean, D: HealthData) {
       {name: 'REM', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[3]), itemStyle: {color: '#db2777'}},
       {name: '浅睡', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[4]), itemStyle: {color: '#14b8a6'}},
       {name: '清醒', type: 'bar', stack: 'sleep', barMaxWidth: 10, data: D.sleep.map(x => x[5]), itemStyle: {color: '#fb923c'}},
+    ],
+  };
+}
+
+function sleepScoreOpt(isDark: boolean, D: HealthData) {
+  const c = cc(isDark);
+  const dates = D.sleep_score.map(([date]) => date);
+  return {
+    ...base(isDark),
+    grid: chartGrid(16, 42),
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {type: 'shadow'},
+      formatter: (params: Array<{axisValue?: string; seriesName: string; value: number}>, ticket: string, callback: (ticket: string, html: string) => void) => {
+        const date = params[0]?.axisValue || '';
+        const byName = new Map(params.map((item) => [item.seriesName, Number(item.value)]));
+        const total = byName.get('睡眠评分') ?? 0;
+        const cached = sleepScoreDetailCache.get(date);
+        if (cached) return sleepScoreTooltip(date, total, byName, cached);
+        void loadSleepScoreDetail(date).then((detail) => callback(ticket, sleepScoreTooltip(date, total, byName, detail)));
+        return `${sleepScoreTooltip(date, total, byName)}<br/>详情加载中...`;
+      },
+    },
+    legend: topLegend(c, ['睡眠时长', '入睡时间', '睡眠中断', '睡眠评分']),
+    xAxis: xAxisFromDates(c, dates),
+    yAxis: yVal(c, {unit: '分', min: 0, max: 100}),
+    series: [
+      {name: '睡眠时长', type: 'bar', stack: 'score', barMaxWidth: 12, data: D.sleep_score.map(([, , value]) => value), itemStyle: {color: '#0a84ff'}},
+      {name: '入睡时间', type: 'bar', stack: 'score', barMaxWidth: 12, data: D.sleep_score.map(([, , , value]) => value), itemStyle: {color: '#16a34a'}},
+      {name: '睡眠中断', type: 'bar', stack: 'score', barMaxWidth: 12, data: D.sleep_score.map(([, , , , value]) => value), itemStyle: {color: '#f59e0b', borderRadius: [2, 2, 0, 0]}},
+      {name: '睡眠评分', type: 'line', data: D.sleep_score.map(([, value]) => value), symbolSize: dates.length <= 31 ? 5 : 2, lineStyle: {color: '#db2777', width: 2.2}, itemStyle: {color: '#db2777'}, z: 4},
     ],
   };
 }
@@ -1847,6 +1938,7 @@ const SECTIONS: Array<{title: string; charts: Array<{label: string; opt: OptionF
     {label: '运动类型统计', opt: workoutTypeOpt},
   ]},
   {title: '睡眠', charts: [
+    {label: '睡眠评分', opt: sleepScoreOpt},
     {label: '睡眠结构', opt: sleepOpt},
     {label: '睡眠腕温', opt: wristTempOpt},
   ]},
@@ -1884,6 +1976,7 @@ const HEALTH_CHART_METRIC_KEYS: Record<string, string[]> = {
   '活跃热量 & 基础代谢': ['active_energy'],
   '站立时间 & 站立小时数': ['stand_time'],
   '睡眠结构': ['sleep_total', 'sleep_deep', 'sleep_rem'],
+  '睡眠评分': ['sleep_score'],
   '静息心率 & HRV': ['rhr', 'hrv'],
   '心肺恢复速率': ['cardio_recovery'],
   '呼吸频率 & 血氧饱和度': ['resp_rate', 'spo2'],
@@ -2192,6 +2285,7 @@ function HealthProviderInner({
   const [internalScope, setInternalScope] = useState<TimeScope>({mode: 'recent', range: '7d'});
   const [allData, setAllData] = useState<Record<string, HealthData>>({});
   const [historyData, setHistoryData] = useState<HealthData | null>(healthHistoryCache);
+  const [sleepScoreData, setSleepScoreData] = useState<HealthData['sleep_score']>(sleepScoreCache || []);
   const [loading, setLoading] = useState(true);
   const [settledTarget, setSettledTarget] = useState('');
   const scope = controlledScope ?? internalScope;
@@ -2202,6 +2296,14 @@ function HealthProviderInner({
     [availableMonths, scope, selectedDate],
   );
   const targetSignature = scope.mode === 'all' ? 'all-history' : targetMonthKeys.join(',');
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadSleepScoreHistory().then((scores) => {
+      if (!cancelled) setSleepScoreData(scores);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -2252,7 +2354,7 @@ function HealthProviderInner({
 
   const data = useMemo(() => {
     if (scope.mode === 'all') return historyData ?? EMPTY;
-    const merged = mergeData(allData, targetMonthKeys);
+    const merged = {...mergeData(allData, targetMonthKeys), sleep_score: sleepScoreData};
     if (scope.mode === 'period') {
       if (!isValidDateKey(scope.start) || !isValidDateKey(scope.end) || scope.start > scope.end) return EMPTY;
       return filterDataByDateRange(merged, scope.start, scope.end);
@@ -2264,7 +2366,7 @@ function HealthProviderInner({
     const start = parseDate(end);
     start.setDate(start.getDate() - RANGE_DAYS[scope.range] + 1);
     return filterDataByDateRange(merged, dateKey(start), end);
-  }, [allData, historyData, scope, selectedDate, targetMonthKeys]);
+  }, [allData, historyData, scope, selectedDate, sleepScoreData, targetMonthKeys]);
   const axisDates = useMemo(() => getScopeAxisDates(scope, data, selectedDate), [scope, data, selectedDate]);
 
   const scopeLoading = loading || settledTarget !== targetSignature;

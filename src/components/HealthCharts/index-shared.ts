@@ -42,7 +42,7 @@ export type TimeScope =
 
 export const EMPTY: HealthData = {
   steps:[], distance:[], exercise:[], energy_active:[], energy_basal:[],
-  flights:[], stand_time:[], stand_hour:[], sleep:[], wrist_temp:[],
+  flights:[], stand_time:[], stand_hour:[], sleep:[], sleep_score:[], wrist_temp:[],
   rhr:[], hrv:[], walking_hr:[], resp_rate:[], spo2:[], weight:[],
   fat:[], bmi:[], lean:[], walk_speed:[], step_length:[], asym:[],
   double_supp:[], stair_up:[], stair_down:[], six_min_walk:[],

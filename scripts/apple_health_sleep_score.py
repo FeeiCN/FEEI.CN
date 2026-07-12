@@ -29,6 +29,32 @@ SEARCH_TAB_ID = "UIA.Health.Tab.Search"
 DEFAULT_OUTPUT_ROOT = Path("static/data/sleep-score")
 DATE_LABEL_RE = re.compile(r"^(?P<month>\d{1,2})月(?P<day>\d{1,2})日(?:\s+.*)?$")
 SCORE_RE = re.compile(r"睡眠评分\s*(?P<score>\d+)")
+
+
+def write_sleep_score_index(output_root: Path) -> Path:
+    rows: list[list[object]] = []
+    generated_at = ""
+    for path in sorted(output_root.glob("[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9].json")):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        components = payload.get("components") or {}
+        date = payload.get("date")
+        score = payload.get("score")
+        if not isinstance(date, str) or not isinstance(score, (int, float)):
+            continue
+        rows.append([
+            date,
+            score,
+            (components.get("duration") or {}).get("score", 0),
+            (components.get("bedtime") or {}).get("score", 0),
+            (components.get("interruptions") or {}).get("score", 0),
+        ])
+        generated_at = max(generated_at, str(payload.get("capturedAt") or ""))
+    index_path = output_root / "index.json"
+    index_path.write_text(
+        json.dumps({"version": 1, "generatedAt": generated_at or None, "dates": [row[0] for row in rows], "scores": rows}, ensure_ascii=False, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    return index_path
 COMPONENT_RE = re.compile(
     r"^(?P<name>时长|就寝|中断)：、?(?P<score>\d+)/(?P<maximum>\d+)、?(?P<detail>.+)$"
 )
@@ -343,6 +369,7 @@ def main() -> int:
         print(f"已跳过 {len(skipped)} 天已有睡眠评分")
     if empty_dates:
         print(f"已跳过 {len(empty_dates)} 天无睡眠评分")
+    print(f"睡眠评分索引: {write_sleep_score_index(args.output_root)}")
     return 0
 
 

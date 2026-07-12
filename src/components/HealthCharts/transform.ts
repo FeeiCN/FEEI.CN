@@ -40,6 +40,7 @@ export type HealthData = {
   stand_time: [string, number][];
   stand_hour: [string, number][];
   sleep: [string, number, number, number, number, number][];
+  sleep_score: [string, number, number, number, number][];
   wrist_temp: [string, number][];
   rhr: [string, number][];
   hrv: [string, number][];
@@ -179,6 +180,7 @@ export function transform(raw: any): HealthData {
     stand_time:     series(metrics, 'apple_stand_time'),
     stand_hour:     series(metrics, 'apple_stand_hour'),
     sleep:          sleep(metrics),
+    sleep_score:    [],
     wrist_temp:     series(metrics, 'apple_sleeping_wrist_temperature'),
     rhr:            series(metrics, 'resting_heart_rate'),
     hrv:            series(metrics, 'heart_rate_variability'),
@@ -371,7 +373,7 @@ export function filterByTimeRange(D: HealthData, days: number): HealthData {
     steps: f(D.steps), distance: f(D.distance), exercise: f(D.exercise),
     energy_active: f(D.energy_active), energy_basal: f(D.energy_basal),
     flights: f(D.flights), stand_time: f(D.stand_time), stand_hour: f(D.stand_hour),
-    sleep: D.sleep.filter(([d]) => d >= cs),
+    sleep: D.sleep.filter(([d]) => d >= cs), sleep_score: D.sleep_score.filter(([d]) => d >= cs && d <= latestDate),
     wrist_temp: f(D.wrist_temp), rhr: f(D.rhr), hrv: f(D.hrv),
     walking_hr: f(D.walking_hr), resp_rate: f(D.resp_rate), spo2: f(D.spo2),
     weight: f(D.weight), fat: f(D.fat), bmi: f(D.bmi), lean: f(D.lean),

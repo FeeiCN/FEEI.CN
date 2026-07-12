@@ -3304,7 +3304,7 @@ type CompareMetric = {
 
 const COMPARE_COLORS = ['#0a84ff', '#16a34a', '#f59e0b', '#db2777'];
 const COMPARE_PRESETS = [
-  {label: '恢复与工作', ids: ['health-sleep', 'health-hrv', 'health-rhr', 'career-ai']},
+  {label: '恢复与工作', ids: ['health-sleep-score', 'health-hrv', 'health-rhr', 'career-ai']},
   {label: '活动与情绪', ids: ['health-steps', 'health-exercise', 'health-daylight', 'health-mood']},
   {label: '工作与生活', ids: ['career-ai', 'life-reading', 'life-diary', 'health-sleep']},
   {label: '资产结构', ids: ['finance-index', 'finance-stock', 'finance-alipay', 'finance-caitong']},
@@ -3446,6 +3446,7 @@ function CrossDomainComparison({timeScope, selectedDate}: {timeScope: ObjectiveT
         {id: 'health-fat', domain: '健康', label: '体脂率', unit: '%', aggregate: 'average', values: seriesMap(healthData?.fat)},
         {id: 'health-exercise', domain: '健康', label: '运动时长', unit: '分钟', aggregate: 'average', values: seriesMap(healthData?.exercise)},
         {id: 'health-sleep', domain: '健康', label: '睡眠时长', unit: '小时', aggregate: 'average', values: new Map((healthData?.sleep || []).map(([date, total]) => [date, total]))},
+        {id: 'health-sleep-score', domain: '健康', label: '睡眠评分', unit: '分', aggregate: 'average', values: new Map((healthData?.sleep_score || []).map(([date, score]) => [date, score]))},
         {id: 'health-hrv', domain: '健康', label: 'HRV', unit: 'ms', aggregate: 'average', values: seriesMap(healthData?.hrv)},
         {id: 'health-rhr', domain: '健康', label: '静息心率', unit: 'bpm', aggregate: 'average', values: seriesMap(healthData?.rhr)},
         {id: 'health-daylight', domain: '健康', label: '日晒时间', unit: '分钟', aggregate: 'average', values: seriesMap(healthData?.daylight)},
@@ -3838,8 +3839,11 @@ function PeriodObjectiveSummary({
       const stepMap = new Map((health?.steps || []).filter(([date]) => periodDate(date, bounds)));
       const previousStepMap = new Map((health?.steps || []).filter(([date]) => periodDate(date, previousBounds)));
       const exerciseMap = new Map((health?.exercise || []).filter(([date]) => periodDate(date, bounds)));
+      const sleepScoreMap = new Map((health?.sleep_score || []).filter(([date]) => periodDate(date, bounds)).map(([date, score]) => [date, score]));
       const stepValues = [...stepMap.values()];
       const exerciseMinutes = [...exerciseMap.values()].reduce((total, value) => total + value, 0);
+      const sleepScores = [...sleepScoreMap.values()];
+      const averageSleepScore = sleepScores.length ? sleepScores.reduce((total, value) => total + value, 0) / sleepScores.length : null;
       const tokenByDate = new Map<string, number>();
       const previousTokenByDate = new Map<string, number>();
       llmPayloads.forEach((payload) => Object.entries(payload?.daily_token_usage || {}).forEach(([date, value]) => {
@@ -3868,6 +3872,7 @@ function PeriodObjectiveSummary({
       const signals: PeriodObjectiveExternalSummary['signals'] = [
         ...(healthChange.ratio !== null && healthChange.ratio <= -0.2 ? [{tone: 'warning' as const, label: `活动量明显下降：${healthChange.text}`} ] : []),
         ...(healthChange.ratio !== null && healthChange.ratio >= 0.2 ? [{tone: 'positive' as const, label: `活动量明显提高：${healthChange.text}`} ] : []),
+        ...(averageSleepScore !== null && averageSleepScore < 80 ? [{tone: 'warning' as const, label: `睡眠评分偏低：周期平均 ${formatNumber(averageSleepScore, 0)} 分`} ] : []),
         ...(careerChange.ratio !== null && Math.abs(careerChange.ratio) >= 0.5 ? [{tone: 'data' as const, label: `AI 使用波动较大：${careerChange.text}`} ] : []),
         ...(financeChange.ratio !== null && Math.abs(financeChange.ratio) >= 0.03 ? [{tone: financeChange.ratio < 0 ? 'warning' as const : 'positive' as const, label: `总资产变化：${financeChange.text}`} ] : []),
         ...(lifeChange.ratio !== null && lifeChange.ratio <= -0.3 ? [{tone: 'warning' as const, label: `阅读投入下降：${lifeChange.text}`} ] : []),
@@ -3876,8 +3881,8 @@ function PeriodObjectiveSummary({
       setSummary({
         health: {
           primary: stepValues.length ? `日均 ${formatNumber(stepValues.reduce((total, value) => total + value, 0) / stepValues.length, 0)} 步` : '暂无步数',
-          secondary: exerciseMap.size ? `运动 ${formatNumber(exerciseMinutes, 0)} 分钟` : '暂无运动记录',
-          coverage: `${healthChange.text} · ${stepMap.size}/${periodDays} 天有步数`,
+          secondary: averageSleepScore !== null ? `睡眠评分 ${formatNumber(averageSleepScore, 0)} · 运动 ${formatNumber(exerciseMinutes, 0)} 分钟` : exerciseMap.size ? `运动 ${formatNumber(exerciseMinutes, 0)} 分钟` : '暂无运动记录',
+          coverage: `${healthChange.text} · 睡眠评分 ${sleepScoreMap.size}/${periodDays} 天 · 步数 ${stepMap.size}/${periodDays} 天`,
         },
         career: {
           primary: tokenByDate.size ? `${formatCompactNumber(totalTokens, 1)} token` : '暂无 AI 用量',

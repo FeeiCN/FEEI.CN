@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-07-20T15:28:26.201Z",
+  "exportedAt": "2026-07-20T17:00:31.985Z",
   "date": "2026-07-20",
   "dateRange": {
     "start": "2026-07-20 00:00:00 +0800",
@@ -9,7 +9,7 @@
     "rawRecords": {
       "healthMetrics": 0,
       "workouts": 0,
-      "medications": 0,
+      "medications": 4,
       "heartNotifications": 0,
       "stateOfMind": 0,
       "cycleTracking": 0,
@@ -27,7 +27,7 @@
       "count": 0
     },
     "medications": {
-      "count": 0
+      "count": 4
     },
     "heartNotifications": {
       "count": 0
@@ -42,7 +42,28 @@
       "count": 0
     }
   },
-  "timeline": [],
+  "timeline": [
+    {
+      "type": "medication",
+      "start": "2026-07-20 09:30:00 +0800",
+      "end": "2026-07-20 09:30:00 +0800"
+    },
+    {
+      "type": "medication",
+      "start": "2026-07-20 13:00:00 +0800",
+      "end": "2026-07-20 13:00:00 +0800"
+    },
+    {
+      "type": "medication",
+      "start": "2026-07-20 13:30:00 +0800",
+      "end": "2026-07-20 13:30:00 +0800"
+    },
+    {
+      "type": "medication",
+      "start": "2026-07-20 18:00:00 +0800",
+      "end": "2026-07-20 18:00:00 +0800"
+    }
+  ],
   "series": {},
   "data": {
     "healthMetrics": {
@@ -51,7 +72,54 @@
     "workouts": {
       "workouts": []
     },
-    "medications": {},
+    "medications": {
+      "medications": [
+        {
+          "status": "未操作",
+          "isArchived": false,
+          "scheduledDosage": 1,
+          "start": "2026-07-20 09:30:00 +0800",
+          "end": "2026-07-20 09:30:00 +0800",
+          "displayText": "碳酸氢钠片",
+          "scheduledDate": "2026-07-20 09:30:00 +0800",
+          "units": "count",
+          "codings": []
+        },
+        {
+          "status": "未操作",
+          "end": "2026-07-20 13:00:00 +0800",
+          "start": "2026-07-20 13:00:00 +0800",
+          "scheduledDosage": 0.5,
+          "scheduledDate": "2026-07-20 13:00:00 +0800",
+          "displayText": "苯溴马隆片",
+          "isArchived": false,
+          "units": "count",
+          "codings": []
+        },
+        {
+          "end": "2026-07-20 13:30:00 +0800",
+          "status": "未操作",
+          "scheduledDosage": 1,
+          "start": "2026-07-20 13:30:00 +0800",
+          "scheduledDate": "2026-07-20 13:30:00 +0800",
+          "displayText": "碳酸氢钠片",
+          "isArchived": false,
+          "units": "count",
+          "codings": []
+        },
+        {
+          "status": "未操作",
+          "isArchived": false,
+          "end": "2026-07-20 18:00:00 +0800",
+          "start": "2026-07-20 18:00:00 +0800",
+          "scheduledDate": "2026-07-20 18:00:00 +0800",
+          "displayText": "碳酸氢钠片",
+          "scheduledDosage": 1,
+          "units": "count",
+          "codings": []
+        }
+      ]
+    },
     "heartNotifications": {},
     "stateOfMind": {},
     "cycleTracking": {},

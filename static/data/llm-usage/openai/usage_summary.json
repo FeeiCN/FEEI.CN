@@ -1,12 +1,12 @@
 {
   "vendor": "openai",
-  "fetchedAt": "2026-08-02 08:08:08",
+  "fetchedAt": "2026-08-03 08:08:28",
   "source": "ai.feei.cn",
   "source_endpoint": "https://ai.feei.cn/api/v1/admin/usage/stats",
   "timezone": "Asia/Shanghai",
   "sync_window": {
-    "start_date": "2026-07-04",
-    "end_date": "2026-08-02",
+    "start_date": "2026-07-05",
+    "end_date": "2026-08-03",
     "days": 30
   },
   "daily_token_usage": {
@@ -54,7 +54,8 @@
     "2026-07-30": 36398649,
     "2026-07-31": 13661122,
     "2026-08-01": 1392171,
-    "2026-08-02": 329568
+    "2026-08-02": 995535,
+    "2026-08-03": 329488
   },
   "date_usage_stats": {
     "2026-05-22": {
@@ -922,28 +923,40 @@
       "average_duration_ms": 1828.6443930635837
     },
     "2026-08-02": {
-      "total_requests": 2932,
-      "total_input_tokens": 250052,
-      "total_output_tokens": 18716,
+      "total_requests": 8641,
+      "total_input_tokens": 749347,
+      "total_output_tokens": 55980,
+      "total_cache_tokens": 190208,
+      "total_cache_creation_tokens": 0,
+      "total_cache_read_tokens": 190208,
+      "total_tokens": 995535,
+      "total_cost": 3.317659,
+      "total_actual_cost": 3.356122,
+      "average_duration_ms": 1799.694479805578
+    },
+    "2026-08-03": {
+      "total_requests": 2933,
+      "total_input_tokens": 250308,
+      "total_output_tokens": 18380,
       "total_cache_tokens": 60800,
       "total_cache_creation_tokens": 0,
       "total_cache_read_tokens": 60800,
-      "total_tokens": 329568,
-      "total_cost": 1.096312,
-      "total_actual_cost": 1.096312,
-      "average_duration_ms": 1584.044679399727
+      "total_tokens": 329488,
+      "total_cost": 1.084397,
+      "total_actual_cost": 1.084397,
+      "average_duration_ms": 1632.6242754858506
     }
   },
-  "window_total_requests": 86821,
-  "window_total_cost": 1566.294769,
-  "window_total_actual_cost": 1613.267455,
+  "window_total_requests": 94677,
+  "window_total_cost": 1471.418627,
+  "window_total_actual_cost": 1518.429776,
   "total_token_consumed": "2.32B",
-  "total_days": 45,
-  "active_days": 45,
-  "current_consecutive_days": 44,
+  "total_days": 46,
+  "active_days": 46,
+  "current_consecutive_days": 45,
   "most_active_day": {
     "date": "2026-07-11",
     "token_count": "872.35M"
   },
-  "daily_avg_token_consumed": "51.64M"
+  "daily_avg_token_consumed": "50.54M"
 }

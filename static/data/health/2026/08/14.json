@@ -1,9 +1,9 @@
 {
   "exportedAt": "2026-08-16T05:53:05.365Z",
-  "date": "2026-08-10",
+  "date": "2026-08-14",
   "dateRange": {
-    "start": "2026-08-10 00:00:00 +0800",
-    "end": "2026-08-10 23:59:59 +0800"
+    "start": "2026-08-14 00:00:00 +0800",
+    "end": "2026-08-14 23:59:59 +0800"
   },
   "summary": {
     "rawRecords": {
@@ -45,23 +45,23 @@
   "timeline": [
     {
       "type": "medication",
-      "start": "2026-08-10 09:30:00 +0800",
-      "end": "2026-08-10 09:30:00 +0800"
+      "start": "2026-08-14 23:24:08 +0800",
+      "end": "2026-08-14 23:24:08 +0800"
     },
     {
       "type": "medication",
-      "start": "2026-08-10 13:00:00 +0800",
-      "end": "2026-08-10 13:00:00 +0800"
+      "start": "2026-08-14 23:24:10 +0800",
+      "end": "2026-08-14 23:24:10 +0800"
     },
     {
       "type": "medication",
-      "start": "2026-08-10 13:30:00 +0800",
-      "end": "2026-08-10 13:30:00 +0800"
+      "start": "2026-08-14 23:24:12 +0800",
+      "end": "2026-08-14 23:24:12 +0800"
     },
     {
       "type": "medication",
-      "start": "2026-08-10 18:00:00 +0800",
-      "end": "2026-08-10 18:00:00 +0800"
+      "start": "2026-08-14 23:24:14 +0800",
+      "end": "2026-08-14 23:24:14 +0800"
     }
   ],
   "series": {},
@@ -76,44 +76,48 @@
       "medications": [
         {
           "isArchived": false,
-          "status": "未操作",
-          "start": "2026-08-10 09:30:00 +0800",
-          "scheduledDosage": 1,
-          "scheduledDate": "2026-08-10 09:30:00 +0800",
+          "dosage": 1,
+          "end": "2026-08-14 23:24:08 +0800",
+          "start": "2026-08-14 23:24:08 +0800",
+          "scheduledDate": "2026-08-14 09:30:00 +0800",
           "displayText": "碳酸氢钠片",
-          "end": "2026-08-10 09:30:00 +0800",
+          "status": "已服用",
+          "scheduledDosage": 1,
           "units": "count",
           "codings": []
         },
         {
-          "end": "2026-08-10 13:00:00 +0800",
-          "isArchived": false,
+          "dosage": 0.5,
+          "end": "2026-08-14 23:24:10 +0800",
           "scheduledDosage": 0.5,
-          "start": "2026-08-10 13:00:00 +0800",
-          "scheduledDate": "2026-08-10 13:00:00 +0800",
-          "displayText": "苯溴马隆片",
-          "status": "未操作",
-          "units": "count",
-          "codings": []
-        },
-        {
+          "start": "2026-08-14 23:24:10 +0800",
           "isArchived": false,
-          "status": "未操作",
-          "start": "2026-08-10 13:30:00 +0800",
-          "scheduledDosage": 1,
-          "scheduledDate": "2026-08-10 13:30:00 +0800",
-          "displayText": "碳酸氢钠片",
-          "end": "2026-08-10 13:30:00 +0800",
+          "displayText": "苯溴马隆片",
+          "scheduledDate": "2026-08-14 13:00:00 +0800",
+          "status": "已服用",
           "units": "count",
           "codings": []
         },
         {
-          "status": "未操作",
-          "end": "2026-08-10 18:00:00 +0800",
-          "start": "2026-08-10 18:00:00 +0800",
-          "scheduledDosage": 1,
-          "scheduledDate": "2026-08-10 18:00:00 +0800",
+          "end": "2026-08-14 23:24:12 +0800",
+          "isArchived": false,
+          "start": "2026-08-14 23:24:12 +0800",
+          "status": "已服用",
+          "scheduledDate": "2026-08-14 13:30:00 +0800",
           "displayText": "碳酸氢钠片",
+          "scheduledDosage": 1,
+          "dosage": 1,
+          "units": "count",
+          "codings": []
+        },
+        {
+          "dosage": 1,
+          "status": "已服用",
+          "start": "2026-08-14 23:24:14 +0800",
+          "scheduledDosage": 1,
+          "scheduledDate": "2026-08-14 18:00:00 +0800",
+          "displayText": "碳酸氢钠片",
+          "end": "2026-08-14 23:24:14 +0800",
           "isArchived": false,
           "units": "count",
           "codings": []

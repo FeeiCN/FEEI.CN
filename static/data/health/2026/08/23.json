@@ -1,0 +1,129 @@
+{
+  "exportedAt": "2026-08-22T18:57:49.080Z",
+  "date": "2026-08-23",
+  "dateRange": {
+    "start": "2026-08-23 00:00:00 +0800",
+    "end": "2026-08-23 23:59:59 +0800"
+  },
+  "summary": {
+    "rawRecords": {
+      "healthMetrics": 610,
+      "workouts": 0,
+      "medications": 0,
+      "heartNotifications": 0,
+      "stateOfMind": 0,
+      "cycleTracking": 0,
+      "ecg": 0,
+      "symptoms": 0
+    },
+    "activeEnergy": {
+      "units": "kJ",
+      "totalKJ": 5.786,
+      "totalKcal": 1.383,
+      "omittedRawRecords": 605,
+      "bucketMinutes": 5,
+      "segmentThresholdKJ": 5,
+      "segmentMergeGapMinutes": 10
+    },
+    "heartRate": {
+      "units": "count/min",
+      "avg": 67.4,
+      "min": 66.6,
+      "max": 69,
+      "omittedRawRecords": 4,
+      "bucketMinutes": 5
+    },
+    "workouts": {
+      "count": 0,
+      "durationMinutes": 0,
+      "activeEnergyKJ": 0,
+      "distanceKm": 0,
+      "steps": 0
+    },
+    "stateOfMind": {
+      "count": 0
+    },
+    "medications": {
+      "count": 0
+    },
+    "heartNotifications": {
+      "count": 0
+    },
+    "cycleTracking": {
+      "count": 0
+    },
+    "ecg": {
+      "count": 0
+    },
+    "symptoms": {
+      "count": 0
+    }
+  },
+  "timeline": [],
+  "series": {
+    "activeEnergy5m": {
+      "units": "kJ",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "00:00",
+          0.212
+        ],
+        [
+          "00:05",
+          2.874
+        ],
+        [
+          "00:10",
+          2.701
+        ]
+      ]
+    },
+    "heartRate5m": {
+      "units": "count/min",
+      "bucketMinutes": 5,
+      "values": [
+        [
+          "00:05",
+          67.5,
+          66.6,
+          69
+        ],
+        [
+          "00:10",
+          67,
+          67,
+          67
+        ]
+      ]
+    }
+  },
+  "data": {
+    "healthMetrics": {
+      "metrics": [
+        {
+          "units": "ms",
+          "name": "heart_rate_variability",
+          "data": [
+            {
+              "date": "2026-08-23 00:06:43 +0800",
+              "end": "2026-08-23 00:07:43 +0800",
+              "source": "Feei的Apple Watch",
+              "qty": 31.908811398438832,
+              "start": "2026-08-23 00:06:43 +0800"
+            }
+          ]
+        }
+      ]
+    },
+    "workouts": {
+      "workouts": []
+    },
+    "medications": {},
+    "heartNotifications": {},
+    "stateOfMind": {},
+    "cycleTracking": {},
+    "ecg": {},
+    "symptoms": {}
+  }
+}

@@ -1,10 +1,8 @@
 name: Daily data analysis
 
-# 每天北京时间 09:10 分析前一日完整数据，生成 Markdown 三省吾身。
+# 已暂停定时执行；保留 workflow_dispatch 供手动触发。
 
 on:
-  schedule:
-    - cron: '10 1 * * *'
   workflow_dispatch:
     inputs:
       report_date:

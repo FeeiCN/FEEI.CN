@@ -20,7 +20,7 @@
     "sync-media": "bash scripts/media-rsync.sh",
     "sync-assets": "bash scripts/sync-static-assets.sh",
     "typecheck": "tsc",
-    "check:docs": "node scripts/check_docs_quality.mjs --changed",
+    "check:docs": "node scripts/check_docs_quality_gate.mjs --changed",
     "audit:docs": "node scripts/check_docs_quality.mjs --all"
   },
   "dependencies": {
@@ -44,7 +44,7 @@
     "react-dom": "^19.0.0",
     "recharts": "^3.8.1",
     "rehype-katex": "^7.0.1",
-    "remark-math": "^6.0.0"
+    "remark-math": "^2.0.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "3.10.1",

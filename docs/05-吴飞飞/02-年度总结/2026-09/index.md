@@ -1,7 +1,9 @@
 ---
 slug: /review-2026-09
 title: 2026 年 9 月记录
+icon: calendar-icon
 description: 记录 2026 年 9 月每天值得留下的事实、进展、感恩与反思，为周复盘、月度复盘和年度总结提供原始素材。
+content_type: article
 ---
 
 # 2026 年 9 月

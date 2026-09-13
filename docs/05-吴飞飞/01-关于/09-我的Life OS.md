@@ -3,6 +3,7 @@ slug: /life-os
 title: 我的 Life OS
 icon: target-icon
 description: 用目标、数据、记录、复盘、工具与 Agent，把重要事情变成可观察、可反馈、可持续调整的个人系统。
+content_type: article
 ---
 
 # 我的 Life OS

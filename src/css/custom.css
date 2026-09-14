@@ -1720,3 +1720,11 @@
 .year-record-list .year-record strong { display:block; font-weight:700; line-height:1.5; }
 .year-record-list .year-record:hover strong { color:var(--ifm-color-primary); }
 @media (max-width:640px) { .theme-doc-markdown > h1:first-child { margin-bottom:.55rem; } .theme-doc-markdown h2 { margin-top:1.5rem; } .year-record-list .year-record { grid-template-columns:3.8rem minmax(0,1fr); gap:.65rem; padding:.6rem 0; } .theme-doc-markdown { font-size:1rem; } .year-record-list .year-record strong { line-height:1.4; } }
+
+
+/* 周末标识：根据记录中的星期文字对应 class */
+.year-record.saturday time { color:#4f8ecb; }
+.year-record.sunday time { color:#d96b6b; }
+.year-record.saturday, .year-record.sunday { border-left:3px solid currentColor; padding-left:.65rem; }
+[data-theme='dark'] .year-record.saturday time { color:#79b6ef; }
+[data-theme='dark'] .year-record.sunday time { color:#f08b8b; }

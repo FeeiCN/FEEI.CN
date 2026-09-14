@@ -1728,3 +1728,14 @@
 .year-record.saturday, .year-record.sunday { border-left:3px solid currentColor; padding-left:.65rem; }
 [data-theme='dark'] .year-record.saturday time { color:#79b6ef; }
 [data-theme='dark'] .year-record.sunday time { color:#f08b8b; }
+
+
+/* 年度记录移动端细节优化 */
+.year-record-list li { list-style:none; }
+.year-record-list li::marker { content:none; }
+.year-record-list .year-record { grid-template-columns:4.4rem minmax(0,1fr); }
+.year-month-nav { position:relative; padding-inline:.15rem; scroll-padding-inline:.15rem; }
+@media (max-width:640px) {
+  .year-record-list .year-record { grid-template-columns:4.4rem minmax(0,1fr); gap:.7rem; }
+  .year-month-nav { margin-right:-.5rem; margin-left:-.15rem; padding-right:1.5rem; }
+}

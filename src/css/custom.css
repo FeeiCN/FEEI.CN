@@ -1745,3 +1745,12 @@
 .year-record-list { margin-left:0; padding-left:0; }
 .year-record-list > ul { margin-left:0; padding-left:0; }
 .year-record-list > ul > li { margin-left:0; padding-left:0; list-style:none; }
+
+
+/* 日期记录统一使用竖向结构线，周末以颜色区分 */
+.year-record-list .year-record { border-left:3px solid rgba(128,128,128,.18); padding-left:.65rem; }
+.year-record-list .year-record.saturday { border-left-color:#79aee0; }
+.year-record-list .year-record.sunday { border-left-color:#e28a8a; }
+[data-theme='dark'] .year-record-list .year-record { border-left-color:rgba(255,255,255,.18); }
+[data-theme='dark'] .year-record-list .year-record.saturday { border-left-color:#79b6ef; }
+[data-theme='dark'] .year-record-list .year-record.sunday { border-left-color:#f08b8b; }

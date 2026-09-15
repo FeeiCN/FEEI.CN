@@ -95,7 +95,6 @@ const isStrictBuild = process.env.CI_STRICT === 'true';
 const config: Config = {
   title: '吴飞飞-安全界',
   tagline: '把所有的时间、精力和金钱都投入到长期目标中',
-  // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
     v4: {
       removeLegacyPostBuildHeadAttribute: true,
@@ -103,77 +102,33 @@ const config: Config = {
       siteStorageNamespacing: true,
       mdx1CompatDisabledByDefault: true,
       fasterByDefault: true,
-    }, // Improve compatibility with the upcoming Docusaurus v4
+    },
   },
-
   markdown: {
-    // .md files use CommonMark (no JSX parsing), .mdx files use MDX
     format: 'detect',
     hooks: {
       onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn',
       onBrokenMarkdownImages: 'ignore',
     },
     preprocessor: ({fileContent}) => {
-      // Escape * inside URLs — security write-ups use *** to mask IPs/domains,
-      // but Markdown parses *** as bold+italic and breaks link resolution.
       return fileContent.replace(/https?:\/\/\S+/g, (url) => url.replace(/\*/g, '\\*'));
     },
   },
-
-  // Set the production url of your site here
   url: 'https://feei.cn',
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
-
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'feeicn', // Usually your GitHub org/user name.
-  projectName: 'FEEI.CN', // Usually your repo name.
-
+  organizationName: 'feeicn',
+  projectName: 'FEEI.CN',
   onBrokenLinks: isStrictBuild ? 'throw' : 'warn',
-
-  // Even if you don't use internationalization, you can use this field to set
-  // useful metadata like html lang. For example, if your site is Chinese, you
-  // may want to replace "en" with "zh-Hans".
   i18n: {
     defaultLocale: 'zh-Hans',
     locales: ['zh-Hans'],
   },
-
   headTags: [
-    {
-      tagName: 'link',
-      attributes: {
-        rel: 'icon',
-        href: '/media/img/icons/feei-icon-32.webp',
-        sizes: '32x32',
-      },
-    },
-    {
-      tagName: 'link',
-      attributes: {
-        rel: 'icon',
-        href: '/media/img/icons/feei-icon-192.webp',
-        sizes: '192x192',
-      },
-    },
-    {
-      tagName: 'link',
-      attributes: {
-        rel: 'apple-touch-icon',
-        href: '/media/img/icons/feei-icon-180.webp',
-      },
-    },
-    {
-      tagName: 'meta',
-      attributes: {
-        name: 'msapplication-TileImage',
-        content: '/media/img/icons/feei-icon-270.webp',
-      },
-    },
+    {tagName: 'link', attributes: {rel: 'icon', href: '/media/img/icons/feei-icon-32.webp', sizes: '32x32'}},
+    {tagName: 'link', attributes: {rel: 'icon', href: '/media/img/icons/feei-icon-192.webp', sizes: '192x192'}},
+    {tagName: 'link', attributes: {rel: 'apple-touch-icon', href: '/media/img/icons/feei-icon-180.webp'}},
+    {tagName: 'meta', attributes: {name: 'msapplication-TileImage', content: '/media/img/icons/feei-icon-270.webp'}},
   ],
-
   presets: [
     [
       'classic',
@@ -187,124 +142,62 @@ const config: Config = {
             const items = await args.defaultSidebarItemsGenerator(args);
             return attachDocFrontMatterToSidebar(items, args.docs);
           },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/FeeiCN/FEEI.CN/tree/main/',
+          editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/',
         },
         blog: false,
-        theme: {
-          customCss: './src/css/custom.css',
-        },
+        theme: {customCss: './src/css/custom.css'},
       } satisfies Preset.Options,
     ],
   ],
-
   plugins: [docMtimePlugin, copyMarkdownPlugin],
-
   themes: [
     [
       require.resolve('@easyops-cn/docusaurus-search-local'),
-      {
-        docsRouteBasePath: '/',
-        indexBlog: false,
-        language: ['en', 'zh'],
-      },
+      {docsRouteBasePath: '/', indexBlog: false, language: ['en', 'zh']},
     ],
   ],
-
   clientModules: ['./src/clientModules/slidingIndicator.ts'],
-
   themeConfig: {
-    docs: {
-      sidebar: {
-        hideable: true,
-        autoCollapseCategories: true,
-      },
-    },
-    // Replace with your project's social card
+    docs: {sidebar: {hideable: true, autoCollapseCategories: true}},
     image: 'media/img/icons/feei-icon-270.webp',
-    colorMode: {
-      defaultMode: 'light',
-      disableSwitch: false,
-      respectPrefersColorScheme: true,
-    },
+    colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
     navbar: {
       hideOnScroll: false,
-      logo: {
-        alt: 'My Site Logo',
-        src: 'media/img/logo.webp',
-      },
+      logo: {alt: 'My Site Logo', src: 'media/img/logo.webp'},
       items: [
-        {
-          type: 'docSidebar',
-          sidebarId: 'healthHappinessSidebar',
-          position: 'left',
-          label: '健康幸福',
-          icon: 'heart',
-        },
-        {
-          type: 'dropdown',
-          position: 'left',
-          label: '事业有成',
-          icon: 'rocket',
-          items: [
-            {type: 'docSidebar', sidebarId: 'securityEngineeringSidebar', label: '安全工程', icon: 'shield'},
-            {type: 'docSidebar', sidebarId: 'softwareEngineeringSidebar', label: '软件工程', icon: 'terminal-icon'},
-            {type: 'docSidebar', sidebarId: 'aiSidebar', label: '人工智能', icon: 'brand-openai-icon'},
-            {type: 'docSidebar', sidebarId: 'aiSecuritySidebar', label: 'AI安全', icon: 'brand-openai-icon'},
-            {type: 'docSidebar', sidebarId: 'careerJobSidebar', label: '职业与事业', icon: 'rocket'},
-          ],
-        },
-        {
-          type: 'dropdown',
-          position: 'left',
-          label: '财务自由',
-          icon: 'brand-bags-fm-icon',
-          items: [
-            {type: 'docSidebar', sidebarId: 'workSavingsSidebar', label: '工作储蓄', icon: 'piggy-bank'},
-            {type: 'docSidebar', sidebarId: 'expenseControlSidebar', label: '控制支出', icon: 'receipt'},
-            {type: 'docSidebar', sidebarId: 'investmentSidebar', label: '投资理财', icon: 'chart-line-icon'},
-            {type: 'docSidebar', sidebarId: 'insuranceSidebar', label: '基础保障', icon: 'shield-check'},
-          ],
-        },
-        {
-          type: 'dropdown',
-          position: 'left',
-          label: '人生丰富',
-          icon: 'compass',
-          items: [
-            {type: 'docSidebar', sidebarId: 'readingSidebar', label: '阅读', icon: 'book-open-text'},
-            {type: 'docSidebar', sidebarId: 'filmSidebar', label: '影视', icon: 'film'},
-            {type: 'docSidebar', sidebarId: 'travelSidebar', label: '旅行', icon: 'globe-icon'},
-            {type: 'docSidebar', sidebarId: 'musicSidebar', label: '音乐', icon: 'vinyl-icon'},
-            {type: 'docSidebar', sidebarId: 'miscHobbiesSidebar', label: '杂项爱好', icon: 'star-icon'},
-          ],
-        },
-        {
-          type: 'dropdown',
-          position: 'left',
-          label: '吴飞飞',
-          icon: 'at-sign-icon',
-          items: [
-            {type: 'docSidebar', sidebarId: 'aboutMeSidebar', label: '关于', icon: 'user'},
-            {type: 'docSidebar', sidebarId: 'lifeProgressSidebar', label: '三省吾身', icon: 'gauge-icon'},
-            {type: 'docSidebar', sidebarId: 'annualReviewSidebar', label: '年度总结', icon: 'history-circle-icon'},
-          ],
-        },
-        {
-          type: 'search',
-          position: 'right',
-        },
+        {type: 'docSidebar', sidebarId: 'healthHappinessSidebar', position: 'left', label: '健康幸福', icon: 'heart'},
+        {type: 'dropdown', position: 'left', label: '事业有成', icon: 'rocket', items: [
+          {type: 'docSidebar', sidebarId: 'securityEngineeringSidebar', label: '安全工程', icon: 'shield'},
+          {type: 'docSidebar', sidebarId: 'softwareEngineeringSidebar', label: '软件工程', icon: 'terminal-icon'},
+          {type: 'docSidebar', sidebarId: 'aiSidebar', label: '人工智能', icon: 'brand-openai-icon'},
+          {type: 'docSidebar', sidebarId: 'aiSecuritySidebar', label: 'AI安全', icon: 'brand-openai-icon'},
+          {type: 'docSidebar', sidebarId: 'careerJobSidebar', label: '职业与事业', icon: 'rocket'},
+        ]},
+        {type: 'dropdown', position: 'left', label: '财务自由', icon: 'brand-bags-fm-icon', items: [
+          {type: 'docSidebar', sidebarId: 'workSavingsSidebar', label: '工作储蓄', icon: 'piggy-bank'},
+          {type: 'docSidebar', sidebarId: 'expenseControlSidebar', label: '控制支出', icon: 'receipt'},
+          {type: 'docSidebar', sidebarId: 'investmentSidebar', label: '投资理财', icon: 'chart-line-icon'},
+          {type: 'docSidebar', sidebarId: 'insuranceSidebar', label: '基础保障', icon: 'shield-check'},
+        ]},
+        {type: 'dropdown', position: 'left', label: '人生丰富', icon: 'compass', items: [
+          {type: 'docSidebar', sidebarId: 'readingSidebar', label: '阅读', icon: 'book-open-text'},
+          {type: 'docSidebar', sidebarId: 'filmSidebar', label: '影视', icon: 'film'},
+          {type: 'docSidebar', sidebarId: 'travelSidebar', label: '旅行', icon: 'globe-icon'},
+          {type: 'docSidebar', sidebarId: 'musicSidebar', label: '音乐', icon: 'vinyl-icon'},
+          {type: 'docSidebar', sidebarId: 'miscHobbiesSidebar', label: '杂项爱好', icon: 'star-icon'},
+        ]},
+        {type: 'dropdown', position: 'left', label: '吴飞飞', icon: 'at-sign-icon', items: [
+          {type: 'docSidebar', sidebarId: 'aboutMeSidebar', label: '关于', icon: 'user'},
+          {type: 'docSidebar', sidebarId: 'lifeProgressSidebar', label: '三省吾身', icon: 'gauge-icon'},
+          {type: 'docSidebar', sidebarId: 'annualReviewSidebar', label: '年度总结', icon: 'history-circle-icon'},
+        ]},
+        {type: 'search', position: 'right'},
       ],
     },
     footer: {
-      copyright: `<span class="footer-copyright">Copyright © 2012–${new Date().getFullYear()} FEEI&nbsp;&nbsp;All Rights Reserved</span><span class="footer-divider"></span><span class="footer-beian"><a class="footer-beian-link" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">浙ICP备2021009229号</a><span class="footer-beian-dot">·</span><a class="footer-beian-link" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586" target="_blank" rel="noopener noreferrer">浙公网安备33011002015586号</a></span>`,
+      copyright: `<span class="footer-copyright">Copyright © 2012–${new Date().getFullYear()} FEEI&nbsp;&nbsp;All Rights Reserved</span><span class="footer-beian"><a class="footer-beian-link" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">浙ICP备2021009229号</a><span class="footer-beian-dot">·</span><a class="footer-beian-link" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586" target="_blank" rel="noopener noreferrer">浙公网安备33011002015586号</a></span>`,
     },
-    prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
-    },
+    prism: {theme: prismThemes.github, darkTheme: prismThemes.dracula},
   } satisfies Preset.ThemeConfig,
 };
 

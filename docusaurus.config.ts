@@ -14,10 +14,7 @@ type SidebarItemWithProps = {
   items?: SidebarItemWithProps[];
   customProps?: Record<string, unknown>;
   collapsed?: boolean;
-  link?: {
-    type?: string;
-    id?: string;
-  };
+  link?: {type?: string; id?: string};
 };
 
 type LoadedDocWithFrontMatter = {
@@ -30,30 +27,18 @@ function getDocIcon(doc?: LoadedDocWithFrontMatter): string | undefined {
   return typeof icon === 'string' && icon.trim() ? icon.trim() : undefined;
 }
 
-function getDocSidebarBadge(
-  doc?: LoadedDocWithFrontMatter,
-): {text: string; color: string} | undefined {
+function getDocSidebarBadge(doc?: LoadedDocWithFrontMatter): {text: string; color: string} | undefined {
   const badge = doc?.frontMatter?.sidebar_badge;
   if (!badge || typeof badge !== 'object') return undefined;
   const text = (badge as Record<string, unknown>).text;
   const color = (badge as Record<string, unknown>).color;
   if (typeof text !== 'string' || !text.trim()) return undefined;
-  return {
-    text: text.trim(),
-    color: typeof color === 'string' && color.trim() ? color.trim() : 'info',
-  };
+  return {text: text.trim(), color: typeof color === 'string' && color.trim() ? color.trim() : 'info'};
 }
 
-function attachDocFrontMatterToSidebar<
-  T extends SidebarItemWithProps,
-  D extends LoadedDocWithFrontMatter,
->(items: T[], docs: D[]): T[] {
+function attachDocFrontMatterToSidebar<T extends SidebarItemWithProps, D extends LoadedDocWithFrontMatter>(items: T[], docs: D[]): T[] {
   const docsById = new Map(docs.map((doc) => [doc.id, doc]));
-
-  function applyDocFields(
-    item: SidebarItemWithProps,
-    docId: string,
-  ): Record<string, unknown> {
+  function applyDocFields(item: SidebarItemWithProps, docId: string): Record<string, unknown> {
     const doc = docsById.get(docId);
     const icon = getDocIcon(doc);
     const sidebarBadge = getDocSidebarBadge(doc);
@@ -62,31 +47,16 @@ function attachDocFrontMatterToSidebar<
     if (sidebarBadge) fields.sidebar_badge = sidebarBadge;
     return fields;
   }
-
   function visit(item: SidebarItemWithProps, depth: number): SidebarItemWithProps {
     const nextItem = {...item};
-
-    if (item.type === 'doc' && item.id) {
-      nextItem.customProps = applyDocFields(item, item.id);
-    }
-
+    if (item.type === 'doc' && item.id) nextItem.customProps = applyDocFields(item, item.id);
     if (item.type === 'category') {
-      if (typeof item.collapsed === 'undefined') {
-        nextItem.collapsed = depth > 0;
-      }
-
-      if (item.link?.type === 'doc' && item.link.id) {
-        nextItem.customProps = applyDocFields(item, item.link.id);
-      }
-
-      if (item.items) {
-        nextItem.items = item.items.map((child) => visit(child, depth + 1));
-      }
+      if (typeof item.collapsed === 'undefined') nextItem.collapsed = depth > 0;
+      if (item.link?.type === 'doc' && item.link.id) nextItem.customProps = applyDocFields(item, item.link.id);
+      if (item.items) nextItem.items = item.items.map((child) => visit(child, depth + 1));
     }
-
     return nextItem;
   }
-
   return items.map((item) => visit(item, 0) as T);
 }
 
@@ -103,6 +73,9 @@ const config: Config = {
       mdx1CompatDisabledByDefault: true,
       fasterByDefault: true,
     },
+    faster: {
+      gitEagerVcs: false,
+    },
   },
   markdown: {
     format: 'detect',
@@ -110,52 +83,40 @@ const config: Config = {
       onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn',
       onBrokenMarkdownImages: 'ignore',
     },
-    preprocessor: ({fileContent}) => {
-      return fileContent.replace(/https?:\/\/\S+/g, (url) => url.replace(/\*/g, '\\*'));
-    },
+    preprocessor: ({fileContent}) => fileContent.replace(/https?:\/\/\S+/g, (url) => url.replace(/\*/g, '\\*')),
   },
   url: 'https://feei.cn',
   baseUrl: '/',
   organizationName: 'feeicn',
   projectName: 'FEEI.CN',
   onBrokenLinks: isStrictBuild ? 'throw' : 'warn',
-  i18n: {
-    defaultLocale: 'zh-Hans',
-    locales: ['zh-Hans'],
-  },
+  i18n: {defaultLocale: 'zh-Hans', locales: ['zh-Hans']},
   headTags: [
     {tagName: 'link', attributes: {rel: 'icon', href: '/media/img/icons/feei-icon-32.webp', sizes: '32x32'}},
     {tagName: 'link', attributes: {rel: 'icon', href: '/media/img/icons/feei-icon-192.webp', sizes: '192x192'}},
     {tagName: 'link', attributes: {rel: 'apple-touch-icon', href: '/media/img/icons/feei-icon-180.webp'}},
     {tagName: 'meta', attributes: {name: 'msapplication-TileImage', content: '/media/img/icons/feei-icon-270.webp'}},
   ],
-  presets: [
-    [
-      'classic',
-      {
-        docs: {
-          routeBasePath: '/',
-          sidebarPath: './sidebars.ts',
-          remarkPlugins: [remarkMath],
-          rehypePlugins: [rehypeKatex],
-          async sidebarItemsGenerator(args) {
-            const items = await args.defaultSidebarItemsGenerator(args);
-            return attachDocFrontMatterToSidebar(items, args.docs);
-          },
-          editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/',
+  presets: [[
+    'classic',
+    {
+      docs: {
+        routeBasePath: '/',
+        sidebarPath: './sidebars.ts',
+        remarkPlugins: [remarkMath],
+        rehypePlugins: [rehypeKatex],
+        async sidebarItemsGenerator(args) {
+          const items = await args.defaultSidebarItemsGenerator(args);
+          return attachDocFrontMatterToSidebar(items, args.docs);
         },
-        blog: false,
-        theme: {customCss: './src/css/custom.css'},
-      } satisfies Preset.Options,
-    ],
-  ],
+        editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/',
+      },
+      blog: false,
+      theme: {customCss: './src/css/custom.css'},
+    } satisfies Preset.Options,
+  ]],
   plugins: [docMtimePlugin, copyMarkdownPlugin],
-  themes: [
-    [
-      require.resolve('@easyops-cn/docusaurus-search-local'),
-      {docsRouteBasePath: '/', indexBlog: false, language: ['en', 'zh']},
-    ],
-  ],
+  themes: [[require.resolve('@easyops-cn/docusaurus-search-local'), {docsRouteBasePath: '/', indexBlog: false, language: ['en', 'zh']}]],
   clientModules: ['./src/clientModules/slidingIndicator.ts'],
   themeConfig: {
     docs: {sidebar: {hideable: true, autoCollapseCategories: true}},

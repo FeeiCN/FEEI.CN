@@ -8,8 +8,6 @@ const require = createRequire(import.meta.url);
 
 function loadInternal(relativePath) {
   const entry = require.resolve('@easyops-cn/docusaurus-search-local');
-  // Package entry is dist/server/index.js. Resolve internal utilities from it
-  // instead of relying on package subpath exports.
   return require(path.join(path.dirname(entry), 'utils', relativePath));
 }
 
@@ -18,9 +16,22 @@ const {buildIndex} = loadInternal('buildIndex');
 
 const outDir = path.resolve(process.argv[2] ?? 'build');
 const baseUrl = '/';
+const statusFile = path.join(outDir, 'search-index-status.json');
+const startedAt = Date.now();
 
-// These are the effective options used by feei.cn. Only fields consumed by
-// scanDocuments()/parse() and buildIndex() are required here.
+async function writeStatus(status, extra = {}) {
+  const payload = {
+    status,
+    startedAt: new Date(startedAt).toISOString(),
+    updatedAt: new Date().toISOString(),
+    durationMs: Date.now() - startedAt,
+    ...extra,
+  };
+  const temp = `${statusFile}.tmp`;
+  await fs.writeFile(temp, JSON.stringify(payload, null, 2), 'utf8');
+  await fs.rename(temp, statusFile);
+}
+
 const config = {
   language: ['zh'],
   ignoreCssSelectors: [],
@@ -50,22 +61,35 @@ function fileToUrl(filePath) {
   return relative ? `${baseUrl}${relative}` : baseUrl;
 }
 
-const startedAt = Date.now();
-const htmlFiles = (await collectHtmlFiles(outDir)).sort();
-const paths = htmlFiles.map((filePath) => ({
-  filePath,
-  url: fileToUrl(filePath),
-  type: 'docs',
-}));
+try {
+  await writeStatus('running');
 
-console.log(`[search-index] parsing ${paths.length} generated pages`);
-const allDocuments = await scanDocuments(paths, config);
-console.log(`[search-index] building index`);
-const searchIndex = buildIndex(allDocuments, config);
+  const htmlFiles = (await collectHtmlFiles(outDir)).sort();
+  const paths = htmlFiles.map((filePath) => ({
+    filePath,
+    url: fileToUrl(filePath),
+    type: 'docs',
+  }));
 
-const tempFile = path.join(outDir, '.search-index.json.tmp');
-const targetFile = path.join(outDir, 'search-index.json');
-await fs.writeFile(tempFile, JSON.stringify(searchIndex), 'utf8');
-await fs.rename(tempFile, targetFile);
+  console.log(`[search-index] parsing ${paths.length} generated pages`);
+  const allDocuments = await scanDocuments(paths, config);
+  console.log('[search-index] building index');
+  const searchIndex = buildIndex(allDocuments, config);
 
-console.log(`[search-index] updated ${targetFile} in ${((Date.now() - startedAt) / 1000).toFixed(2)}s`);
+  const tempFile = path.join(outDir, '.search-index.json.tmp');
+  const targetFile = path.join(outDir, 'search-index.json');
+  await fs.writeFile(tempFile, JSON.stringify(searchIndex), 'utf8');
+  await fs.rename(tempFile, targetFile);
+
+  await writeStatus('success', {pages: paths.length, indexFile: 'search-index.json'});
+  console.log(`[search-index] updated ${targetFile} in ${((Date.now() - startedAt) / 1000).toFixed(2)}s`);
+} catch (error) {
+  const message = error instanceof Error ? error.stack ?? error.message : String(error);
+  try {
+    await writeStatus('failure', {error: message});
+  } catch {
+    // Preserve the original indexing failure.
+  }
+  console.error('[search-index] failed:', message);
+  process.exitCode = 1;
+}

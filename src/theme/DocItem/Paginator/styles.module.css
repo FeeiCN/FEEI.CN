@@ -47,20 +47,22 @@
 
 @media (max-width: 640px) {
   .paginator {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
     margin-top: 2.8rem;
   }
 
   .item {
     width: 100%;
-    padding: 0.85rem 0;
+    padding: 0.55rem 0;
   }
 
   .next {
-    align-items: flex-start;
-    border-top: 1px solid var(--ifm-color-emphasis-200);
-    text-align: left;
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .title {
+    font-size: 0.94rem;
   }
 }

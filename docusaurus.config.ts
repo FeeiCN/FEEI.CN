@@ -5,6 +5,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import docMtimePlugin from './plugins/docMtimePlugin';
 import copyMarkdownPlugin from './plugins/copyMarkdownPlugin';
+import fastSearchPlugin from './plugins/fastSearchPlugin';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -61,6 +62,13 @@ function attachDocFrontMatterToSidebar<T extends SidebarItemWithProps, D extends
 }
 
 const isStrictBuild = process.env.CI_STRICT === 'true';
+const searchOptions = {
+  docsRouteBasePath: '/',
+  indexBlog: false,
+  indexPages: false,
+  hashed: true,
+  language: ['zh'],
+};
 
 const config: Config = {
   title: '吴飞飞-安全界',
@@ -73,9 +81,7 @@ const config: Config = {
       mdx1CompatDisabledByDefault: true,
       fasterByDefault: true,
     },
-    faster: {
-      gitEagerVcs: false,
-    },
+    faster: {gitEagerVcs: false},
   },
   markdown: {
     format: 'detect',
@@ -97,32 +103,19 @@ const config: Config = {
     {tagName: 'link', attributes: {rel: 'apple-touch-icon', href: '/media/img/icons/feei-icon-180.webp'}},
     {tagName: 'meta', attributes: {name: 'msapplication-TileImage', content: '/media/img/icons/feei-icon-270.webp'}},
   ],
-  presets: [[
-    'classic',
-    {
-      docs: {
-        routeBasePath: '/',
-        sidebarPath: './sidebars.ts',
-        remarkPlugins: [remarkMath],
-        rehypePlugins: [rehypeKatex],
-        async sidebarItemsGenerator(args) {
-          const items = await args.defaultSidebarItemsGenerator(args);
-          return attachDocFrontMatterToSidebar(items, args.docs);
-        },
-        editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/',
+  presets: [['classic', {
+    docs: {
+      routeBasePath: '/', sidebarPath: './sidebars.ts', remarkPlugins: [remarkMath], rehypePlugins: [rehypeKatex],
+      async sidebarItemsGenerator(args) {
+        const items = await args.defaultSidebarItemsGenerator(args);
+        return attachDocFrontMatterToSidebar(items, args.docs);
       },
-      blog: false,
-      theme: {customCss: './src/css/custom.css'},
-    } satisfies Preset.Options,
-  ]],
-  plugins: [docMtimePlugin, copyMarkdownPlugin],
-  themes: [[require.resolve('@easyops-cn/docusaurus-search-local'), {
-    docsRouteBasePath: '/',
-    indexBlog: false,
-    indexPages: false,
-    hashed: true,
-    language: ['zh'],
-  }]],
+      editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/',
+    },
+    blog: false,
+    theme: {customCss: './src/css/custom.css'},
+  } satisfies Preset.Options]],
+  plugins: [docMtimePlugin, copyMarkdownPlugin, [fastSearchPlugin, searchOptions]],
   clientModules: ['./src/clientModules/slidingIndicator.ts'],
   themeConfig: {
     docs: {sidebar: {hideable: true, autoCollapseCategories: true}},

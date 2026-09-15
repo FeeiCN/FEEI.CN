@@ -5,7 +5,7 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
-    "build": "DOCUSAURUS_PERF_LOGGER=true docusaurus build",
+    "build": "docusaurus build",
     "build:profile": "NODE_OPTIONS='--max-old-space-size=4096' docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
@@ -32,7 +32,7 @@
     "aplayer": "^1.10.1",
     "clsx": "^2.0.0",
     "echarts": "^6.1.0",
-    "echarts-for-react": "^3.8.1",
+    "echarts-for-react": "^3.0.6",
     "gsap": "^3.15.0",
     "heti": "^0.9.6",
     "justified-layout": "^4.1.0",

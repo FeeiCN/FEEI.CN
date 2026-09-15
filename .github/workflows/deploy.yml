@@ -2,14 +2,14 @@ name: Deploy website
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'docs/**'
       - 'src/**'
       - 'static/**'
       - 'plugins/**'
       - 'scripts/check_docs_quality.mjs'
+      - 'scripts/build_search_index.mjs'
       - 'docusaurus.config.ts'
       - 'sidebars.ts'
       - 'package.json'
@@ -31,7 +31,6 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Setup SSH
         run: |
@@ -49,15 +48,8 @@ jobs:
 
           timer_start=0
           start_timer() { timer_start="$(date +%s)"; }
-          format_duration() {
-            local total="$1"; local minutes=$((total / 60)); local seconds=$((total % 60))
-            if [ "$minutes" -gt 0 ]; then echo "${minutes}分${seconds}秒"; else echo "${seconds}秒"; fi
-          }
-          end_timer() {
-            local name="$1"; local timer_end; local duration
-            timer_end="$(date +%s)"; duration=$((timer_end - timer_start))
-            echo "[deploy-timing] ${name}: $(format_duration "$duration")"
-          }
+          format_duration() { local t="$1"; if [ "$t" -ge 60 ]; then echo "$((t/60))分$((t%60))秒"; else echo "${t}秒"; fi; }
+          end_timer() { local name="$1"; local duration=$(($(date +%s)-timer_start)); echo "[deploy-timing] ${name}: $(format_duration "$duration")"; }
           group_start() { echo "::group::$1"; start_timer; }
           group_end() { end_timer "$1"; echo "::endgroup::"; }
 
@@ -77,10 +69,7 @@ jobs:
 
           mkdir -p "$site_root"
           exec 9>"$deploy_lock_file"
-          if ! flock --wait 1200 9; then
-            echo "ERROR: another deployment is still running after waiting 20 minutes"
-            exit 1
-          fi
+          flock --wait 1200 9 || { echo "ERROR: another deployment is still running after waiting 20 minutes"; exit 1; }
           echo "Deployment lock acquired: $deploy_lock_file"
 
           restore_data_source() {
@@ -92,14 +81,13 @@ jobs:
             exit_status=$?
             trap - EXIT HUP INT TERM
             if [ -n "$active_build_pid" ] && kill -0 "$active_build_pid" 2>/dev/null; then
-              echo "Stopping active build process group: $active_build_pid"
               kill -TERM -- "-$active_build_pid" 2>/dev/null || kill -TERM "$active_build_pid" 2>/dev/null || true
               sleep 2
               kill -KILL -- "-$active_build_pid" 2>/dev/null || kill -KILL "$active_build_pid" 2>/dev/null || true
               wait "$active_build_pid" 2>/dev/null || true
             fi
             restore_data_source
-            if [ -n "$staging_dir" ] && [ -e "$staging_dir" ]; then echo "Cleaning incomplete staging directory: $staging_dir"; rm -rf "$staging_dir"; fi
+            if [ -n "$staging_dir" ] && [ -e "$staging_dir" ]; then rm -rf "$staging_dir"; fi
             exit "$exit_status"
           }
           trap cleanup_deploy EXIT
@@ -112,27 +100,27 @@ jobs:
           git pull origin main
           new_head="$(git rev-parse HEAD)"
           deployed_head=""
-          if [ -L "$current_link" ]; then deployed_head="$(basename "$(readlink -f "$current_link")")"; fi
+          previous_release=""
+          if [ -L "$current_link" ]; then
+            previous_release="$(readlink -f "$current_link")"
+            deployed_head="$(basename "$previous_release")"
+          fi
+          quality_base="$old_head"
+          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then quality_base="$deployed_head"; fi
           echo "old_head=$old_head"
           echo "new_head=$new_head"
           echo "deployed_head=${deployed_head:-none}"
-          quality_base="$old_head"
-          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then quality_base="$deployed_head"; fi
-          echo "quality_base=$quality_base"
           group_end "Prepare repository"
 
           group_start "Check docs quality"
           npm run check:docs -- --base="$quality_base"
           group_end "Check docs quality"
 
-          group_start "Prepare static assets"
+          group_start "Prepare shared assets"
           rm -rf static/media static/music
-          group_end "Prepare static assets"
-
-          group_start "Sync shared data"
           mkdir -p "$data_root"
           rsync -a --delete static/data/ "$data_root/"
-          group_end "Sync shared data"
+          group_end "Prepare shared assets"
 
           data_only=false
           if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
@@ -140,83 +128,54 @@ jobs:
             if [ -n "$changed_files" ] && ! printf '%s\n' "$changed_files" | grep -qv '^static/data/'; then data_only=true; fi
           fi
           if [ "$data_only" = true ]; then
-            group_start "Publish data only"
             current_release="$(readlink -f "$current_link")"
             rm -rf "$current_release/data"
             ln -s "$data_root" "$current_release/data"
             echo "Only static/data changed; skipped Docusaurus build."
-            group_end "Publish data only"
             exit 0
           fi
 
           group_start "Install dependencies if needed"
-          if ! git diff --quiet "$old_head" "$new_head" -- package.json package-lock.json; then
-            echo "package.json or package-lock.json changed. Running npm ci."
-            npm ci
-          else
-            echo "Dependencies unchanged. Skipping npm ci."
-          fi
+          if ! git diff --quiet "$old_head" "$new_head" -- package.json package-lock.json; then npm ci; else echo "Dependencies unchanged. Skipping npm ci."; fi
           group_end "Install dependencies if needed"
 
-          group_start "Clean oversized build cache"
+          group_start "Clean build cache and stale releases"
           build_cache="node_modules/.cache"
           if [ -d "$build_cache" ]; then
             cache_size_kb="$(du -sk "$build_cache" | cut -f1)"
             echo "build_cache_size_kb=$cache_size_kb"
-            if [ "$cache_size_kb" -gt 2097152 ]; then echo "Build cache exceeds 2GB; removing stale cache."; rm -rf "$build_cache"; fi
+            if [ "$cache_size_kb" -gt 2097152 ]; then rm -rf "$build_cache"; fi
           fi
-          group_end "Clean oversized build cache"
-
-          group_start "Clean stale releases"
           mkdir -p "$releases_dir"
           find "$releases_dir" -mindepth 1 -maxdepth 1 -type d -name '*.tmp' -exec rm -rf {} +
           ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf
-          group_end "Clean stale releases"
+          group_end "Clean build cache and stale releases"
 
-          group_start "Prepare release directories"
           release_name="$(git rev-parse HEAD)"
           release_dir="$releases_dir/$release_name"
           staging_dir="${release_dir}.tmp"
           rm -rf "$staging_dir"
-          if [ -e "$staging_dir" ]; then echo "ERROR: failed to clean staging dir before build: $staging_dir"; ls -la "$staging_dir" || true; exit 1; fi
           mv static/data "$hidden_data_dir"
-          echo "release_dir=$release_dir"
-          echo "staging_dir=$staging_dir"
-          group_end "Prepare release directories"
 
           group_start "Build Docusaurus"
           build_timeout_seconds=900
           run_build() {
             local build_status
-            if [ -x /usr/bin/time ]; then
-              setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
-                env DOCUSAURUS_PERF_LOGGER=true /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
-            elif [ -x /bin/time ]; then
-              setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
-                env DOCUSAURUS_PERF_LOGGER=true /bin/time -v npm run build -- --out-dir "$staging_dir" &
-            else
-              echo "GNU time not found. Running build without resource profiling."
-              setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
-                env DOCUSAURUS_PERF_LOGGER=true npm run build -- --out-dir "$staging_dir" &
-            fi
+            setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
+              env DOCUSAURUS_PERF_LOGGER=true /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
             active_build_pid=$!
             if wait "$active_build_pid"; then build_status=0; else build_status=$?; fi
             active_build_pid=""
             return "$build_status"
           }
-          build_max_attempts=3
-          build_attempt=0
           build_ok=false
-          while [ "$build_attempt" -lt "$build_max_attempts" ]; do
-            build_attempt=$((build_attempt + 1))
+          for build_attempt in 1 2 3; do
             rm -rf "$staging_dir"
-            if [ -e "$staging_dir" ]; then echo "WARN: staging dir not clean before attempt $build_attempt: $staging_dir"; ls -la "$staging_dir" || true; continue; fi
-            echo "Build attempt $build_attempt of $build_max_attempts"
+            echo "Build attempt $build_attempt of 3"
             if run_build; then build_ok=true; break; fi
-            echo "Build attempt $build_attempt failed; retrying in 5s"
             sleep 5
           done
-          if [ "$build_ok" != "true" ]; then echo "Build failed after $build_max_attempts attempts"; exit 1; fi
+          [ "$build_ok" = true ] || { echo "Build failed after 3 attempts"; exit 1; }
           group_end "Build Docusaurus"
           restore_data_source
 
@@ -226,13 +185,30 @@ jobs:
           ln -s "$media_root" "$staging_dir/media"
           ln -s "$music_root" "$staging_dir/music"
           ln -s "$data_root" "$staging_dir/data"
+
+          # Keep the previous index available immediately. The freshly published
+          # site therefore never has a search outage while the new index builds.
+          if [ -n "$previous_release" ] && [ -f "$previous_release/search-index.json" ]; then
+            cp "$previous_release/search-index.json" "$staging_dir/search-index.json"
+            echo "Carried forward previous search index."
+          fi
+
           rm -rf "$release_dir"
           mv "$staging_dir" "$release_dir"
+          staging_dir=""
           ln -sfn "$release_dir" "$next_current_link"
           mv -Tf "$next_current_link" "$current_link"
           group_end "Publish release"
 
+          group_start "Start search index refresh"
+          search_log="$site_root/search-index-${release_name}.log"
+          nohup node "$repo_dir/scripts/build_search_index.mjs" "$release_dir" >"$search_log" 2>&1 </dev/null &
+          search_pid=$!
+          echo "Search index refresh started in background: pid=$search_pid log=$search_log"
+          group_end "Start search index refresh"
+
           group_start "Clean old releases"
           ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf
+          find "$site_root" -maxdepth 1 -type f -name 'search-index-*.log' -mtime +7 -delete || true
           group_end "Clean old releases"
           EOF

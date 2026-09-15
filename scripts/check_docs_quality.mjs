@@ -630,10 +630,10 @@ function needsLastReviewed(file, contentType) {
   if (contentType === 'tutorial' || contentType === 'reference') return true;
   if (!['hub', 'article', 'review'].includes(contentType)) return false;
 
-  return file.startsWith('docs/01-健康幸福/')
-    || file.startsWith('docs/03-财务自由/')
-    || file.startsWith('docs/02-事业有成/01-安全工程/')
-    || file.startsWith('docs/02-事业有成/03-人工智能/')
+  return file.startsWith('docs/02-人生操作系统/01-健康幸福/')
+    || file.startsWith('docs/02-人生操作系统/03-财务自由/')
+    || file.startsWith('docs/01-网络空间安全/01-安全工程/')
+    || file.startsWith('docs/01-网络空间安全/02-人工智能安全/')
     || /(?:法律|法规|政策|竞业|合规)/.test(file);
 }
 

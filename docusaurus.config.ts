@@ -32,15 +32,15 @@ const config: Config = {
   themeConfig: {
     docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: 'media/img/icons/feei-icon-270.webp', colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
     navbar: {hideOnScroll: false, logo: {alt: 'My Site Logo', src: 'media/img/logo.webp'}, items: [
-      {type: 'docSidebar', sidebarId: 'healthHappinessSidebar', position: 'left', label: '健康幸福', icon: 'heart'},
-      {type: 'dropdown', position: 'left', label: '事业有成', icon: 'rocket', items: [
-        {type: 'docSidebar', sidebarId: 'securityEngineeringSidebar', label: '安全工程', icon: 'shield'}, {type: 'docSidebar', sidebarId: 'softwareEngineeringSidebar', label: '软件工程', icon: 'terminal-icon'}, {type: 'docSidebar', sidebarId: 'aiSidebar', label: '人工智能', icon: 'brand-openai-icon'}, {type: 'docSidebar', sidebarId: 'aiSecuritySidebar', label: 'AI安全', icon: 'brand-openai-icon'}, {type: 'docSidebar', sidebarId: 'careerJobSidebar', label: '职业与事业', icon: 'rocket'},
+      {type: 'dropdown', position: 'left', label: '网络空间安全', icon: 'shield', items: [
+        {type: 'docSidebar', sidebarId: 'securityEngineeringSidebar', label: '安全工程', icon: 'shield'},
+        {type: 'docSidebar', sidebarId: 'aiSecuritySidebar', label: '人工智能安全', icon: 'brand-openai-icon'},
       ]},
-      {type: 'dropdown', position: 'left', label: '财务自由', icon: 'brand-bags-fm-icon', items: [
-        {type: 'docSidebar', sidebarId: 'workSavingsSidebar', label: '工作储蓄', icon: 'piggy-bank'}, {type: 'docSidebar', sidebarId: 'expenseControlSidebar', label: '控制支出', icon: 'receipt'}, {type: 'docSidebar', sidebarId: 'investmentSidebar', label: '投资理财', icon: 'chart-line-icon'}, {type: 'docSidebar', sidebarId: 'insuranceSidebar', label: '基础保障', icon: 'shield-check'},
-      ]},
-      {type: 'dropdown', position: 'left', label: '人生丰富', icon: 'compass', items: [
-        {type: 'docSidebar', sidebarId: 'readingSidebar', label: '阅读', icon: 'book-open-text'}, {type: 'docSidebar', sidebarId: 'filmSidebar', label: '影视', icon: 'film'}, {type: 'docSidebar', sidebarId: 'travelSidebar', label: '旅行', icon: 'globe-icon'}, {type: 'docSidebar', sidebarId: 'musicSidebar', label: '音乐', icon: 'vinyl-icon'}, {type: 'docSidebar', sidebarId: 'miscHobbiesSidebar', label: '杂项爱好', icon: 'star-icon'},
+      {type: 'dropdown', position: 'left', label: '人生操作系统', icon: 'biceps-flexed', to: '/life-os', items: [
+        {type: 'docSidebar', sidebarId: 'healthHappinessSidebar', label: '健康幸福', icon: 'heart'},
+        {type: 'docSidebar', sidebarId: 'careerSuccessSidebar', label: '事业有成', icon: 'rocket'},
+        {type: 'docSidebar', sidebarId: 'financeFreedomSidebar', label: '财务自由', icon: 'brand-bags-fm-icon'},
+        {type: 'docSidebar', sidebarId: 'exploreWorldSidebar', label: '人生丰富', icon: 'compass'},
       ]},
       {type: 'dropdown', position: 'left', label: '吴飞飞', icon: 'at-sign-icon', items: [
         {type: 'docSidebar', sidebarId: 'aboutMeSidebar', label: '关于', icon: 'user'},

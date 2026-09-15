@@ -55,6 +55,11 @@
   text-decoration-color: currentColor;
 }
 
+.theme-doc-markdown .year-month-nav a:not(.hash-link):not(.button),
+.theme-doc-markdown .year-record-list a.year-record:not(.hash-link):not(.button) {
+  text-decoration-line: none;
+}
+
 /* Breadcrumbs are context, not content. */
 .breadcrumbs__link {
   color: var(--feei-text-muted);

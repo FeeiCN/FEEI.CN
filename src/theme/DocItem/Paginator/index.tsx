@@ -15,11 +15,12 @@ function getDate(permalink: string): string | null {
 
 function Item({item, direction}: {item: PaginatorItem; direction: 'previous' | 'next'}): ReactNode {
   const date = getDate(item.permalink);
+  const label = date ? `${date} · ${item.title}` : item.title;
+
   return (
     <Link className={`${styles.item} ${direction === 'next' ? styles.next : ''}`} to={item.permalink}>
-      <span className={styles.direction}>{direction === 'previous' ? '← 上一篇' : '下一篇 →'}</span>
-      <span className={styles.title}>{item.title}</span>
-      {date && <span className={styles.date}>{date}</span>}
+      <span className={styles.direction}>{direction === 'previous' ? '上一篇' : '下一篇'}</span>
+      <span className={styles.title}>{label}</span>
     </Link>
   );
 }

@@ -10,12 +10,38 @@ import DocActionsMenu from '@site/src/components/DocActionsMenu';
 
 function useSyntheticTitle(): string | null {
   const {metadata, frontMatter, contentTitle} = useDoc();
-  const shouldRender =
-    !frontMatter.hide_title && typeof contentTitle === 'undefined';
-  if (!shouldRender) {
-    return null;
-  }
+  const shouldRender = !frontMatter.hide_title && typeof contentTitle === 'undefined';
+  if (!shouldRender) return null;
   return metadata.title;
+}
+
+function ReadingMode(): ReactNode {
+  const {metadata, frontMatter} = useDoc();
+  const permalink = metadata.permalink;
+  const contentType = (frontMatter as Record<string, unknown>).content_type;
+
+  let label: string | null = null;
+  let text: string | null = null;
+
+  if (permalink === '/thinking' || permalink.endsWith('/thinking')) {
+    label = '持续积累';
+    text = '这是一组持续更新的思维卡片，不是一篇需要从头读到尾的文章。更适合按主题查阅，在遇到具体问题时回来调用。';
+  } else if (permalink === '/commercial-ai' || permalink.endsWith('/commercial-ai')) {
+    label = '参考资料';
+    text = '先看开头的判断和选型顺序即可；后面的评测、模型、价格与产品信息是带日期的参考快照，需要做具体选择时再查。';
+  } else if (contentType === 'reference') {
+    label = '参考资料';
+    text = '这是一页持续维护的参考资料，适合按需查阅，不必从头到尾阅读。';
+  }
+
+  if (!label || !text) return null;
+
+  return (
+    <aside className="doc-reading-mode" aria-label="阅读方式">
+      <span className="doc-reading-mode__label">{label}</span>
+      <span>{text}</span>
+    </aside>
+  );
 }
 
 export default function DocItemContent({children}: Props): ReactNode {
@@ -23,8 +49,6 @@ export default function DocItemContent({children}: Props): ReactNode {
   const {frontMatter, contentTitle} = useDoc();
   const iconValue = (frontMatter as Record<string, unknown>).icon;
   const icon = typeof iconValue === 'string' ? iconValue : undefined;
-
-  // contentTitle: h1 extracted from markdown content (e.g. # Title at top)
   const hasContentTitle = typeof contentTitle !== 'undefined' && !frontMatter.hide_title;
 
   return (
@@ -42,6 +66,7 @@ export default function DocItemContent({children}: Props): ReactNode {
           <DocActionsMenu />
         </div>
       )}
+      <ReadingMode />
       <MDXContent>{children}</MDXContent>
     </div>
   );

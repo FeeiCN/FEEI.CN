@@ -87,9 +87,19 @@ jobs:
           releases_dir="$site_root/releases"
           current_link="$site_root/current"
           next_current_link="$site_root/current.next"
+          deploy_lock_file="$site_root/.deploy.lock"
           releases_to_keep=2
           staging_dir=""
+          active_build_pid=""
           hidden_data_dir="$repo_dir/static/.data.deploy-hidden"
+
+          mkdir -p "$site_root"
+          exec 9>"$deploy_lock_file"
+          if ! flock --wait 1200 9; then
+            echo "ERROR: another deployment is still running after waiting 20 minutes"
+            exit 1
+          fi
+          echo "Deployment lock acquired: $deploy_lock_file"
 
           restore_data_source() {
             if [ -d "$hidden_data_dir" ]; then
@@ -101,13 +111,24 @@ jobs:
             fi
           }
           cleanup_deploy() {
+            exit_status=$?
+            trap - EXIT HUP INT TERM
+            if [ -n "$active_build_pid" ] && kill -0 "$active_build_pid" 2>/dev/null; then
+              echo "Stopping active build process group: $active_build_pid"
+              kill -TERM -- "-$active_build_pid" 2>/dev/null || kill -TERM "$active_build_pid" 2>/dev/null || true
+              sleep 2
+              kill -KILL -- "-$active_build_pid" 2>/dev/null || kill -KILL "$active_build_pid" 2>/dev/null || true
+              wait "$active_build_pid" 2>/dev/null || true
+            fi
             restore_data_source
             if [ -n "$staging_dir" ] && [ -e "$staging_dir" ]; then
               echo "Cleaning incomplete staging directory: $staging_dir"
               rm -rf "$staging_dir"
             fi
+            exit "$exit_status"
           }
           trap cleanup_deploy EXIT
+          trap 'exit 143' HUP INT TERM
 
           group_start "Prepare repository"
           cd "$repo_dir"
@@ -214,15 +235,28 @@ jobs:
           # fails with ENOTEMPTY if stale files survive from a prior
           # interrupted run. Wrap the build in a short retry loop that
           # re-cleans the staging dir between attempts.
+          build_timeout_seconds=900
           run_build() {
+            local build_status
             if [ -x /usr/bin/time ]; then
-              /usr/bin/time -v npm run build -- --out-dir "$staging_dir"
+              setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
+                /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
             elif [ -x /bin/time ]; then
-              /bin/time -v npm run build -- --out-dir "$staging_dir"
+              setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
+                /bin/time -v npm run build -- --out-dir "$staging_dir" &
             else
               echo "GNU time not found. Running build without resource profiling."
-              npm run build -- --out-dir "$staging_dir"
+              setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
+                npm run build -- --out-dir "$staging_dir" &
             fi
+            active_build_pid=$!
+            if wait "$active_build_pid"; then
+              build_status=0
+            else
+              build_status=$?
+            fi
+            active_build_pid=""
+            return "$build_status"
           }
           build_max_attempts=3
           build_attempt=0

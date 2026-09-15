@@ -61,7 +61,6 @@ function attachDocFrontMatterToSidebar<T extends SidebarItemWithProps, D extends
 }
 
 const isStrictBuild = process.env.CI_STRICT === 'true';
-const profileWithoutLocalSearch = process.env.PROFILE_WITHOUT_LOCAL_SEARCH === 'true';
 
 const config: Config = {
   title: '吴飞飞-安全界',
@@ -117,9 +116,13 @@ const config: Config = {
     } satisfies Preset.Options,
   ]],
   plugins: [docMtimePlugin, copyMarkdownPlugin],
-  themes: profileWithoutLocalSearch
-    ? []
-    : [[require.resolve('@easyops-cn/docusaurus-search-local'), {docsRouteBasePath: '/', indexBlog: false, language: ['en', 'zh']}]],
+  themes: [[require.resolve('@easyops-cn/docusaurus-search-local'), {
+    docsRouteBasePath: '/',
+    indexBlog: false,
+    indexPages: false,
+    hashed: true,
+    language: ['zh'],
+  }]],
   clientModules: ['./src/clientModules/slidingIndicator.ts'],
   themeConfig: {
     docs: {sidebar: {hideable: true, autoCollapseCategories: true}},

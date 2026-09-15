@@ -190,14 +190,14 @@ jobs:
             local build_status
             if [ -x /usr/bin/time ]; then
               setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
-                env DOCUSAURUS_PERF_LOGGER=true PROFILE_WITHOUT_LOCAL_SEARCH=true /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
+                env DOCUSAURUS_PERF_LOGGER=true DEBUG='search-local:*' /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
             elif [ -x /bin/time ]; then
               setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
-                env DOCUSAURUS_PERF_LOGGER=true PROFILE_WITHOUT_LOCAL_SEARCH=true /bin/time -v npm run build -- --out-dir "$staging_dir" &
+                env DOCUSAURUS_PERF_LOGGER=true DEBUG='search-local:*' /bin/time -v npm run build -- --out-dir "$staging_dir" &
             else
               echo "GNU time not found. Running build without resource profiling."
               setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
-                env DOCUSAURUS_PERF_LOGGER=true PROFILE_WITHOUT_LOCAL_SEARCH=true npm run build -- --out-dir "$staging_dir" &
+                env DOCUSAURUS_PERF_LOGGER=true DEBUG='search-local:*' npm run build -- --out-dir "$staging_dir" &
             fi
             active_build_pid=$!
             if wait "$active_build_pid"; then build_status=0; else build_status=$?; fi

@@ -1,0 +1,135 @@
+/* FEEI.CN neutral color system: typography and content carry the brand. */
+:root {
+  --ifm-color-primary: #262626;
+  --ifm-color-primary-dark: #1f1f1f;
+  --ifm-color-primary-darker: #1a1a1a;
+  --ifm-color-primary-darkest: #111111;
+  --ifm-color-primary-light: #404040;
+  --ifm-color-primary-lighter: #525252;
+  --ifm-color-primary-lightest: #737373;
+  --ifm-font-color-base: #262626;
+  --ifm-background-color: #fafafa;
+  --ifm-background-surface-color: #ffffff;
+  --feei-text-secondary: #666666;
+  --feei-text-muted: #999999;
+  --feei-border: #e5e5e5;
+  --feei-link-underline: #bdbdbd;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #ededed;
+  --ifm-color-primary-dark: #d4d4d4;
+  --ifm-color-primary-darker: #bdbdbd;
+  --ifm-color-primary-darkest: #a3a3a3;
+  --ifm-color-primary-light: #f2f2f2;
+  --ifm-color-primary-lighter: #f5f5f5;
+  --ifm-color-primary-lightest: #fafafa;
+  --ifm-font-color-base: #ededed;
+  --ifm-background-color: #111111;
+  --ifm-background-surface-color: #181818;
+  --feei-text-secondary: #a3a3a3;
+  --feei-text-muted: #737373;
+  --feei-border: #2a2a2a;
+  --feei-link-underline: #525252;
+}
+
+::selection {
+  background: rgba(115, 115, 115, 0.22);
+  color: inherit;
+}
+
+/* Links read as text first, interaction second. */
+.theme-doc-markdown a:not(.hash-link):not(.button),
+.markdown a:not(.hash-link):not(.button) {
+  color: inherit;
+  text-decoration-color: var(--feei-link-underline);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+  transition: color 140ms ease, text-decoration-color 140ms ease;
+}
+
+.theme-doc-markdown a:not(.hash-link):not(.button):hover,
+.markdown a:not(.hash-link):not(.button):hover {
+  color: var(--ifm-color-primary);
+  text-decoration-color: currentColor;
+}
+
+/* Breadcrumbs are context, not content. */
+.breadcrumbs__link {
+  color: var(--feei-text-muted);
+}
+
+.breadcrumbs__item--active .breadcrumbs__link {
+  color: var(--feei-text-secondary);
+}
+
+.breadcrumbs__link:hover {
+  color: var(--ifm-font-color-base);
+  background: transparent;
+}
+
+.breadcrumbs__item:not(:last-child)::after {
+  opacity: 0.38;
+}
+
+/* Sidebar: selected state relies on weight and contrast, not color. */
+.menu__link {
+  color: var(--feei-text-secondary);
+}
+
+.menu__link:hover {
+  color: var(--ifm-font-color-base);
+  background: rgba(115, 115, 115, 0.07);
+}
+
+.menu__link--active:not(.menu__link--sublist) {
+  color: var(--ifm-font-color-base);
+  font-weight: 650;
+  background: rgba(115, 115, 115, 0.08);
+}
+
+/* Table of contents stays quiet until the current section. */
+.table-of-contents__link {
+  color: var(--feei-text-muted);
+}
+
+.table-of-contents__link:hover {
+  color: var(--feei-text-secondary);
+}
+
+.table-of-contents__link--active {
+  color: var(--ifm-font-color-base);
+  font-weight: 600;
+}
+
+/* Navbar and dropdowns follow the same neutral hierarchy. */
+.navbar__link,
+.dropdown__link {
+  color: var(--feei-text-secondary);
+}
+
+.navbar__link:hover,
+.navbar__link--active,
+.dropdown__link:hover,
+.dropdown__link--active {
+  color: var(--ifm-font-color-base);
+}
+
+/* Keep focus visible without reintroducing a chromatic accent. */
+:focus-visible {
+  outline-color: #737373;
+}
+
+[data-theme='dark'] :focus-visible {
+  outline-color: #a3a3a3;
+}
+
+/* Remove the remaining green tint from image loading placeholders. */
+.markdownImageFrame {
+  --image-skeleton-base-b: rgba(115, 115, 115, 0.08);
+}
+
+[data-theme='dark'] .markdownImageFrame {
+  --image-skeleton-base-b: rgba(115, 115, 115, 0.12);
+}

@@ -7,6 +7,7 @@ import MDXContent from '@theme/MDXContent';
 import type {Props} from '@theme/DocItem/Content';
 import DocTitleWithIcon from '@site/src/components/DocTitleWithIcon';
 import DocActionsMenu from '@site/src/components/DocActionsMenu';
+import styles from './styles.module.css';
 
 function useSyntheticTitle(): string | null {
   const {metadata, frontMatter, contentTitle} = useDoc();
@@ -37,8 +38,8 @@ function ReadingMode(): ReactNode {
   if (!label || !text) return null;
 
   return (
-    <aside className="doc-reading-mode" aria-label="阅读方式">
-      <span className="doc-reading-mode__label">{label}</span>
+    <aside className={styles.readingMode} aria-label="阅读方式">
+      <span className={styles.label}>{label}</span>
       <span>{text}</span>
     </aside>
   );

@@ -48,36 +48,18 @@ jobs:
           set -euo pipefail
 
           timer_start=0
-          start_timer() {
-            timer_start="$(date +%s)"
-          }
+          start_timer() { timer_start="$(date +%s)"; }
           format_duration() {
-            local total="$1"
-            local minutes=$((total / 60))
-            local seconds=$((total % 60))
-
-            if [ "$minutes" -gt 0 ]; then
-              echo "${minutes}分${seconds}秒"
-            else
-              echo "${seconds}秒"
-            fi
+            local total="$1"; local minutes=$((total / 60)); local seconds=$((total % 60))
+            if [ "$minutes" -gt 0 ]; then echo "${minutes}分${seconds}秒"; else echo "${seconds}秒"; fi
           }
           end_timer() {
-            local name="$1"
-            local timer_end
-            local duration
-            timer_end="$(date +%s)"
-            duration=$((timer_end - timer_start))
+            local name="$1"; local timer_end; local duration
+            timer_end="$(date +%s)"; duration=$((timer_end - timer_start))
             echo "[deploy-timing] ${name}: $(format_duration "$duration")"
           }
-          group_start() {
-            echo "::group::$1"
-            start_timer
-          }
-          group_end() {
-            end_timer "$1"
-            echo "::endgroup::"
-          }
+          group_start() { echo "::group::$1"; start_timer; }
+          group_end() { end_timer "$1"; echo "::endgroup::"; }
 
           repo_dir="$REPO_DIR"
           site_root="$SITE_ROOT"
@@ -103,11 +85,7 @@ jobs:
 
           restore_data_source() {
             if [ -d "$hidden_data_dir" ]; then
-              if [ ! -e "$repo_dir/static/data" ]; then
-                mv "$hidden_data_dir" "$repo_dir/static/data"
-              else
-                rm -rf "$hidden_data_dir"
-              fi
+              if [ ! -e "$repo_dir/static/data" ]; then mv "$hidden_data_dir" "$repo_dir/static/data"; else rm -rf "$hidden_data_dir"; fi
             fi
           }
           cleanup_deploy() {
@@ -121,10 +99,7 @@ jobs:
               wait "$active_build_pid" 2>/dev/null || true
             fi
             restore_data_source
-            if [ -n "$staging_dir" ] && [ -e "$staging_dir" ]; then
-              echo "Cleaning incomplete staging directory: $staging_dir"
-              rm -rf "$staging_dir"
-            fi
+            if [ -n "$staging_dir" ] && [ -e "$staging_dir" ]; then echo "Cleaning incomplete staging directory: $staging_dir"; rm -rf "$staging_dir"; fi
             exit "$exit_status"
           }
           trap cleanup_deploy EXIT
@@ -137,19 +112,13 @@ jobs:
           git pull origin main
           new_head="$(git rev-parse HEAD)"
           deployed_head=""
-          if [ -L "$current_link" ]; then
-            deployed_head="$(basename "$(readlink -f "$current_link")")"
-          fi
+          if [ -L "$current_link" ]; then deployed_head="$(basename "$(readlink -f "$current_link")")"; fi
           echo "old_head=$old_head"
           echo "new_head=$new_head"
           echo "deployed_head=${deployed_head:-none}"
-
           quality_base="$old_head"
-          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
-            quality_base="$deployed_head"
-          fi
+          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then quality_base="$deployed_head"; fi
           echo "quality_base=$quality_base"
-
           group_end "Prepare repository"
 
           group_start "Check docs quality"
@@ -157,8 +126,6 @@ jobs:
           group_end "Check docs quality"
 
           group_start "Prepare static assets"
-          # media/music 由独立共享目录提供。构建前移除仓库中的链接，避免
-          # Docusaurus 把数 GB 媒体复制到 staging，发布时再挂回。
           rm -rf static/media static/music
           group_end "Prepare static assets"
 
@@ -170,12 +137,8 @@ jobs:
           data_only=false
           if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
             changed_files="$(git diff --name-only "$deployed_head" "$new_head")"
-            if [ -n "$changed_files" ] &&
-               ! printf '%s\n' "$changed_files" | grep -qv '^static/data/'; then
-              data_only=true
-            fi
+            if [ -n "$changed_files" ] && ! printf '%s\n' "$changed_files" | grep -qv '^static/data/'; then data_only=true; fi
           fi
-
           if [ "$data_only" = true ]; then
             group_start "Publish data only"
             current_release="$(readlink -f "$current_link")"
@@ -200,19 +163,14 @@ jobs:
           if [ -d "$build_cache" ]; then
             cache_size_kb="$(du -sk "$build_cache" | cut -f1)"
             echo "build_cache_size_kb=$cache_size_kb"
-            if [ "$cache_size_kb" -gt 2097152 ]; then
-              echo "Build cache exceeds 2GB; removing stale cache."
-              rm -rf "$build_cache"
-            fi
+            if [ "$cache_size_kb" -gt 2097152 ]; then echo "Build cache exceeds 2GB; removing stale cache."; rm -rf "$build_cache"; fi
           fi
           group_end "Clean oversized build cache"
 
           group_start "Clean stale releases"
           mkdir -p "$releases_dir"
           find "$releases_dir" -mindepth 1 -maxdepth 1 -type d -name '*.tmp' -exec rm -rf {} +
-          ls -1dt "$releases_dir"/* 2>/dev/null |
-            tail -n +$((releases_to_keep + 1)) |
-            xargs -r rm -rf
+          ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf
           group_end "Clean stale releases"
 
           group_start "Prepare release directories"
@@ -220,41 +178,29 @@ jobs:
           release_dir="$releases_dir/$release_name"
           staging_dir="${release_dir}.tmp"
           rm -rf "$staging_dir"
-          if [ -e "$staging_dir" ]; then
-            echo "ERROR: failed to clean staging dir before build: $staging_dir"
-            ls -la "$staging_dir" || true
-            exit 1
-          fi
+          if [ -e "$staging_dir" ]; then echo "ERROR: failed to clean staging dir before build: $staging_dir"; ls -la "$staging_dir" || true; exit 1; fi
           mv static/data "$hidden_data_dir"
           echo "release_dir=$release_dir"
           echo "staging_dir=$staging_dir"
           group_end "Prepare release directories"
 
           group_start "Build Docusaurus"
-          # Docusaurus's tryToBuildLocale uses fs.rmdir on the out-dir, which
-          # fails with ENOTEMPTY if stale files survive from a prior
-          # interrupted run. Wrap the build in a short retry loop that
-          # re-cleans the staging dir between attempts.
           build_timeout_seconds=900
           run_build() {
             local build_status
             if [ -x /usr/bin/time ]; then
               setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
-                /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
+                env DOCUSAURUS_PERF_LOGGER=true /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
             elif [ -x /bin/time ]; then
               setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
-                /bin/time -v npm run build -- --out-dir "$staging_dir" &
+                env DOCUSAURUS_PERF_LOGGER=true /bin/time -v npm run build -- --out-dir "$staging_dir" &
             else
               echo "GNU time not found. Running build without resource profiling."
               setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
-                npm run build -- --out-dir "$staging_dir" &
+                env DOCUSAURUS_PERF_LOGGER=true npm run build -- --out-dir "$staging_dir" &
             fi
             active_build_pid=$!
-            if wait "$active_build_pid"; then
-              build_status=0
-            else
-              build_status=$?
-            fi
+            if wait "$active_build_pid"; then build_status=0; else build_status=$?; fi
             active_build_pid=""
             return "$build_status"
           }
@@ -264,23 +210,13 @@ jobs:
           while [ "$build_attempt" -lt "$build_max_attempts" ]; do
             build_attempt=$((build_attempt + 1))
             rm -rf "$staging_dir"
-            if [ -e "$staging_dir" ]; then
-              echo "WARN: staging dir not clean before attempt $build_attempt: $staging_dir"
-              ls -la "$staging_dir" || true
-              continue
-            fi
+            if [ -e "$staging_dir" ]; then echo "WARN: staging dir not clean before attempt $build_attempt: $staging_dir"; ls -la "$staging_dir" || true; continue; fi
             echo "Build attempt $build_attempt of $build_max_attempts"
-            if run_build; then
-              build_ok=true
-              break
-            fi
+            if run_build; then build_ok=true; break; fi
             echo "Build attempt $build_attempt failed; retrying in 5s"
             sleep 5
           done
-          if [ "$build_ok" != "true" ]; then
-            echo "Build failed after $build_max_attempts attempts"
-            exit 1
-          fi
+          if [ "$build_ok" != "true" ]; then echo "Build failed after $build_max_attempts attempts"; exit 1; fi
           group_end "Build Docusaurus"
           restore_data_source
 
@@ -297,8 +233,6 @@ jobs:
           group_end "Publish release"
 
           group_start "Clean old releases"
-          ls -1dt "$releases_dir"/* 2>/dev/null |
-            tail -n +$((releases_to_keep + 1)) |
-            xargs -r rm -rf
+          ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf
           group_end "Clean old releases"
           EOF

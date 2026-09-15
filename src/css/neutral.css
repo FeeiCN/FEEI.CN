@@ -116,6 +116,12 @@
   color: var(--ifm-font-color-base);
 }
 
+/* Dark mode logo uses the same soft-white tone as primary text. */
+[data-theme='dark'] .navbar__logo img {
+  filter: grayscale(1) brightness(0) invert(1);
+  opacity: 0.93;
+}
+
 /* Keep focus visible without reintroducing a chromatic accent. */
 :focus-visible {
   outline-color: #737373;

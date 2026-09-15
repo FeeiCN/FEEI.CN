@@ -1,28 +1,35 @@
 import type {ReactNode} from 'react';
 import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import {useColorMode} from '@docusaurus/theme-common';
 import Layout from '@theme/Layout';
-import LetterGlitch from '@site/src/components/LetterGlitch';
-import LightRays from '@site/src/components/LightRays';
-import TextType from '@site/src/components/TextType';
 import styles from './index.module.css';
 
+const goals = [
+  {title: '健康幸福', description: '保持身体和家庭处于长期可持续的状态。'},
+  {title: '事业有成', description: '安全、AI，以及如何把复杂系统做得更可靠。'},
+  {title: '财务自由', description: '储蓄、投资，以及获得选择的自由。'},
+  {title: '人生丰富', description: '阅读、旅行、记录，认真体验这个世界。'},
+];
+
 const featured = [
+  {
+    title: '我的 Life OS',
+    description: '我如何把目标、数据、日记、复盘、工具和 AI Agent 连成一套持续变化的个人系统。',
+    to: '/life-os',
+  },
   {
     title: '创造确定性人生',
     description: '把时间、精力和金钱投入长期目标，在复杂时代持续积累确定性。',
     to: '/life-certainty',
   },
   {
+    title: '2025 年度总结：量变到质变',
+    description: '关于健康、事业、财务和人生体验的一年，也是长期积累开始显现复利的一年。',
+    to: '/annual-review-for-2025',
+  },
+  {
     title: '我原本是来看黄土高原的',
     description: '壶口黄河、六万多棵树，以及延安真正留在记忆里的颜色。',
     to: '/2026-09-13',
-  },
-  {
-    title: '当时怎么看都不像能赢',
-    description: '站在杨家岭和那些窑洞前，重新看延安最困难的那些年。',
-    to: '/2026-09-12',
   },
 ];
 
@@ -35,66 +42,53 @@ const recent = [
 ];
 
 function HeroSection(): ReactNode {
-  const {siteConfig} = useDocusaurusContext();
-  const {colorMode} = useColorMode();
-  const isDark = colorMode === 'dark';
-
-  const glitchColors = isDark
-    ? ['#1a0800', '#ff5b1f', '#7a2e0a']
-    : ['#2b4539', '#61dca3', '#61b3dc'];
-
   return (
     <section className={styles.hero}>
-      <LetterGlitch
-        glitchColors={glitchColors}
-        centerVignette
-        style={{position: 'absolute', inset: 0, zIndex: 0, backgroundColor: '#000'}}
-      />
-      <LightRays
-        raysOrigin="top-center"
-        raysColor="#ffffff"
-        raysSpeed={0.8}
-        lightSpread={0.6}
-        rayLength={1.5}
-        followMouse
-        mouseInfluence={0.08}
-        style={{position: 'absolute', inset: 0, zIndex: 1}}
-      />
-      <div className={styles.heroContent}>
-        <p className={styles.heroLabel}>FEEI · Personal Wiki</p>
-        <h1 className={styles.heroTitle}>
-          <TextType
-            text={['创造确定性人生', '健康幸福', '事业有成', '财务自由', '人生丰富']}
-            typingSpeed={75}
-            pauseDuration={1500}
-            showCursor
-            cursorCharacter="_"
-            deletingSpeed={50}
-            variableSpeedEnabled={false}
-            variableSpeedMin={60}
-            variableSpeedMax={120}
-            cursorBlinkDuration={0.5}
-          />
-        </h1>
-        <p className={styles.heroTagline}>{siteConfig.tagline}</p>
-        <Link to="/life-certainty" className={styles.heroCta}>
-          <span>开启确定性人生</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className={styles.heroCtaArrow}>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </svg>
-        </Link>
+      <div className={styles.heroInner}>
+        <p className={styles.heroKicker}>吴飞飞 · FEEI</p>
+        <h1>吴飞飞</h1>
+        <p className={styles.heroIntro}>
+          网络安全从业者，长期关注安全、AI 与个人成长。<br />
+          十余年参与内容电商、互联网银行与支付平台的安全体系建设。
+        </p>
+        <p className={styles.heroStatement}>在复杂时代创造确定性。</p>
+        <div className={styles.heroActions}>
+          <Link to="/about" className={styles.primaryAction}>关于我</Link>
+          <Link to="/life-os" className={styles.secondaryAction}>开始阅读 <span aria-hidden="true">→</span></Link>
+        </div>
       </div>
     </section>
   );
 }
 
-function ContentSection(): ReactNode {
+function GoalsSection(): ReactNode {
   return (
-    <section className={styles.content}>
-      <div className={styles.contentInner}>
+    <section className={styles.section}>
+      <div className={styles.inner}>
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionEyebrow}>SELECTED</span>
-          <h2>精选</h2>
+          <span className={styles.eyebrow}>LONG TERM</span>
+          <h2>长期目标</h2>
+        </div>
+        <div className={styles.goalGrid}>
+          {goals.map((goal) => (
+            <div className={styles.goalItem} key={goal.title}>
+              <h3>{goal.title}</h3>
+              <p>{goal.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ReadingSection(): ReactNode {
+  return (
+    <section className={styles.section}>
+      <div className={styles.inner}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.eyebrow}>START HERE</span>
+          <h2>从这里开始</h2>
         </div>
         <div className={styles.featuredList}>
           {featured.map((item) => (
@@ -107,10 +101,18 @@ function ContentSection(): ReactNode {
             </Link>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
 
-        <div className={`${styles.sectionHeader} ${styles.recentHeader}`}>
-          <span className={styles.sectionEyebrow}>RECENT</span>
-          <h2>最近更新</h2>
+function RecentSection(): ReactNode {
+  return (
+    <section className={`${styles.section} ${styles.recentSection}`}>
+      <div className={styles.inner}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.eyebrow}>RECENT</span>
+          <h2>最近</h2>
         </div>
         <div className={styles.recentList}>
           {recent.map((item) => (
@@ -120,19 +122,22 @@ function ContentSection(): ReactNode {
             </Link>
           ))}
         </div>
-        <Link to="/2026" className={styles.allRecords}>查看 2026 年度记录 →</Link>
+        <Link to="/2026" className={styles.allRecords}>查看全部记录 →</Link>
       </div>
     </section>
   );
 }
 
 export default function Home(): ReactNode {
-  const {siteConfig} = useDocusaurusContext();
   return (
-    <Layout title={siteConfig.title} description={siteConfig.tagline}>
-      <main>
+    <Layout
+      title="吴飞飞"
+      description="吴飞飞的长期公开记录：网络安全、AI、个人成长，以及在复杂时代创造确定性的实践。">
+      <main className={styles.page}>
         <HeroSection />
-        <ContentSection />
+        <GoalsSection />
+        <ReadingSection />
+        <RecentSection />
       </main>
     </Layout>
   );

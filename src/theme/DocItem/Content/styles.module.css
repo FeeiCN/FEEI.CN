@@ -1,0 +1,31 @@
+.readingMode {
+  display: flex;
+  gap: 0.7rem;
+  align-items: baseline;
+  margin: 1.15rem 0 1.8rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+.label {
+  flex: 0 0 auto;
+  color: var(--ifm-color-emphasis-500);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 640px) {
+  .readingMode {
+    display: block;
+  }
+
+  .label {
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+}

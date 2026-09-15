@@ -113,7 +113,7 @@ const config: Config = {
       editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/',
     },
     blog: false,
-    theme: {customCss: './src/css/custom.css'},
+    theme: {customCss: ['./src/css/custom.css', './src/css/neutral.css']},
   } satisfies Preset.Options]],
   plugins: [docMtimePlugin, copyMarkdownPlugin, [fastSearchPlugin, searchOptions]],
   clientModules: ['./src/clientModules/slidingIndicator.ts'],

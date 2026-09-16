@@ -1,0 +1,37 @@
+name: Repair PBC4
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-pbc4.yml'
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore and refine
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          p='docs/01-网络空间安全/01-安全工程/03-安全体系/03-安全合法合规/人民银行网络安全事件报告管理办法.md'
+          s=subprocess.check_output(['git','show','945cf5897d221af6715a7b07774a089b57b54d19:'+p], text=True)
+          s=s.replace('→ 如何证明”', '→ 验收方式”')
+          s=s.replace('**如何证明。**', '**验收方式。**')
+          s=s.replace('灵魂拷问和证明方式', '灵魂拷问和验收方式')
+          s=s.replace('证明材料位置', '验收材料位置')
+          s=s.replace('### 判断证明材料和替代实现', '### 判断验收材料和替代实现')
+          s=s.replace('证明材料应说明来源、对象、发生时间、覆盖期间和关联关系，能够支持对应事实。', '验收材料应说明来源、对象、发生时间、覆盖期间和关联关系，并结合抽样、反向核对或现场测试支持对应事实。')
+          s=s.replace('证明材料引用和独立结论', '验收材料引用和独立结论')
+          Path(p).write_text(s)
+          PY
+      - name: Commit
+        run: |
+          git config user.name 'Feei'
+          git config user.email 'feei@feei.cn'
+          git add 'docs/01-网络空间安全/01-安全工程/03-安全体系/03-安全合法合规/人民银行网络安全事件报告管理办法.md'
+          git commit -m 'docs: use acceptance methods in PBC order 4 guide'
+          git push origin HEAD:main

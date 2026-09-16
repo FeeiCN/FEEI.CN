@@ -46,18 +46,40 @@ jobs:
           head,n=table_re.subn(table_new,head,count=1)
           if n!=1: raise SystemExit('goal-state table not replaced')
           block_re=re.compile(r'\*\*落实要求。\*\*\s*(?P<body>.*?)(?=\n\n\*\*怎么检查。\*\*)', re.S)
-          def merge_impl(m):
-              body=m.group('body').strip()
-              if '```' in body or '\n|' in body: raise SystemExit('unexpected complex markup inside implementation block')
-              body=' '.join(x.strip() for x in body.splitlines() if x.strip())
-              parts=[x.strip() for x in re.split(r'(?<=。)\s*',body) if x.strip()]
-              bullets=[]
+          def prose_to_bullets(text):
+              text=' '.join(x.strip() for x in text.splitlines() if x.strip())
+              if not text: return []
+              parts=[x.strip() for x in re.split(r'(?<=。)\s*',text) if x.strip()]
+              out=[]
               for x in parts:
                   x=re.sub(r'\s{2,}',' ',x)
                   if not x.endswith(('。','；','：')): x+='。'
-                  bullets.append('- '+x)
-              if len(bullets)<2: raise SystemExit('implementation block too short')
-              return '**落实要求。**\n\n'+'\n'.join(bullets)
+                  out.append('- '+x)
+              return out
+          def merge_impl(m):
+              body=m.group('body').strip('\n')
+              lines=body.splitlines()
+              out=[]; buf=[]; in_code=False
+              def flush():
+                  nonlocal buf
+                  out.extend(prose_to_bullets('\n'.join(buf))); buf=[]
+              for line in lines:
+                  st=line.strip()
+                  if st.startswith('```'):
+                      flush(); in_code=not in_code; out.append(line); continue
+                  if in_code:
+                      out.append(line); continue
+                  if st.startswith('|') or st.startswith('- ') or st.startswith('>'):
+                      flush(); out.append(line); continue
+                  if not st:
+                      flush();
+                      if out and out[-1] != '': out.append('')
+                  else:
+                      buf.append(line)
+              flush()
+              while out and out[-1]=='': out.pop()
+              if not any(x.startswith('- ') for x in out): raise SystemExit('implementation block has no bullets')
+              return '**落实要求。**\n\n'+'\n'.join(out)
           head,count=block_re.subn(merge_impl,head)
           if count<10: raise SystemExit(f'only transformed {count} implementation blocks')
           head=re.sub(r'^- 核查(.+)$', r'- 从实际材料和运行记录中抽样核对\1', head, flags=re.M)

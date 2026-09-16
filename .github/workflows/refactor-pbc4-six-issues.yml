@@ -14,53 +14,41 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-
           p=Path('docs/01-网络空间安全/01-安全工程/03-安全体系/03-安全合法合规/人民银行网络安全事件报告管理办法.md')
           s=p.read_text()
           original=s
-
-          # 1) 全中文命名：Reference -> 法规原文；检查章节改成“如何开展检查”。
           s=s.replace('[检查与验收](#assurance)', '[如何开展检查](#assurance)')
           s=s.replace('[Reference · 法规原文](#reference)', '[法规原文](#reference)')
           s=s.replace('## 检查与验收 {#assurance}', '## 如何开展检查 {#assurance}')
           s=s.replace('## Reference · 法规原文 {#reference}', '## 法规原文 {#reference}')
           s=s.replace('## Reference · 法规原文', '## 法规原文')
-
           ref_marker='## 法规原文'
-          if ref_marker not in s:
-              raise SystemExit('法规原文 heading missing')
+          if ref_marker not in s: raise SystemExit('法规原文 heading missing')
           ref=s.index(ref_marker)
           head,tail=s[:ref],s[ref:]
-
-          # 2) 开头只保留读者真正需要的结构说明，删除编辑过程式说明和重复免责声明。
           old=re.compile(r'下文每项要求统一按 \*\*“法规要求（含条款）→ 落实要求 → 怎么检查”\*\* 展开。.*?必要时向主管机关确认。', re.S)
           new=('下文按 **“法规要求 → 落实要求 → 怎么检查”** 展开。法规原文要求与实施建议明确区分；法定要求不得通过替代实现降低标准。'
                '存在适用、起算或解释争议时，应结合具体事实由法务合规核实，必要时向主管机关确认。')
           head,n=old.subn(new,head,count=1)
           if n!=1: raise SystemExit('intro structure paragraph not replaced')
-
-          # 3) 顶部工作主题表改成目标状态，而不是伪装成交付物列表。
           table_re=re.compile(r'\| 工作主题 \| 落实重点 \| 建议牵头与参与方 \|\n\| --- \| --- \| --- \|\n'
                               r'\| \[范围与职责\]\(#scope-and-roles\) \| .*?\| 安全与法务合规牵头，业务、运维、监管联络参与 \|\n'
                               r'\| \[事件识别与分级\]\(#identification-and-grading\) \| .*?\| 安全牵头，业务、运维、数据、隐私参与 \|\n'
                               r'\| \[报告与持续更新\]\(#reporting\) \| .*?\| 监管联络与安全牵头，法务、业务、隐私、公关参与 \|\n'
                               r'\| \[调查与留存\]\(#investigation-and-records\) \| .*?\| 安全牵头，业务、法务、人力、内审及档案管理参与 \|')
-          table_new='''| 工作主题 | 最终要达到的状态 | 建议牵头与参与方 |
-| --- | --- | --- |
-| [范围与职责](#scope-and-roles) | 知道哪些业务适用、需要向谁报告、由谁负责 | 安全与法务合规牵头，业务、运维、监管联络参与 |
-| [事件识别与分级](#identification-and-grading) | 事件不漏、等级判得准、关键指标随时取得到 | 安全牵头，业务、运维、数据、隐私参与 |
-| [报告与持续更新](#reporting) | 该报的事件能够按对象、时限、内容和渠道持续完成报告 | 监管联络与安全牵头，法务、业务、隐私、公关参与 |
-| [调查与留存](#investigation-and-records) | 每起事件能够完整还原、整改闭环、证据可追溯 | 安全牵头，业务、法务、人力、内审及档案管理参与 |'''
+          table_new='\n'.join([
+              '| 工作主题 | 最终要达到的状态 | 建议牵头与参与方 |',
+              '| --- | --- | --- |',
+              '| [范围与职责](#scope-and-roles) | 知道哪些业务适用、需要向谁报告、由谁负责 | 安全与法务合规牵头，业务、运维、监管联络参与 |',
+              '| [事件识别与分级](#identification-and-grading) | 事件不漏、等级判得准、关键指标随时取得到 | 安全牵头，业务、运维、数据、隐私参与 |',
+              '| [报告与持续更新](#reporting) | 该报的事件能够按对象、时限、内容和渠道持续完成报告 | 监管联络与安全牵头，法务、业务、隐私、公关参与 |',
+              '| [调查与留存](#investigation-and-records) | 每起事件能够完整还原、整改闭环、证据可追溯 | 安全牵头，业务、法务、人力、内审及档案管理参与 |'])
           head,n=table_re.subn(table_new,head,count=1)
           if n!=1: raise SystemExit('goal-state table not replaced')
-
-          # 4) “落实要求”真正融合：把“怎么做 + 产出 + 程度”统一改成可执行 checklist。
           block_re=re.compile(r'\*\*落实要求。\*\*\s*(?P<body>.*?)(?=\n\n\*\*怎么检查。\*\*)', re.S)
           def merge_impl(m):
               body=m.group('body').strip()
-              if '```' in body or '\n|' in body:
-                  raise SystemExit('unexpected complex markup inside implementation block')
-              # 合并段落，按完整中文句子拆成动作/状态项；不拆分分号，避免语义过碎。
+              if '```' in body or '\n|' in body: raise SystemExit('unexpected complex markup inside implementation block')
               body=' '.join(x.strip() for x in body.splitlines() if x.strip())
               parts=[x.strip() for x in re.split(r'(?<=。)\s*',body) if x.strip()]
               bullets=[]
@@ -72,33 +60,21 @@ jobs:
               return '**落实要求。**\n\n'+'\n'.join(bullets)
           head,count=block_re.subn(merge_impl,head)
           if count<10: raise SystemExit(f'only transformed {count} implementation blocks')
-
-          # 5) “怎么检查”只保留检查动作。把证据罗列式“核查...”改成实际抽样动作。
           head=re.sub(r'^- 核查(.+)$', r'- 从实际材料和运行记录中抽样核对\1', head, flags=re.M)
-          # 去掉由于前版结构留下的空白 list 分隔。
           head=head.replace('\n\n- 从实际材料和运行记录中抽样核对', '\n- 从实际材料和运行记录中抽样核对')
-
-          # 6) 全局检查章节定位清晰：它讲“怎么组织一次完整检查”，不是第二套单项检查。
           head=head.replace('后面的检查章节只统一规定取样、测试和结论方法，不再复制另一份要求清单。',
                             '后面的“如何开展检查”只说明如何组织一次完整检查，包括范围、抽样、场景测试、结论、整改与复测，不重复单项要求。')
           head=re.sub(r'(## 如何开展检查 \{#assurance\}\n\n)(.*?)(?=\n### )',
                       r'\1本节说明如何把前面的单项检查组织成一次完整的合规检查。先确定范围并反查是否漏项，再抽样验证真实运行情况，最后通过场景测试、整改和复测形成可追溯结论。\n',
                       head,count=1,flags=re.S)
-
-          # 统一措辞，避免再引入“交付物/验收方式/重点核验”等旧概念。
           for old_term in ['Reference · 法规原文','**怎么落实。**','**做到什么程度。**','**交付物与完成标准。**','**灵魂拷问。**','**验收方式。**','重点核验：']:
-              if old_term in head:
-                  raise SystemExit('residual old concept: '+old_term)
+              if old_term in head: raise SystemExit('residual old concept: '+old_term)
           if '## 检查与验收' in head: raise SystemExit('old assurance heading remains')
           if '| 工作主题 | 落实重点 |' in head: raise SystemExit('old overview table remains')
-          if head.count('**落实要求。**') != head.count('**怎么检查。**'):
-              raise SystemExit('implementation/test section count mismatch')
-          if head.count('**落实要求。**') < 10:
-              raise SystemExit('too few three-layer sections')
-
+          if head.count('**落实要求。**') != head.count('**怎么检查。**'): raise SystemExit('implementation/test section count mismatch')
+          if head.count('**落实要求。**') < 10: raise SystemExit('too few three-layer sections')
           out=head+tail
-          if not out.startswith('---\n') or len(out)<20000 or '## 法规原文' not in out:
-              raise SystemExit('output integrity failed')
+          if not out.startswith('---\n') or len(out)<20000 or '## 法规原文' not in out: raise SystemExit('output integrity failed')
           if out==original: raise SystemExit('no changes produced')
           p.write_text(out)
           PY

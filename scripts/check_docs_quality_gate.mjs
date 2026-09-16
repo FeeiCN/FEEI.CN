@@ -18,11 +18,10 @@ process.stderr.write(stderr);
 
 if (result.error) throw result.error;
 
-// Includes are a deterministic build dependency. Validate them independently
-// of the heuristic writing-quality rules so a missing partial fails before the
-// Docusaurus build. Scan all docs because an unchanged document can reference
-// a partial removed by another commit.
-const list = spawnSync('git', ['ls-files', 'docs/**/*.md', 'docs/*.md'], {encoding: 'utf8'});
+// Includes are deterministic build dependencies. Use NUL-delimited git output
+// so Chinese, spaces and other special characters are returned as literal paths
+// instead of Git's quoted/core.quotePath representation.
+const list = spawnSync('git', ['ls-files', '-z', '--', 'docs'], {encoding: 'utf8'});
 if (list.error) throw list.error;
 if (list.status !== 0) {
   process.stderr.write(list.stderr ?? '');
@@ -31,7 +30,8 @@ if (list.status !== 0) {
 
 const includePattern = /<!--\s*@include\s+([^\s]+)\s*-->/g;
 const includeErrors = [];
-for (const file of list.stdout.split(/\r?\n/).filter(Boolean)) {
+const markdownFiles = list.stdout.split('\0').filter((file) => file.endsWith('.md'));
+for (const file of markdownFiles) {
   let markdown;
   try {
     markdown = readFileSync(file, 'utf8');
@@ -55,9 +55,6 @@ if (includeErrors.length > 0) {
 
 if (result.status === 0) process.exit(0);
 
-// Only deterministic structural/data-contract problems should block deploy.
-// Writing-style rules are useful review signals, but are too heuristic to be
-// release gates (e.g. `9 月目标` was previously mistaken for manual numbering).
 const blockingRuleNames = new Set([
   'front matter 缺失',
   'front matter 未闭合',
@@ -90,5 +87,4 @@ if (errorLines.length > 0) {
   process.exit(0);
 }
 
-// Unknown failure: fail closed so script/runtime failures are never hidden.
 process.exit(result.status ?? 1);

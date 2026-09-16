@@ -6,6 +6,7 @@ import rehypeKatex from 'rehype-katex';
 import docMtimePlugin from './plugins/docMtimePlugin';
 import copyMarkdownPlugin from './plugins/copyMarkdownPlugin';
 import fastSearchPlugin from './plugins/fastSearchPlugin';
+import {expandMarkdownIncludes} from './plugins/markdownIncludes';
 
 type SidebarItemWithProps = {type: string; id?: string; items?: SidebarItemWithProps[]; customProps?: Record<string, unknown>; collapsed?: boolean; link?: {type?: string; id?: string}};
 type LoadedDocWithFrontMatter = {id: string; frontMatter?: Record<string, unknown>};
@@ -19,7 +20,7 @@ const searchOptions = {docsRouteBasePath: '/', indexBlog: false, indexPages: fal
 const config: Config = {
   title: '吴飞飞-安全界', tagline: '把所有的时间、精力和金钱都投入到长期目标中',
   future: {v4: {removeLegacyPostBuildHeadAttribute: true, useCssCascadeLayers: true, siteStorageNamespacing: true, mdx1CompatDisabledByDefault: true, fasterByDefault: true}, faster: {gitEagerVcs: false}},
-  markdown: {format: 'detect', hooks: {onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn', onBrokenMarkdownImages: 'ignore'}, preprocessor: ({fileContent}) => fileContent.replace(/https?:\/\/\S+/g, (url) => url.replace(/\*/g, '\\*'))},
+  markdown: {format: 'detect', hooks: {onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn', onBrokenMarkdownImages: 'ignore'}, preprocessor: ({filePath, fileContent}) => expandMarkdownIncludes(fileContent, filePath).replace(/https?:\/\/\S+/g, (url) => url.replace(/\*/g, '\\*'))},
   url: 'https://feei.cn', baseUrl: '/', organizationName: 'feeicn', projectName: 'FEEI.CN', onBrokenLinks: isStrictBuild ? 'throw' : 'warn', i18n: {defaultLocale: 'zh-Hans', locales: ['zh-Hans']},
   headTags: [
     {tagName: 'link', attributes: {rel: 'icon', href: '/media/img/icons/feei-icon-32.webp', sizes: '32x32'}},

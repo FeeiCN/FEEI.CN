@@ -1,6 +1,11 @@
 name: Deploy website
 
 on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Save daily diary issue', 'Codex issue driver', 'Fetch issue content', 'Sync security engineering', 'Daily data analysis']
+    types: [completed]
+    branches: [main]
   push:
     branches: [main]
     paths:
@@ -30,6 +35,7 @@ env:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - name: Setup SSH

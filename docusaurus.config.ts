@@ -6,6 +6,7 @@ import rehypeKatex from 'rehype-katex';
 import docMtimePlugin from './plugins/docMtimePlugin';
 import copyMarkdownPlugin from './plugins/copyMarkdownPlugin';
 import fastSearchPlugin from './plugins/fastSearchPlugin';
+import homeRecordsPlugin from './plugins/homeRecordsPlugin';
 import {expandMarkdownIncludes} from './plugins/markdownIncludes';
 
 type SidebarItemWithProps = {type: string; id?: string; items?: SidebarItemWithProps[]; customProps?: Record<string, unknown>; collapsed?: boolean; link?: {type?: string; id?: string}};
@@ -29,21 +30,21 @@ const config: Config = {
     {tagName: 'meta', attributes: {name: 'msapplication-TileImage', content: '/media/img/icons/feei-icon-270.webp'}},
   ],
   presets: [['classic', {docs: {routeBasePath: '/', sidebarPath: './sidebars.ts', remarkPlugins: [remarkMath], rehypePlugins: [rehypeKatex], async sidebarItemsGenerator(args) { const items = await args.defaultSidebarItemsGenerator(args); return attachDocFrontMatterToSidebar(items, args.docs); }, editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/'}, blog: false, theme: {customCss: ['./src/css/custom.css', './src/css/neutral.css']}} satisfies Preset.Options]],
-  plugins: [docMtimePlugin, copyMarkdownPlugin, [fastSearchPlugin, searchOptions]], clientModules: ['./src/clientModules/slidingIndicator.ts'],
+  plugins: [docMtimePlugin, copyMarkdownPlugin, homeRecordsPlugin, [fastSearchPlugin, searchOptions]], clientModules: ['./src/clientModules/slidingIndicator.ts'],
   themeConfig: {
     docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: 'media/img/icons/feei-icon-270.webp', colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
     navbar: {hideOnScroll: false, logo: {alt: 'My Site Logo', src: 'media/img/logo.webp'}, items: [
-      {type: 'dropdown', position: 'left', label: '网络空间安全', icon: 'shield', items: [
-        {type: 'docSidebar', sidebarId: 'securityEngineeringSidebar', label: '安全工程', icon: 'shield'},
+      {type: 'dropdown', position: 'left', label: '网络安全', icon: 'shield', to: '/security-engineering', items: [
+        {type: 'docSidebar', sidebarId: 'securityEngineeringSidebar', label: '网络空间安全', icon: 'shield'},
         {type: 'docSidebar', sidebarId: 'aiSecuritySidebar', label: '人工智能安全', icon: 'brand-openai-icon'},
       ]},
-      {type: 'dropdown', position: 'left', label: '人生操作系统', icon: 'biceps-flexed', to: '/life-os', items: [
+      {type: 'dropdown', position: 'left', label: '人生系统', icon: 'biceps-flexed', to: '/life-certainty', items: [
         {type: 'docSidebar', sidebarId: 'healthHappinessSidebar', label: '健康幸福', icon: 'heart'},
         {type: 'docSidebar', sidebarId: 'careerSuccessSidebar', label: '事业有成', icon: 'rocket'},
         {type: 'docSidebar', sidebarId: 'financeFreedomSidebar', label: '财务自由', icon: 'brand-bags-fm-icon'},
         {type: 'docSidebar', sidebarId: 'exploreWorldSidebar', label: '人生丰富', icon: 'compass'},
       ]},
-      {type: 'dropdown', position: 'left', label: '吴飞飞', icon: 'at-sign-icon', items: [
+      {type: 'dropdown', position: 'left', label: '吴飞飞', icon: 'at-sign-icon', to: '/about', items: [
         {type: 'docSidebar', sidebarId: 'aboutMeSidebar', label: '关于', icon: 'user'},
         {type: 'docSidebar', sidebarId: 'annualReviewSidebar', label: '年度总结', icon: 'history-circle-icon'},
       ]},

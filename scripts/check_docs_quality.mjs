@@ -34,6 +34,7 @@ const RULE_NAMES = {
   METADATA_REQUIRED: '元数据缺失',
   DESCRIPTION_LENGTH: 'description 过长',
   LAST_REVIEWED: '复核日期',
+  PUBLISHED_AT: '首次发布日期',
   TOO_MANY_H2: 'H2 过多',
   HEADING_DEPTH: '标题层级过深',
   NUMBERED_HEADING: '手写标题编号',
@@ -630,10 +631,10 @@ function needsLastReviewed(file, contentType) {
   if (contentType === 'tutorial' || contentType === 'reference') return true;
   if (!['hub', 'article', 'review'].includes(contentType)) return false;
 
-  return file.startsWith('docs/02-人生操作系统/01-健康幸福/')
-    || file.startsWith('docs/02-人生操作系统/03-财务自由/')
-    || file.startsWith('docs/01-网络空间安全/01-安全工程/')
-    || file.startsWith('docs/01-网络空间安全/02-人工智能安全/')
+  return file.startsWith('docs/02-人生系统/01-健康幸福/')
+    || file.startsWith('docs/02-人生系统/03-财务自由/')
+    || file.startsWith('docs/01-网络安全/01-网络空间安全/')
+    || file.startsWith('docs/01-网络安全/02-人工智能安全/')
     || /(?:法律|法规|政策|竞业|合规)/.test(file);
 }
 
@@ -693,6 +694,19 @@ function metadataChecks(document, parsed, mode, issues) {
       file,
       fields.get('description').line,
       `description 共 ${descriptionSize.count} ${descriptionSize.unit}，应不超过 160 ${descriptionSize.unit}。`,
+    );
+  }
+
+  const publishedAt = fieldValue(fields, 'published_at');
+  if ((publishedAt && !validDate(publishedAt))
+    || (isAdded && ['article', 'tutorial', 'review', 'essay'].includes(contentType) && !publishedAt)) {
+    addIssue(
+      issues,
+      isAll ? 'warning' : 'error',
+      'PUBLISHED_AT',
+      file,
+      fields.get('published_at')?.line ?? fields.get('content_type')?.line ?? 1,
+      '新文章必须手动填写真实有效的 YYYY-MM-DD 格式 published_at；历史文章只补可确认的首次发表日期。',
     );
   }
 

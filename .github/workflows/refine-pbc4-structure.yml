@@ -1,0 +1,102 @@
+name: Refine PBC4 structure
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/refine-pbc4-structure.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Refactor article structure
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('docs/01-网络空间安全/01-安全工程/03-安全体系/03-安全合法合规/人民银行网络安全事件报告管理办法.md')
+          s = p.read_text()
+
+          s = s.replace('下文中，**“法规要求”概括条文明示的义务；“实施方式”“完成标准”“验证问题”和证据样式，是落实与检查建议。**', '下文每项要求统一按 **“法规要求（含条款）→ 怎么落实 → 交付物与完成标准 → 灵魂拷问 → 如何证明”** 展开。法规要求直接标注对应条款，不再另设“依据”段落；其余内容属于落实与检查建议。')
+
+          clause_map = {
+            'scope': '第2—4条',
+            'roles': '第13—14条',
+            'detection': '第3条、第10条、第13条',
+            'grading-rules': '第6—12条、第31条',
+            'grading-data': '第6—12条、第31条',
+            'reporting-deadlines': '第13条、第15—17条',
+            'report-content-and-channels': '第18—21条',
+            'personal-information': '第4条、第20条；并行适用《个人信息保护法》第57条',
+            'post-incident': '第17—19条、第23条',
+            'accountability': '第21—22条',
+            'regulatory-notices': '第24条',
+            'records': '第25条',
+          }
+          delivery_map = {
+            'scope': '交付物：适用范围清单、排除项依据、并行报告义务映射和责任分工。',
+            'roles': '交付物：生效的应急职责与授权安排、报告对象和主备渠道清单。',
+            'detection': '交付物：事件线索来源清单、研判入口和跨团队联动机制。',
+            'grading-rules': '交付物：可执行的四级分级规则、年度评估记录、必要的审批和协商记录。',
+            'grading-data': '交付物：判级指标口径、数据源、计算或估算方法和动态升级记录机制。',
+            'reporting-deadlines': '交付物：报告触发规则、时限管理机制、授权与提醒机制。',
+            'report-content-and-channels': '交付物：四类报告字段清单、合法报送渠道、备用路径和收悉确认机制。',
+            'personal-information': '交付物：个人信息事件补救、主管部门通知、个人通知及不通知判断机制。',
+            'post-incident': '交付物：调查总结流程、期限管理、延期承诺和退回重报机制。',
+            'accountability': '交付物：责任认定和差异化处理规则、事实与证明材料留存机制。',
+            'regulatory-notices': '交付物：监管风险提示接收、分派、核查、补救和反馈闭环机制。',
+            'records': '交付物：网络安全事件台账、证据索引和至少三年的留存策略。',
+          }
+
+          # Refactor each requirement section without touching the Reference law text.
+          ref_at = s.index('## Reference · 法规原文')
+          head, tail = s[:ref_at], s[ref_at:]
+          anchors = list(clause_map)
+          for anchor in anchors:
+            pat = re.compile(r'(#### [^\n]+ \{#'+re.escape(anchor)+r'\}\n)(.*?)(?=\n#### |\n### |\n## )', re.S)
+            m = pat.search(head)
+            if not m:
+              raise SystemExit(f'missing section {anchor}')
+            block = m.group(2)
+            block = block.replace('**法规要求。**', f'**法规要求｜{clause_map[anchor]}。**', 1)
+            block = block.replace('**实施方式。**', '**怎么落实。**', 1)
+            block = block.replace('**完成标准。**', f'**交付物与完成标准。** {delivery_map[anchor]} ', 1)
+            block = block.replace('**验证问题。**', '**灵魂拷问。**', 1)
+            block = block.replace('**证据。**', '**如何证明。**', 1)
+            # The clause is already attached to 法规要求; remove the separate 依据 paragraph.
+            block = re.sub(r'\n\*\*依据。\*\*.*?(?=\n?$)', '', block, flags=re.S)
+            head = head[:m.start(2)] + block + head[m.end(2):]
+
+          # Remove residual wording that implies a separate evidence/requirement index.
+          head = head.replace('每项要求的具体问题和证据已在前文列出', '每项要求的灵魂拷问和证明方式已在前文列出')
+          head = head.replace('先建立每条适用义务到实施成果、测试项及证据的映射', '先建立每条适用义务到交付物、完成标准、验证项及证明材料的映射')
+          head = head.replace('### 判断证据和替代实现 {#evidence-rules}', '### 判断证明材料和替代实现 {#evidence-rules}')
+          head = head.replace('证据应说明来源、对象、发生时间、覆盖期间和关联关系，能够支持对应事实。', '证明材料应说明来源、对象、发生时间、覆盖期间和关联关系，能够支持对应事实。')
+          head = head.replace('证据引用和独立结论', '证明材料引用和独立结论')
+          head = head.replace('观察事实、时间依据和证据位置：', '观察事实、时间依据和证明材料位置：')
+          head = head.replace('整改期限及复测结果：', '整改期限及复测结果：')
+
+          # Remove the now-obsolete statement about custom test IDs if an older copy remains.
+          tail = re.sub(r'\n原有 `IR-04-01`.*?不是监管发布的检查项编号。\n', '\n', tail)
+
+          p.write_text(head + tail)
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name 'Feei'
+          git config user.email 'feei@feei.cn'
+          git add 'docs/01-网络空间安全/01-安全工程/03-安全体系/03-安全合法合规/人民银行网络安全事件报告管理办法.md'
+          if git diff --cached --quiet; then
+            echo 'No changes'
+          else
+            git commit -m 'docs: simplify PBC order 4 compliance structure'
+            git push origin HEAD:main
+          fi

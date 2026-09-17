@@ -1,4 +1,3 @@
-import clsx from 'clsx';
 import {useEffect, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import type {Root} from 'react-dom/client';
@@ -9,18 +8,17 @@ import {buildAllDerivedGroups, playlistGroupFromManifest, siteMusicGroups} from 
 import type {PlaylistGroup, PlaylistManifestGroup} from './playlist';
 import styles from './styles.module.css';
 import Galaxy from './Galaxy';
+import MusicControls from './Controls';
 import {
-  getItsHoverIcon,
-  MusicIcon,
-} from '@site/src/components/ItsHoverIcon';
-import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useControlledIconAnimation';
-import {
+  dispatchMusicPlayerPlay,
   dispatchMusicPlayerState,
+  musicPlayerOpenEventName,
   musicPlayerPlayEventName,
+  musicPlayerStateEventName,
 } from './playerEvents';
-import type {MusicPlayerPlayDetail} from './playerEvents';
+import type {MusicPlayerPlayDetail, MusicPlayerStateDetail} from './playerEvents';
 
-type APlayerConstructor = new (options: APlayerOptions) => APlayerInstance;
+type APlayerConstructor = new (options: APlayerOptions & {mini?: boolean}) => APlayerInstance;
 const babyMusicManifestUrl = '/music/baby-music/manifest.json';
 const initialMusicGroups = [...siteMusicGroups, ...buildAllDerivedGroups(siteMusicGroups)];
 const fullScreenLyricLineHeight = 48;
@@ -54,6 +52,7 @@ type ExtendedAPlayer = APlayerInstance & {
   };
   on?: (name: string, callback: () => void) => void;
   play?: () => void;
+  pause?: () => void;
   seek?: (time: number) => void;
   template?: {
     lrcButton?: HTMLElement;
@@ -119,15 +118,10 @@ function ensurePlayerDOM(): {shell: HTMLDivElement; mount: HTMLDivElement} {
 }
 // ────────────────────────────────────────────────────────────────────────────
 
-function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitcher?: boolean}) {
-  const musicIconAnimation = useControlledIconAnimation(true);
+function GlobalMusicPlayerClient() {
   const playerRef = useRef<APlayerInstance | null>(_player);
-  const isListOpenRef = useRef(false);
-  const shouldKeepListOpenOnNextMountRef = useRef(false);
   const shouldAutoplayOnNextMountRef = useRef(false);
   const requestedTrackIndexRef = useRef<number | undefined>(undefined);
-  const groupPanelRef = useRef<HTMLDivElement | null>(null);
-  const groupToggleButtonRef = useRef<HTMLButtonElement | null>(null);
   const storedStateRef = useRef<StoredPlayerState>(readStoredPlayerState());
   const [groups, setGroups] = useState<PlaylistGroup[]>(initialMusicGroups);
   const [hasResolvedGroups, setHasResolvedGroups] = useState(false);
@@ -138,16 +132,11 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
   // the player is already running — skip the pending/fade-in state entirely.
   const [isReady, setIsReady] = useState(_wasVisible && _player !== null);
   const [isPlayerVisible, setIsPlayerVisible] = useState(_wasVisible);
-  const [isListOpen, setIsListOpen] = useState(false);
-  const [isGroupPanelOpen, setIsGroupPanelOpen] = useState(false);
+  const [currentTrackUrl, setCurrentTrackUrl] = useState(_player?.audio?.getAttribute('src') ?? '');
+  const [playerError, setPlayerError] = useState('');
   const matchedActiveGroup = groups.find((g) => g.id === activeGroupId);
   const shouldWaitForActiveGroup = !hasResolvedGroups && activeGroupId !== '' && !matchedActiveGroup;
   const activeGroup = matchedActiveGroup ?? (shouldWaitForActiveGroup ? undefined : groups[0]);
-
-  const updateListOpenState = (open: boolean) => {
-    isListOpenRef.current = open;
-    setIsListOpen(open);
-  };
 
   const persistStoredState = (updater: (current: StoredPlayerState) => StoredPlayerState) => {
     const nextState = updater(storedStateRef.current);
@@ -192,7 +181,7 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
       typeof trackIndex === 'number' && trackIndex >= 0 && trackIndex < group.tracks.length ? trackIndex : 0;
     try {
       player.list?.switch?.(safeTrackIndex);
-      // Playlist-initiated plays from the music page should never open the
+      // User-requested tracks should never open the
       // fullscreen lyric overlay automatically — keep it collapsed until the
       // user explicitly toggles the lyric button.
       collapseLyricOverlay(player);
@@ -214,6 +203,7 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
   // Sync shell visibility and body padding class with React state
   useEffect(() => {
     const {shell} = ensurePlayerDOM();
+    _wasVisible = isPlayerVisible;
     shell.style.display = isPlayerVisible ? '' : 'none';
     document.body.classList.toggle(playerVisibleBodyClassName, isPlayerVisible);
   }, [isPlayerVisible]);
@@ -225,23 +215,14 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
   }, [isReady]);
 
   useEffect(() => {
-    if (!isGroupPanelOpen) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (groupPanelRef.current?.contains(target) || groupToggleButtonRef.current?.contains(target)) return;
-      setIsGroupPanelOpen(false);
+    const handleState = (event: Event) => {
+      const detail = (event as CustomEvent<MusicPlayerStateDetail>).detail;
+      const track = groups.find((group) => group.id === detail?.groupId)?.tracks[detail?.trackIndex ?? 0];
+      setCurrentTrackUrl(track?.url ?? '');
     };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsGroupPanelOpen(false);
-    };
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isGroupPanelOpen]);
+    window.addEventListener(musicPlayerStateEventName, handleState);
+    return () => window.removeEventListener(musicPlayerStateEventName, handleState);
+  }, [groups]);
 
   useEffect(() => {
     let disposed = false;
@@ -274,10 +255,12 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
       if (!requestedGroup) return;
       requestedTrackIndexRef.current = detail?.trackIndex;
       shouldAutoplayOnNextMountRef.current = true;
-      shouldKeepListOpenOnNextMountRef.current = detail?.showList !== false;
-      setIsGroupPanelOpen(false);
+      setPlayerError('');
+      if (detail?.showList === true) window.dispatchEvent(new Event(musicPlayerOpenEventName));
       setIsPlayerVisible(true);
       if (requestedGroup.id === activeGroup?.id && _player) {
+        shouldAutoplayOnNextMountRef.current = false;
+        requestedTrackIndexRef.current = undefined;
         playRequestedTrack(requestedGroup, detail?.trackIndex);
         return;
       }
@@ -291,14 +274,10 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
   useEffect(() => {
     let disposed = false;
     const shouldAutoplay = shouldAutoplayOnNextMountRef.current;
-    const shouldRestoreListOpen =
-      isPlayerVisible && (shouldKeepListOpenOnNextMountRef.current || isListOpen || isListOpenRef.current);
     shouldAutoplayOnNextMountRef.current = false;
-    shouldKeepListOpenOnNextMountRef.current = false;
 
     if (!isPlayerVisible || !activeGroup) {
       setIsReady(false);
-      updateListOpenState(false);
       return;
     }
 
@@ -315,6 +294,7 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
         if (shouldAutoplay || typeof requestedTrackIndex === 'number') {
           playRequestedTrack(currentGroup, requestedTrackIndex);
         }
+        dispatchPlayerState(currentGroup.id, _player.list?.index ?? 0);
         setIsReady(true);
         return;
       }
@@ -336,6 +316,7 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
         playerRef.current = new APlayer({
           container: mount,
           fixed: true,
+          mini: false,
           audio: currentGroup.tracks,
           autoplay: false,
           loop: 'all',
@@ -343,7 +324,7 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
           preload: 'metadata',
           volume: 0.45,
           mutex: false,
-          listFolded: !shouldRestoreListOpen,
+          listFolded: true,
           listMaxHeight: '14rem',
           lrcType: 3,
           theme: '#205d3b',
@@ -351,6 +332,8 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
 
         _player = playerRef.current as ExtendedAPlayer;
         _lastGroupId = currentGroup.id;
+        const info = mount.querySelector<HTMLElement>('.aplayer-info');
+        if (info) info.style.display = 'block';
 
         const lrcEl = mount.querySelector('.aplayer-lrc') as HTMLElement | null;
         if (lrcEl) {
@@ -371,7 +354,7 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
           typeof requestedTrackIndex === 'number' && requestedTrackIndex >= 0 && requestedTrackIndex < currentGroup.tracks.length
             ? requestedTrackIndex
             : savedTrackIndex >= 0 ? savedTrackIndex : 0;
-        const restoreCurrentTime = normalizeStoredTime(savedGroupPlayback?.currentTime);
+        const restoreCurrentTime = typeof requestedTrackIndex === 'number' ? 0 : normalizeStoredTime(savedGroupPlayback?.currentTime);
         let lastSavedPlaybackSecond = -1;
         let hasRestoredProgress = restoreCurrentTime === 0;
 
@@ -420,7 +403,7 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
         }
         // The first `listswitch` for a fresh mount won't reach the handler
         // (it's registered a few lines below), so dispatch the state event
-        // manually so the music library page can update its highlight.
+        // manually so the selection panel can update its highlight.
         dispatchPlayerState(currentGroup.id, restoreTrackIndex);
         restorePlaybackProgress();
 
@@ -462,25 +445,13 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
           persistGroupPlayback(currentGroup, player);
         });
 
-        const listElement = mount.querySelector('.aplayer-list');
-        if (shouldRestoreListOpen) listElement?.classList.remove('aplayer-list-hide');
-        updateListOpenState(
-          shouldRestoreListOpen || (listElement ? !listElement.classList.contains('aplayer-list-hide') : false),
-        );
-        player.on?.('listshow', () => updateListOpenState(true));
-        player.on?.('listhide', () => updateListOpenState(false));
-
-        if (shouldRestoreListOpen) {
-          window.requestAnimationFrame(() => {
-            listElement?.classList.remove('aplayer-list-hide');
-            try {
-              player.list?.show?.();
-            } catch {}
-          });
-          try {
-            player.list?.show?.();
-          } catch {}
-        }
+        const menuButton = mount.querySelector<HTMLButtonElement>('.aplayer-icon-menu');
+        menuButton?.setAttribute('aria-label', '打开选歌面板');
+        menuButton?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          window.dispatchEvent(new Event(musicPlayerOpenEventName));
+        }, true);
 
         if (shouldAutoplay) window.requestAnimationFrame(attemptAutoplay);
 
@@ -492,6 +463,8 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
         return () => { window.removeEventListener('pagehide', handlePageHide); };
       } catch (error) {
         console.error('Failed to initialize global music player.', error);
+        setPlayerError('播放器加载失败，请重新选歌');
+        setIsPlayerVisible(false);
       }
     }
 
@@ -511,85 +484,23 @@ function GlobalMusicPlayerClient({renderGroupSwitcher = true}: {renderGroupSwitc
     };
   }, [activeGroup, isPlayerVisible]);
 
-  if (!activeGroup) return null;
-
-  if (!renderGroupSwitcher) return null;
-
-  const handleGroupSelect = (groupId: string) => {
-    shouldKeepListOpenOnNextMountRef.current = isPlayerVisible && (isListOpen || isListOpenRef.current);
-    setIsGroupPanelOpen(false);
-    if (isPlayerVisible && groupId === activeGroup.id) {
-      const p = playerRef.current as ExtendedAPlayer | null;
-      p?.play?.();
-      void p?.audio?.play?.().catch(() => {});
-      return;
-    }
-    shouldAutoplayOnNextMountRef.current = true;
-    setActiveGroupId(groupId);
-    setIsPlayerVisible(true);
-  };
-
-  const groupSwitcher =
-    groups.length > 1 ? (
-      <div className={styles.musicGroupNavbarItem}>
-        <button
-          ref={groupToggleButtonRef}
-          type="button"
-          className={clsx(
-            'clean-btn',
-            styles.musicGroupActionButton,
-            styles.musicGroupToggleButton,
-            isGroupPanelOpen && styles.musicGroupToggleButtonActive,
-          )}
-          aria-label="切换音乐歌单分组"
-          aria-expanded={isGroupPanelOpen}
-          aria-controls="global-music-group-panel"
-          onMouseEnter={musicIconAnimation.onMouseEnter}
-          onMouseLeave={musicIconAnimation.onMouseLeave}
-          onClick={(event) => {
-            event.stopPropagation();
-            setIsGroupPanelOpen((open) => !open);
-          }}>
-          <MusicIcon
-            ref={musicIconAnimation.iconRef}
-            size={24}
-            strokeWidth={2}
-            disableHover={musicIconAnimation.disableHover}
-            className={styles.musicGroupToggleIcon}
-          />
-        </button>
-        <div
-          id="global-music-group-panel"
-          ref={groupPanelRef}
-          className={clsx(styles.musicGroupPanel, isGroupPanelOpen && styles.musicGroupPanelOpen)}
-          role="dialog"
-          aria-label="音乐歌单分组">
-          <div className={styles.musicGroupPanelTitle}>歌单分类</div>
-          <div className={styles.musicGroupPanelList} role="tablist" aria-label="音乐歌单分组">
-            {groups.map((group) => (
-              <button
-                key={group.id}
-                type="button"
-                role="tab"
-                aria-selected={group.id === activeGroup.id}
-                className={clsx(
-                  styles.musicGroupPanelItem,
-                  group.id === activeGroup.id && styles.musicGroupPanelItemActive,
-                )}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleGroupSelect(group.id);
-                }}>
-                <span className={styles.musicGroupPanelItemLabel}>{group.label}</span>
-                <span className={styles.musicGroupPanelItemCount}>{group.tracks.length}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    ) : null;
-
-  return <>{groupSwitcher}</>;
+  return (
+    <MusicControls
+      groups={groups}
+      activeGroupId={activeGroup?.id ?? activeGroupId}
+      currentTrackUrl={currentTrackUrl}
+      visible={isPlayerVisible}
+      error={playerError}
+      onPlay={dispatchMusicPlayerPlay}
+      onHide={() => {
+        const player = playerRef.current as ExtendedAPlayer | null;
+        persistGroupPlayback(activeGroup, player);
+        player?.pause?.();
+        collapseLyricOverlay(player);
+        setIsPlayerVisible(false);
+      }}
+    />
+  );
 }
 
 export default GlobalMusicPlayerClient;

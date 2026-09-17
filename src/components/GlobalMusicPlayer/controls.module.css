@@ -1,0 +1,98 @@
+.launcher {
+  position: fixed;
+  right: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  z-index: calc(var(--ifm-z-index-fixed) + 5);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.abovePlayer { bottom: calc(6.25rem + env(safe-area-inset-bottom)); }
+.launchButton, .hideButton, .closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  color: var(--ifm-font-color-base);
+  background: var(--ifm-background-surface-color);
+  cursor: pointer;
+  font: inherit;
+}
+.launchButton {
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+  font-size: 0.85rem;
+}
+.hideButton, .closeButton { border-radius: 50%; font-size: 1.35rem; }
+.closeButton { border: 0; background: transparent; }
+.launchButton:hover, .hideButton:hover, .closeButton:hover { background: var(--ifm-color-emphasis-200); }
+.error {
+  max-width: 15rem;
+  font-size: 0.78rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-color-danger);
+}
+.dialog {
+  position: fixed;
+  inset: auto 1rem calc(4.5rem + env(safe-area-inset-bottom)) auto;
+  margin: 0;
+  padding: 0;
+  width: min(26rem, calc(100vw - 2rem));
+  height: min(38rem, calc(100dvh - 6rem - env(safe-area-inset-bottom)));
+  max-height: calc(100dvh - 2rem);
+  max-width: none;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 1.1rem;
+  color: var(--ifm-font-color-base);
+  background: var(--ifm-background-surface-color);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+.dialog[open] { display: flex; flex-direction: column; }
+.dialog::backdrop { background: rgba(0, 0, 0, 0.18); }
+.header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem 0.4rem; flex-shrink: 0; }
+.header strong { font-size: 1.05rem; }
+.caption { margin-left: 0.75rem; font-size: 0.75rem; color: var(--ifm-color-emphasis-600); }
+.filters { padding: 0.25rem 1rem 0.6rem; border-bottom: 1px solid var(--ifm-color-emphasis-200); flex-shrink: 0; }
+.search, .selectors select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.6rem 0.65rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 0.55rem;
+  background: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+  font: inherit;
+  font-size: 16px;
+}
+.selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.6rem; }
+.selectors label { min-width: 0; font-size: 0.72rem; color: var(--ifm-color-emphasis-600); }
+.selectors select { display: block; margin-top: 0.25rem; font-size: 0.8rem; }
+.listHeading { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.4rem; min-height: 32px; font-size: 0.75rem; color: var(--ifm-color-emphasis-600); }
+.listHeading button { border: 0; padding: 0.35rem 0; background: transparent; color: var(--ifm-color-primary); font: inherit; cursor: pointer; }
+.results { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0.35rem 0.5rem; }
+.track { display: flex; align-items: center; gap: 0.65rem; width: 100%; min-height: 58px; padding: 0.55rem 0.65rem; text-align: left; border: 0; border-radius: 0.5rem; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.track:hover, .track:focus-visible { background: var(--ifm-color-emphasis-100); }
+.current { background: var(--ifm-color-emphasis-200); color: var(--ifm-color-primary); }
+.trackIcon { flex: 0 0 18px; font-size: 0.75rem; opacity: 0.7; }
+.trackText { display: flex; flex-direction: column; min-width: 0; gap: 0.1rem; }
+.trackName { font-size: 0.88rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.artist { font-size: 0.74rem; color: var(--ifm-color-emphasis-600); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.empty { margin: 1.5rem 0.5rem; font-size: 0.85rem; color: var(--ifm-color-emphasis-600); }
+.footer { flex-shrink: 0; padding: 0.6rem 1rem; border-top: 1px solid var(--ifm-color-emphasis-200); color: var(--ifm-color-emphasis-600); font-size: 0.7rem; }
+.launchButton:focus-visible, .hideButton:focus-visible, .closeButton:focus-visible, .dialog button:focus-visible, .dialog input:focus-visible, .dialog select:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .launcher { right: 0.75rem; }
+  .dialog { inset: auto 0.5rem calc(0.5rem + env(safe-area-inset-bottom)) 0.5rem; width: auto; height: min(36rem, calc(100dvh - 2rem - env(safe-area-inset-bottom))); border-radius: 1rem; }
+  .footer { display: none; }
+  .caption { margin-left: 0.5rem; }
+}
+
+@media (max-width: 640px) { .selectors select { font-size: 16px; } }

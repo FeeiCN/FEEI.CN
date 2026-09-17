@@ -499,7 +499,7 @@ export const buildSceneGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => {
 };
 
 // Non-artist derived groups: hand-curated filters, language buckets, and scene presets.
-// Exposed separately so MusicLibrary can render them in a different surface
+// Exposed separately so selection controls can render them in a different surface
 // (filter chips) than artist groups (drawer), without duplicating the 3 calls.
 export const buildFilterGroups = (groups: PlaylistGroup[]): PlaylistGroup[] => [
   ...buildMusicFilterGroups(groups),

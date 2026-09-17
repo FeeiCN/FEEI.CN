@@ -1,3 +1,4 @@
+export const musicPlayerOpenEventName = 'feei:music-player-open';
 export const musicPlayerPlayEventName = 'feei:music-player-play';
 export const musicPlayerStateEventName = 'feei:music-player-state';
 

@@ -1,5 +1,5 @@
 :global(body.global-music-player-visible) {
-  padding-bottom: calc(clamp(10rem, 24vw, 13rem) + env(safe-area-inset-bottom));
+  padding-bottom: calc(9.5rem + env(safe-area-inset-bottom));
 }
 
 .musicPlayerShell {
@@ -20,144 +20,19 @@
   transform: translateY(0.5rem);
 }
 
-.musicGroupNavbarItem {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex: 0 0 auto;
-  gap: 0.125rem;
-  width: auto;
-  height: auto;
-  margin-left: 0.25rem;
-  z-index: calc(var(--ifm-z-index-fixed) + 5);
-}
 
-.musicGroupActionButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  color: var(--ifm-navbar-link-color);
-  background: transparent;
-  cursor: pointer;
-  transition:
-    color var(--ifm-transition-fast) ease,
-    background var(--ifm-transition-fast) ease;
-}
 
-.musicGroupActionButton:hover {
-  color: var(--ifm-navbar-link-hover-color);
-  background: var(--ifm-color-emphasis-200);
-}
 
-.musicGroupToggleButtonActive {
-  color: var(--ifm-navbar-link-hover-color);
-  background: var(--ifm-color-emphasis-200);
-}
 
-.musicGroupToggleIcon {
-  color: currentColor;
-  transition: color var(--ifm-transition-fast) ease;
-}
 
-.musicGroupPanel {
-  position: absolute;
-  top: calc(100% + 0.55rem);
-  right: 0;
-  width: min(14.5rem, calc(100vw - 2rem));
-  padding: 0.35rem;
-  border: 1px solid rgba(17, 24, 39, 0.08);
-  border-radius: 0.9rem;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 0.9rem 2rem rgba(15, 23, 42, 0.1);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-0.35rem) scale(0.98);
-  transform-origin: right top;
-  pointer-events: none;
-  transition:
-    opacity var(--ifm-transition-fast) ease,
-    visibility var(--ifm-transition-fast) ease,
-    transform var(--ifm-transition-fast) ease;
-}
 
-.musicGroupPanelOpen {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0) scale(1);
-  pointer-events: auto;
-}
 
-.musicGroupPanelTitle {
-  padding: 0.45rem 0.6rem 0.35rem;
-  color: #9ca3af;
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-}
 
-.musicGroupPanelList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
 
-.musicGroupPanelItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.65rem;
-  width: 100%;
-  padding: 0.55rem 0.6rem;
-  border: none;
-  border-radius: 0.65rem;
-  color: #8f96a3;
-  background: transparent;
-  cursor: pointer;
-  transition:
-    color var(--ifm-transition-fast) ease,
-    background var(--ifm-transition-fast) ease,
-    transform var(--ifm-transition-fast) ease;
-}
 
-.musicGroupPanelItem:hover {
-  color: #374151;
-  background: rgba(243, 244, 246, 0.9);
-}
 
-.musicGroupPanelItemActive {
-  color: #111827;
-  font-weight: 500;
-  background: rgba(243, 244, 246, 0.96);
-}
 
-.musicGroupPanelItemLabel {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.82rem;
-  font-weight: inherit;
-}
 
-.musicGroupPanelItemCount {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.1rem;
-  height: 1.1rem;
-  padding: 0;
-  border-radius: 999px;
-  color: inherit;
-  background: transparent;
-  font-size: 0.7rem;
-  font-weight: 500;
-  opacity: 0.72;
-}
 
 .musicPlayerMount {
   min-height: 0;
@@ -363,15 +238,8 @@
     bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 
-  .musicGroupNavbarItem {
-    margin-left: 0.2rem;
-  }
-
-  .musicGroupPanel {
-    right: -0.2rem;
-    width: min(14rem, calc(100vw - 1rem));
-  }
-
+  
+  
   :global(.aplayer.aplayer-fixed) {
     right: 0.5rem;
     width: calc(100vw - 1rem);
@@ -407,30 +275,10 @@
   background: rgba(3, 7, 18, 0.96);
 }
 
-[data-theme='dark'] .musicGroupPanel {
-  border-color: rgba(148, 163, 184, 0.18);
-  background: rgba(17, 24, 39, 0.98);
-  box-shadow: 0 0.9rem 2rem rgba(2, 6, 23, 0.24);
-}
 
-[data-theme='dark'] .musicGroupPanelTitle {
-  color: rgba(148, 163, 184, 0.78);
-}
 
-[data-theme='dark'] .musicGroupPanelItem {
-  color: rgba(255, 255, 255, 0.68);
-  background: transparent;
-}
 
-[data-theme='dark'] .musicGroupPanelItem:hover {
-  color: rgba(255, 255, 255, 0.92);
-  background: rgba(31, 41, 55, 0.96);
-}
 
-[data-theme='dark'] .musicGroupPanelItemActive {
-  color: #fff;
-  background: rgba(31, 41, 55, 1);
-}
 
 [data-theme='dark'] .musicPlayerMetaCount {
   color: rgba(148, 163, 184, 0.84);
@@ -480,3 +328,7 @@
 [data-theme='dark'] .musicPlayerMount :global(.aplayer-list ol li.aplayer-list-light) {
   background: rgba(45, 212, 191, 0.12);
 }
+
+.musicPlayerMount :global(.aplayer-list) { display: none !important; }
+
+.musicPlayerMount :global(.aplayer-miniswitcher) { display: none !important; }

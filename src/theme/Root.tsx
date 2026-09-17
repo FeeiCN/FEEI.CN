@@ -8,7 +8,7 @@ export default function Root({children}: {children: ReactNode}) {
     <>
       {children}
       <BrowserOnly fallback={null}>
-        {() => <GlobalMusicPlayerClient renderGroupSwitcher={false} />}
+        {() => <GlobalMusicPlayerClient />}
       </BrowserOnly>
       <ImageLightbox />
     </>

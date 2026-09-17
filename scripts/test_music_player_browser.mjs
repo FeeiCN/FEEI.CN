@@ -136,7 +136,7 @@ try {
   const timeBeforeCollapse = await page.evaluate(() => window.__playingAudio.currentTime);
   await page.getByRole('button', {name: '收起播放器并继续播放'}).click();
   await page.waitForTimeout(400);
-  assert.equal(await page.evaluate(() => !window.__playingAudio.paused && window.__playingAudio.currentTime >= timeBeforeCollapse), true);
+  assert.equal(await page.evaluate((before) => !window.__playingAudio.paused && window.__playingAudio.currentTime >= before, timeBeforeCollapse), true);
   assert.equal(await page.locator('.aplayer').isVisible(), false);
   await trigger().click();
   await panel().waitFor();

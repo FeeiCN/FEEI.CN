@@ -40,6 +40,8 @@ jobs:
           subprocess.run(['python3', 'scripts/apply_music_refactor.py'], check=True)
           Path('scripts/apply_music_refactor.py').unlink()
           subprocess.run(['python3', '.github/music-refactor-post.py'], check=True)
+          p = Path('scripts/test_music_player.mjs')
+          p.write_text(p.read_text().replace('a[href="/my-journey-in-cybersecurity"]', 'a[href="/my-journey-in-cybersecurity"]:visible'))
           PY
       - name: Check document changes
         run: npm run check:docs
@@ -72,10 +74,12 @@ jobs:
         env:
           MUSIC_PLAYWRIGHT_PATH: /tmp/music-browser/node_modules/playwright
         run: |
+          set -o pipefail
+          tar -czf /tmp/music-source.tgz src/components/GlobalMusicPlayer src/pages/my-playlist.tsx scripts/test_music_player.mjs
           python3 -m http.server 4173 --bind 127.0.0.1 --directory build >/tmp/music-http.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
-          node scripts/test_music_player.mjs
+          node scripts/test_music_player.mjs 2>&1 | tee /tmp/music-browser.log
       - name: Save verified changes to isolated branch
         run: |
           git config user.name 'github-actions[bot]'
@@ -94,4 +98,6 @@ jobs:
             /tmp/music-http.log
             /tmp/music-typecheck-before.log
             /tmp/music-typecheck-after.log
+            /tmp/music-browser.log
+            /tmp/music-source.tgz
           retention-days: 7

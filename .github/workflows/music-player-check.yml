@@ -1,0 +1,64 @@
+name: Music player check
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/GlobalMusicPlayer/**'
+      - 'src/components/MusicLibrary/**'
+      - 'src/components/MusicTrackPlayer/**'
+      - 'src/theme/Root.tsx'
+      - 'src/pages/my-playlist.tsx'
+      - 'docs/**/04-音乐/**'
+      - 'scripts/test_music_player_browser.mjs'
+      - '.github/workflows/music-player-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: music-player-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Type check
+        run: npm run typecheck
+      - name: Check docs
+        run: npm run check:docs -- --base=origin/main
+      - name: Build website
+        run: DOCUSAURUS_FASTER=true CI_STRICT=true npm run build
+      - name: Install browser test tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/music-browser" --no-package-lock --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/music-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Browser regression
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/music-browser/node_modules/playwright/index.mjs
+        run: |
+          python3 -m http.server 4173 --directory build >/tmp/music-test-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" || true' EXIT
+          for attempt in {1..30}; do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || sleep 1; done
+          node scripts/test_music_player_browser.mjs
+      - name: Upload browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: music-player-screenshots
+          path: .music-player-test/
+          if-no-files-found: ignore

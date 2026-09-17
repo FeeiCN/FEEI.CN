@@ -88,7 +88,7 @@ try {
     window.__playingAudio.currentTime = 7;
   });
   await page.waitForTimeout(300);
-  await page.locator('a[href="/my-journey-in-cybersecurity"]').first().click();
+  await page.locator('a[href="/my-journey-in-cybersecurity"]:visible').first().click();
   await page.waitForURL('**/my-journey-in-cybersecurity*');
   assert.equal(await page.evaluate(() => Boolean(window.__playingAudio) && !window.__playingAudio.paused && window.__playingAudio.currentTime >= 7), true);
   assert.equal(await page.locator('.aplayer').count(), 1);

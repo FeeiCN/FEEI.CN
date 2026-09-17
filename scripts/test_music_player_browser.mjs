@@ -48,7 +48,24 @@ await page.route('**/music/**', async (route) => {
   } else if (pathname.endsWith('.lrc')) {
     await route.fulfill({status: 200, contentType: 'text/plain', body: '[00:00.00]播放测试\n[00:05.00]歌词切换测试\n[00:10.00]退出测试'});
   } else if (/\.(?:mp3|wav|flac)$/i.test(pathname)) {
-    await route.fulfill({status: 200, contentType: 'audio/wav', body: audio});
+    const range = route.request().headers().range?.match(/^bytes=(\d+)-(\d*)$/);
+    const start = range ? Number(range[1]) : 0;
+    const end = range?.[2] ? Math.min(Number(range[2]), audio.length - 1) : audio.length - 1;
+    if (start > end || start >= audio.length) {
+      await route.fulfill({status: 416, headers: {'Content-Range': `bytes */${audio.length}`}});
+      return;
+    }
+    const body = audio.subarray(start, end + 1);
+    await route.fulfill({
+      status: range ? 206 : 200,
+      contentType: 'audio/wav',
+      headers: {
+        'Accept-Ranges': 'bytes',
+        'Content-Length': String(body.length),
+        ...(range ? {'Content-Range': `bytes ${start}-${end}/${audio.length}`} : {}),
+      },
+      body,
+    });
   } else {
     await route.fulfill({status: 200, contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aPyoAAAAASUVORK5CYII=', 'base64')});
   }
@@ -58,6 +75,16 @@ let checks = 0;
 const passed = (name) => console.log(`PASS ${++checks}: ${name}`);
 const trigger = () => page.getByRole('button', {name: '打开音乐播放器', exact: true});
 const panel = () => page.getByRole('dialog', {name: '音乐歌单', exact: true});
+const playbackDiagnostic = () => page.evaluate(() => ({
+  originalAudioExists: Boolean(window.__playingAudio),
+  originalPaused: window.__playingAudio?.paused,
+  originalTime: window.__playingAudio?.currentTime,
+  audios: window.__musicTestAudios.map((element) => ({
+    src: element.currentSrc, paused: element.paused, time: element.currentTime,
+    readyState: element.readyState, errorCode: element.error?.code,
+    seekable: Array.from({length: element.seekable.length}, (_, index) => [element.seekable.start(index), element.seekable.end(index)]),
+  })),
+}));
 
 try {
   await page.goto('http://127.0.0.1:4173/', {waitUntil: 'networkidle'});
@@ -87,12 +114,15 @@ try {
     window.__playingAudio = window.__musicTestAudios.find((element) => !element.paused);
     window.__playingAudio.currentTime = 7;
   });
-  await page.waitForTimeout(300);
+  await page.waitForFunction(() => window.__playingAudio.currentTime >= 7, null, {timeout: 3000});
+  console.log('Before navigation:', await playbackDiagnostic());
   await page.locator('a[href="/my-journey-in-cybersecurity"]:visible').first().click();
   await page.waitForURL('**/my-journey-in-cybersecurity*');
+  console.log('After navigation:', await playbackDiagnostic());
   assert.equal(await page.evaluate(() => Boolean(window.__playingAudio) && !window.__playingAudio.paused && window.__playingAudio.currentTime >= 7), true);
   assert.equal(await page.locator('.aplayer').count(), 1);
-  passed('从首页切到文章，音频和进度不中断');
+  assert.equal(await page.getByText('音频加载失败，请尝试另一首歌。', {exact: true}).count(), 0);
+  passed('从首页切到文章，音频和进度不中断，旧音频事件不会误报');
 
   await page.locator('.aplayer-icon-menu').click();
   await panel().waitFor();
@@ -137,6 +167,7 @@ try {
 } catch (error) {
   await page.screenshot({path: `${output}/failure.png`, fullPage: true});
   console.error('Browser errors:', errors);
+  console.error('Playback state:', await playbackDiagnostic());
   throw error;
 } finally {
   await browser.close();

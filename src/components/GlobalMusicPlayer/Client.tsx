@@ -95,7 +95,8 @@ function reportPlaybackError(message: string) {
 
 function startPlayback(player: ExtendedAPlayer) {
   if (player.audio) {
-    void player.audio.play().catch(() => {
+    void player.audio.play().catch((error: unknown) => {
+      if (_player !== player || (error instanceof DOMException && error.name === 'AbortError')) return;
       reportPlaybackError('暂时无法播放，请点击播放器的播放按钮重试。');
     });
   } else {
@@ -397,8 +398,10 @@ export default function GlobalMusicPlayerClient() {
         for (const event of ['play', 'pause', 'seeked', 'ended']) {
           player.on?.(event, () => persistGroupPlayback(currentGroup, player));
         }
-        player.on?.('play', () => reportPlaybackError(''));
-        player.on?.('error', () => reportPlaybackError('音频加载失败，请尝试另一首歌。'));
+        player.on?.('play', () => { if (_player === player) reportPlaybackError(''); });
+        player.on?.('error', () => {
+          if (_player === player) reportPlaybackError('音频加载失败，请尝试另一首歌。');
+        });
         player.on?.('timeupdate', () => {
           const second = normalizeStoredTime(player.audio?.currentTime);
           if (second === lastSavedPlaybackSecond || second === 0 || second % 5 !== 0) return;

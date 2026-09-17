@@ -1,0 +1,97 @@
+name: Verify global music consolidation
+on:
+  push:
+    branches: [codex/global-music-20260917]
+permissions:
+  contents: write
+concurrency:
+  group: music-refactor-verify
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Record existing TypeScript diagnostics
+        run: |
+          npm run typecheck -- --pretty false >/tmp/music-typecheck-before.log 2>&1 || test "$?" -eq 2
+          cat /tmp/music-typecheck-before.log
+      - name: Apply scoped changes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, gzip, hashlib, json, subprocess
+          encoded = ''.join(Path(f'.github/music-refactor.part{i}').read_text().strip() for i in range(1, 5))
+          data = base64.b64decode(encoded, validate=True)
+          assert hashlib.sha256(data).hexdigest() == '462d3f2fefa4bd69457cc1fd056cc3dbcc48dbcb0525f3a81b238e1bf1a31a49'
+          for name, content in json.loads(gzip.decompress(data)).items():
+              path = Path(name)
+              assert not path.is_absolute() and '..' not in path.parts and path.parts[0] in ('src', 'scripts')
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_text(content)
+          subprocess.run(['python3', 'scripts/apply_music_refactor.py'], check=True)
+          Path('scripts/apply_music_refactor.py').unlink()
+          subprocess.run(['python3', '.github/music-refactor-post.py'], check=True)
+          PY
+      - name: Check document changes
+        run: npm run check:docs
+      - name: Verify no new TypeScript errors
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess, re, collections
+          result = subprocess.run(['npm','run','typecheck','--','--pretty','false'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+          Path('/tmp/music-typecheck-after.log').write_text(result.stdout)
+          print(result.stdout)
+          pattern = r'^(.*?)\(\d+,\d+\): error (TS\d+: .*)$'
+          old = collections.Counter(re.findall(pattern, Path('/tmp/music-typecheck-before.log').read_text(), re.M))
+          new = collections.Counter(re.findall(pattern, result.stdout, re.M))
+          added = new - old
+          print(f'Existing diagnostics: {sum(old.values())}; new diagnostics: {sum(added.values())}')
+          assert result.returncode in (0, 2) and (result.returncode == 0 or new), 'TypeScript check did not complete normally'
+          assert not added, added
+          PY
+      - name: Production build
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee /tmp/music-build.log
+          ! grep -F '[WARNING]' /tmp/music-build.log
+      - name: Install browser test tooling
+        run: |
+          npm install --prefix /tmp/music-browser --no-save playwright@1.56.1
+          node /tmp/music-browser/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Browser regression tests
+        env:
+          MUSIC_PLAYWRIGHT_PATH: /tmp/music-browser/node_modules/playwright
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory build >/tmp/music-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          node scripts/test_music_player.mjs
+      - name: Save verified changes to isolated branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -- src docs scripts/test_music_player.mjs
+          git diff --cached --stat
+          git commit -m '整合音乐库到全站播放器并验证交互'
+          git push origin HEAD:codex/global-music-20260917
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: music-player-verification
+          path: |
+            /tmp/music-player-test
+            /tmp/music-build.log
+            /tmp/music-http.log
+            /tmp/music-typecheck-before.log
+            /tmp/music-typecheck-after.log
+          retention-days: 7

@@ -133,17 +133,21 @@ try {
   await page.getByRole('button', {name: '关闭全屏歌词'}).waitFor({state: 'hidden'});
   passed('原生列表按钮进入统一选歌面板，歌词可主动打开和关闭');
 
-  await page.getByRole('button', {name: '暂停并收起播放器'}).click();
-  assert.equal(await page.evaluate(() => window.__musicTestAudios.every((element) => element.paused)), true);
+  const timeBeforeCollapse = await page.evaluate(() => window.__playingAudio.currentTime);
+  await page.getByRole('button', {name: '收起播放器并继续播放'}).click();
+  await page.waitForTimeout(400);
+  assert.equal(await page.evaluate((before) => !window.__playingAudio.paused && window.__playingAudio.currentTime >= before, timeBeforeCollapse), true);
+  assert.equal(await page.locator('.aplayer').isVisible(), false);
   await trigger().click();
   await panel().waitFor();
-  assert.equal(await page.evaluate(() => window.__musicTestAudios.every((element) => element.paused)), true);
-  passed('收起时暂停，重新打开不擅自恢复播放');
+  assert.equal(await page.evaluate(() => !window.__playingAudio.paused), true);
+  passed('收起只隐藏界面，播放不中断；重新打开仍继续当前歌曲');
 
   await page.getByRole('searchbox', {name: '搜索音乐'}).fill('___no_such_track___');
   await panel().getByText('没有匹配', {exact: false}).first().waitFor();
   passed('无结果搜索有明确反馈');
 
+  await page.evaluate(() => window.__musicTestAudios.forEach((element) => element.pause()));
   await page.setViewportSize({width: 390, height: 844});
   await page.goto('http://127.0.0.1:4173/my-playlist', {waitUntil: 'networkidle'});
   await panel().waitFor();
@@ -151,8 +155,13 @@ try {
   const box = await panel().boundingBox();
   assert.ok(box && box.x >= 0 && box.x + box.width <= 391 && box.y >= 0 && box.y + box.height <= 844);
   assert.equal(await page.evaluate(() => window.__musicTestAudios.every((element) => element.paused)), true);
+  assert.notEqual(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), '搜索音乐');
+  const mobileCloseBox = await page.getByRole('button', {name: '关闭音乐歌单', exact: true}).boundingBox();
+  assert.ok(mobileCloseBox && mobileCloseBox.width >= 44 && mobileCloseBox.height >= 44);
+  const mobileTrackBox = await panel().locator('button[class*="trackItem"]').first().boundingBox();
+  assert.ok(mobileTrackBox && mobileTrackBox.height >= 44);
   await page.screenshot({path: `${output}/mobile.png`});
-  passed('旧音乐链接兼容，手机面板不溢出且不自动播放');
+  passed('旧音乐链接兼容，手机面板不溢出、不自动弹键盘且常用触控目标足够大');
 
   await page.goto('http://127.0.0.1:4173/health?music=open&example=keep', {waitUntil: 'networkidle'});
   await panel().waitFor();

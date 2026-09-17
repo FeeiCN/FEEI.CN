@@ -2,7 +2,6 @@ import {lazy, Suspense, useEffect, useRef, useState} from 'react';
 import {useHistory, useLocation} from '@docusaurus/router';
 import {MusicIcon} from '@site/src/components/ItsHoverIcon';
 import {
-  dispatchMusicPlayerClose,
   dispatchMusicPlayerOpen,
   musicPlayerCloseEventName,
   musicPlayerErrorEventName,
@@ -13,11 +12,15 @@ import {
 import styles from './controls.module.css';
 
 const MusicLibrary = lazy(() => import('@site/src/components/MusicLibrary'));
+const playerCollapsedBodyClassName = 'global-music-player-collapsed';
 
 function SelectorReady() {
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      document.querySelector<HTMLInputElement>('#global-music-panel input[type="search"]')?.focus();
+      const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+      if (!coarsePointer && window.innerWidth > 640) {
+        document.querySelector<HTMLInputElement>('#global-music-panel input[type="search"]')?.focus();
+      }
       window.dispatchEvent(new CustomEvent(musicPlayerStateRequestEventName));
     });
     return () => window.cancelAnimationFrame(frame);
@@ -27,11 +30,17 @@ function SelectorReady() {
 
 export default function Controls() {
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [error, setError] = useState('');
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const location = useLocation();
   const history = useHistory();
+
+  const setPlayerCollapsed = (nextCollapsed: boolean) => {
+    document.body.classList.toggle(playerCollapsedBodyClassName, nextCollapsed);
+    setCollapsed(nextCollapsed);
+  };
 
   const closePanel = () => {
     setOpen(false);
@@ -39,9 +48,24 @@ export default function Controls() {
   };
 
   useEffect(() => {
-    const onOpen = () => { setOpen(true); setError(''); };
-    const onClose = () => { setOpen(false); setError(''); };
-    const onPlay = () => closePanel();
+    setCollapsed(document.body.classList.contains(playerCollapsedBodyClassName));
+  }, []);
+
+  useEffect(() => {
+    const onOpen = () => {
+      setPlayerCollapsed(false);
+      setOpen(true);
+      setError('');
+    };
+    const onClose = () => {
+      setPlayerCollapsed(false);
+      setOpen(false);
+      setError('');
+    };
+    const onPlay = () => {
+      setPlayerCollapsed(false);
+      closePanel();
+    };
     const onError = (event: Event) => {
       const message = (event as CustomEvent<unknown>).detail;
       setError(typeof message === 'string' ? message : '播放失败，请重试。');
@@ -63,8 +87,8 @@ export default function Controls() {
     if (params.get('music') !== 'open') return;
     params.delete('music');
     const search = params.toString();
-    // Dispatch after the parent engine subscribes, before removing the query.
     const frame = window.requestAnimationFrame(() => {
+      setPlayerCollapsed(false);
       dispatchMusicPlayerOpen();
       history.replace({...location, search: search ? `?${search}` : ''});
     });
@@ -120,11 +144,29 @@ export default function Controls() {
           aria-controls="global-music-panel"
           aria-haspopup="dialog"
           title="音乐"
-          onClick={() => open ? closePanel() : dispatchMusicPlayerOpen()}>
+          onClick={() => {
+            if (open) {
+              closePanel();
+              return;
+            }
+            setPlayerCollapsed(false);
+            dispatchMusicPlayerOpen();
+          }}>
           <MusicIcon size={20} disableHover />
           <span className={styles.triggerLabel}>选歌</span>
         </button>
-        <button type="button" className={styles.collapse} aria-label="暂停并收起播放器" title="暂停并收起播放器" onClick={dispatchMusicPlayerClose}>收起</button>
+        <button
+          type="button"
+          className={styles.collapse}
+          aria-label="收起播放器并继续播放"
+          title="收起播放器，继续播放"
+          onClick={() => {
+            setOpen(false);
+            setError('');
+            setPlayerCollapsed(true);
+          }}>
+          收起
+        </button>
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ on:
       - 'src/theme/Root.tsx'
       - 'src/pages/my-playlist.tsx'
       - 'docs/**/04-音乐/**'
-      - 'scripts/test_music_player_browser.mjs'
+      - 'scripts/*music*.mjs'
       - '.github/workflows/music-player-check.yml'
   pull_request:
     paths:
@@ -21,7 +21,7 @@ on:
       - 'src/theme/Root.tsx'
       - 'src/pages/my-playlist.tsx'
       - 'docs/**/04-音乐/**'
-      - 'scripts/test_music_player_browser.mjs'
+      - 'scripts/*music*.mjs'
       - '.github/workflows/music-player-check.yml'
   workflow_dispatch:
 
@@ -48,8 +48,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Type check
-        run: npm run typecheck
+      - name: Check type regressions against main
+        run: node scripts/check_music_typecheck.mjs
       - name: Check docs
         run: npm run check:docs -- --base=origin/main
       - name: Build website
@@ -73,4 +73,5 @@ jobs:
         with:
           name: music-player-screenshots
           path: .music-player-test/
+          include-hidden-files: true
           if-no-files-found: ignore

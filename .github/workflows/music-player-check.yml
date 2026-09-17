@@ -1,6 +1,18 @@
 name: Music player check
 
 on:
+  push:
+    branches:
+      - 'refactor/**'
+    paths:
+      - 'src/components/GlobalMusicPlayer/**'
+      - 'src/components/MusicLibrary/**'
+      - 'src/components/MusicTrackPlayer/**'
+      - 'src/theme/Root.tsx'
+      - 'src/pages/my-playlist.tsx'
+      - 'docs/**/04-音乐/**'
+      - 'scripts/test_music_player_browser.mjs'
+      - '.github/workflows/music-player-check.yml'
   pull_request:
     paths:
       - 'src/components/GlobalMusicPlayer/**'

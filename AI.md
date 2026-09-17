@@ -10,6 +10,7 @@
 2. 修改代码或文档前，先理解相关目录、现有风格和约定。
 3. 不要重构无关代码或顺手清理请求范围外的内容。
 4. 不确定时，用最小范围验证；不要扩大上下文。
+5. 文档不再维护复核日期。首次发布日期使用 `published_at`，最后更新时间由 Git 自动获取，不手填更新时间。
 
 ## 前端与主题覆盖
 
@@ -21,7 +22,7 @@
 | 任务类型 | 读取 |
 |---------|------|
 | 仓库结构、构建命令、提交规范、静态资源 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/仓库结构.md` |
-| TypeScript 风格、命名、front matter（slug / icon / description / image / content_type / last_reviewed） | `docs/05-吴飞飞/01-关于/关于FEEI.CN/网站开发规范.md` |
+| TypeScript 风格、命名、front matter（slug / icon / description / image / content_type / published_at） | `docs/05-吴飞飞/01-关于/关于FEEI.CN/网站开发规范.md` |
 | Docusaurus 配置、sidebars、入口页文件位置与命名 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/docusaurus配置.md` |
 | 通用文档写作（入口页 / 观点文 / 教程 / 资料 / 复盘 / 历史档案）、证据强度与质量检查 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/我的写作原则.md` |
 | 人生系统/04-人生丰富 散文、游记 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/散文写作.md` |

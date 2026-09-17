@@ -1,6 +1,7 @@
 import type {LoadContext, Plugin} from '@docusaurus/types';
 import type {LoadedContent} from '@docusaurus/plugin-content-docs';
 import type {Compiler} from 'webpack';
+import type {DocMetadataMap} from './docMtimePlugin';
 
 export type HomeRecord = {date: string; title: string; to: string};
 
@@ -22,6 +23,7 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
     name: 'home-records-plugin',
     allContentLoaded({allContent, actions}) {
       const content = allContent['docusaurus-plugin-content-docs']?.default as LoadedContent | undefined;
+      const docMetadata = allContent['doc-mtime-plugin']?.default as DocMetadataMap | undefined;
       const docs = (content?.loadedVersions.find((version) => version.isLast)?.docs ?? [])
         .filter((doc) => !doc.unlisted && !doc.draft);
       const records: HomeRecord[] = docs
@@ -30,14 +32,15 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
         .map((doc) => ({date: doc.slug.replace(/^\//, '').replace(/\/$/, ''), title: doc.title, to: doc.permalink}))
         .sort((first, second) => second.date.localeCompare(first.date))
         .slice(0, 3);
-      const updates = docs
+      const updates: HomeRecord[] = docs
         .filter((doc) => doc.source.startsWith('@site/docs/01-网络安全/') && !doc.frontMatter.sidebar_badge
           && ['article', 'tutorial'].includes(String(doc.frontMatter.content_type))
           && doc.slug.replace(/\/$/, '') !== '/ai-agent-tool-security')
-        .map((doc) => ({date: String(doc.frontMatter.last_reviewed ?? ''), title: doc.title, to: doc.permalink}))
-        .filter((doc) => /^\d{4}-\d{2}-\d{2}$/.test(doc.date))
-        .sort((first, second) => second.date.localeCompare(first.date) || first.to.localeCompare(second.to))
-        .slice(0, 3);
+        .map((doc) => ({updatedAt: docMetadata?.[doc.source]?.updatedAt ?? 0, title: doc.title, to: doc.permalink}))
+        .filter((doc) => Number.isFinite(doc.updatedAt) && doc.updatedAt > 0 && doc.updatedAt <= Date.now())
+        .sort((first, second) => second.updatedAt - first.updatedAt || first.to.localeCompare(second.to))
+        .slice(0, 3)
+        .map((doc) => ({date: new Date(doc.updatedAt + 8 * 60 * 60 * 1000).toISOString().slice(0, 10), title: doc.title, to: doc.to}));
       actions.setGlobalData({records, updates});
 
       const siteUrl = context.siteConfig.url;

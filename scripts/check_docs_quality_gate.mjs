@@ -62,7 +62,6 @@ const blockingRuleNames = new Set([
   'content_type 非法',
   '元数据缺失',
   'description 过长',
-  '复核日期',
   'Markdown include 缺失',
 ]);
 

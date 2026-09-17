@@ -33,7 +33,6 @@ const RULE_NAMES = {
   CONTENT_TYPE_INVALID: 'content_type 非法',
   METADATA_REQUIRED: '元数据缺失',
   DESCRIPTION_LENGTH: 'description 过长',
-  LAST_REVIEWED: '复核日期',
   PUBLISHED_AT: '首次发布日期',
   TOO_MANY_H2: 'H2 过多',
   HEADING_DEPTH: '标题层级过深',
@@ -627,17 +626,6 @@ function validDate(value) {
     && date.getUTCDate() === day;
 }
 
-function needsLastReviewed(file, contentType) {
-  if (contentType === 'tutorial' || contentType === 'reference') return true;
-  if (!['hub', 'article', 'review'].includes(contentType)) return false;
-
-  return file.startsWith('docs/02-人生系统/01-健康幸福/')
-    || file.startsWith('docs/02-人生系统/03-财务自由/')
-    || file.startsWith('docs/01-网络安全/01-网络空间安全/')
-    || file.startsWith('docs/01-网络安全/02-人工智能安全/')
-    || /(?:法律|法规|政策|竞业|合规)/.test(file);
-}
-
 function metadataChecks(document, parsed, mode, issues) {
   const {file, state} = document;
   const {fields} = parsed;
@@ -708,21 +696,6 @@ function metadataChecks(document, parsed, mode, issues) {
       fields.get('published_at')?.line ?? fields.get('content_type')?.line ?? 1,
       '新文章必须手动填写真实有效的 YYYY-MM-DD 格式 published_at；历史文章只补可确认的首次发表日期。',
     );
-  }
-
-  if (needsLastReviewed(file, contentType)) {
-    const reviewed = fieldValue(fields, 'last_reviewed');
-    if (!reviewed || !validDate(reviewed)) {
-      const severity = isAll ? 'warning' : 'error';
-      addIssue(
-        issues,
-        severity,
-        'LAST_REVIEWED',
-        file,
-        fields.get('last_reviewed')?.line ?? fields.get('content_type')?.line ?? 1,
-        `${contentType} 属于教程、资料或高时效主题，必须提供 YYYY-MM-DD 格式且真实有效的 last_reviewed。`,
-      );
-    }
   }
 
   return CONTENT_TYPES.has(contentType) ? contentType : null;

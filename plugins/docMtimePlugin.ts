@@ -8,7 +8,7 @@ type DocMetadata = {
   revisionCount?: number;
 };
 
-type DocMetadataMap = Record<string, DocMetadata>;
+export type DocMetadataMap = Record<string, DocMetadata>;
 
 type GitMetadata = {
   updatedAt: number;
@@ -42,8 +42,8 @@ function collectDocFiles(dirPath: string): string[] {
 
 /**
  * Read all docs history with a single git process instead of spawning two
- * synchronous `git log` processes per document. `--name-only` lets us map
- * each commit timestamp to every docs path touched by that commit.
+ * synchronous `git log` processes per document. NUL-delimited paths preserve
+ * Chinese characters, whitespace and quotes independently of core.quotePath.
  *
  * This intentionally counts commits touching the current path. It does not
  * follow historical renames; preserving `--follow` semantics would require
@@ -55,7 +55,7 @@ function getGitMetadata(siteDir: string): Map<string, GitMetadata> {
   try {
     const output = execFileSync(
       'git',
-      ['log', '--format=@@COMMIT@@%ct', '--name-only', '--', 'docs'],
+      ['log', '--format=@@COMMIT@@%ct', '--name-only', '-z', '--', 'docs'],
       {
         cwd: siteDir,
         encoding: 'utf8',
@@ -72,6 +72,7 @@ function getGitMetadata(siteDir: string): Map<string, GitMetadata> {
       for (const relativePath of touchedInCommit) {
         const current = metadata.get(relativePath);
         if (current) {
+          current.updatedAt = Math.max(current.updatedAt, commitTimestamp * 1000);
           current.revisionCount += 1;
         } else {
           metadata.set(relativePath, {
@@ -83,26 +84,26 @@ function getGitMetadata(siteDir: string): Map<string, GitMetadata> {
       touchedInCommit.clear();
     };
 
-    for (const rawLine of output.split('\n')) {
-      const line = rawLine.trim();
-      if (!line) continue;
+    for (const token of output.split('\0')) {
+      const value = token.replace(/^\n/, '');
+      if (!value) continue;
 
-      if (line.startsWith('@@COMMIT@@')) {
+      if (value.startsWith('@@COMMIT@@')) {
         flushCommit();
-        const parsedTimestamp = Number(line.slice('@@COMMIT@@'.length));
+        const parsedTimestamp = Number(value.slice('@@COMMIT@@'.length));
         commitTimestamp = Number.isFinite(parsedTimestamp) && parsedTimestamp > 0
           ? parsedTimestamp
           : undefined;
         continue;
       }
 
-      if (commitTimestamp && (line.endsWith('.md') || line.endsWith('.mdx'))) {
-        touchedInCommit.add(toPosixPath(line));
+      if (commitTimestamp && (value.endsWith('.md') || value.endsWith('.mdx'))) {
+        touchedInCommit.add(toPosixPath(value));
       }
     }
     flushCommit();
   } catch {
-    // Missing/unavailable git history is fine; callers fall back to file mtime.
+    // Missing git history means an unknown update time, not the checkout time.
   }
 
   return metadata;
@@ -123,21 +124,14 @@ export default function docMtimePlugin(context: LoadContext): Plugin {
       const gitMetadata = getGitMetadata(siteDir);
 
       for (const docFile of docFiles) {
-        let fileMtime: number;
-        try {
-          fileMtime = fs.statSync(docFile).mtimeMs;
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
-          throw error;
-        }
-
         const relativePath = toPosixPath(path.relative(siteDir, docFile));
         const sourceKey = `@site/${relativePath}`;
         const git = gitMetadata.get(relativePath);
+        if (!git) continue;
 
         metadata[sourceKey] = {
-          updatedAt: git?.updatedAt ?? fileMtime,
-          revisionCount: git?.revisionCount,
+          updatedAt: git.updatedAt,
+          revisionCount: git.revisionCount,
         };
       }
 

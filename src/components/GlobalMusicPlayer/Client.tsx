@@ -322,7 +322,7 @@ export default function GlobalMusicPlayerClient() {
         _player = playerRef.current as ExtendedAPlayer;
         _lastGroupId = currentGroup.id;
         const player = _player;
-        mount.querySelector('.aplayer')?.classList.remove('aplayer-narrow');
+        mount.classList.remove('aplayer-narrow');
         const lrcEl = mount.querySelector('.aplayer-lrc') as HTMLElement | null;
         if (lrcEl) {
           const burstContainer = document.createElement('div');

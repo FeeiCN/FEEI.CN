@@ -21,7 +21,7 @@ if (result.error) throw result.error;
 // Includes are deterministic build dependencies. Use NUL-delimited git output
 // so Chinese, spaces and other special characters are returned as literal paths
 // instead of Git's quoted/core.quotePath representation.
-const list = spawnSync('git', ['ls-files', '-z', '--', 'docs'], {encoding: 'utf8'});
+const list = spawnSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', 'docs'], {encoding: 'utf8'});
 if (list.error) throw list.error;
 if (list.status !== 0) {
   process.stderr.write(list.stderr ?? '');
@@ -30,7 +30,8 @@ if (list.status !== 0) {
 
 const includePattern = /<!--\s*@include\s+([^\s]+)\s*-->/g;
 const includeErrors = [];
-const markdownFiles = list.stdout.split('\0').filter((file) => file.endsWith('.md'));
+const markdownFiles = [...new Set(list.stdout.split('\0'))]
+  .filter((file) => file.endsWith('.md') && existsSync(file));
 for (const file of markdownFiles) {
   let markdown;
   try {

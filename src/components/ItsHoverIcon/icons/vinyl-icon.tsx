@@ -16,7 +16,7 @@ const VinylIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
 
       animationControls.current.push(
         animate(
-          ".vinyl-disc",
+          ".vinyl-grooves",
           {
             rotate: [0, 360],
           },
@@ -48,7 +48,7 @@ const VinylIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
       animationControls.current = [];
 
       animate(
-        ".vinyl-disc",
+        ".vinyl-grooves",
         {
           rotate: 0,
         },
@@ -92,11 +92,14 @@ const VinylIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
         onHoverEnd={stop}
       >
         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-        <motion.path
-          className="vinyl-disc"
-          d="M16 3.937a9 9 0 1 0 5 8.063"
+        <path d="M16 3.937a9 9 0 1 0 5 8.063" />
+        <motion.g
+          className="vinyl-grooves"
           style={{ transformOrigin: "50% 50%" }}
-        />
+        >
+          <circle cx="12" cy="12" r="6" opacity="0.45" strokeDasharray="2.4 2.1" />
+          <path d="M12 6v1.4" />
+        </motion.g>
         <motion.path
           className="center-dot"
           d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"

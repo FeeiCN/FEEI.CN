@@ -1,6 +1,12 @@
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import clsx from 'clsx';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import type {Audio} from 'aplayer';
+import DotsIcon from '@site/src/components/ItsHoverIcon/icons/dots-horizontal-icon';
+import ArrowDownIcon from '@site/src/components/ItsHoverIcon/icons/arrow-narrow-down-icon';
+import MagnifierIcon from '@site/src/components/ItsHoverIcon/icons/magnifier-icon';
+import PlayerIcon from '@site/src/components/ItsHoverIcon/icons/player-icon';
+import XIcon from '@site/src/components/ItsHoverIcon/icons/x-icon';
 import {
   buildArtistGroups,
   buildFilterGroups,
@@ -14,7 +20,9 @@ import type {
 } from '@site/src/components/GlobalMusicPlayer/playlist';
 import {
   dispatchMusicPlayerPlay,
+  dispatchMusicPlayerCommand,
   musicPlayerStateEventName,
+  musicPlayerStateRequestEventName,
 } from '@site/src/components/GlobalMusicPlayer/playerEvents';
 import type {
   MusicPlayerPlayDetail,
@@ -26,7 +34,9 @@ const babyMusicManifestUrl = '/music/baby-music/manifest.json';
 
 type TrackLocation = {groupId: string; index: number};
 
-function MusicLibraryClient() {
+type MusicLibraryProps = {compact?: boolean; onQueued?: () => void};
+
+function MusicLibraryClient({compact = false, onQueued}: MusicLibraryProps) {
   // Core groups are static (shipped in playlist.ts). The baby-music manifest
   // loads asynchronously and is appended to extensionGroups so we can keep
   // the two lifecycles separate and reason about cache invalidation per side.
@@ -40,8 +50,15 @@ function MusicLibraryClient() {
   const [searchQuery, setSearchQuery] = useState('');
   const [singerDrawerOpen, setSingerDrawerOpen] = useState(false);
   const [currentTrackKey, setCurrentTrackKey] = useState('');
+  const [currentTrackUrl, setCurrentTrackUrl] = useState('');
+  const receivedInitialState = useRef(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [trackMenu, setTrackMenu] = useState<Audio | null>(null);
+
+  useEffect(() => {
+    if (compact && window.innerWidth > 640 && !window.matchMedia('(pointer: coarse)').matches) searchInputRef.current?.focus({preventScroll: true});
+  }, [compact]);
 
   useEffect(() => {
     let disposed = false;
@@ -139,6 +156,7 @@ function MusicLibraryClient() {
 
   const playFromGlobalPlayer = useCallback((detail: MusicPlayerPlayDetail) => {
     dispatchMusicPlayerPlay(detail);
+    setCurrentTrackUrl('');
     setCurrentTrackKey(`${detail.groupId}:${detail.trackIndex ?? 0}`);
   }, []);
 
@@ -151,9 +169,15 @@ function MusicLibraryClient() {
     const handlePlayerState = (event: Event) => {
       const detail = (event as CustomEvent<MusicPlayerStateDetail>).detail;
       if (!detail?.groupId) return;
+      if (!receivedInitialState.current) {
+        receivedInitialState.current = true;
+        setActiveGroupId(detail.groupId);
+      }
       setCurrentTrackKey(`${detail.groupId}:${detail.trackIndex ?? 0}`);
+      setCurrentTrackUrl(detail.trackUrl ?? '');
     };
     window.addEventListener(musicPlayerStateEventName, handlePlayerState);
+    window.dispatchEvent(new CustomEvent(musicPlayerStateRequestEventName));
     return () => window.removeEventListener(musicPlayerStateEventName, handlePlayerState);
   }, []);
 
@@ -207,12 +231,14 @@ function MusicLibraryClient() {
         target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
 
       if (event.key === 'Escape') {
+        if (trackMenu) { event.preventDefault(); setTrackMenu(null); return; }
         if (singerDrawerOpen) {
           event.preventDefault();
           setSingerDrawerOpen(false);
           return;
         }
         if (isTyping) {
+          if (document.querySelector('#global-music-panel')?.contains(target as Node)) return;
           (target as HTMLInputElement).blur();
           setSearchQuery('');
           return;
@@ -247,7 +273,7 @@ function MusicLibraryClient() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [flatTracks, highlightedIndex, playTrack, searchQuery, singerDrawerOpen]);
+  }, [flatTracks, highlightedIndex, playTrack, searchQuery, singerDrawerOpen, trackMenu]);
 
   if (!activeGroup && !searchActive) return null;
 
@@ -262,6 +288,7 @@ function MusicLibraryClient() {
         <button
           type="button"
           className={styles.groupTabSelect}
+          aria-pressed={isActive}
           onClick={() => selectGroup(group.id)}>
           <span className={styles.groupTabLabel}>{group.label}</span>
           <span className={styles.groupCount}>{group.tracks.length}</span>
@@ -272,7 +299,7 @@ function MusicLibraryClient() {
           aria-label={`播放 ${group.label}`}
           title={`播放 ${group.label}`}
           onClick={() => playGroup(group.id)}>
-          ▶
+          <PlayerIcon size={13} />
         </button>
       </div>
     );
@@ -289,7 +316,7 @@ function MusicLibraryClient() {
       <div className={styles.toolbar}>
         <div className={styles.searchRow}>
           <span className={styles.searchIcon} aria-hidden="true">
-            ⌕
+            <MagnifierIcon size={16} />
           </span>
           <input
             ref={searchInputRef}
@@ -318,7 +345,13 @@ function MusicLibraryClient() {
           )}
         </div>
 
-        <div className={styles.filtersBar}>
+        {compact ? <label className={styles.compactFilter}>歌单
+          <select aria-label="选择歌单" value={activeGroupId} onChange={(event) => selectGroup(event.target.value)}>
+            <optgroup label="我的歌单">{derived.fixed.map((group) => <option key={group.id} value={group.id}>{group.label} · {group.tracks.length}</option>)}</optgroup>
+            <optgroup label="分类">{derived.filter.map((group) => <option key={group.id} value={group.id}>{group.label} · {group.tracks.length}</option>)}</optgroup>
+            <optgroup label="歌手">{derived.artist.map((group) => <option key={group.id} value={group.id}>{group.label} · {group.tracks.length}</option>)}</optgroup>
+          </select>
+        </label> : <div className={styles.filtersBar}>
           <div className={styles.filtersGroup}>
             <span className={styles.filtersLabel}>歌单</span>
             {derived.fixed.map(renderTab)}
@@ -354,12 +387,12 @@ function MusicLibraryClient() {
                   </span>
                 </span>
                 <span className={styles.singerTriggerCaret} aria-hidden="true">
-                  ▾
+                  <ArrowDownIcon size={13} />
                 </span>
               </button>
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       <div className={styles.trackList}>
@@ -381,12 +414,12 @@ function MusicLibraryClient() {
                 const flatIndex = flatIndexByTrack.get(track) ?? -1;
                 const trackLocation = trackLocationByTrack.get(track);
                 const trackKey = trackLocation ? `${trackLocation.groupId}:${trackLocation.index}` : '';
-                const isCurrent = trackKey !== '' && currentTrackKey === trackKey;
+                const isCurrent = currentTrackUrl ? track.url === currentTrackUrl : trackKey !== '' && currentTrackKey === trackKey;
                 const isHighlighted = flatIndex === highlightedIndex;
                 const hideArtist = Boolean(group.artist) || isArtistGrouping;
                 return (
+                  <div key={`${track.url}-${groupIndex}`} className={compact ? styles.trackRow : styles.plainTrackRow}>
                   <button
-                    key={`${track.url}-${groupIndex}`}
                     type="button"
                     className={clsx(
                       styles.trackItem,
@@ -395,15 +428,23 @@ function MusicLibraryClient() {
                       isCurrent && styles.trackItemCurrent,
                     )}
                     onClick={() => playTrack(track)}
+                    aria-current={isCurrent ? 'true' : undefined}
                     onMouseEnter={() => setHighlightedIndex(flatIndex)}>
                     <span className={styles.trackPlayHint} aria-hidden="true">
-                      {isCurrent ? '♫' : '▶'}
+                      {isCurrent ? <span className={styles.playingBars}><i /><i /><i /></span> : <PlayerIcon size={12} />}
                     </span>
                     <span className={styles.trackName}>{track.name}</span>
                     {!hideArtist && (
                       <span className={styles.trackArtist}>{track.artist}</span>
                     )}
                   </button>
+                  {compact && <button type="button" className={styles.trackMore} aria-label={`更多 ${track.name} ${track.artist}`} title="歌曲选项"
+                    aria-expanded={trackMenu === track} onClick={() => setTrackMenu(trackMenu === track ? null : track)}><DotsIcon size={18} /></button>}
+                  {compact && trackMenu === track && <div className={styles.trackMenu} role="menu" aria-label={`${track.name} 的选项`}>
+                    <button type="button" role="menuitem" onClick={() => { dispatchMusicPlayerCommand({action: 'queue-next', track}); setTrackMenu(null); onQueued?.(); }}>播放下一首</button>
+                    <button type="button" role="menuitem" onClick={() => { dispatchMusicPlayerCommand({action: 'queue-add', track}); setTrackMenu(null); onQueued?.(); }}>加入待播列表</button>
+                  </div>}
+                  </div>
                 );
               })}
             </div>
@@ -427,12 +468,12 @@ function MusicLibraryClient() {
         />
       )}
 
-      <div className={styles.keyboardHints} aria-hidden="true">
+      {!compact && <div className={styles.keyboardHints} aria-hidden="true">
         <span><kbd>/</kbd> 搜索</span>
         <span><kbd>J</kbd> <kbd>K</kbd> 上下</span>
         <span><kbd>Enter</kbd> 播放</span>
         <span><kbd>Esc</kbd> 关闭</span>
-      </div>
+      </div>}
     </section>
   );
 }
@@ -481,7 +522,7 @@ function SingerDrawer({
             className={styles.drawerCloseButton}
             onClick={onClose}
             aria-label="关闭">
-            ×
+            <XIcon size={19} />
           </button>
         </div>
         <input
@@ -516,7 +557,7 @@ function SingerDrawer({
                   aria-label={`播放 ${artist.label}`}
                   title={`播放 ${artist.label}`}
                   onClick={() => onPlay(artist.id)}>
-                  ▶
+                  <PlayerIcon size={13} />
                 </button>
               </div>
             ))
@@ -527,6 +568,6 @@ function SingerDrawer({
   );
 }
 
-export default function MusicLibrary() {
-  return <BrowserOnly fallback={null}>{() => <MusicLibraryClient />}</BrowserOnly>;
+export default function MusicLibrary(props: MusicLibraryProps) {
+  return <BrowserOnly fallback={null}>{() => <MusicLibraryClient {...props} />}</BrowserOnly>;
 }

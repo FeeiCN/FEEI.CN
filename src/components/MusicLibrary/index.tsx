@@ -176,7 +176,7 @@ function MusicLibraryClient({compact = false, onQueued}: MusicLibraryProps) {
       }
       setCurrentTrackKey(`${detail.groupId}:${detail.trackIndex ?? 0}`);
       setCurrentTrackUrl(detail.trackUrl ?? '');
-      setPlaybackPaused(detail.paused);
+      setPlaybackPaused(detail.paused !== false);
     };
     window.addEventListener(musicPlayerStateEventName, handlePlayerState);
     window.dispatchEvent(new CustomEvent(musicPlayerStateRequestEventName));

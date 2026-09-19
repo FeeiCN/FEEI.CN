@@ -19,7 +19,7 @@ const isStrictBuild = process.env.CI_STRICT === 'true';
 const searchOptions = {docsRouteBasePath: '/', indexBlog: false, indexPages: false, hashed: true, language: ['zh']};
 
 const config: Config = {
-  title: '吴飞飞-安全界', tagline: '把所有的时间、精力和金钱都投入到长期目标中',
+  title: '吴飞飞', tagline: '把所有的时间、精力和金钱都投入到长期目标中',
   future: {v4: {removeLegacyPostBuildHeadAttribute: true, useCssCascadeLayers: true, siteStorageNamespacing: true, mdx1CompatDisabledByDefault: true, fasterByDefault: true}, faster: {gitEagerVcs: false}},
   markdown: {format: 'detect', hooks: {onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn', onBrokenMarkdownImages: 'ignore'}, preprocessor: ({filePath, fileContent}) => expandMarkdownIncludes(fileContent, filePath).replace(/https?:\/\/\S+/g, (url) => url.replace(/\*/g, '\\*'))},
   url: 'https://feei.cn', baseUrl: '/', organizationName: 'feeicn', projectName: 'FEEI.CN', onBrokenLinks: isStrictBuild ? 'throw' : 'warn', i18n: {defaultLocale: 'zh-Hans', locales: ['zh-Hans']},

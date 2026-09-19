@@ -1,5 +1,6 @@
 import type {ReactNode} from 'react';
 import Link from '@docusaurus/Link';
+import Head from '@docusaurus/Head';
 import Layout from '@theme/Layout';
 import Heading from '@theme/Heading';
 import {usePluginData} from '@docusaurus/useGlobalData';
@@ -19,7 +20,7 @@ function HeroSection(): ReactNode {
         <h1>吴飞飞</h1>
         <p className={styles.heroIntro}>写网络安全、人工智能安全，也记录生活。</p>
         <div className={styles.compactActions}>
-          <Link to="/my-journey-in-cybersecurity">关于我 →</Link>
+          <Link to="/about">关于我 →</Link>
           <a href="/rss.xml">RSS ↗</a>
         </div>
       </div>
@@ -79,7 +80,11 @@ function RecentSection(): ReactNode {
 
 export default function Home(): ReactNode {
   return (
-    <Layout wrapperClassName={styles.homeLayout} title="吴飞飞" description="吴飞飞的个人网站。写网络安全、人工智能安全与人生系统，也记录健康、阅读、旅行和日常生活。">
+    <Layout wrapperClassName={styles.homeLayout} description="吴飞飞的个人网站。写网络安全、人工智能安全与人生系统，也记录健康、阅读、旅行和日常生活。">
+      <Head>
+        <title>吴飞飞 · 安全界</title>
+        <meta property="og:title" content="吴飞飞 · 安全界" />
+      </Head>
       <main className={styles.page}>
         <HeroSection />
         <ReadingSection />

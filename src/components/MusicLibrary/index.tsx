@@ -51,8 +51,9 @@ function MusicLibraryClient({compact = false, onQueued}: MusicLibraryProps) {
   const [singerDrawerOpen, setSingerDrawerOpen] = useState(false);
   const [currentTrackKey, setCurrentTrackKey] = useState('');
   const [currentTrackUrl, setCurrentTrackUrl] = useState('');
+  const [playbackPaused, setPlaybackPaused] = useState(true);
   const receivedInitialState = useRef(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [trackMenu, setTrackMenu] = useState<Audio | null>(null);
 
@@ -147,7 +148,7 @@ function MusicLibraryClient({compact = false, onQueued}: MusicLibraryProps) {
   }, [flatTracks]);
 
   useEffect(() => {
-    setHighlightedIndex(0);
+    setHighlightedIndex(-1);
   }, [activeGroupId, searchQuery]);
 
   useEffect(() => {
@@ -175,6 +176,7 @@ function MusicLibraryClient({compact = false, onQueued}: MusicLibraryProps) {
       }
       setCurrentTrackKey(`${detail.groupId}:${detail.trackIndex ?? 0}`);
       setCurrentTrackUrl(detail.trackUrl ?? '');
+      setPlaybackPaused(detail.paused);
     };
     window.addEventListener(musicPlayerStateEventName, handlePlayerState);
     window.dispatchEvent(new CustomEvent(musicPlayerStateRequestEventName));
@@ -429,9 +431,10 @@ function MusicLibraryClient({compact = false, onQueued}: MusicLibraryProps) {
                     )}
                     onClick={() => playTrack(track)}
                     aria-current={isCurrent ? 'true' : undefined}
-                    onMouseEnter={() => setHighlightedIndex(flatIndex)}>
+                    onMouseEnter={() => setHighlightedIndex(flatIndex)}
+                    onMouseLeave={() => setHighlightedIndex(-1)}>
                     <span className={styles.trackPlayHint} aria-hidden="true">
-                      {isCurrent ? <span className={styles.playingBars}><i /><i /><i /></span> : <PlayerIcon size={12} />}
+                      {isCurrent ? <span className={clsx(styles.playingBars, playbackPaused && styles.playingBarsPaused)}><i /><i /><i /></span> : <PlayerIcon size={12} />}
                     </span>
                     <span className={styles.trackName}>{track.name}</span>
                     {!hideArtist && (

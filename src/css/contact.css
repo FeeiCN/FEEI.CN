@@ -1,0 +1,127 @@
+/* Contact page */
+.contactExperience {
+  margin-top: 1.1rem;
+}
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--feei-border);
+}
+
+.contactCard {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: center;
+  min-height: 7rem;
+  margin: 0;
+  padding: 1.15rem 0.9rem;
+  border: 0;
+  border-bottom: 1px solid var(--feei-border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none !important;
+  cursor: pointer;
+  appearance: none;
+}
+
+.contactCard:nth-child(odd) {
+  border-right: 1px solid var(--feei-border);
+}
+
+.contactCard:hover,
+.contactCard:focus-visible {
+  color: inherit;
+}
+
+.contactCard:focus-visible {
+  outline: 2px solid var(--ifm-color-emphasis-500);
+  outline-offset: -2px;
+}
+
+.contactCardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ifm-font-color-base);
+  line-height: 0;
+  pointer-events: none;
+}
+
+.contactCardIcon svg {
+  cursor: inherit !important;
+}
+
+.contactCardContent {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.contactCardLabel {
+  margin-bottom: 0.12rem;
+  color: var(--feei-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.contactCardValue {
+  overflow: hidden;
+  color: var(--ifm-font-color-base);
+  font-size: 1.02rem;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contactCardHint {
+  margin-top: 0.22rem;
+  color: var(--feei-text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.contactCardAction {
+  align-self: start;
+  min-width: 2rem;
+  color: var(--feei-text-muted);
+  font-size: 0.74rem;
+  text-align: right;
+}
+
+.contactNote {
+  margin: 1rem 0 2rem;
+  color: var(--feei-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.contactCopyStatus {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .contactGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .contactCard:nth-child(odd) {
+    border-right: 0;
+  }
+
+  .contactCard {
+    min-height: 6.5rem;
+    padding-right: 0.25rem;
+    padding-left: 0.25rem;
+  }
+}

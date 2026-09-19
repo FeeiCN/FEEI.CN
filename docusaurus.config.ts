@@ -8,15 +8,10 @@ import copyMarkdownPlugin from './plugins/copyMarkdownPlugin';
 import fastSearchPlugin from './plugins/fastSearchPlugin';
 import homeRecordsPlugin from './plugins/homeRecordsPlugin';
 import {expandMarkdownIncludes} from './plugins/markdownIncludes';
-
-type SidebarItemWithProps = {type: string; id?: string; items?: SidebarItemWithProps[]; customProps?: Record<string, unknown>; collapsed?: boolean; link?: {type?: string; id?: string}};
-type LoadedDocWithFrontMatter = {id: string; frontMatter?: Record<string, unknown>};
-function getDocIcon(doc?: LoadedDocWithFrontMatter): string | undefined { const icon = doc?.frontMatter?.icon; return typeof icon === 'string' && icon.trim() ? icon.trim() : undefined; }
-function getDocSidebarBadge(doc?: LoadedDocWithFrontMatter): {text: string; color: string} | undefined { const badge = doc?.frontMatter?.sidebar_badge; if (!badge || typeof badge !== 'object') return undefined; const text = (badge as Record<string, unknown>).text; const color = (badge as Record<string, unknown>).color; if (typeof text !== 'string' || !text.trim()) return undefined; return {text: text.trim(), color: typeof color === 'string' && color.trim() ? color.trim() : 'info'}; }
-function attachDocFrontMatterToSidebar<T extends SidebarItemWithProps, D extends LoadedDocWithFrontMatter>(items: T[], docs: D[]): T[] { const docsById = new Map(docs.map((doc) => [doc.id, doc])); function applyDocFields(item: SidebarItemWithProps, docId: string): Record<string, unknown> { const doc = docsById.get(docId); const icon = getDocIcon(doc); const sidebarBadge = getDocSidebarBadge(doc); const fields: Record<string, unknown> = {...item.customProps}; if (icon) fields.icon = icon; if (sidebarBadge) fields.sidebar_badge = sidebarBadge; return fields; } function visit(item: SidebarItemWithProps, depth: number): SidebarItemWithProps { const nextItem = {...item}; if (item.type === 'doc' && item.id) nextItem.customProps = applyDocFields(item, item.id); if (item.type === 'category') { if (typeof item.collapsed === 'undefined') nextItem.collapsed = depth > 0; if (item.link?.type === 'doc' && item.link.id) nextItem.customProps = applyDocFields(item, item.link.id); if (item.items) nextItem.items = item.items.map((child) => visit(child, depth + 1)); } return nextItem; } return items.map((item) => visit(item, 0) as T); }
+import {attachDocFrontMatterToSidebar} from './config/docusaurusSidebar';
+import {searchOptions} from './config/search';
 
 const isStrictBuild = process.env.CI_STRICT === 'true';
-const searchOptions = {docsRouteBasePath: '/', indexBlog: false, indexPages: false, hashed: true, language: ['zh']};
 
 const config: Config = {
   title: '吴飞飞', tagline: '把所有的时间、精力和金钱都投入到长期目标中',
@@ -24,16 +19,13 @@ const config: Config = {
   markdown: {format: 'detect', hooks: {onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn', onBrokenMarkdownImages: 'ignore'}, preprocessor: ({filePath, fileContent}) => expandMarkdownIncludes(fileContent, filePath).replace(/https?:\/\/\S+/g, (url) => url.replace(/\*/g, '\\*'))},
   url: 'https://feei.cn', baseUrl: '/', organizationName: 'feeicn', projectName: 'FEEI.CN', onBrokenLinks: isStrictBuild ? 'throw' : 'warn', i18n: {defaultLocale: 'zh-Hans', locales: ['zh-Hans']},
   headTags: [
-    {tagName: 'link', attributes: {rel: 'icon', href: '/media/img/icons/feei-icon-32.webp', sizes: '32x32'}},
-    {tagName: 'link', attributes: {rel: 'icon', href: '/media/img/icons/feei-icon-192.webp', sizes: '192x192'}},
-    {tagName: 'link', attributes: {rel: 'apple-touch-icon', href: '/media/img/icons/feei-icon-180.webp'}},
-    {tagName: 'meta', attributes: {name: 'msapplication-TileImage', content: '/media/img/icons/feei-icon-270.webp'}},
+    {tagName: 'link', attributes: {rel: 'icon', href: '/img/feei-icon.svg', type: 'image/svg+xml'}},
   ],
-  presets: [['classic', {docs: {routeBasePath: '/', sidebarPath: './sidebars.ts', remarkPlugins: [remarkMath], rehypePlugins: [rehypeKatex], async sidebarItemsGenerator(args) { const items = await args.defaultSidebarItemsGenerator(args); return attachDocFrontMatterToSidebar(items, args.docs); }, editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/'}, blog: false, theme: {customCss: ['./src/css/custom.css', './src/css/neutral.css']}} satisfies Preset.Options]],
+  presets: [['classic', {docs: {routeBasePath: '/', sidebarPath: './sidebars.ts', remarkPlugins: [remarkMath], rehypePlugins: [rehypeKatex], async sidebarItemsGenerator(args) { const items = await args.defaultSidebarItemsGenerator(args); return attachDocFrontMatterToSidebar(items, args.docs); }, editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/'}, blog: false, theme: {customCss: ['./src/css/custom.css', './src/css/neutral.css', './src/css/sliding-indicator.css', './src/css/friend-links.css', './src/css/year-records.css', './src/css/contact.css']}} satisfies Preset.Options]],
   plugins: [docMtimePlugin, copyMarkdownPlugin, homeRecordsPlugin, [fastSearchPlugin, searchOptions]], clientModules: ['./src/clientModules/slidingIndicator.ts'],
   themeConfig: {
-    docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: 'media/img/icons/feei-icon-270.webp', colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
-    navbar: {hideOnScroll: false, logo: {alt: 'My Site Logo', src: 'media/img/logo.webp'}, items: [
+    docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: 'music/feei-site-theme-cover.webp', colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
+    navbar: {hideOnScroll: false, logo: {alt: 'FEEI', src: 'img/feei-icon.svg'}, items: [
       {type: 'dropdown', position: 'left', label: '网络安全', icon: 'shield', to: '/security-engineering', items: [
         {type: 'docSidebar', sidebarId: 'securityEngineeringSidebar', label: '网络空间安全', icon: 'shield'},
         {type: 'docSidebar', sidebarId: 'aiSecuritySidebar', label: '人工智能安全', icon: 'brand-openai-icon'},

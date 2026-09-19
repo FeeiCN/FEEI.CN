@@ -56,12 +56,12 @@ function renderedMarkdown(file: string, siteUrl?: string): string {
   return rewriteAbsoluteUrls(injectUrlIntoFrontMatter(expanded, siteUrl), siteUrl);
 }
 
-export default function copyMarkdownPlugin(context: LoadContext): Plugin<MarkdownMap> {
+export default function copyMarkdownPlugin(context: LoadContext, _options: unknown): Plugin {
   const {siteDir, siteConfig} = context;
   const docsDir = path.join(siteDir, 'docs');
   const siteUrl = siteConfig.url.replace(/\/$/, '');
 
-  return {
+  const plugin: Plugin<MarkdownMap> = {
     name: 'copy-markdown-plugin',
 
     async loadContent(): Promise<MarkdownMap> {
@@ -95,4 +95,6 @@ export default function copyMarkdownPlugin(context: LoadContext): Plugin<Markdow
       }
     },
   };
+
+  return plugin as Plugin;
 }

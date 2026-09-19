@@ -157,6 +157,10 @@ jobs:
           ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf
           group_end "Clean build cache and stale releases"
 
+          group_start "Type check"
+          npm run typecheck
+          group_end "Type check"
+
           release_name="$(git rev-parse HEAD)"
           release_dir="$releases_dir/$release_name"
           staging_dir="${release_dir}.tmp"

@@ -11,11 +11,12 @@ export function validateOptions<T, U>(data: OptionValidationContext<T, U>): U {
 // Docusaurus build, but move its expensive full-site index generation out of
 // the critical publish path. scripts/build_search_index.mjs rebuilds the same
 // search-index.json after the release has been published.
-export default function fastSearchPlugin(context: LoadContext, options: Record<string, unknown> = {}): Plugin {
+export default function fastSearchPlugin(context: LoadContext, options: unknown): Plugin {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const module = require('@easyops-cn/docusaurus-search-local');
   const factory = module.default ?? module;
-  const plugin = factory(context, options);
+  const normalizedOptions = options && typeof options === 'object' ? options : {};
+  const plugin = factory(context, normalizedOptions);
 
   return {
     ...plugin,

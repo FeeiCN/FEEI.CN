@@ -12,6 +12,7 @@ export type LibraryBook = {
   reviewCount: number;
   startReadTime: number | null;
   lastReadTime: number | null;
+  finishReading: number | null;
   finishTime: number | null;
   year: number | null;
   publisher: string;

@@ -240,7 +240,7 @@ export default function Controls() {
       {!expanded ? <div className={styles.mini}>
         <button ref={expandRef} type="button" className={styles.miniTrack} aria-label="展开音乐播放器"
           aria-haspopup="dialog" onClick={() => { dispatchMusicPlayerOpen(); setView(playback ? 'playing' : 'library'); }}>
-          <span className={styles.miniVinyl} aria-hidden="true"><MusicIcon ref={vinylRef} size={30} strokeWidth={1.7} disableHover /></span>
+          <span className={styles.miniVinyl} aria-hidden="true"><MusicIcon ref={vinylRef} size={25} strokeWidth={1.7} disableHover /></span>
           <span className={styles.miniText}><strong>{playback?.title || '音乐'}</strong><span>{playback?.artist || '我的音乐库'}</span></span>
         </button>
         {playback && playButton()}

@@ -20,6 +20,7 @@ export type ReadingCtxType = {
   filteredLibrary: LibraryBook[];
   availableYears: number[];
   loading: boolean;
+  error: string | null;
 };
 
 export const ReadingCtx = createContext<ReadingCtxType>({
@@ -32,6 +33,7 @@ export const ReadingCtx = createContext<ReadingCtxType>({
   filteredLibrary: [],
   availableYears: [],
   loading: true,
+  error: null,
 });
 
 export function yearCutoff(year: number): string {
@@ -92,7 +94,7 @@ export function computeFilteredTotals(
     totalReadSeconds,
     booksInLibrary: filteredLibrary.length,
     booksFinished: filteredLibrary.filter(
-      (b) => (b.progress ?? 0) >= 99 || b.finishReading === true,
+      (b) => (b.progress ?? 0) >= 99 || b.finishReading === 1,
     ).length,
     notesTotal: filteredLibrary.reduce((s, b) => s + (b.noteCount || 0), 0),
     bookmarksTotal: filteredLibrary.reduce((s, b) => s + (b.bookmarkCount || 0), 0),

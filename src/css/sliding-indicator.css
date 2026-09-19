@@ -1,0 +1,40 @@
+/* ── Sliding line indicator (JS-driven) ─────────────────────────────────── */
+.sliding-line-indicator {
+  position: absolute;
+  background: #111827;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.15s ease;
+  z-index: 2;
+}
+
+/* Vertical indicators (sidebar / TOC): left edge, 2px wide */
+.sliding-line-indicator[data-axis='y'] {
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 1rem;
+}
+
+.theme-doc-sidebar-menu:has(.menu__caret:hover) #sliding-line-sidebar,
+.theme-doc-sidebar-menu:has(.menu__caret:focus-visible) #sliding-line-sidebar {
+  opacity: 0 !important;
+}
+
+/* Horizontal indicator (navbar): bottom edge, 2px tall */
+.sliding-line-indicator[data-axis='x'] {
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 2rem;
+  background: rgba(17, 24, 39, 0.35);
+}
+
+[data-theme='dark'] .sliding-line-indicator {
+  background: #fff;
+}

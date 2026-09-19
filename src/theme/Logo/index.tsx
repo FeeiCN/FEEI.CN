@@ -1,25 +1,56 @@
+import type {ReactNode} from 'react';
 import Link from '@docusaurus/Link';
 import useBaseUrl from '@docusaurus/useBaseUrl';
-import {useThemeConfig} from '@docusaurus/theme-common';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import {useThemeConfig, type NavbarLogo} from '@docusaurus/theme-common';
+import ThemedImage from '@theme/ThemedImage';
 import type {Props} from '@theme/Logo';
-import ShinyText from '@site/src/components/ShinyText';
 
-export default function Logo({className, imageClassName, titleClassName, ...rest}: Props) {
-  const {navbar: {logo}} = useThemeConfig();
+function LogoImage({
+  logo,
+  alt,
+  imageClassName,
+}: {
+  logo: NavbarLogo;
+  alt: string;
+  imageClassName?: string;
+}) {
+  const image = (
+    <ThemedImage
+      className={logo.className}
+      sources={{
+        light: useBaseUrl(logo.src),
+        dark: useBaseUrl(logo.srcDark || logo.src),
+      }}
+      height={logo.height}
+      width={logo.width}
+      alt={alt}
+      style={logo.style}
+    />
+  );
+
+  return imageClassName ? <div className={imageClassName}>{image}</div> : image;
+}
+
+export default function Logo(props: Props): ReactNode {
+  const {
+    siteConfig: {title},
+  } = useDocusaurusContext();
+  const {
+    navbar: {title: navbarTitle, logo},
+  } = useThemeConfig();
+  const {imageClassName, titleClassName, ...linkProps} = props;
   const logoLink = useBaseUrl(logo?.href || '/');
+  const alt = logo?.alt ?? (navbarTitle ? '' : title);
 
   return (
-    <Link to={logoLink} className={className} {...rest}>
-      <div className={imageClassName}>
-        <ShinyText
-          text="FEEI"
-          speed={3}
-          color="#888888"
-          shineColor="#ffffff"
-          spread={90}
-          style={{fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.08em'}}
-        />
-      </div>
+    <Link
+      to={logoLink}
+      {...linkProps}
+      {...(logo?.target && {target: logo.target})}
+    >
+      {logo ? <LogoImage logo={logo} alt={alt} imageClassName={imageClassName} /> : null}
+      {navbarTitle != null ? <b className={titleClassName}>{navbarTitle}</b> : null}
     </Link>
   );
 }

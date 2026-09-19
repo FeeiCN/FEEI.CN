@@ -363,6 +363,7 @@
 .playingBars i:nth-child(1) { height: 45%; }
 .playingBars i:nth-child(2) { height: 100%; animation-delay: -0.55s; }
 .playingBars i:nth-child(3) { height: 70%; animation-delay: -0.25s; }
+.playingBarsPaused i { animation: none; }
 
 @keyframes playingBar {
   from { height: 35%; }

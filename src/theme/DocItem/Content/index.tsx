@@ -17,9 +17,8 @@ function useSyntheticTitle(): string | null {
 }
 
 function ReadingMode(): ReactNode {
-  const {metadata, frontMatter} = useDoc();
+  const {metadata} = useDoc();
   const permalink = metadata.permalink;
-  const contentType = (frontMatter as Record<string, unknown>).content_type;
 
   let label: string | null = null;
   let text: string | null = null;
@@ -30,9 +29,6 @@ function ReadingMode(): ReactNode {
   } else if (permalink === '/commercial-ai' || permalink.endsWith('/commercial-ai')) {
     label = '参考资料';
     text = '先看开头的判断和选型顺序即可；后面的评测、模型、价格与产品信息是带日期的参考快照，需要做具体选择时再查。';
-  } else if (contentType === 'reference') {
-    label = '参考资料';
-    text = '这是一页持续维护的参考资料，适合按需查阅，不必从头到尾阅读。';
   }
 
   if (!label || !text) return null;

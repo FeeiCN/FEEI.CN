@@ -6,6 +6,7 @@ import {DocsSidebarProvider, useDocRootMetadata} from '@docusaurus/plugin-conten
 import {useLocation} from '@docusaurus/router';
 import DocRootLayout from '@theme/DocRoot/Layout';
 import NotFoundContent from '@theme/NotFound/Content';
+import type {Props} from '@theme/DocRoot';
 
 type DocRoute = {
   path: string;
@@ -14,12 +15,6 @@ type DocRoute = {
   routes?: DocRoute[];
   metadata?: {
     frontMatter?: Record<string, unknown>;
-  };
-};
-
-type DocRootProps = {
-  route: {
-    routes?: DocRoute[];
   };
 };
 
@@ -39,14 +34,14 @@ function findCurrentRoute(routes: DocRoute[] | undefined, pathname: string): Doc
   return undefined;
 }
 
-function useCurrentRouteFrontMatter({route}: DocRootProps) {
+function useCurrentRouteFrontMatter({route}: Props) {
   const location = useLocation();
-  const currentRoute = findCurrentRoute(route.routes, location.pathname);
+  const currentRoute = findCurrentRoute(route.routes as DocRoute[] | undefined, location.pathname);
 
   return currentRoute?.metadata?.frontMatter ?? {};
 }
 
-export default function DocRoot(props: DocRootProps) {
+export default function DocRoot(props: Props) {
   const currentDocRouteMetadata = useDocRootMetadata(props);
   const frontMatter = useCurrentRouteFrontMatter(props);
   const location = useLocation();

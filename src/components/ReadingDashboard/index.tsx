@@ -160,6 +160,7 @@ function ReadingProviderInner({children, timeScope}: {children: React.ReactNode;
       filteredLibrary: state.filteredLibrary,
       availableYears: state.availableYears,
       loading: state.loading,
+      error: state.error,
     }),
     [state],
   );

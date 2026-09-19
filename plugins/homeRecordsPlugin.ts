@@ -3,7 +3,7 @@ import type {LoadedContent} from '@docusaurus/plugin-content-docs';
 import type {Compiler} from 'webpack';
 import type {DocMetadataMap} from './docMtimePlugin';
 
-export type HomeRecord = {date: string; title: string; to: string};
+export type HomeRecord = {date: string; title: string; to: string; location?: string};
 
 function validPublicationDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -26,12 +26,17 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
       const docMetadata = allContent['doc-mtime-plugin']?.default as DocMetadataMap | undefined;
       const docs = (content?.loadedVersions.find((version) => version.isLast)?.docs ?? [])
         .filter((doc) => !doc.unlisted && !doc.draft);
-      const records: HomeRecord[] = docs
+      const dailyRecords: HomeRecord[] = docs
         .filter((doc) => /^\/\d{4}-\d{2}-\d{2}\/?$/.test(doc.slug)
           && doc.source.startsWith('@site/docs/05-吴飞飞/02-年度总结/'))
-        .map((doc) => ({date: doc.slug.replace(/^\//, '').replace(/\/$/, ''), title: doc.title, to: doc.permalink}))
-        .sort((first, second) => second.date.localeCompare(first.date))
-        .slice(0, 3);
+        .map((doc) => ({
+          date: doc.slug.replace(/^\//, '').replace(/\/$/, ''),
+          title: doc.title,
+          to: doc.permalink,
+          location: typeof doc.frontMatter.location === 'string' ? doc.frontMatter.location : undefined,
+        }))
+        .sort((first, second) => second.date.localeCompare(first.date));
+      const records = dailyRecords.slice(0, 3);
       const updates: HomeRecord[] = docs
         .filter((doc) => doc.source.startsWith('@site/docs/01-网络安全/') && !doc.frontMatter.sidebar_badge
           && ['article', 'tutorial'].includes(String(doc.frontMatter.content_type))
@@ -41,7 +46,7 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
         .sort((first, second) => second.updatedAt - first.updatedAt || first.to.localeCompare(second.to))
         .slice(0, 3)
         .map((doc) => ({date: new Date(doc.updatedAt + 8 * 60 * 60 * 1000).toISOString().slice(0, 10), title: doc.title, to: doc.to}));
-      actions.setGlobalData({records, updates});
+      actions.setGlobalData({records, dailyRecords, updates});
 
       const siteUrl = context.siteConfig.url;
       const feedUrl = new URL(`${context.siteConfig.baseUrl}rss.xml`, siteUrl).href;

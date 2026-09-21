@@ -18,6 +18,7 @@ const ICON_SIZE = '16px';
 const IconCopy    = getItsHoverIcon('copy-icon');
 const IconCopied  = getItsHoverIcon('simple-checked-icon');
 const IconGitHub  = getItsHoverIcon('github-icon');
+const IconBug     = getItsHoverIcon('bug-icon');
 const IconClaude  = getItsHoverIcon('brand-anthropic-icon');
 const IconOpenAI  = getItsHoverIcon('brand-openai-icon');
 
@@ -67,6 +68,16 @@ function normalizeDocMetadata(value: number | DocMetadata | undefined): DocMetad
   return value;
 }
 
+function issueUrl(title: string, pageUrl: string, selectedText = ''): string {
+  const url = new URL('https://github.com/FeeiCN/FEEI.CN/issues/new');
+  const quote = selectedText
+    ? `引用原文：\n> ${selectedText.replace(/\n/g, '\n> ')}\n\n`
+    : '';
+  url.searchParams.set('title', `文章纠错：${title}`);
+  url.searchParams.set('body', `文章链接：${pageUrl}\n\n${quote}问题描述：\n\n建议修改：\n`);
+  return url.toString();
+}
+
 export default function DocActionsMenu(): ReactNode {
   const {metadata} = useDoc();
   const {siteConfig} = useDocusaurusContext();
@@ -83,6 +94,7 @@ export default function DocActionsMenu(): ReactNode {
   const aiQuery = encodeURIComponent(`Read ${pageUrl} and answer questions about the content.`);
   const claudeUrl = `https://claude.ai/new?q=${aiQuery}`;
   const chatgptUrl = `https://chat.openai.com/?q=${aiQuery}`;
+  const reportIssueUrl = issueUrl(metadata.title, pageUrl);
 
   useEffect(() => {
     function onOutside(e: MouseEvent) {
@@ -119,10 +131,6 @@ export default function DocActionsMenu(): ReactNode {
 
   const TriggerIcon = copyState === 'copied' ? IconCopied : IconCopy;
   const triggerLabel = copyState === 'copied' ? '已复制' : copyState === 'error' ? '失败' : '复制Markdown';
-
-  if (metadata.source.endsWith('.mdx')) {
-    return null;
-  }
 
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
@@ -181,6 +189,31 @@ export default function DocActionsMenu(): ReactNode {
               </span>
             </a>
           )}
+
+          <a
+            className={styles.item}
+            href={reportIssueUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            role="menuitem"
+            onClick={(event) => {
+              const selectedText = window.getSelection()?.toString().trim().slice(0, 500) ?? '';
+              event.currentTarget.href = issueUrl(metadata.title, pageUrl, selectedText);
+              setOpen(false);
+            }}
+          >
+            {IconBug && (
+              <span className={styles.itemIconWrap}>
+                <IconBug size={ICON_SIZE} disableHover />
+              </span>
+            )}
+            <span className={styles.itemBody}>
+              <span className={styles.itemTitle}>
+                文章纠错 <ExternalArrow />
+              </span>
+              <span className={styles.itemDesc}>在 GitHub 提交问题或修改建议</span>
+            </span>
+          </a>
 
           <div className={styles.divider} />
 

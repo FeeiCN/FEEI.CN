@@ -5,7 +5,6 @@ sidebar_position: 10
 icon: layout-dashboard-icon
 description: AI 风险等级应由身份、数据、工具、规模和可逆性共同形成的最大可达后果决定，并绑定证据、责任、停止权与复审条件。
 content_type: article
-last_reviewed: '2026-07-11'
 ---
 
 # AI 风险治理

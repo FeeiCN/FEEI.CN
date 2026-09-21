@@ -153,7 +153,7 @@ sidebar_position: 0
     - [building-a-trusted-in-depth-defense-system-based-on-native-security-paradigm](./03-安全体系/07-安全框架研究/building-a-trusted-in-depth-defense-system-based-on-native-security-paradigm/index.md)
     - [digital-bank-cybersecurity-system-construction](./03-安全体系/07-安全框架研究/digital-bank-cybersecurity-system-construction/index.md)
   - [人工智能安全](../02-人工智能安全/人工智能安全.md)
-    - [基于AI驱动的实战网络攻击](../02-人工智能安全/基于AI驱动的实战网络攻击.md)
+    - [基于AI驱动的实战网络攻击](../02-人工智能安全/02-AI赋能安全/基于AI驱动的实战网络攻击.md)
 
 ---
 

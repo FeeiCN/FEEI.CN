@@ -1,10 +1,17 @@
 name: Strict site check
 
 on:
+  push:
+    branches:
+      - 'refactor/ai-*'
+  pull_request:
   workflow_dispatch:
   schedule:
     # 北京时间 10:40，避开凌晨自动数据提交和 GitHub 整点拥堵。
     - cron: '40 2 * * *'
+
+permissions:
+  contents: read
 
 jobs:
   check:
@@ -13,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -20,8 +29,28 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: AI navigation and migration check
+        env:
+          AI_MIGRATION_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -z "$AI_MIGRATION_BASE" ]; then
+            AI_MIGRATION_BASE="$(git rev-parse origin/main)"
+          fi
+          export AI_MIGRATION_BASE
+          node scripts/test_ai_navigation.mjs
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Changed document check
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        env:
+          DOCS_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -z "$DOCS_BASE" ]; then
+            DOCS_BASE="$(git rev-parse origin/main)"
+          fi
+          npm run check:docs -- --base="$DOCS_BASE"
 
       - name: Type check
         run: npm run typecheck

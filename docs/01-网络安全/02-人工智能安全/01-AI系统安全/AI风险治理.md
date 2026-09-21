@@ -5,7 +5,6 @@ sidebar_position: 10
 icon: layout-dashboard-icon
 description: AI 风险等级应由身份、数据、工具、规模和可逆性共同形成的最大可达后果决定，并绑定证据、责任、停止权与复审条件。
 content_type: article
-last_reviewed: '2026-07-11'
 ---
 
 # AI 风险治理
@@ -104,7 +103,7 @@ expires_at: <review-date>
 reopen_on: [tool_change, permission_change, model_change, major_incident]
 ```
 
-记录把 [Release Manifest](./人工智能安全.md#四个公共工程对象)、能力包络、不变量、证据、接受人和复审条件连在一起。发布系统可以检查记录是否存在、是否过期、是否对应当前制品组合；运行监控也能从 `scenario_id` 找到允许能力和停止责任人。
+记录把 [Release Manifest](../人工智能安全.md#四个公共工程对象)、能力包络、不变量、证据、接受人和复审条件连在一起。发布系统可以检查记录是否存在、是否过期、是否对应当前制品组合；运行监控也能从 `scenario_id` 找到允许能力和停止责任人。
 
 ## 证据决定可以放开多少能力
 

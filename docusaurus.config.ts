@@ -30,6 +30,7 @@ const config: Config = {
         {type: 'docSidebar', sidebarId: 'securityEngineeringSidebar', label: '网络空间安全', icon: 'shield'},
         {type: 'docSidebar', sidebarId: 'aiSecuritySidebar', label: '人工智能安全', icon: 'brand-openai-icon'},
       ]},
+      {type: 'docSidebar', sidebarId: 'aiEngineeringSidebar', position: 'left', label: '智能工程', icon: 'brain-circuit-icon'},
       {type: 'dropdown', position: 'left', label: '人生系统', icon: 'biceps-flexed', to: '/life-certainty', items: [
         {type: 'docSidebar', sidebarId: 'healthHappinessSidebar', label: '健康幸福', icon: 'heart'},
         {type: 'docSidebar', sidebarId: 'careerSuccessSidebar', label: '事业有成', icon: 'rocket'},

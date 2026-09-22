@@ -8,11 +8,11 @@ import {fileURLToPath} from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const aiRoot = 'docs/01-网络安全/02-人工智能安全';
-const engineeringRoot = 'docs/03-智能工程';
+const engineeringRoot = `${aiRoot}/01-智能工程`;
 const groups = {
-  '01-AI系统安全': ['AI数据与知识安全.md', '模型资产与AI供应链安全.md', '模型安全对齐与输出安全.md', '大模型应用安全.md', 'Agent与工具调用安全.md', 'AI隐私与机密保护.md', 'AI风险治理.md', 'AI安全评测与红队.md', 'AI运行监控与事件响应.md'],
-  '02-AI赋能安全': ['AI漏洞挖掘.md', 'AI驱动的全链路自动化网络攻击.md', '基于AI驱动的实战网络攻击.md', '安全大模型评测体系.md'],
-  '03-AI滥用防御': ['AI滥用与攻防升级.md', '合成内容与信任安全.md'],
+  '02-AI系统安全': ['AI数据与知识安全.md', '模型资产与AI供应链安全.md', '模型安全对齐与输出安全.md', '大模型应用安全.md', 'Agent与工具调用安全.md', 'AI隐私与机密保护.md', 'AI风险治理.md', 'AI安全评测与红队.md', 'AI运行监控与事件响应.md'],
+  '03-AI赋能安全': ['AI漏洞挖掘.md', 'AI驱动的全链路自动化网络攻击.md', '基于AI驱动的实战网络攻击.md', '安全大模型评测体系.md'],
+  '04-AI滥用防御': ['AI滥用与攻防升级.md', '合成内容与信任安全.md'],
 };
 const read = (file) => readFileSync(path.join(repoRoot, file), 'utf8');
 const exists = (file) => existsSync(path.join(repoRoot, file));
@@ -25,7 +25,8 @@ const scalar = (text, key) => {
   return value?.replace(/^(['"])(.*)\1$/, '$2');
 };
 
-assert.ok(!exists(`${aiRoot}/02-智能工程`), '通用智能工程不能继续嵌套在人工智能安全内');
+assert.ok(exists(engineeringRoot), '智能工程应作为人工智能安全的基础层');
+assert.ok(!exists('docs/03-智能工程'), '智能工程不应作为独立一级目录');
 assert.ok(!exists(`${engineeringRoot}/02-AI使用实践/05-使用AI`), '重复的使用 AI 层级未压平');
 for (const obsolete of ['03-AI滥用与信任风险', '04-治理评测与响应']) {
   assert.ok(!exists(`${aiRoot}/${obsolete}`), `合并后仍残留旧分组：${obsolete}`);
@@ -41,13 +42,13 @@ for (const [group, names] of Object.entries(groups)) {
     assert.ok(!exists(`${aiRoot}/${name}`), `旧位置仍有重复文章：${name}`);
   }
 }
-for (const name of ['03-智能工程.md', '02-AI使用实践/模型接入与部署.md', '02-AI使用实践/使用商业AI.md', '02-AI使用实践/本地部署AI.md']) {
+for (const name of ['01-智能工程.md', '02-AI使用实践/模型接入与部署.md', '02-AI使用实践/使用商业AI.md', '02-AI使用实践/本地部署AI.md']) {
   assert.ok(exists(`${engineeringRoot}/${name}`), `智能工程入口或接入文章缺失：${name}`);
 }
 assert.equal(scalar(read(`${aiRoot}/人工智能安全.md`), 'slug'), '/ai-security');
-assert.equal(scalar(read(`${engineeringRoot}/03-智能工程.md`), 'slug'), '/ai');
-assert.ok(read('sidebars.ts').includes("dirName: '03-智能工程'"), '缺少独立智能工程侧边栏');
-assert.ok(read('docusaurus.config.ts').includes("sidebarId: 'aiEngineeringSidebar'"), '缺少智能工程导航入口');
+assert.equal(scalar(read(`${engineeringRoot}/01-智能工程.md`), 'slug'), '/ai');
+assert.ok(!read('sidebars.ts').includes('aiEngineeringSidebar'), '不应保留独立智能工程侧边栏');
+assert.ok(!read('docusaurus.config.ts').includes("sidebarId: 'aiEngineeringSidebar'"), '不应保留独立智能工程顶栏入口');
 
 const files = git(['ls-files', '-z', '--', 'docs']).split('\0').filter(isMarkdown);
 const bySlug = new Map();

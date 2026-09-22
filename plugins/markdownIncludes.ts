@@ -27,7 +27,21 @@ export function expandMarkdownIncludes(markdown: string, sourcePath?: string): s
     if (!fs.existsSync(includePath)) {
       throw new Error(`Markdown include not found: ${reference} (from ${sourcePath})`);
     }
-    return stripFrontMatter(fs.readFileSync(includePath, 'utf8')).trim();
+
+    const included = stripFrontMatter(fs.readFileSync(includePath, 'utf8')).trim();
+    const filename = path.basename(reference);
+
+    // Reference material is useful for verification but should not dominate the
+    // default reading path. Keep it in the page for anchors/search while making
+    // the implementation guidance the primary visible content.
+    if (filename.includes('原文')) {
+      return `<details>\n<summary>查看法规原文</summary>\n\n${included}\n\n</details>`;
+    }
+    if (filename === '_合规检查通用方法.md') {
+      return `<details>\n<summary>查看通用合规检查方法</summary>\n\n${included}\n\n</details>`;
+    }
+
+    return included;
   });
 }
 

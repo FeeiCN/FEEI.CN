@@ -3,13 +3,13 @@ slug: /japan-appi
 title: APPI 日本个人信息保护法
 sidebar_position: 1
 description: 从海外业务安全治理视角解读日本APPI的个人数据处理、安全措施、第三方提供、跨境传输和泄露报告要求。
-content_type: reference
+content_type: regulation
 last_reviewed: '2026-09-23'
 ---
 
 # APPI 日本个人信息保护法
 
-日本《个人信息保护法》（Act on the Protection of Personal Information, APPI）是日本个人信息治理的核心法律。日本个人信息保护委员会PPC提供现行法律、内阁令、施行规则和指南体系；官方同时提示英文译文仅供参考，日文原文具有法律效力。citeturn0search0
+日本《个人信息保护法》（Act on the Protection of Personal Information, APPI）是日本个人信息治理的核心法律。日本个人信息保护委员会PPC提供现行法律、内阁令、施行规则和指南体系；官方同时提示英文译文仅供参考，日文原文具有法律效力。
 
 ## 核心要求
 

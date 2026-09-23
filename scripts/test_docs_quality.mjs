@@ -41,7 +41,7 @@ function document(type, extra = '', body = '我在工作中记录了一次实践
   return `---\nslug: /test\nicon: target-icon\ndescription: 测试文档。\ncontent_type: ${type}\npublished_at: '2026-01-01'\n${extra}---\n\n# 测试\n\n${body}\n`;
 }
 
-for (const type of ['hub', 'article', 'tutorial', 'reference', 'review']) {
+for (const type of ['hub', 'article', 'tutorial', 'reference', 'review', 'regulation', 'standard', 'qualification']) {
   test(`${type} does not require a review date in a security directory`, () => {
     withRepository(({writeDoc, check}) => {
       writeDoc('docs/01-网络安全/01-网络空间安全/测试.md', document(type));

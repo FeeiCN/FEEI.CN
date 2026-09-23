@@ -3,7 +3,7 @@ slug: /eu-gdpr
 title: GDPR 欧盟通用数据保护条例
 sidebar_position: 1
 description: 从海外业务安全治理视角解读GDPR的数据处理、数据主体权利、安全、跨境传输和数据泄露通知要求。
-content_type: reference
+content_type: regulation
 last_reviewed: '2026-09-23'
 ---
 

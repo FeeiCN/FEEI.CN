@@ -3,13 +3,13 @@ slug: /eu-dora
 title: DORA 欧盟数字运营韧性法案
 sidebar_position: 2
 description: 解读欧盟金融行业DORA的ICT风险管理、事件报告、韧性测试、第三方风险和监管要求。
-content_type: reference
+content_type: regulation
 last_reviewed: '2026-09-23'
 ---
 
 # DORA 欧盟数字运营韧性法案
 
-DORA（Regulation (EU) 2022/2554）是欧盟金融行业数字运营韧性的核心法规，适用于其规定范围内的金融实体，并建立ICT第三方风险监管框架。法规当前有效。citeturn0search7
+DORA（Regulation (EU) 2022/2554）是欧盟金融行业数字运营韧性的核心法规，适用于其规定范围内的金融实体，并建立ICT第三方风险监管框架。法规当前有效。
 
 ## 核心要求
 

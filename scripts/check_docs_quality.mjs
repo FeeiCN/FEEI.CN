@@ -14,6 +14,9 @@ const CONTENT_TYPES = new Set([
   'article',
   'tutorial',
   'reference',
+  'regulation',
+  'standard',
+  'qualification',
   'review',
   'archive',
   'essay',
@@ -646,7 +649,9 @@ function metadataChecks(document, parsed, mode, issues) {
   }
 
   if (isAdded) {
-    for (const key of ['slug', 'icon', 'description', 'content_type']) {
+    for (const key of (['regulation', 'standard', 'qualification'].includes(contentType)
+      ? ['slug', 'description', 'content_type']
+      : ['slug', 'icon', 'description', 'content_type'])) {
       if (!fieldValue(fields, key)) {
         addIssue(
           issues,
@@ -791,7 +796,7 @@ function structureChecks(document, contentType, lines, mode, issues) {
     }
   }
 
-  if (contentType === 'tutorial' || contentType === 'reference') {
+  if (['tutorial', 'reference', 'regulation', 'standard', 'qualification'].includes(contentType)) {
     const deep = headings.filter((heading) => heading.level >= 5);
     if (deep.length > 0) {
       addIssue(

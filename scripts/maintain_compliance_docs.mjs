@@ -302,7 +302,7 @@ function main() {
     if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) continue;
     input.set(file, markdown(file) || code.has(file) ? fs.readFileSync(absolute, 'utf8') : '');
   }
-  const planned = planChanges(input);
+  const planned = args[0] === '--write' ? planChanges(input) : {files: input, repaired: []};
   const changes = [...planned.files].filter(([file, source]) => input.get(file) !== source);
   const check = validate(planned.files);
   for (const [file, old] of input) {

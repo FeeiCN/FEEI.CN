@@ -10,6 +10,8 @@ content_type: regulation
 
 DORA（[Regulation (EU) 2022/2554](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554)）自2025年1月17日起适用。它把ICT风险治理、事件报告、韧性测试和第三方风险联系起来；不能仅准备一次渗透测试或一份供应商问卷即认为完成。
 
+[事件分类条例（EU）2024/1772：英中全文](#dora-1772-fulltext) · [第8条重大事件](#dora-1772-article-8) · [第9条分类阈值](#dora-1772-article-9)
+
 [事件报告配套条例（EU）2025/301：英中全文](#dora-301-fulltext) · [第5条报告期限](#dora-301-article-5)
 
 ## 先确认实体与适用范围
@@ -31,7 +33,11 @@ DORA（[Regulation (EU) 2022/2554](https://eur-lex.europa.eu/legal-content/EN/TX
 
 ## 重大ICT事件的报告时钟
 
-事件是否达到重大分类，应按DORA第18条及配套分类规则判断，不能以企业内部P1直接替代。以下时限依据[Delegated Regulation (EU) 2025/301第5条](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R0301)。
+事件是否达到重大分类，应按DORA第18条及[条例（EU）2024/1772第6、8、9条](https://eur-lex.europa.eu/eli/reg_del/2024/1772/oj/eng)判断，不能以企业内部P1直接替代。以下时限依据[Delegated Regulation (EU) 2025/301第5条](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R0301)。
+
+**先分类，再启动对应报告流程。** 2024/1772第8条第1款要求：事件已影响第6条所述关键服务，并且达到第9条第5款(b)项的特定恶意访问阈值，或达到第9条第1—6款中至少两项其他重大性阈值。同一分类标准内多个备选条件同时满足，不应重复计为两类阈值；具体比较符、分母和估算规则见[第9条对照](#dora-1772-article-9)。
+
+**重复事件单独评估。** 第8条第2款还要求对6个月内至少发生两次、具有相同表面根本原因、合并达到重大条件的事件进行判断，并按月评估重复事件。本款对微型企业和DORA第16条第1款所列金融实体有明确排除，不能把该排除扩展为整个事件报告制度的豁免。
 
 | 阶段 | 一般规则 | 起算点 |
 | --- | --- | --- |
@@ -57,10 +63,29 @@ DORA（[Regulation (EU) 2022/2554](https://eur-lex.europa.eu/legal-content/EN/TX
 
 建议保存实体适用判断、业务依赖图、风险控制、测试发现及复测、第三方登记、报告模板和一次完整事件演练。演练记录获知、分类、首报、中报、恢复、更新和最终报告对应的时间，检查主联系人不可达及渠道故障下的替代路径。
 
-[基础法规](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554) · [事件报告内容和时限](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R0301) · [GDPR并行义务](./GDPR.md)。本文不替代成员国主管机关的实施要求，也不声称完整收录全部配套技术标准。
+[基础法规](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554) · [事件分类与阈值](https://eur-lex.europa.eu/eli/reg_del/2024/1772/oj/eng) · [事件报告内容和时限](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R0301) · [GDPR并行义务](./GDPR.md)。本文不替代成员国主管机关的实施要求，也不声称完整收录全部配套技术标准。
+
+## 事件分类配套条例英中全文 {#dora-1772-fulltext}
+
+本节为Commission Delegated Regulation (EU) 2024/1772全文英中对照，包含制定依据、序言、全部正文和脚注。它回答如何分类及是否达到重大性阈值；下节2025/301回答报告内容与时限。中文均为非官方参考译文，解读与原文分开展示。
+
+| 阅读范围 | 直达入口 |
+| --- | --- |
+| 标题、制定依据和18段序言 | [制定依据](#dora-1772-preamble) · [序言](#dora-1772-recitals) |
+| 第一章：分类标准，第1—7条 | [客户、交易与影响](#dora-1772-chapter-i) |
+| 第二章：重大事件与阈值，第8—9条 | [重大事件](#dora-1772-article-8) · [阈值](#dora-1772-article-9) |
+| 第三章：重大网络威胁，第10条 | [威胁分类](#dora-1772-article-10) |
+| 第四章：机关间相关性与共享，第11—12条 | [跨成员国影响](#dora-1772-article-11) · [报告共享](#dora-1772-article-12) |
+| 第五章及其他原文信息 | [第13条生效](#dora-1772-article-13) · [签署](#dora-1772-signatures) · [脚注](#dora-1772-notes) |
+
+<!-- @include _DORA-2024-1772英中原文-序言.md -->
+
+<!-- @include _DORA-2024-1772英中原文-01.md -->
+
+<!-- @include _DORA-2024-1772英中原文-02.md -->
 
 ## 事件报告配套条例英中全文 {#dora-301-fulltext}
 
-下方按序言和条文分组折叠，保留英文原文与中文参考译文。这里收录的是Commission Delegated Regulation (EU) 2025/301，不代表DORA基础法规或其他配套法规已完成全文翻译。
+下方按序言和条文分组折叠，保留英文原文与中文参考译文。这里收录的是Commission Delegated Regulation (EU) 2025/301，规定事件报告内容和时限；事件分类和阈值见上节2024/1772。DORA基础法规及未列出的其他配套法规尚未在本文完整收录。
 
 <!-- @include _DORA-2025-301英中原文.md -->

@@ -5,7 +5,7 @@ sidebar_position: 6
 icon: brain-circuit-icon
 description: Agent 安全要用 Capability Envelope 限定一次运行可达的权限，再以 Action Envelope、逐次授权和资源侧执行约束每个真实副作用。
 content_type: article
-last_reviewed: '2026-07-11'
+last_reviewed: '2026-09-23'
 ---
 
 # Agent 与工具调用安全
@@ -37,6 +37,50 @@ last_reviewed: '2026-07-11'
 编码场景还要区分两类工作区。未信任工作区在用户确认前就可能通过配置加载、可执行文件搜索路径、插件或 MCP 配置触发代码；已信任工作区则可能通过 README、源码、Issue、终端输出或网页内容注入指令，再寻找沙箱逃逸、权限提示绕过、敏感文件覆盖和网络外传路径。`.git/hooks`、Agent 配置、工作区配置、Shell 启动文件和 MCP 注册信息都属于高敏感对象，写入它们的权限应独立于普通源码编辑。
 
 模型拒答和 API 护栏不能充当执行边界。白皮书明确把 Harness 视为阻止危险工具调用的最终强制点；攻击者可以把恶意动作伪装成正常构建步骤，也可能利用护栏制造拒答。[Shai-Hulud 样本的公开分析](https://mp.weixin.qq.com/s/AbVCdK35qAjUgIxQ6-2vHg)展示了后一种情况：恶意包在代码前放置会触发安全拒答的文本，试图让 AI 扫描器在分析混淆代码前停止。扫描系统必须把拒答、超时和空响应记为“未完成分析”，继续使用静态规则、沙箱或人工复核；任何非结论都不能自动转换成安全结论。
+
+## Soft Scope 不是安全边界，Hard Scope 才是
+
+告诉 Agent “只能访问这些域名”“不要访问互联网”“不要修改生产数据”，属于 **Soft Scope**：它影响模型计划，但仍依赖模型正确理解并愿意遵守。真正的 **Hard Scope** 必须由模型之外的系统强制执行，使越界动作即使被模型完整规划出来也无法落地。
+
+XBOW 在自主安全测试架构中给出的实践很直观：评估启动时锁定目标范围，运行过程中 Agent 没有扩大 Scope 的路径；所有出站流量经过 Egress Proxy，DNS 和目标 Allowlist 在模型外执行；目标域名内部还可以把 URL 标记为 `auth-only` 或 `blocked`。因此“可以访问登录页”与“可以攻击登录页”也能成为不同能力，而不是只靠 Prompt 解释。([XBOW](https://xbow.com/blog/autonomous-agent-safety-guardrails))
+
+这与 Capability Envelope 的原则一致：
+
+> **Policy should constrain capability, not cognition.**
+
+模型可以自由推理一个超范围方案，甚至可以判断某个第三方目标值得继续调查；真正执行时，DNS、网络、Tool Gateway、Credential Broker 和资源侧 PEP 仍只允许 Envelope 内的动作。这样安全性不依赖模型在 Prompt 与现实环境冲突时“选择相信 Prompt”。
+
+Hard Scope 也不能只有一层。网络 Allowlist 能阻止访问第三方域名，却无法区分同一域名上的密码重置与普通读取；Tool Gateway 能限制工具，却未必知道业务对象归属；业务资源 PEP 能判断对象权限，却无法限制容器读取本地敏感文件。因此 Scope 应沿网络、工具、凭证、资源和数据去向多层收窄，并让更靠近真实副作用的强制点拥有最终决定权。
+
+### Agent 不是事实来源
+
+XBOW 还把短生命周期 Attack Agent 的输出先写成 Debrief，只有经过 Adjudication 的内容才进入持久 Worldview。这个设计可以抽象成：
+
+```text
+Agent Proposal
+      ↓
+External Policy
+      ↓
+Execution
+      ↓
+Observation
+      ↓
+Adjudication / Verification
+      ↓
+Trusted State
+```
+
+**Observation ≠ Fact。** Agent 对响应的解释、工具返回的自然语言、另一个 Agent 的总结，都只是带来源的观察。共享事实库只能接收经过验证的状态；失败假设和不确定结论可以保留，但不能悄然升级为后续 Agent 的 Ground Truth。
+
+这对于多 Agent 系统尤其重要。一个短生命周期 Worker 可以大胆探索和犯错，只要错误不会直接污染持久状态。共享 Worldview 应保存原始证据引用、验证状态和裁决依据；后续 Agent 读取的是“已确认事实 + 明确标记的假设”，而不是前一个 Agent 自信的自然语言结论。
+
+### 是否继续也不应由 Agent 单独决定
+
+XBOW 还使用确定性健康监控观察目标可用性、认证状态和限流/WAF 状态；目标异常、账号锁定、Captcha、WAF 阻断或站点不可用时自动暂停。这里的关键不是具体信号，而是**停止条件属于运行系统，而不是任务 Agent 的自主判断**。
+
+Agent 可以建议“继续尝试”，但生命周期控制器应根据预算、授权、目标健康、账号状态和异常信号决定暂停、停止或转人工。对于高自主 Agent，能否可靠停止与能否正确行动同样重要。
+
+独立 Guardian Model 可以作为额外防线，对拟执行动作进行语义安全判断，但它仍是概率模型，不能替代 DNS、Allowlist、PEP、预算和确定性停止规则。更合理的分工是：**确定性控制守住不可违反的边界，独立模型处理难以完全编码的语义风险。**
 
 ## Capability Envelope 限定一次运行的最大权限
 

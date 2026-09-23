@@ -10,6 +10,8 @@ content_type: regulation
 
 DORA（[Regulation (EU) 2022/2554](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554)）自2025年1月17日起适用。它把ICT风险治理、事件报告、韧性测试和第三方风险联系起来；不能仅准备一次渗透测试或一份供应商问卷即认为完成。
 
+[事件报告配套条例（EU）2025/301：英中全文](#dora-301-fulltext) · [第5条报告期限](#dora-301-article-5)
+
 ## 先确认实体与适用范围
 
 第2条列明金融实体类型及排除情形，包括相应支付机构、电子货币机构等。某类支付业务在其他制度下获豁免，不等于自动豁免DORA；微型实体及适用简化框架的主体，也需核对具体条款，不能只按员工人数整体排除。
@@ -56,3 +58,9 @@ DORA（[Regulation (EU) 2022/2554](https://eur-lex.europa.eu/legal-content/EN/TX
 建议保存实体适用判断、业务依赖图、风险控制、测试发现及复测、第三方登记、报告模板和一次完整事件演练。演练记录获知、分类、首报、中报、恢复、更新和最终报告对应的时间，检查主联系人不可达及渠道故障下的替代路径。
 
 [基础法规](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554) · [事件报告内容和时限](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R0301) · [GDPR并行义务](./GDPR.md)。本文不替代成员国主管机关的实施要求，也不声称完整收录全部配套技术标准。
+
+## 事件报告配套条例英中全文 {#dora-301-fulltext}
+
+下方按序言和条文分组折叠，保留英文原文与中文参考译文。这里收录的是Commission Delegated Regulation (EU) 2025/301，不代表DORA基础法规或其他配套法规已完成全文翻译。
+
+<!-- @include _DORA-2025-301英中原文.md -->

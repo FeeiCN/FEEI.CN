@@ -363,6 +363,18 @@ AI 扩展候选与生成工具
 
 这样，AI 漏洞挖掘才从“用模型帮我找一次漏洞”，逐渐变成“每次研究都在训练下一次研究所使用的系统”。
 
+## 专家、模型、Harness 与工具共同决定发现能力
+
+AI 漏洞研究不能只比较模型。ret2p.lt 作者公开描述的 CVE-2026-28956 “Requiem” 是一个有代表性的个人案例：作者称该 libJPEGXL 漏洞由 Claude Code、少量修改后的 Jackalope 和 ImageIO Fuzzer 共同发现。这个案例能够证明的是一种实际研究组合，而不是单独证明某个模型具有自主发现同类 0day 的稳定能力。([ret2p.lt](https://ret2p.lt/2026/08/10/ai-vuln-research-future.html))
+
+更合理的能力表达是：
+
+> **Research Capability = Researcher Expertise × Model × Context × Harness × Tools × Validation**
+
+领域专家决定问题选择、异常是否值得追和结果意味着什么；模型扩大阅读、假设与推理规模；Context 提供历史漏洞、架构和目标知识；Harness 管理搜索、状态与预算；Fuzzer、Debugger、Browser 和静态分析器提供模型无法仅靠文本推理获得的真实信号；Validation 最终把候选变成可复核发现。
+
+这也解释了为什么同一个模型在不同研究者手中差异可能很大。AI 可以降低执行门槛，却不会自动补齐领域模型、实验设计和证据纪律。评估一个 AI 漏洞挖掘系统时，应冻结或至少记录上述变量，而不是把所有提升都归因于“换了更强模型”。
+
 ## 把专家经验变成可执行的 Security Skill
 
 开放式探索负责寻找未知问题，但成熟的漏洞发现系统不能只依赖模型临场发挥。Mandiant 在 2026 年公开的 Agentic Vulnerability Discovery Harness（AVDH）提供了另一条重要路径：把一线安全专家长期积累的经验提炼成模块化规则，并在分析过程中按目标技术栈和漏洞类型选择性注入。

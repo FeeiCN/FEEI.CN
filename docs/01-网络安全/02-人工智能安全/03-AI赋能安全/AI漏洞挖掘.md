@@ -290,6 +290,38 @@ Exchange 的 ProxyLogon 利用链提供了一个明确案例。DEVCORE 公布的
 
 一条成立的风险链，不是几个可疑点被连在一起，而是每一步都真实提供了下一步需要的能力，并最终突破了明确的安全边界。
 
+## 从安全承诺反推攻击面：新系统里的老漏洞
+
+AI 基础设施不一定需要“AI 特有漏洞”才能破坏其核心安全目标。Apple Private Cloud Compute 的 CVE-2026-20685 是一个很好的例子：研究者 Drinor Selmanaj 在 Apple 提供的 Virtual Research Environment 中发现，PCC 节点启动阶段的 `darwin-init` 在提取 Cryptex 归档时存在路径穿越，可在 root 权限下把文件写出预期目录。Apple 最终将其修复于 PCC 5E290.3，并支付 15 万美元漏洞赏金。([Sentry](https://blog.sentry.security/beyond-prompt-injection-hacking-apples-private-cloud-compute/))
+
+真正值得复用的不是“再检查一次 `../`”，而是研究者选择攻击面的方式。PCC 对外强调 **Stateless、Attested、Sealed Observability** 等安全与隐私保证。研究可以从这些承诺反向追问：
+
+> **为了让这个保证成立，哪些组件、状态和时间窗口必须始终满足什么条件？**
+
+在 PCC 中，`darwin-init` 是第一个 userspace 进程，以 root 身份完成节点 Provisioning，而稳态安全服务尚未全部启动。它恰好位于一个高杠杆窗口：**权限已经很高，安全不变量还没有完全建立。** 一个传统 Archive Extraction 缺陷因此能够影响远比“任意文件写”更大的系统保证。
+
+这种方法可以抽象成 **Guarantee-driven Attack Surface Mapping**：
+
+```text
+系统公开/设计的安全保证
+        ↓
+保证依赖的安全不变量
+        ↓
+谁负责建立这个不变量
+        ↓
+建立之前 / 转换期间 / 恢复期间有哪些窗口
+        ↓
+这些组件拥有什么权限与可写状态
+        ↓
+传统漏洞 Primitive 能否破坏该不变量
+```
+
+尤其应该优先检查 **Bootstrap、Provisioning、Upgrade、Recovery、Migration、Failover** 等状态转换阶段。稳态系统可能已经有完整 Sandbox、Attestation、Network Policy 和审计，但建立这些控制的组件本身往往拥有更高权限，而且运行在控制尚未完全生效的窗口。
+
+因此“新系统里的老漏洞”并不矛盾。Path Traversal、TOCTOU、Injection、Unsafe Deserialization、权限继承错误等传统 Primitive，只要出现在新的高权限控制点，就可能突破新的安全保证。研究重点应该从“这个漏洞类型新不新”，转向：
+
+> **这个 Primitive 出现在什么信任位置，它能够破坏哪个系统级不变量？**
+
 ## 不要平均搜索攻击面：优先寻找高杠杆控制点
 
 攻击面上的节点价值并不相同。普通用户功能、运营后台、内部管理 API、跨租户 Control Plane 和共享基础设施一旦失守，影响范围可能完全不同。漏洞挖掘系统如果平均分配搜索预算，很容易在大量低影响接口上消耗算力，却忽略少数能够控制大量资产、身份或下游系统的节点。

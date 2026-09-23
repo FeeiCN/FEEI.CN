@@ -1,0 +1,91 @@
+name: Compliance maintenance validation
+
+on:
+  push:
+    branches:
+      - fix/compliance-metadata-20260923
+    paths:
+      - scripts/maintain_compliance_docs.mjs
+      - scripts/test_compliance_docs.mjs
+      - .github/workflows/compliance-maintenance-once.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compliance-maintenance-once
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: github.repository == 'FeeiCN/FEEI.CN' && github.ref == 'refs/heads/fix/compliance-metadata-20260923'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the exact requested revision
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+      - name: Test migration safety
+        run: node --test scripts/test_compliance_docs.mjs
+      - name: Apply approved deterministic migration
+        run: |
+          set -euo pipefail
+          node scripts/maintain_compliance_docs.mjs --write | tee "$RUNNER_TEMP/compliance-migration.json"
+          node scripts/maintain_compliance_docs.mjs --check
+          node scripts/test_docs_quality.mjs
+          git diff --check
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate documents and TypeScript
+        run: |
+          set -euo pipefail
+          npm run check:docs -- --base=3fcba4559205ca0324284e0b274329e071311b95
+          npm run typecheck
+      - name: Strict site build
+        env:
+          CI_STRICT: 'true'
+          DOCUSAURUS_FASTER: 'true'
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: npm run build
+      - name: Commit only the migration output to this branch
+        env:
+          MIGRATION_REPORT: ${{ runner.temp }}/compliance-migration.json
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import {execFileSync} from 'node:child_process';
+          const report = JSON.parse(fs.readFileSync(process.env.MIGRATION_REPORT, 'utf8'));
+          const code = new Set(['scripts/check_docs_quality.mjs', 'scripts/check_docs_quality_gate.mjs', 'scripts/test_docs_quality.mjs', 'package.json']);
+          for (const file of report.changedFiles) {
+            if (file.startsWith('/') || file.split('/').includes('..')) throw new Error(`Unsafe path: ${file}`);
+            if (!file.startsWith('docs/') && !/\.mdx?$/.test(file) && !code.has(file)) throw new Error(`Unexpected change: ${file}`);
+          }
+          if (report.changedFiles.length) execFileSync('git', ['add', '--', ...report.changedFiles], {stdio: 'inherit'});
+          NODE
+          if git diff --cached --quiet; then
+            echo 'No migration changes.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'refactor(compliance): apply semantic types and repair navigation'
+          git push origin HEAD:refs/heads/fix/compliance-metadata-20260923
+          echo "Validated migration commit: $(git rev-parse HEAD)"
+      - name: Preserve validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-migration-report
+          path: ${{ runner.temp }}/compliance-migration.json
+          if-no-files-found: ignore
+          retention-days: 7

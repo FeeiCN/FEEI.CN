@@ -1,6 +1,10 @@
 ---
+slug: /platform-app-ai-compliance
 title: 平台App与AI
+icon: shield-check
 sidebar_position: 6
+description: 平台App与AI相关法律法规、监管要求与实施材料的治理域导航。
+content_type: hub
 ---
 
 # 平台App与AI

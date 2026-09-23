@@ -77,6 +77,48 @@ FEEI.CN 当前让 `AI.md` 作为 Agent 入口规则的单一来源，再生成 `
 
 示例仍然有价值，但应主要用于容易误解的边界行为，而不是替代接口设计。工具行为发生变化时，也只需要修改 Tool Contract，而不是寻找散落在多个 Prompt 中的调用范例。
 
+### 从“提示步骤”转向“定义授权与成功”
+
+OpenAI 的 GPT-5.6 官方 Guidance 与 Claude 5 的方向高度一致：模型对用户意图的理解增强后，通常不需要把每一步操作都写进 Prompt；更应该明确 **Domain Context、Hard Constraints、Approval Boundaries 和 Success Criteria**。OpenAI 也建议减少重复指令和示例，并通过代表性 Eval 验证精简后的 Prompt，而不是假定“越短越好”。([OpenAI GPT-5.6 Model Guidance](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.6))
+
+因此任务上下文可以进一步区分：
+
+```text
+Goal / Intent
+    ↓
+Relevant Context
+    ↓
+Hard Constraints
+    ↓
+Autonomy & Approval Boundary
+    ↓
+Required Evidence
+    ↓
+Success Criteria
+```
+
+其中最容易被忽略的是 **Autonomy Boundary**。只写“需要时先问我”会让 Agent 在安全的本地读取、编辑和测试上反复暂停；完全不写又可能让 Agent 把“修复代码”外推成 Push、Deploy 或外部写入。更好的方式是明确：哪些低风险、可回滚、任务范围内的动作可以连续执行，哪些外部、破坏性、付费或扩大 Scope 的动作必须停在 Authority Gate。
+
+这和前面的 Human-at-the-authority-boundary 是同一原则在 Prompt 层的实现：**Prompt 不负责微观遥控 Agent，而负责定义它的自主空间和停止边界。**
+
+### 按任务形状选择 Model Loop 还是 Program Loop
+
+GPT-5.6 的 Programmatic Tool Calling 又补充了一个重要的 Harness 设计判断：并非每一个工具步骤都需要模型重新思考。对于过滤、Join、排序、去重、聚合、格式校验等**有界且确定性的中间处理**，可以让程序一次处理多个工具结果；如果每个结果都可能改变下一步语义判断、需要审批或最终必须保留原生证据，则应回到模型直接调用。([OpenAI GPT-5.6 Model Guidance](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.6))
+
+可以把 Agent 执行拆成两种 Loop：
+
+> **Model Loop：Observation → Judgment → Action**
+
+> **Program Loop：Input → Deterministic Transform → Structured Output**
+
+设计时问的不是“能不能让 Agent 调这个工具”，而是：
+
+> **这一阶段是否真的需要新的模型判断？**
+
+如果不需要，就尽量下沉成程序、Schema、Query 或 Validator；如果需要，就保留 Model Loop，并让模型看到足够的原始证据。两者之间应有明确 Handoff，避免程序和模型重复完成同一工作。
+
+这进一步强化了 Harness 的职责：**让模型只处理需要判断的不确定性，把确定性尽可能固化成代码。**
+
 ### 定期偿还 Prompt Debt
 
 项目规则、Skill 和 Prompt 都应该像代码一样接受删除。模型升级、工具能力增强、测试补齐或 Harness 获得新的确定性控制后，旧的自然语言规则可能已经变成冗余约束。

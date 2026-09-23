@@ -110,6 +110,26 @@ GitLab 的 CVE-2021-22205 提供了一个典型案例。GitLab Workhorse 在文�
 
 这种方法也适用于 Request Smuggling、路径穿越、URL Parser Differential、反序列化和参数污染等问题，但不能看到“两个 Parser”就直接判定漏洞。必须继续证明：解释差异确实跨过了某项安全检查，并且下游解释能够到达敏感行为。
 
+WordPress 的 CVE-2026-65640 又提供了一个相近但更适合系统化搜索的实例。WordPress 官方公告确认，pwn.ai 团队报告了一个在使用 Imagick 与 Ghostscript 的站点上、需要 `upload_files` 能力（默认 Author+）的恶意文件上传 RCE。公开资料可以确认发现归属和利用前提，但不足以判断该漏洞具体由人还是 Agent、以及自动化程度，因此不应把它表述为“AI 自动发现的 0day”。([WordPress](https://wordpress.org/news/2026/08/wordpress-7-0-4-release/))([GitHub Advisory](https://github.com/WordPress/wordpress-develop/security/advisories/GHSA-8vr3-7mxf-gx8w))
+
+这个案例可以把 Interpretation Gap 进一步写成一个差集问题。设上游安全校验允许的语义集合为 **A**，下游通用 Parser / Processor 实际能够解释的集合为 **B**，值得重点寻找的是：
+
+> **能够通过 A 的校验，却在 B 中获得额外危险语义的输入。**
+
+因此可以定向枚举所有“安全校验后继续交给更强解释器”的边界，例如：
+
+```text
+Upload Validation  → Image / Document Processor
+MIME Validation    → Parser
+Archive Validation → Decompressor
+URL Validation     → HTTP Client
+Template Validation→ Renderer
+Document Validation→ Converter
+Source Validation  → Compiler / Interpreter
+```
+
+AI 不只需要比较扩展名和 Magic Bytes，而应提取上游校验实际约束的属性、下游解释器真正使用的属性，以及下游额外拥有的 Delegate、外部进程、网络、文件系统或代码执行能力。**下游解释能力越强于上游校验表达能力，这个边界越值得优先调查。**
+
 因此，跨组件分析除了问“上游保证了什么、下游相信什么”，还应该再问一句：
 
 > **安全检查看到的对象，和最终执行组件看到的对象，真的是同一个语义对象吗？**

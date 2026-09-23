@@ -1,6 +1,10 @@
 ---
+slug: /foundational-compliance
 title: 基础与综合
+icon: shield-check
 sidebar_position: 9
+description: 基础与综合相关法律法规、监管要求与实施材料的治理域导航。
+content_type: hub
 ---
 
 # 基础与综合

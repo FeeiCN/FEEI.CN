@@ -37,9 +37,6 @@ export function expandMarkdownIncludes(markdown: string, sourcePath?: string): s
     if (filename.includes('原文')) {
       return `<details>\n<summary>查看法规原文</summary>\n\n${included}\n\n</details>`;
     }
-    if (filename === '_合规检查通用方法.md') {
-      return `<details>\n<summary>查看通用合规检查方法</summary>\n\n${included}\n\n</details>`;
-    }
 
     return included;
   });

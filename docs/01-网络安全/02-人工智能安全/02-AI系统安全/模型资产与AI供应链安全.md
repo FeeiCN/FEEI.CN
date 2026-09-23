@@ -5,7 +5,7 @@ sidebar_position: 3
 icon: cpu-icon
 description: 生产模型身份是权重、Tokenizer、Adapter、量化、运行时、Prompt 与策略的组合承诺，并须绑定来源、评测和加载证明。
 content_type: article
-last_reviewed: '2026-07-11'
+last_reviewed: '2026-09-23'
 ---
 
 # 模型资产与 AI 供应链安全
@@ -137,6 +137,18 @@ release_digest: "sha256:<canonical-release-manifest>"
 **运行门。** 生产准入策略只接受签名有效、来源条件匹配、行为评测通过且已批准的 manifest。实例启动后回传实际加载摘要，网关只向匹配实例路由。这一机制不需要模型自报版本，证据由容器准入层、模型加载器和路由层共同产生。
 
 **托管 API 门。** 外部供应商不提供权重时，使用方无法校验真实权重摘要，运行时证明的强度会降低。此时发布身份记录供应商、产品版本 ID、端点、区域、组织配置和观测时间，再用固定 canary 任务、变更通知和持续回归发现行为变化。报告应如实标注“无法验证权重身份”，不用供应商品牌或一个版本名称补齐证据空缺。
+
+## Attestation 只能证明它覆盖的状态
+
+CVE-2026-20685 也说明，Attestation 的价值取决于**测量边界是否覆盖真正决定运行行为的状态**。研究者利用 root 文件写修改了 PCC 可写数据卷上的 `splunkloggingd` 配置，将推理相关遥测重定向到自己控制的端点；Sentry 报告指出，PCC 的 Attestation 主要证明安装的软件，而这类可写运行配置不在同一测量边界内。([Sentry](https://blog.sentry.security/beyond-prompt-injection-hacking-apples-private-cloud-compute/))
+
+这不是“Attestation 无效”，而是一个更精确的问题：
+
+> **Measured State ≠ Effective Runtime State 时，证明对象可能比真实执行语义更窄。**
+
+对 AI 基础设施也一样。仅证明模型镜像、权重或容器摘要，不代表能够证明实际行为没有被未测量的 Prompt、Config、Tool Endpoint、Credential、Writable Volume、Feature Flag 或运行时策略改变。
+
+因此设计 Attestation / Runtime Load Proof 时，应先枚举**哪些状态真正能够改变安全相关行为**，再明确哪些进入测量、哪些由其他强制控制保护、哪些仍然属于无法证明的残余风险。证明系统最危险的不是“没有覆盖一切”，而是把一个有限范围的证明解释成了更强的整体安全保证。
 
 ## 指标要检查证据是否闭合
 

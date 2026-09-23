@@ -134,6 +134,22 @@ AVDH 还把 Benchmark 当成 Harness 的组成部分，而不是上线后的附�
 
 本页只定义架构分工：模型提出动作，模型外系统授权，受限执行器执行并记录副作用。上下文信任、能力包络、凭证与逐次授权的具体机制，统一引用 [Agent 与工具调用安全](../02-AI系统安全/Agent与工具调用安全.md)和[大模型应用安全](../02-AI系统安全/大模型应用安全.md)，不在攻防文章里复制一套控制清单。
 
+### Browser Harness：稳定的真实状态比“会点网页”更重要
+
+让 Agent 通过 CDP 或 Playwright 控制浏览器并不难，难的是让浏览器在真实注册、认证、风控和长时间研究中持续提供可信观察。Marius du Preez 公开的 AI Bug Bounty Browser Stack 提供了一个很完整的工程案例：长期持久化 Chrome Profile、固定出口与地理属性、独立流量捕获、人工原地接管，以及在 Browser 与 API 测试之间动态切换。
+
+**持久身份。** 每个 Profile 保留 Cookie、LocalStorage、登录状态、Consent、Challenge Cookie 和正常浏览历史，而不是每次创建干净 Session。账号、出口 IP、国家、时区和浏览器存储保持一致，使一次研究能够跨多轮运行继续，而不是不断重新触发注册和风控。
+
+**Browser 负责建立真实上下文，脚本负责规模化验证。** Agent 可以先通过真实 UI 注册、登录并执行一次正常业务操作，捕获产品真正产生的 OAuth Redirect、Token Refresh、GraphQL、Multipart Upload、Presigned Storage、CSRF 和 Service Worker 流量。一旦得到有效请求，IDOR Matrix、参数变异、Mass Assignment、Injection 和 Race 等高频测试可以转到 HTTP Client 或脚本；只有依赖 SPA、Service Worker、动态页面状态的请求继续留在 Browser Context 中。
+
+**人工接管不能破坏状态连续性。** MFA、跨源 iframe、复杂 Consent 或其他需要人工判断的节点，可以把同一个 Browser Profile 暂时交给人处理。完成后 Agent 继续使用原账号、IP、Cookie、Tab 和认证状态。Human-in-the-loop 因此不是“失败后重新开始”，而是运行时的一种状态保持型控制转移。
+
+**Profile 必须有明确所有权。** 浏览器状态不是无状态算力。多个 Agent 同时驱动同一个 Profile，会混合 Cookie、Storage、账号状态和 Traffic Evidence。Profile 应租给明确的 Target、Research Cycle、Role 和 Agent，生命周期管理器记录 Owner、启动状态、崩溃恢复与释放。
+
+**流量证据也要隔离。** 每个 Profile 的请求捕获、代理和 Flow 文件应能关联到唯一研究上下文。需要原生 TLS 指纹时，可以牺牲 MITM 可见性改走透明/转发模式，但必须把“本次没有完整流量证据”作为 Provenance 的一部分，而不是假装观测能力没有变化。
+
+这类 Browser Harness 的目的不是伪装成普通用户，而是让授权测试中的账号、网络、浏览器状态和证据具有连续性与可解释性。具体 CAPTCHA、代理或反自动化机制的处理必须服从测试授权和目标规则，不能因为技术上可绕过就自动获得执行权限。
+
 ### 环境感知
 
 403 可能来自权限不足或防护拦截，500 可能是普通业务异常，200 也可能是统一错误页。环境观察需要与请求、账号、会话和业务状态关联。

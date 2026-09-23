@@ -42,6 +42,36 @@ sidebar_badge:
 2. **单位需求必要的人工介入、角色交接次数减少50%**：在原有的职责分工下，一个需求要涉及大量的角色和人员，就算每个人的效率都起来了，协同成本也非常高。我们希望能够按照理想状态去设计整个工作流程甚至角色分工。
 3. **核心人员AI提效覆盖率100%**：这是一个从下到上的逻辑，我们希望每个人都能够真的把AI应用在自己的实际工作流过程中。
 
+## 4. 从 Human-in-the-loop 到 Human-at-the-authority-boundary
+
+当 Agent 能够持续读取上下文、调查问题、验证结果和与其他 Agent 协作后，组织协作的基本单位可能从单独的 **Person** 逐渐变成 **Person + Agent**。Raft 在《[Don't talk to me, talk to my agents](https://x.com/raft_hq/status/2080263093808939041)》中展示了一种跨公司形态：双方的人和 Agent 进入同一个 Joint Channel，只共享当前任务需要的成员、上下文和能力，而不是把整个 Workspace 或公司账号开放给对方。
+
+这种设计可以抽象成：
+
+> **特定任务 + 特定人员 + 特定 Agent + 特定 Context + 特定 Capability**
+
+跨组织协作的关键不是“让两个 Agent 都能看到更多”，而是建立一个双方都能理解和撤销的最小共享边界。各自的历史、私有资源、其他权限和内部记忆仍然留在本地；Agent 的自主程度也由拥有它的一方决定。
+
+更重要的变化是人的位置。传统 Human-in-the-loop 容易被实现成“Agent 每做一步都等人确认”，最终把人的审批变成新的串行瓶颈。更合理的组织设计是 **Human at the Authority Boundary**：
+
+```text
+Agent 调查 / 搜索 / 分析 / 验证 / 协作
+                    ↓
+             Authority Gate
+                    ↓
+Human：生产变更 / 凭证 / 政策 / 架构 / 最终承诺
+                    ↓
+Agent 继续执行、验证和同步
+```
+
+是否需要人工，不由“这是第几步”决定，而由这一步是否改变责任、权限、资金、生产状态、外部承诺或其他不可逆后果决定。低风险、可回滚、可验证的工作可以持续由 Agent 推进；跨越 Authority Boundary 时才升级给拥有责任的人。
+
+因此组织 AI 化的终态不只是“每个人有一个 Copilot”，而可能是：
+
+> **Person + Agent → Agent-native Collaboration → Human at Authority Boundaries**
+
+这也会改变协作接口。未来一个团队对外提供的不一定只是联系人、文档和工单入口，也可能包括受控的专业 Agent：它携带该团队允许共享的知识和能力，直接处理高频调查与协作；人集中处理例外、判断和责任边界。
+
 ## 4. 提效不是最大化 AI 使用量
 
 AI 能同时启动更多 Agent，并不意味着人应该同时推进更多事情。Brent Fitzgerald 在《[The human is the loop](https://brentfitzgerald.com/posts/the-human-is-the-loop/)》中把一种常见反模式称为“生产力衔尾蛇”：为了提高生产力不断增加 Agent、自动化和并行任务，最后又花大量注意力管理这些工具和半成品，工具使用本身反而成为新的工作。

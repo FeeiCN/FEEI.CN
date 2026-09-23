@@ -2,7 +2,7 @@
 slug: /harness-engineering
 title: Harness 工程
 icon: gear-icon
-description: 仓库 Harness 的实现参考：用任务契约、隔离工作区、权威状态、命令审计、验证 Gate 和检查点约束 Agent 修改。
+description: 从 Identity、Work Object、Capability、State、Gate、Recovery 定义 Harness 控制面，并以仓库任务展示隔离执行、验证与恢复的实现参考。
 content_type: reference
 last_reviewed: '2026-09-23'
 ---
@@ -17,7 +17,42 @@ Harness 是包在模型外面的执行环境。它接收模型提出的行动请
 
 本文从行动请求进入宿主程序开始，只处理仓库环境和外部控制。模型如何选择下一步行动属于 [Agent 架构基础](/agent-architecture) 的范围。
 
-## 运行目录与前置条件
+## Harness Architecture：先定义模型外的控制面
+
+Harness 的核心不是某一种 Worktree 或命令执行方式，而是把模型不能自行决定的控制放在模型之外。一套完整 Harness 至少要回答六件事：
+
+| 控制面 | 要回答的问题 |
+|---|---|
+| **Identity** | 谁在行动？哪个 Human / Agent / Model / Delegation 对应这次运行？ |
+| **Work Object** | 这次工作属于哪个任务，相关 Context、Patch、CI、Review、Approval 如何关联？ |
+| **Capability** | Agent 能读什么、写什么、调用什么，哪些动作需要额外授权？ |
+| **State & Evidence** | 哪些是模型观察，哪些是宿主确认的权威状态，证据如何引用？ |
+| **Gate** | 什么条件满足后才能进入下一阶段或宣布成功？ |
+| **Recovery** | 中断、超时、部分副作用和失败后从哪里恢复，如何避免重复执行？ |
+
+可以把运行关系压缩为：
+
+```text
+Human / Team
+    ↓ delegation
+Agent Identity ──→ Work Object
+    ↓ request          ↑ events / evidence
+Capability Check → Execute → Validate → Gate
+                         ↓
+                 Authoritative State
+                         ↓
+                 Checkpoint / Recovery
+```
+
+模型负责提出下一步行动和解释观察；Harness 负责身份、授权、执行、证据、状态和终止。模型能力升级可以减少 Capability Scaffold，但不能自动取消这些 Safety / Assurance Control。
+
+下面先说明 Work Object、Event Log 和 Agent Identity，再用一个仓库修改任务展示这套架构如何落地。
+
+## Repository Harness Reference：把架构落到真实仓库
+
+下面继续使用登录回跳 Bug 作为贯穿案例。Git Worktree、命令 Allowlist、Diff、Test 和 Checkpoint 都只是上述 Architecture 在代码仓库中的一种实现；其他环境可以替换执行器，但仍应保留相同的身份、能力、状态、Gate 和恢复语义。
+
+### 运行目录与前置条件
 
 一套符合本文约束的实现，应为一次运行创建两个彼此分开的目录：
 
@@ -109,7 +144,7 @@ Agent Identity 不意味着 Agent 获得与人完全相同的权限。它的 Cap
 
 这种结构也降低对单一 Agent Vendor 的绑定。Work Object、Event Log、权限和证据由组织自己的 Harness 持有，Claude、Codex、Goose 或后续模型只是可以替换的参与者。**组织记忆属于工作系统，而不是属于某个模型的聊天窗口。**
 
-## 写下任务契约
+### 写下任务契约
 
 任务契约先固定目标、修改范围、命令和完成标准。下面是一份最小示例：
 
@@ -150,7 +185,7 @@ completion:
 
 契约在运行期间由 Harness 持有，模型只能读取。如果测试命令不存在、完成标准需要调整或任务必须修改其他目录，Harness 将运行置为 `blocked`，由人更新契约版本后再继续。模型不能通过修改 `task.yaml` 为自己扩大范围。
 
-## 创建隔离工作区
+### 创建隔离工作区
 
 从已知基线 commit 创建独立 worktree，不让 Agent 直接使用开发者正在工作的目录：
 
@@ -172,7 +207,7 @@ npm test -- tests/auth
 
 Worktree 隔离了当前开发目录和其他任务的文件变化，但不构成安全沙箱。宿主仍要限制进程权限、网络、可见凭证、可执行命令和真实写入路径。
 
-## 建立权威状态与命令记录
+### 建立权威状态与命令记录
 
 `state.json` 只保存恢复和判定所需的当前事实，不把整段聊天或完整日志塞进去：
 
@@ -209,7 +244,7 @@ Worktree 隔离了当前开发目录和其他任务的文件变化，但不构�
 
 日志采用追加写，状态通过 `command_id` 引用证据。命令输出进入系统时仍是未验证观察：其中的文本不能修改任务目标或权限。Harness 需要确认命令来自允许目录、参数与契约相符、进程已经结束、退出码可解释，再更新对应 Gate。任意命令返回 `0` 都不能直接证明整个任务完成。
 
-## 执行受限修改
+### 执行受限修改
 
 模型提出的结构化请求可以类似这样：
 
@@ -230,7 +265,7 @@ Worktree 隔离了当前开发目录和其他任务的文件变化，但不构�
 
 测试进程也可能生成快照、覆盖率或缓存文件。它们需要写入 Harness 单独允许的临时目录，或在 Gate 中被识别并清理；不能因为写入者是测试命令就跳过路径检查。
 
-## 用测试与差异守住 Gate
+### 用测试与差异守住 Gate
 
 修复后的验证命令按从局部到整体的顺序运行：
 
@@ -258,7 +293,7 @@ git diff "$BASE_SHA" -- src/auth tests/auth
 
 测试和 diff 是外部验证。模型声称“已经修好”、工具返回“写入成功”或代码看起来合理，都不能替代这些 Gate。任何必需 Gate 失败时，权威状态保持 `active`、`blocked` 或 `interrupted`，不能进入 `succeeded`。
 
-## 保存检查点并处理中断
+### 保存检查点并处理中断
 
 至少在三个位置保存检查点：基线验证后、回归测试稳定复现后、全部 Gate 通过后。检查点应包含当前 Git commit、`state.json` 快照、命令日志位置和关键制品校验值。
 
@@ -291,7 +326,7 @@ git status --porcelain=v1
 
 恢复依据是检查点和权威状态，聊天摘要只能帮助导航。中断前尚未通过 Gate 的修改可以保留供人工参考，不能直接升级为已确认事实。如果命令超时且可能留下运行中的进程或外部副作用，应先查明实际状态，再决定重试。
 
-## 故障排查与成功标准
+### 故障排查与成功标准
 
 常见阻塞应保持明确状态：
 

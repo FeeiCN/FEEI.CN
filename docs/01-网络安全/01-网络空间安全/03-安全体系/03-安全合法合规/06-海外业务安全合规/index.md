@@ -1,6 +1,10 @@
 ---
+slug: /overseas-business-compliance
 title: 海外业务安全合规
+icon: shield-check
 sidebar_position: 7
+description: 海外业务安全合规相关法律法规、监管要求与实施材料的治理域导航。
+content_type: hub
 ---
 
 # 海外业务安全合规

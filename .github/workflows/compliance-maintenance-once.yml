@@ -2,8 +2,7 @@ name: Compliance maintenance validation
 
 on:
   push:
-    branches:
-      - fix/compliance-metadata-20260923
+    branches: [fix/compliance-metadata-20260923]
     paths:
       - scripts/maintain_compliance_docs.mjs
       - scripts/test_compliance_docs.mjs
@@ -43,7 +42,7 @@ jobs:
           import fs from 'node:fs';
           import path from 'node:path';
           import {execFileSync} from 'node:child_process';
-          import {proseOnly, field} from './scripts/maintain_compliance_docs.mjs';
+          import {proseOnly, field, ROOT} from './scripts/maintain_compliance_docs.mjs';
           const ai = 'docs/01-网络安全/02-人工智能安全';
           const groups = {
             '02-AI系统安全': [
@@ -130,7 +129,11 @@ jobs:
               fs.writeFileSync(file, next); changed.add(file);
             }
           }
-          // The persistent gate must validate, not reapply historical migration patches.
+          const reference = `${ROOT}/04-支付与金融安全/_人民银行网络安全事件报告管理办法原文.md`;
+          const previous = fs.readFileSync(reference, 'utf8');
+          const corrected = previous.replace('[配合检查与验收准备](#test-rules)', '[第二十六条原文](#law-26)');
+          if (corrected !== previous) { fs.writeFileSync(reference, corrected); changed.add(reference); }
+          // The persistent gate validates without reapplying historical migrations.
           const script = 'scripts/maintain_compliance_docs.mjs';
           const original = fs.readFileSync(script, 'utf8');
           const next = original.replace('const planned = planChanges(input);',
@@ -175,7 +178,11 @@ jobs:
             if (file.startsWith('/') || file.split('/').includes('..')) throw new Error(`Unsafe path: ${file}`);
             if (!file.startsWith('docs/') && !code.has(file)) throw new Error(`Unexpected change: ${file}`);
           }
-          if (changed.length) execFileSync('git', ['add', '-A', '--', ...changed], {stdio: 'inherit'});
+          // Deleted source paths were staged with the renames above. Do not add them twice.
+          const existing = changed.filter((file) => fs.existsSync(file));
+          if (existing.length) execFileSync('git', ['add', '--', ...existing], {stdio: 'inherit'});
+          const staged = execFileSync('git', ['diff', '--cached', '--name-only', '--no-renames', '-z'], {encoding: 'utf8'}).split('\0').filter(Boolean);
+          if (staged.some((file) => !changed.includes(file))) throw new Error('Unexpected staged file');
           NODE
           if git diff --cached --quiet; then
             echo 'No migration changes.'

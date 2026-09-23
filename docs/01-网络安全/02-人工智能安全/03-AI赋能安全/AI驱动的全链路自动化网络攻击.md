@@ -48,6 +48,50 @@ content_type: article
 
 事实库保存原始证据引用、来源、时间、版本和验证状态。推断可以写入，但不得在后续步骤中悄然升级为事实。失败路径同样保留，避免重复消耗预算，也便于追查误判从哪一步开始。
 
+## 一条可复用的源码漏洞发现 Pipeline
+
+Mandiant 公开的 AVDH 是一个值得参考的点时源码审计架构。它没有让多个 Agent 自由讨论，而是用确定性的 Harness 把不同职责串成顺序 Pipeline，并在关键位置设置人工 Gate：
+
+```text
+环境与代码上下文
+      ↓
+Threat Modeling
+      ↓ 人工确认威胁模型
+Entry Point Discovery
+      ↓
+Context Enrichment
+      ↓
+Hypothesis Generation
+      ↓ Confidence Filter
+Independent Validation
+      ↓
+Validation Synthesis
+      ↓
+去重 / 风险评级
+      ↓
+人工动态 PoC 验证
+```
+
+**Threat Modeling** 先建立目标的安全语义。Explorer Agent 判断软件类型、读取文档、排除无关目录，再让 Specialist Explorer 分析认证、授权、路由等领域，最后合成威胁模型。这里的关键不是生成一张漂亮架构图，而是先回答攻击向量、业务逻辑、权限和可达性，否则后续代码分析容易失去安全上下文。
+
+**Entry Point Discovery** 追求广覆盖。Mandiant 使用较轻量模型并行扫描范围内文件，提取 HTTP Route、IPC Listener 等入口及其中的用户输入 Source。这与“Breadth 用便宜模型”的搜索预算策略一致：先把攻击面覆盖完整，再把昂贵推理留给少量候选。
+
+**Context Enrichment** 解决“单看入口不够”的问题。每个入口由独立 Agent 沿代码继续收集 Sanitizer、权限、路由条件和多层函数调用，把与该入口真正相关的代码聚合起来，再决定进入 Access Control、Data Flow 或两条分析路径。
+
+**Hypothesis Generation** 刻意偏向 Recall。Access Control Agent 检查身份、授权和保护假设，Data Flow Agent 跟踪用户输入到危险 Sink；这一阶段只做有限自验证，让 Agent 尽可能提出候选，再通过 Confidence Filter 控制数量。这种设计把“创造性找线索”和“严谨确认漏洞”分开，避免同一个 Agent 因过早自我否定而漏掉候选。
+
+**Hypothesis Validation** 则转向怀疑式验证。AVDH 为同一假设启动多个 Validation Agent，再由 Synthesis Agent 汇总冲突证据，将结果区分为 Confirmed、Disproven 和 Rejected。模型间一致并不等于真实漏洞，因此随后仍由专家在动态环境中执行 PoC，确认模型假设成立且不存在未观察到的补偿控制；无法通过动态验证的结果被丢弃。
+
+这套 Pipeline 最值得借鉴的不是具体 Agent 数量，而是几个分离原则：**Recon 与深挖分离、假设生成与验证分离、模型判断与动态证据分离、自动化与人工责任分离。**
+
+### 评测必须防止记忆、过拟合和 Judge 偏差
+
+AVDH 还把 Benchmark 当成 Harness 的组成部分，而不是上线后的附加报表。Mandiant 指出，公开漏洞仓库可能已经进入前沿模型训练数据，因此仅用公开 CVE 复现很难区分“真正推理”与“记住答案”。他们使用跨 Domain、语言、漏洞深度和架构的私有合成代码库，并由安全专家确认植入漏洞真实可达、可以动态利用。
+
+评分阶段要求发现精确对应 Ground Truth，而不是只做宽松语义相似；额外流程处理 False Positive 和 Duplicate，最后仍由人工检查 AI Grader。重大 Harness 版本在多个领域和架构上重复测试，以降低模型非确定性造成的偶然波动。
+
+因此 Agent 漏洞发现的持续优化至少要同时防四类问题：**训练数据污染、针对 Benchmark 过拟合、重复发现虚增指标、AI Judge 自己误判。** Prompt、Skill 或规则每次更新，都应该在目标样本和保留集上比较，并明确是否引入质量回归。
+
 ## 真正技术上的难题
 
 以下问题相互关联，不宜按“模型问题”与“纯工程问题”简单切开。研究能力、领域知识与系统实现都可能决定最终效果。

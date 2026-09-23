@@ -3,7 +3,7 @@ slug: /ai-coding
 icon: code-xml-icon
 description: AI Coding 的交付物应是范围受限、经过测试且可审查的补丁；任务契约、仓库上下文和外部验证决定协作质量。
 content_type: tutorial
-last_reviewed: '2026-07-10'
+last_reviewed: '2026-09-23'
 ---
 
 # AI Coding
@@ -44,6 +44,52 @@ AI Coding 的目标是让模型在真实仓库中产生**可运行、可验证�
 - 完成前必须通过的质量门。
 
 规则文件只保留跨任务稳定的约定。当前 Bug 的临时细节放在任务描述中，大日志和大文件按需读取，避免一次把整个仓库塞进上下文。详见[上下文工程](/context-engineering)。
+
+## 上下文工程：Invariant → Routing → Knowledge
+
+随着模型判断能力提高，项目上下文不应只增不减。Thariq 在总结 Claude Code 新一代模型实践时披露，Anthropic 对部分新模型删除了 Claude Code System Prompt 中超过 80% 的内容，而其编码评测没有观察到可测量损失。这是特定产品和模型上的内部结果，不能直接外推为“Prompt 越短越好”；更值得复用的是：**定期验证历史约束是否仍然必要。**([Thariq](https://x.com/trq212/status/2080710971228918066))
+
+仓库级上下文可以分成三层：
+
+```text
+Invariant
+   ↓
+Routing
+   ↓
+Knowledge / Skill / Reference
+```
+
+**Invariant** 只保存跨任务稳定且必须始终成立的硬约束，例如禁止修改生成物、必须执行的质量门、明确的安全和权限边界。能由测试、Lint、权限系统或 Harness 强制的规则，优先放进机器控制，而不是反复写成自然语言。
+
+**Routing** 告诉 Agent “遇到什么任务去哪里找”，不复制知识本身。例如文档维护读取写作 Skill，前端任务读取设计约定，发布任务读取 Release Checklist。根规则文件因此可以保持很轻。
+
+**Knowledge / Skill / Reference** 保存真正的领域知识、复杂流程、Rubric、测试、设计稿和实现参考，并按任务渐进加载。详细内容不因为“未来也许有用”就全部预置进 Context。
+
+这也意味着 **Context Duplication 是一种技术债**。同一规则如果同时存在于 System Prompt、`AGENTS.md`、`CLAUDE.md`、Skill 和 Tool Description，迟早会出现版本漂移和冲突。更稳的原则是：
+
+> **One rule, one owner; reference it elsewhere.**
+
+FEEI.CN 当前让 `AI.md` 作为 Agent 入口规则的单一来源，再生成 `AGENTS.md` 与 `CLAUDE.md`，就是这种做法；更细的任务知识通过路由进入独立 Skill，而不是复制到三个入口文件。
+
+### Interface 比示例更值得长期维护
+
+旧模型经常需要大量 Tool Call 示例；模型能力提高后，示例有时反而会把探索限制在示例覆盖的路径里。工具应该优先通过 Schema 表达语义：清晰的参数名、枚举、前置条件、返回状态和错误类型，让 Agent 能从接口本身理解可做什么。
+
+示例仍然有价值，但应主要用于容易误解的边界行为，而不是替代接口设计。工具行为发生变化时，也只需要修改 Tool Contract，而不是寻找散落在多个 Prompt 中的调用范例。
+
+### 定期偿还 Prompt Debt
+
+项目规则、Skill 和 Prompt 都应该像代码一样接受删除。模型升级、工具能力增强、测试补齐或 Harness 获得新的确定性控制后，旧的自然语言规则可能已经变成冗余约束。
+
+可以周期性检查：
+
+- 这条规则仍然防止真实失败吗？
+- 是否已经由测试、Schema、权限或工具本身保证？
+- 是否与另一处规则重复或冲突？
+- 删除后 Eval 是否退化？
+- 它属于全局 Invariant，还是应该下沉到特定 Skill？
+
+上下文优化因此不是“把 Prompt 写得越来越完整”，而是持续寻找**完成同样任务所需的最小充分上下文**。
 
 ## 小步修改并持续验证
 

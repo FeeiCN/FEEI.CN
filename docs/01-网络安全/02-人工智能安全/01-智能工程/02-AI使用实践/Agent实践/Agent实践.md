@@ -56,6 +56,7 @@ Agent 会围绕目标反复读取环境、提出行动、获得观察并调整�
 
 ## 按当前问题继续阅读
 
+- **需要让 Agent 根据真实反馈持续变好**：阅读 [Agent 优化](/agent-optimization)，把 Eval、人类反馈、错误归因和 Skill/Harness 更新组成可审计的改进闭环。
 - **需要设计跨层循环、停止条件与预算**：阅读 [Loop 工程](/agent-loop-engineering)，区分执行、任务、产品与系统循环的对象和出口。
 - **根因未知，需要边观察边决定**：从 [ReAct 模式](/react-agent-loop) 开始，理解最小行动循环和停止条件。
 - **任务步骤多、有依赖，计划还可能变化**：阅读 [Plan-and-Execute 模式](/plan-and-execute-loop)，为每步增加依赖、`done_when` 和 Replan 预算。

@@ -1,6 +1,10 @@
 ---
+slug: /industry-compliance
 title: 行业专项
+icon: shield-check
 sidebar_position: 8
+description: 行业专项相关法律法规、监管要求与实施材料的治理域导航。
+content_type: hub
 ---
 
 # 行业专项

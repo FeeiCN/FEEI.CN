@@ -60,6 +60,41 @@ Agent 提议行动 -> Harness 执行 -> 环境返回观察
 
 先用少量真实任务试运行，再扩大并发和频率。一个执行循环能启动数百个 Agent，不代表任务值得这样处理。触发频率应匹配外部状态的变化速度，模型档位应匹配任务难度，确定性的解析、排序、去重和格式转换交给脚本。
 
+## 从 Pipeline 到 Hypothesis-driven State Machine
+
+固定 Pipeline 适合步骤稳定、分支少、失败语义明确的任务；探索型任务更适合带回边的状态机。Black cat 红队 Skill 提供了一个有代表性的实现：不把 Recon、Enumerate、Validate 当成只能向前推进的阶段，而允许新观察、验证失败和假设证伪把系统重新带回前面的搜索状态。([GitHub](https://github.com/0rangec3t/Black-cat))
+
+可以把这种 Loop 写得更严格：
+
+```text
+Observe
+  ↓
+Hypothesize
+  ↓
+Test
+  ↓
+Update Belief
+  ↓
+Re-plan
+  └──────────────↺
+```
+
+这里最重要的是 **Update Belief**。测试失败只说明当前证据削弱了某个假设，不能自动证明另一个假设成立。例如“没有发现 SQL Injection”并不能推出“目标使用 ORM”，更不能直接推出“存在 Mass Assignment”。正确做法是记录失败证据，调整候选假设优先级，再为新的解释寻找独立证据。
+
+运行时可以把 Hypothesis 管理为三个基本状态：
+
+- **Active**：当前仍值得投入验证预算。
+- **Confirmed**：已经满足预先定义的证据门槛。
+- **Killed**：当前关键前提被证伪，停止继续消耗预算。
+
+Killed 不等于删除。应同时保存 **为什么被证伪、依赖了什么证据、什么环境变化后值得重新激活**。这样失败路径既能避免重复搜索，也能在代码、配置、权限或环境变化后重新进入 Active。
+
+Black cat 的另外几个结构也适合泛化到探索型 Agent：用单一 Tracker 保存当前任务状态；用 Decision Log 记录关键分叉的选择与理由；证据按 Observation → Reproduction → Impact 关联；按当前假设显式加载少量相关 Skill，而不是把所有 Technique 一次塞入上下文。对于会产生临时资源或副作用的任务，还应维护 Cleanup Ledger，并由宿主在结束时检查未清理项。
+
+因此 Loop 的核心不是“重复执行直到成功”，而是：
+
+> **每轮都必须产生新的证据、改变假设置信或改变下一步搜索策略；如果状态没有实质变化，就应该停止或升级，而不是继续循环。**
+
 ## 契约决定每轮能否收敛
 
 GPT-5.6 的[官方提示词指南](https://developers.openai.com/api/docs/guides/prompt-guidance-gpt-5p6)建议优先写结果、关键约束、可用证据和完成门槛，再让模型选择路径。官方内部样本中，精简重复指令改善了部分编码评测并降低了 Token，但这些数字只代表该组实验；迁移现有 Prompt 时仍要逐项删除、逐项复测。

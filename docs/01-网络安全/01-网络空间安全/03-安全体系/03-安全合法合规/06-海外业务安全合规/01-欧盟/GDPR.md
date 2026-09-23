@@ -10,6 +10,8 @@ content_type: regulation
 
 GDPR应按处理活动和角色判断。主体在欧盟外、服务器在其他地区，都不足以直接排除适用；仅因网站能从欧盟访问，也不能直接认定全部业务适用。本文依据[Regulation (EU) 2016/679正式文本](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679)，以下工程流程与测试为实施建议。
 
+[第1—99条正文英中对照](#gdpr-articles-fulltext) · [第32条处理安全](#gdpr-article-32) · [第33条事件通知](#gdpr-article-33) · [第83条行政罚款](#gdpr-article-83)
+
 ## 先判断地域与角色
 
 第3条包括欧盟内机构活动背景下的数据处理，以及境外主体向欧盟境内个人提供商品服务、监测其在欧盟境内行为等场景。不是只保护欧盟公民，也不是只看数据中心位置。
@@ -64,3 +66,58 @@ GDPR应按处理活动和角色判断。主体在欧盟外、服务器在其他�
 建议以一次用户请求穿行：前端数据、业务库、日志、处理者、境外支持和备份分别保存什么；调用依据是什么；用户行权如何执行；发生泄露谁何时获知并报告。验收保留事实和范围，不用“供应商有ISO证书”代替上述控制。
 
 [官方完整文本及版本信息](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679) · [欧盟业务入口](./index.md)。成员国补充规则、主管机构及具体案件解释仍需单独核对。
+
+## 第1—99条正文英中对照 {#gdpr-articles-fulltext}
+
+**收录范围。** 下方收录GDPR第I—XI章、第1—99条的英文正文与中文参考译文，以及结束语、签署信息和正文引用的脚注19—21。每条均保留款项、条件和例外，按条折叠。**制定依据和序言暂未收录，因此这里是条文正文对照，不是包含序言的整部法规全文。**
+
+**版本与效力。** 英文绑定2016年5月4日《欧盟官方公报》L 119公布文本，即[CELEX 32016R0679](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679)。仅调整空格、换行、列表及脚注链接；保留该公布文本的原有措辞，不将后续勘误或其他版本混入原文。中文为本站AI辅助制作的**非官方参考译文**，未经主管机关或法律专业人员审定，不具有法律效力。实际适用应另行核对官方版本、勘误、成员国规则及相关解释。
+
+**版本查询。** [EUR-Lex整合文本及版本信息](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504)与[欧洲数据保护委员会法律框架入口](https://www.edpb.europa.eu/about-edpb/legal-framework_en)用于继续核对整合文本和勘误。条文中的历史日期及对其他法律文件的引用按公布文本保留，不等于确认所引用文件截至当前仍未变化。
+
+**术语说明。** personal data breach译为“个人数据泄露事件”，范围按第4条第12项，包括毁损、丢失、变更、未授权披露或访问，不限于向外泄露。pseudonymisation译为“假名化”，不等于匿名化。Board为欧洲数据保护委员会，Commission为欧盟委员会；第93条的committee为实施程序中的委员会，三者不混用。下方中文为各条英文的对应译文，页面导航与本段说明均不属于法规原文。
+
+**来源与使用。** 英文来源为EUR-Lex／欧盟官方公报，©欧盟，2016。再利用条件见[EUR-Lex法律声明](https://eur-lex.europa.eu/content/legal-notice/legal-notice.html)。中文译文、折叠排版和锚点由本站添加，不代表欧盟机构审定或背书。
+
+| 章节 | 条号与阅读入口 |
+| --- | --- |
+| I 总则 | [第1—4条](#gdpr-chapter-i) |
+| II 原则 | [第5—11条](#gdpr-chapter-ii) |
+| III 数据主体权利 | [第12—23条](#gdpr-chapter-iii) |
+| IV 控制者和处理者 | [第24—43条](#gdpr-chapter-iv) |
+| V 向第三国或国际组织传输 | [第44—50条](#gdpr-chapter-v) |
+| VI 独立监管机构 | [第51—59条](#gdpr-chapter-vi) |
+| VII 合作与一致性 | [第60—76条](#gdpr-chapter-vii) |
+| VIII 救济、责任与处罚 | [第77—84条](#gdpr-chapter-viii) |
+| IX 特定处理情形 | [第85—91条](#gdpr-chapter-ix) |
+| X 授权法案与实施法案 | [第92—93条](#gdpr-chapter-x) |
+| XI 最后条款 | [第94—99条](#gdpr-chapter-xi) |
+| 结束语、签署与脚注 | [签署信息](#gdpr-signatures) · [脚注19—21](#gdpr-article-notes) |
+
+<!-- @include _GDPR英中原文-01.md -->
+
+<!-- @include _GDPR英中原文-02.md -->
+
+<!-- @include _GDPR英中原文-03.md -->
+
+<!-- @include _GDPR英中原文-04a.md -->
+
+<!-- @include _GDPR英中原文-04b.md -->
+
+<!-- @include _GDPR英中原文-05.md -->
+
+<!-- @include _GDPR英中原文-06.md -->
+
+<!-- @include _GDPR英中原文-07a.md -->
+
+<!-- @include _GDPR英中原文-07b.md -->
+
+<!-- @include _GDPR英中原文-08.md -->
+
+<!-- @include _GDPR英中原文-09.md -->
+
+<!-- @include _GDPR英中原文-10.md -->
+
+<!-- @include _GDPR英中原文-11.md -->
+
+<!-- @include _GDPR英中原文-脚注.md -->

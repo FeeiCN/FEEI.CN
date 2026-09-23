@@ -252,6 +252,25 @@ AI 扩展候选与生成工具
 
 这样，AI 漏洞挖掘才从“用模型帮我找一次漏洞”，逐渐变成“每次研究都在训练下一次研究所使用的系统”。
 
+## 把专家经验变成可执行的 Security Skill
+
+开放式探索负责寻找未知问题，但成熟的漏洞发现系统不能只依赖模型临场发挥。Mandiant 在 2026 年公开的 Agentic Vulnerability Discovery Harness（AVDH）提供了另一条重要路径：把一线安全专家长期积累的经验提炼成模块化规则，并在分析过程中按目标技术栈和漏洞类型选择性注入。
+
+其知识体系按软件 Domain 组织，再分为 **Language、Framework、Vulnerability** 三类规则。语言和框架规则贯穿分析过程，帮助 Agent 理解入口定义方式、技术特有攻击面和威胁建模上下文；漏洞规则主要用于后段，规定某类问题应怎样发现、验证和评级。这与 Skill Engineering 的思想接近：不是把所有经验堆进一个巨大 Prompt，而是让经过验证的专家方法按需加载。
+
+这种结构补充了纯探索式方法的不足：
+
+- **Exploration** 扩大未知问题和异常组合的搜索空间。
+- **Security Skill** 系统覆盖已经掌握的专家经验，减少已知模式漏报。
+- **Context** 提供资产、SBOM、架构、威胁情报和目标代码等当前环境事实。
+- **Eval** 检查 Skill 和 Prompt 更新究竟提高了召回还是引入回归。
+
+专家经验也不应只写成“查找 SQL 注入”这样的漏洞名称。更有价值的是保留发现方法：入口通常如何定义、哪些框架行为会改变可达性、数据经过哪些 Sanitizer 后仍值得追踪、什么证据才能确认漏洞、哪些条件会推翻假设。这样经验才能被 Agent 执行和验证。
+
+Mandiant 报告 AVDH 已在内部使用约十个月，并披露在一次涉及被盗企业代码仓库的事件响应中，两天发现超过 100 个经其确认的 Critical 漏洞；其还报告在数千万行代码环境运行数千条 Pipeline，并产生 12 个已分配 CVE。这些是 Google/Mandiant 对自身系统的公开结果，适合作为工程案例，而不是独立 Benchmark 或对其他系统能力的比较结论。([Google Cloud](https://cloud.google.com/blog/topics/threat-intelligence/staying-ahead-of-adversarial-ai-through-agentic-source-code-review))
+
+更值得复用的是闭环：**专家知识进入 Skill → Agent 在真实代码中执行 → 新发现和漏报进入评测 → 专家更新规则 → 新版本重新跑 Benchmark。** 专家的价值因此不只存在于一次人工 Review 中，而是逐渐成为组织可以重复调用的发现能力。
+
 ## 把研究切口变成可验证的发现能力
 
 这些案例证明相关问题确实发生过，但它们本身不能证明某个 AI 系统已经具备稳定发现能力。

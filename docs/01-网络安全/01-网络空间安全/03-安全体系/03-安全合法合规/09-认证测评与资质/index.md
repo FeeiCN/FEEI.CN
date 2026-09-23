@@ -2,7 +2,7 @@
 slug: /cybersecurity-certification-assessment-qualification
 title: 网络安全认证、测评与资质体系
 icon: rosette-discount-check-icon
-sidebar_position: 9
+sidebar_position: 10
 description: 判断企业、系统、产品和人员分别需要哪些认证、测评、检测、鉴证或资格，以及为什么需要、证明什么。
 content_type: hub
 ---

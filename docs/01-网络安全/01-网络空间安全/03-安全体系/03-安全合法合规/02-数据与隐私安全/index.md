@@ -1,6 +1,10 @@
 ---
+slug: /data-privacy-compliance
 title: 数据与隐私安全
+icon: shield-check
 sidebar_position: 3
+description: 数据与隐私安全相关法律法规、监管要求与实施材料的治理域导航。
+content_type: hub
 ---
 
 # 数据与隐私安全

@@ -5,8 +5,10 @@ icon: brain-circuit-icon
 sidebar_badge:
   text: 演讲
   color: secondary
-description: 基于 AI 驱动的实战网络攻击演讲材料 PDF，覆盖 APG / APG Runtime / Offensive Infrastructure 工程体系（演讲快照）。
+description: 2025 年《基于 AI 驱动的实战网络攻击》演讲归档，保留当时 APG / Runtime / Offensive Infrastructure 的实践判断；最新方法统一维护在 AI 自动化渗透。
 ---
+
+> **归档说明**：本文是 **2025 年 11 月演讲快照**，用于保留当时的实践背景、APG / APG Runtime / Offensive Infrastructure 设计和阶段性判断。它不作为持续更新的方法规范。后续经过验证的新架构、Harness、评测与授权边界统一维护在 [AI 自动化渗透：架构与工程挑战](./AI驱动的全链路自动化网络攻击.md)。两篇出现差异时，以持续维护文章为当前方法，本文保留历史语境。
 
 <iframe
   src="/media/files/基于AI驱动的实战网络攻击-吴飞飞（Feei）v1.1-20251117.pdf"
@@ -103,7 +105,7 @@ AI 时代的攻击基础设施应该是 AI Native 的。传统工具如 BurpSuit
 
 更远的方向是 AI 自迭代。AI 不只执行 APG，还能根据失败案例、成功路径和防守响应反向优化 APG、工具和运行时策略。到这个阶段，实战攻击检验会从“组织一场演练”变成“持续运行一套攻击能力校准系统”。
 
-## 防守启示
+## 当时的防守启示
 
 AI 驱动攻击的出现，会倒逼防守体系升级。防守方不能只假设攻击者是人，也要假设攻击者拥有长期在线、自动试错、快速复盘和工具编排能力。
 

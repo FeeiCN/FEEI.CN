@@ -36,6 +36,110 @@ jobs:
           cache: npm
       - name: Test migration safety
         run: node --test scripts/test_compliance_docs.mjs
+      - name: Recover verified historical filenames and link targets
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import {execFileSync} from 'node:child_process';
+          import {proseOnly, field} from './scripts/maintain_compliance_docs.mjs';
+          const ai = 'docs/01-网络安全/02-人工智能安全';
+          const groups = {
+            '02-AI系统安全': [
+              ['AI系统安全.md', '02-AI系统安全.md', '98e51f3fe6db3124361e50d635c8bcf00e9568bb'],
+              ['nt与工具调用安全.md', 'Agent与工具调用安全.md', '43c3593e2d10294b3c09365285264f6516f2f62a'],
+              ['tegory_.json', '_category_.json', '3ee6ae3a9bc9537068b35138a0ffd4aaa8c44e06'],
+              ['产与AI供应链安全.md', '模型资产与AI供应链安全.md', '66a3945cad85099167197cbb29fde0449eb18f97'],
+              ['全对齐与输出安全.md', '模型安全对齐与输出安全.md', '78a1d9a4e581f45eed0265ad9eaa6ebd3e124828'],
+              ['全评测与红队.md', 'AI安全评测与红队.md', 'c337f8d13a4d1a99be52c06426d13624e95b2f9d'],
+              ['应用安全.md', '大模型应用安全.md', '37810c35aebd172aa1f59dcb887c1f75a1a7b5dc'],
+              ['据与知识安全.md', 'AI数据与知识安全.md', 'd2bebb2416ed0d5e090536a786b366f8afed1bcd'],
+              ['私与机密保护.md', 'AI隐私与机密保护.md', '92614f7f55b3d6f870613746527e500197765009'],
+              ['行监控与事件响应.md', 'AI运行监控与事件响应.md', '5e3ec617835694471c93bd7246b764342c3a927f'],
+              ['险治理.md', 'AI风险治理.md', 'b444d1b301a5e98bdb9027318678e72f6a360c1e'],
+            ],
+            '03-AI赋能安全': [
+              ['AI赋能安全.md', '03-AI赋能安全.md', 'e483c375b3cada98ebc4dcca65abf3f4f49c9ab4'],
+              ['I驱动的实战网络攻击.md', '基于AI驱动的实战网络攻击.md', '87f932d1679027bccd8a659e983e78c91d38c168'],
+              ['tegory_.json', '_category_.json', '112ac48d5e21053f221362ca2c325b4742f79df2'],
+              ['动的全链路自动化网络攻击.md', 'AI驱动的全链路自动化网络攻击.md', 'b59a9fa1141d9f6327adeda1847e7a32cfc7f56b'],
+              ['模型评测体系.md', '安全大模型评测体系.md', '7dda16af295c62a878e514b0fc34af243ee06a0b'],
+              ['洞挖掘.md', 'AI漏洞挖掘.md', 'f8387bc0b616e008f179e676d5adc1c725d136bb'],
+            ],
+            '04-AI滥用防御': [
+              ['AI滥用防御.md', '04-AI滥用防御.md', '9f818788eecdf6be621305c8f6c5506bfb274360'],
+              ['tegory_.json', '_category_.json', '6e66f7523d2a93044aa26765c5ab89bc15ec70ec'],
+              ['容与信任安全.md', '合成内容与信任安全.md', '05a84bff24dbad0acef9ae283970b18802e387fc'],
+              ['用与攻防升级.md', 'AI滥用与攻防升级.md', 'b443b7d85d15262632c55a198e91c9695b8c2389'],
+            ],
+          };
+          const git = (...args) => execFileSync('git', args, {encoding: 'utf8', maxBuffer: 32 * 1024 * 1024});
+          const changed = new Set();
+          const renames = new Map();
+          for (const [group, entries] of Object.entries(groups)) {
+            for (const [old, next, sha] of entries) {
+              const from = `${ai}/${group}/${old}`, to = `${ai}/${group}/${next}`;
+              renames.set(from, to);
+              if (!fs.existsSync(from) && fs.existsSync(to)) continue;
+              if (fs.existsSync(to) || !fs.existsSync(from)) throw new Error(`Conflicting recovery: ${from}`);
+              if (git('hash-object', from).trim() !== sha) throw new Error(`Source changed since verified tree: ${from}`);
+              fs.renameSync(from, to);
+              changed.add(from); changed.add(to);
+            }
+          }
+          const all = new Set(git('ls-files', '-z', '--', 'docs').split('\0').filter((f) => /\.mdx?$/.test(f) && fs.existsSync(f)));
+          for (const file of renames.values()) if (/\.mdx?$/.test(file)) all.add(file);
+          const names = new Map();
+          for (const file of all) if (file.startsWith(`${ai}/`)) {
+            const name = path.posix.basename(file);
+            names.set(name, [...(names.get(name) ?? []), file]);
+          }
+          const hubAliases = new Map([
+            ['01-AI系统安全.md', `${ai}/02-AI系统安全/02-AI系统安全.md`],
+            ['AI系统安全.md', `${ai}/02-AI系统安全/02-AI系统安全.md`],
+            ['02-AI赋能安全.md', `${ai}/03-AI赋能安全/03-AI赋能安全.md`],
+            ['AI赋能安全.md', `${ai}/03-AI赋能安全/03-AI赋能安全.md`],
+            ['03-AI滥用防御.md', `${ai}/04-AI滥用防御/04-AI滥用防御.md`],
+            ['AI滥用防御.md', `${ai}/04-AI滥用防御/04-AI滥用防御.md`],
+          ]);
+          let repaired = 0;
+          for (const file of all) {
+            const source = fs.readFileSync(file, 'utf8');
+            const rewrite = (url) => {
+              if (/^(?:[a-z][\w+.-]*:|\/|#)/i.test(url)) return url;
+              const cut = url.search(/[?#]/);
+              const raw = cut === -1 ? url : url.slice(0, cut), suffix = cut === -1 ? '' : url.slice(cut);
+              let decoded; try { decoded = decodeURIComponent(raw); } catch { return url; }
+              if (!/\.mdx?$/.test(decoded)) return url;
+              const target = path.posix.normalize(path.posix.join(path.posix.dirname(file), decoded));
+              if (fs.existsSync(target) || (!file.startsWith(`${ai}/`) && !target.startsWith(`${ai}/`))) return url;
+              const name = path.posix.basename(target);
+              const options = renames.has(target) ? [renames.get(target)] : hubAliases.has(name) ? [hubAliases.get(name)] : names.get(name) ?? [];
+              if (options.length !== 1 || !fs.existsSync(options[0])) throw new Error(`Unresolved historical AI link: ${file}: ${url}`);
+              let relative = path.posix.relative(path.posix.dirname(file), options[0]);
+              if (!relative.startsWith('.')) relative = `./${relative}`;
+              repaired += 1;
+              return relative + suffix;
+            };
+            const next = proseOnly(source, (line) => line.replace(/(\]\([ \t]*)([^\s)]+)(?=[\s)])/g,
+              (all, open, url) => open + rewrite(url)).replace(/(^ {0,3}\[[^\]]+\]:[ \t]*)(\S+)/g,
+              (all, open, url) => open + rewrite(url)));
+            if (next !== source) {
+              if (field(next, 'slug') !== field(source, 'slug')) throw new Error(`URL changed: ${file}`);
+              fs.writeFileSync(file, next); changed.add(file);
+            }
+          }
+          // The persistent gate must validate, not reapply historical migration patches.
+          const script = 'scripts/maintain_compliance_docs.mjs';
+          const original = fs.readFileSync(script, 'utf8');
+          const next = original.replace('const planned = planChanges(input);',
+            "const planned = args[0] === '--write' ? planChanges(input) : {files: input, repaired: []};");
+          if (next !== original) { fs.writeFileSync(script, next); changed.add(script); }
+          if (changed.size) execFileSync('git', ['add', '-A', '--', ...changed], {stdio: 'inherit'});
+          fs.writeFileSync(`${process.env.RUNNER_TEMP}/recovery-report.json`, JSON.stringify({changedFiles: [...changed], renamedFiles: renames.size, repairedLinks: repaired}));
+          console.log(`Recovered ${renames.size} verified names; repaired ${repaired} historical AI links.`);
+          NODE
       - name: Apply approved deterministic migration
         run: |
           set -euo pipefail
@@ -43,6 +147,7 @@ jobs:
           node scripts/maintain_compliance_docs.mjs --check
           node scripts/test_docs_quality.mjs
           git diff --check
+          AI_MIGRATION_BASE=3fcba4559205ca0324284e0b274329e071311b95 node scripts/test_ai_navigation.mjs
       - name: Install dependencies
         run: npm ci
       - name: Validate documents and TypeScript
@@ -56,21 +161,21 @@ jobs:
           DOCUSAURUS_FASTER: 'true'
           NODE_OPTIONS: --max-old-space-size=6144
         run: npm run build
-      - name: Commit only the migration output to this branch
-        env:
-          MIGRATION_REPORT: ${{ runner.temp }}/compliance-migration.json
+      - name: Commit only the validated migration output to this branch
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           import {execFileSync} from 'node:child_process';
-          const report = JSON.parse(fs.readFileSync(process.env.MIGRATION_REPORT, 'utf8'));
-          const code = new Set(['scripts/check_docs_quality.mjs', 'scripts/check_docs_quality_gate.mjs', 'scripts/test_docs_quality.mjs', 'package.json']);
-          for (const file of report.changedFiles) {
+          const report = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/compliance-migration.json`, 'utf8'));
+          const recovery = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/recovery-report.json`, 'utf8'));
+          const changed = [...new Set([...report.changedFiles, ...recovery.changedFiles])];
+          const code = new Set(['scripts/maintain_compliance_docs.mjs', 'scripts/check_docs_quality.mjs', 'scripts/check_docs_quality_gate.mjs', 'scripts/test_docs_quality.mjs', 'package.json']);
+          for (const file of changed) {
             if (file.startsWith('/') || file.split('/').includes('..')) throw new Error(`Unsafe path: ${file}`);
-            if (!file.startsWith('docs/') && !/\.mdx?$/.test(file) && !code.has(file)) throw new Error(`Unexpected change: ${file}`);
+            if (!file.startsWith('docs/') && !code.has(file)) throw new Error(`Unexpected change: ${file}`);
           }
-          if (report.changedFiles.length) execFileSync('git', ['add', '--', ...report.changedFiles], {stdio: 'inherit'});
+          if (changed.length) execFileSync('git', ['add', '-A', '--', ...changed], {stdio: 'inherit'});
           NODE
           if git diff --cached --quiet; then
             echo 'No migration changes.'
@@ -78,14 +183,16 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'refactor(compliance): apply semantic types and repair navigation'
+          git commit -m 'refactor(compliance): apply semantic types and validated navigation repairs'
           git push origin HEAD:refs/heads/fix/compliance-metadata-20260923
           echo "Validated migration commit: $(git rev-parse HEAD)"
-      - name: Preserve validation report
+      - name: Preserve validation reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: compliance-migration-report
-          path: ${{ runner.temp }}/compliance-migration.json
+          path: |
+            ${{ runner.temp }}/compliance-migration.json
+            ${{ runner.temp }}/recovery-report.json
           if-no-files-found: ignore
           retention-days: 7

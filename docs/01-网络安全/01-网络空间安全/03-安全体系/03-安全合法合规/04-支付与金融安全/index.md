@@ -1,6 +1,10 @@
 ---
+slug: /payment-financial-compliance
 title: 支付与金融安全
+icon: shield-check
 sidebar_position: 5
+description: 支付与金融安全相关法律法规、监管要求与实施材料的治理域导航。
+content_type: hub
 ---
 
 # 支付与金融安全

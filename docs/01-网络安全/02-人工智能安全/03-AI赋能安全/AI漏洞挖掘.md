@@ -170,6 +170,54 @@ CVE-2026-41940 是一个真实案例。cPanel 官方将其描述为 cPanel & WHM
 
 如果业务必须复用认证前状态，认证完成时应明确重新绑定主体、校验来源与完整性，并丢弃不应该跨越认证边界的用户可控字段。
 
+## 验证链不是一个布尔值：寻找多个弱检查的交集
+
+复杂认证和安全协议通常不是一个 `verify()` 决定成败，而是解析、算法选择、密钥解析、签名、Issuer、Audience、身份映射等多个阶段共同建立信任。真正值得寻找的漏洞，有时不是某一步完全没有检查，而是**多个看似局部合理的弱点组合后，使整条验证链失去原本要证明的安全性质**。
+
+SharePoint 的 CVE-2026-55040 是一个很好的案例。Rapid7 对 SharePoint Server Subscription Edition 的反编译分析指出，其 S2S 认证使用嵌套 JWT：外层 Token 携带用户身份，内层 Actor Token 表示调用应用，后者本应由可信证书签名。Rapid7 将根因归纳为 JWT 验证流水线中的四个独立弱点组合，最终允许未认证攻击者伪造可接受的 Token 并冒充 SharePoint 用户。([Rapid7](https://www.rapid7.com/blog/post/ra-microsoft-sharepoint-jwt-token-authentication-bypass-cve-2026-55040/))
+
+这个案例适合抽象成 **Validation Chain Composition**：
+
+```text
+Parse
+  ↓
+Algorithm Policy
+  ↓
+Key Resolution
+  ↓
+Cryptographic Verification
+  ↓
+Issuer / Audience / Trust Validation
+  ↓
+Identity Mapping
+  ↓
+Authorization
+```
+
+AI 审计时不应只分别问“有没有验签”“有没有检查 Issuer”，还应该为每一步记录：
+
+- 这一步准备证明什么安全事实？
+- 它接受哪些输入和 fallback？
+- 失败是否一定终止，还是会进入另一条兼容路径？
+- 上一步输出是否被下一步当成了比实际更强的保证？
+- 是否存在一组输入，让每个局部检查都走到可接受分支，但最终没有任何一步真正证明完整身份链？
+
+这与“判断成功意味着什么”相关，但关注点不同：这里研究的是**多个 Validator 之间的组合语义**。单独看每个函数可能都存在检查，漏洞只在把完整 Pipeline 串起来后出现。
+
+### Agent 研究复杂闭源目标：先建立可查询的系统模型
+
+CVE-2026-55040 还有一层与 AI 漏洞挖掘直接相关的价值。Rapid7 披露，这次 SharePoint 0day 项目分两轮研究：2026 年 1 月的第一轮没有得到可用于 Exploit Chain 的发现；3 月第二轮最终得到由两个漏洞组成的未认证 RCE 链。整个项目包含 24 个 Agent 工作日、96 个 Session、256 个 Prompt 和约 8 万次 Agent Tool Call，同时仍包含人工代码审查和逆向工程。([Rapid7](https://www.rapid7.com/blog/post/ve-cve-2026-55040-microsoft-sharepoint-jwt-token-authentication-bypass-fixed/))
+
+这个数据不能简单解释成“更多 Tool Call 就能找到漏洞”。更值得注意的是**第一次失败后，模型、工作流和研究方法共同发生了变化**。对于 SharePoint 这种闭源、大规模、反编译后的代码库，Agent 首先需要把碎片化符号、继承关系、协议状态和跨模块调用逐渐变成可查询的系统模型，再在其上提出假设。
+
+因此复杂目标的研究资产不只是最终漏洞，还包括：
+
+> **失败 Sprint → Dead-End / Trace → Harness 与 Workflow 调整 → 第二轮重新搜索**
+
+这与前面的 Dead-End Memory、Security Skill 和 Eval 形成闭环：失败不是简单增加 Token，而应该改变下一轮搜索空间、上下文组织或验证策略。
+
+Rapid7 随后披露第二个漏洞 CVE-2026-63520：Business Connectivity Services 中的不安全 .NET 类型实例化问题。两个漏洞分别是认证绕过和认证后的 RCE，组合后成为未认证 RCE。这再次说明单点严重度和前置条件不能代替完整 Capability Chain 分析。([Rapid7](https://www.rapid7.com/blog/post/etr-cve-2026-63520-microsoft-sharepoint-remote-code-execution-fixed/))
+
 ## 判断与含义的关系：检查通过，却没有证明该证明的事情
 
 有些安全检查并没有被绕过。它被正常执行，返回成功，但这个成功没有对应真实的安全保证。

@@ -4,7 +4,7 @@ title: Harness 工程
 icon: gear-icon
 description: 仓库 Harness 的实现参考：用任务契约、隔离工作区、权威状态、命令审计、验证 Gate 和检查点约束 Agent 修改。
 content_type: reference
-last_reviewed: '2026-07-10'
+last_reviewed: '2026-09-23'
 ---
 
 # Harness 工程
@@ -50,6 +50,64 @@ parent/
 | **权威状态** | Harness 确认后的任务阶段、路径、Gate 和检查点，是恢复依据 |
 | **外部验证** | 测试、退出码、文件差异和路径策略提供的模型外证据 |
 | **完成标准** | 任务开始前写定、全部满足后才能进入成功状态的条件 |
+
+## Work Object：不要每次从多个工具重建上下文
+
+当 Agent 同时依赖聊天、代码仓库、CI、Review、工单和文档时，最大的上下文损耗往往发生在系统接缝。Block 的 Buzz 尝试把消息、Patch、Review、Workflow Step 和 Approval 统一记录为事件，并让人和 Agent 都围绕同一工作空间参与。([Jack Dorsey](https://x.com/jack/status/2080056638820450400))
+
+Harness 可以借用其中更一般的思想：**不要把“连接更多工具”本身当成上下文工程，先定义一个稳定的 Work Object。**
+
+例如一次代码任务可以拥有：
+
+```text
+Work Object: login-redirect-001
+  ├─ Task Contract
+  ├─ Conversation / Decision
+  ├─ Patch
+  ├─ Test / CI Result
+  ├─ Review
+  ├─ Approval
+  └─ Final Outcome
+```
+
+Git、CI、Chat、Issue Tracker 和 Agent 都只是向这个对象产生或消费事件。Agent 恢复任务时，首先定位 Work Object，再读取与当前阶段有关的事件，而不是分别搜索多个系统后临时拼出一份可能不一致的历史。
+
+这也使上下文从“聊天记录”升级成**可验证的工作轨迹**。对话解释为什么做，Patch 表示实际改了什么，CI 给出外部执行结果，Review 和 Approval 记录责任边界。不同来源可以保留各自权威性，而不需要把所有信息复制成一份巨大 Prompt。
+
+### Event Log 是事实记录，不是所有事件都是真相
+
+统一事件流不意味着每条事件都具有同等可信度。模型总结、人的评论、工具输出、CI 结果和最终审批应带有明确的 `type`、`source`、`timestamp`、`work_object_id` 和证据引用。
+
+```json
+{
+  "work_object_id": "login-redirect-001",
+  "event_id": "evt-042",
+  "actor": "agent:auth-fixer/run-17",
+  "type": "test_result",
+  "source": "ci:auth-suite",
+  "artifact": "sha256:<digest>",
+  "result": "passed"
+}
+```
+
+Harness 再根据事件类型决定它能更新什么权威状态。Agent 发出“测试已经通过”的消息不能替代 CI Event；CI 通过也不能自动替代 Human Approval。**One Context 不等于 One Trust Level。**
+
+### Agent 必须拥有独立可归因身份
+
+Agent 进入真实工作流后，不应全部藏在一个共享 Service Account 后面。一次动作至少应能追溯：
+
+> **Agent Instance → Model / Version → Owner / Team → Delegation → Work Object → Action**
+
+因此需要区分：
+
+- **Human Identity**：责任主体和授权来源。
+- **Agent Identity**：实际提出或执行动作的运行主体。
+- **Model Identity**：该运行使用的模型与版本。
+- **Delegation**：Agent 此次代表谁、在什么 Scope 和有效期内行动。
+
+Agent Identity 不意味着 Agent 获得与人完全相同的权限。它的 Capability 仍由 Harness、短期凭证和 Approval Gate 决定。独立身份的价值是 Attribution、Revocation 和 Audit：出问题时能够撤销一个 Agent 或一次 Delegation，而不是停掉整个团队共用账号。
+
+这种结构也降低对单一 Agent Vendor 的绑定。Work Object、Event Log、权限和证据由组织自己的 Harness 持有，Claude、Codex、Goose 或后续模型只是可以替换的参与者。**组织记忆属于工作系统，而不是属于某个模型的聊天窗口。**
 
 ## 写下任务契约
 

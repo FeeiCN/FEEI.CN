@@ -34,9 +34,13 @@ jobs:
           AI_MIGRATION_BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           if [ -z "$AI_MIGRATION_BASE" ]; then
-            AI_MIGRATION_BASE="$(git rev-parse origin/main)"
+            # Scheduled/manual checks validate the current tree only. Comparing
+            # origin/main with itself makes ordinary content edits look like
+            # migration changes and incorrectly enforces historical snapshots.
+            unset AI_MIGRATION_BASE
+          else
+            export AI_MIGRATION_BASE
           fi
-          export AI_MIGRATION_BASE
           node scripts/test_ai_navigation.mjs
 
       - name: Install dependencies

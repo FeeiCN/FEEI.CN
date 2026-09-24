@@ -5,13 +5,12 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {getItsHoverIcon} from '@site/src/components/ItsHoverIcon';
 import styles from './styles.module.css';
 
-type MarkdownMap = Record<string, string>;
 type DocMetadata = {
   updatedAt: number;
   revisionCount?: number;
 };
 type DocMetadataMap = Record<string, number | DocMetadata>;
-type CopyState = 'idle' | 'copied' | 'error';
+type CopyState = 'idle' | 'copying' | 'copied' | 'error';
 
 const ICON_SIZE = '16px';
 
@@ -60,6 +59,17 @@ function fileNameFromSource(source: string): string {
   return docsPath.split('/').filter(Boolean).at(-1) ?? docsPath;
 }
 
+function markdownUrlFromSource(source: string, baseUrl: string): string {
+  const docsPath = source.replace(/^@site\/docs\/?/, '');
+  const encodedPath = docsPath
+    .split('/')
+    .filter(Boolean)
+    .map(segment => encodeURIComponent(segment))
+    .join('/');
+  const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  return `${normalizedBaseUrl}markdown/${encodedPath}`;
+}
+
 function normalizeDocMetadata(value: number | DocMetadata | undefined): DocMetadata | undefined {
   if (typeof value === 'number') {
     return {updatedAt: value};
@@ -84,7 +94,6 @@ export default function DocActionsMenu(): ReactNode {
   const [open, setOpen] = useState(false);
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const markdownMap = usePluginData('copy-markdown-plugin') as MarkdownMap | undefined;
   const metadataMap = usePluginData('doc-mtime-plugin') as DocMetadataMap | undefined;
   const canCopyMarkdown = metadata.source.endsWith('.md');
   const docMetadata = normalizeDocMetadata(metadata.source ? metadataMap?.[metadata.source] : undefined);
@@ -111,15 +120,18 @@ export default function DocActionsMenu(): ReactNode {
       return;
     }
 
-    const key = metadata.source.replace('@site/docs', '');
-    const text = markdownMap?.[key];
     setOpen(false);
-    if (!text) {
-      setCopyState('error');
-      setTimeout(() => setCopyState('idle'), 2000);
-      return;
-    }
+    setCopyState('copying');
     try {
+      const response = await fetch(markdownUrlFromSource(metadata.source, siteConfig.baseUrl), {cache: 'no-cache'});
+      if (!response.ok) {
+        throw new Error(`Markdown request failed: ${response.status}`);
+      }
+      const text = await response.text();
+      if (response.headers.get('content-type')?.includes('text/html')
+        || /^\s*(?:<!doctype\s+html|<html\b)/i.test(text) || !text.trim()) {
+        throw new Error('Invalid Markdown response');
+      }
       await navigator.clipboard.writeText(text);
       setCopyState('copied');
       setTimeout(() => setCopyState('idle'), 2000);
@@ -130,7 +142,7 @@ export default function DocActionsMenu(): ReactNode {
   }
 
   const TriggerIcon = copyState === 'copied' ? IconCopied : IconCopy;
-  const triggerLabel = copyState === 'copied' ? '已复制' : copyState === 'error' ? '复制失败' : '复制 Markdown';
+  const triggerLabel = copyState === 'copying' ? '正在复制' : copyState === 'copied' ? '已复制' : copyState === 'error' ? '复制失败' : '复制 Markdown';
 
   return (
     <div className={styles.wrapper} ref={wrapperRef} data-open={open ? 'true' : undefined}>
@@ -141,6 +153,7 @@ export default function DocActionsMenu(): ReactNode {
             <button
               className={styles.triggerMain}
               onClick={handleCopy}
+              disabled={copyState === 'copying'}
               aria-label={triggerLabel}
               title={triggerLabel}
               data-state={copyState}

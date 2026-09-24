@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import type {IncomingMessage, ServerResponse} from 'node:http';
 import type {LoadContext, Plugin} from '@docusaurus/types';
+import type {Configuration} from 'webpack-dev-server';
 import {expandMarkdownIncludes, isMarkdownPartial} from './markdownIncludes';
-
-type MarkdownMap = Record<string, string>;
 
 function collectMarkdownFiles(dirPath: string): string[] {
   const entries = fs.readdirSync(dirPath, {withFileTypes: true});
@@ -61,25 +61,43 @@ export default function copyMarkdownPlugin(context: LoadContext, _options: unkno
   const docsDir = path.join(siteDir, 'docs');
   const siteUrl = siteConfig.url.replace(/\/$/, '');
 
-  const plugin: Plugin<MarkdownMap> = {
+  const plugin: Plugin = {
     name: 'copy-markdown-plugin',
 
-    async loadContent(): Promise<MarkdownMap> {
-      if (!fs.existsSync(docsDir)) return {};
-
-      const files = collectMarkdownFiles(docsDir);
-      const content: MarkdownMap = {};
-
-      for (const file of files) {
-        const key = '/' + path.relative(docsDir, file).split(path.sep).join('/');
-        content[key] = renderedMarkdown(file, siteUrl);
-      }
-
-      return content;
-    },
-
-    contentLoaded({content, actions}) {
-      actions.setGlobalData(content);
+    configureWebpack() {
+      return {
+        devServer: {
+          setupMiddlewares(middlewares) {
+            middlewares.unshift({
+              name: 'copy-markdown',
+              path: `${siteConfig.baseUrl}markdown/`,
+              middleware(req: IncomingMessage, res: ServerResponse) {
+                let file: string;
+                try {
+                  const relative = decodeURIComponent((req.url ?? '').split('?')[0]);
+                  file = path.resolve(docsDir, `.${relative}`);
+                } catch {
+                  res.statusCode = 400;
+                  res.end('Invalid Markdown path');
+                  return;
+                }
+                const relative = path.relative(docsDir, file);
+                if (relative.startsWith('..') || path.isAbsolute(relative)
+                  || !file.endsWith('.md') || isMarkdownPartial(file)
+                  || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+                  res.statusCode = 404;
+                  res.end('Markdown not found');
+                  return;
+                }
+                res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+                res.setHeader('Cache-Control', 'no-store');
+                res.end(renderedMarkdown(file, siteUrl));
+              },
+            });
+            return middlewares;
+          },
+        } satisfies Configuration,
+      };
     },
 
     async postBuild({outDir}) {
@@ -88,13 +106,13 @@ export default function copyMarkdownPlugin(context: LoadContext, _options: unkno
       const files = collectMarkdownFiles(docsDir);
       for (const file of files) {
         const relative = path.relative(docsDir, file);
-        const destPath = path.join(outDir, relative);
+        const destPath = path.join(outDir, 'markdown', relative);
         const destDir = path.dirname(destPath);
         if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, {recursive: true});
-        fs.writeFileSync(destPath, renderedMarkdown(file), 'utf8');
+        fs.writeFileSync(destPath, renderedMarkdown(file, siteUrl), 'utf8');
       }
     },
   };
 
-  return plugin as Plugin;
+  return plugin;
 }

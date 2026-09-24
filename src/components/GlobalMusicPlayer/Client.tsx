@@ -188,34 +188,44 @@ export default function GlobalMusicPlayerClient() {
   const [resolved, setResolved] = useState(false);
   const pendingPlay = useRef<MusicPlayerPlayDetail | null>(null);
   const pendingOpen = useRef(false);
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch('/music/baby-music/manifest.json', {signal: controller.signal})
+  const manifestLoad = useRef<Promise<void> | null>(null);
+
+  const loadManifest = () => {
+    if (manifestLoad.current) return manifestLoad.current;
+    manifestLoad.current = fetch('/music/baby-music/manifest.json')
       .then(async (response) => {
         if (!response.ok) return;
         const manifest = await response.json() as PlaylistManifestGroup[];
         if (!Array.isArray(manifest)) return;
         const base = [...siteMusicGroups, ...manifest.map(playlistGroupFromManifest)];
         setGroups([...base, ...buildAllDerivedGroups(base)]);
-      }).catch(() => {}).finally(() => { if (!controller.signal.aborted) setResolved(true); });
-    return () => controller.abort();
-  }, []);
+      })
+      .catch(() => {})
+      .finally(() => setResolved(true));
+    return manifestLoad.current;
+  };
+
   useEffect(() => {
     const onPlay = (event: Event) => {
       const detail = (event as CustomEvent<MusicPlayerPlayDetail>).detail;
-      const group = groups.find((item) => item.id === detail?.groupId);
-      if (!group) {
-        if (!resolved) pendingPlay.current = detail;
-        else reportError('未找到这个歌单，请重试。');
+      if (!resolved) {
+        pendingPlay.current = detail;
+        void loadManifest();
         return;
       }
+      const group = groups.find((item) => item.id === detail?.groupId);
+      if (!group) { reportError('未找到这个歌单，请重试。'); return; }
       void prepare(group, detail.trackIndex ?? 0, true).catch(() => reportError('播放器加载失败，请重试。'));
     };
     const onOpen = () => {
       if (engine) { reportState(); return; }
+      if (!resolved) {
+        pendingOpen.current = true;
+        void loadManifest();
+        return;
+      }
       const savedId = readStoredState().activeGroupId;
       const savedGroup = groups.find((item) => item.id === savedId);
-      if (savedId && !savedGroup && !resolved) { pendingOpen.current = true; return; }
       const group = savedGroup ?? groups[0];
       if (group) void prepare(group).catch(() => reportError('播放器加载失败，请重试。'));
     };

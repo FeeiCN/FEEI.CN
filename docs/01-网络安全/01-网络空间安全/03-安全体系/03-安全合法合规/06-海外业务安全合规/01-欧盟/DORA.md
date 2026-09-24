@@ -2,13 +2,15 @@
 slug: /eu-dora
 title: DORA 欧盟数字运营韧性法案
 sidebar_position: 2
-description: 按金融实体及豁免判断DORA，串联ICT风险、重大事件报告、韧性测试和第三方依赖，区分各阶段报告起算点。
+description: 按金融实体及豁免判断DORA，串联ICT风险、重大事件报告、韧性测试和第三方依赖，收录基础法规及事件分类、报告配套条例英中对照。
 content_type: regulation
 ---
 
 # DORA 欧盟数字运营韧性法案
 
 DORA（[Regulation (EU) 2022/2554](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554)）自2025年1月17日起适用。它把ICT风险治理、事件报告、韧性测试和第三方风险联系起来；不能仅准备一次渗透测试或一份供应商问卷即认为完成。
+
+[基础法规（EU）2022/2554：英中全文](#dora-base-fulltext) · [第2条适用范围](#dora-base-article-2) · [第16条简化框架](#dora-base-article-16) · [第30条合同要求](#dora-base-article-30)
 
 [事件分类条例（EU）2024/1772：英中全文](#dora-1772-fulltext) · [第8条重大事件](#dora-1772-article-8) · [第9条分类阈值](#dora-1772-article-9)
 
@@ -65,6 +67,84 @@ DORA（[Regulation (EU) 2022/2554](https://eur-lex.europa.eu/legal-content/EN/TX
 
 [基础法规](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554) · [事件分类与阈值](https://eur-lex.europa.eu/eli/reg_del/2024/1772/oj/eng) · [事件报告内容和时限](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R0301) · [GDPR并行义务](./GDPR.md)。本文不替代成员国主管机关的实施要求，也不声称完整收录全部配套技术标准。
 
+## 基础法规英中全文 {#dora-base-fulltext}
+
+**收录范围。** 本节收录Regulation (EU) 2022/2554的标题、制定依据、106段序言、9章64条正文、结束语、签署信息及39项原文脚注。第59—63条内嵌的修订引文和5项脚注也予保留。序言用于解释立法背景，具体义务应结合正文适用；本节不把摘要或实施建议混入条文。
+
+**版本与效力。** 英文绑定2022年12月27日《欧盟官方公报》L 333第1—79页公布文本，即[CELEX 32022R2554](https://eur-lex.europa.eu/legal-content/EN/ALL/?uri=CELEX:32022R2554)，并参照[同一公布版本的官方PDF](https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32022R2554)核对修订条款脚注。英文仅调整空白、分段、列表和脚注展示，不将后续修订、勘误或现行配套规则暗中写入原文。中文为本站AI辅助制作的**非官方参考译文**，未经主管机关或法律专业人员审定，不具有法律效力。实际适用应另行核对官方整合版本、勘误、成员国规则及监管解释。
+
+**阅读边界。** 原文中的历史日期、待制定文件名称及交叉引用按公布文本保留，不表示这些事项截至当前仍未变化，也不表示本页已完成全部现行版本的逐字校勘。微型企业、简化ICT风险管理框架、特定条款豁免及关键第三方指定排除，应分别依据相应条款判断。
+
+**来源与使用。** 英文来源为EUR-Lex／欧盟官方公报，©欧盟，2022；再利用条件见[EUR-Lex法律声明](https://eur-lex.europa.eu/content/legal-notice/legal-notice.html)。中文译文、导航、锚点和折叠排版由本站添加，不代表欧盟机构审定或背书。
+
+**术语说明（非原文）。** ICT为信息与通信技术；management body译为“管理机构”，competent authority译为“主管机关”，Lead Overseer译为“牵头监督机构”。resolution及resolution authorities使用金融处置语境，分别译为“处置”和“处置当局”。TLPT译为“基于威胁情报的渗透测试”。下方按原有条号、款项和条件对照阅读。
+
+| 阅读范围 | 直达入口 |
+| --- | --- |
+| 标题、制定依据及106段序言 | [序言第1—10段](#dora-base-recitals-1-10) · [第11—20段](#dora-base-recitals-11-20) · [第21—30段](#dora-base-recitals-21-30) · [第31—40段](#dora-base-recitals-31-40) · [第41—50段](#dora-base-recitals-41-50) · [第51—60段](#dora-base-recitals-51-60) · [第61—70段](#dora-base-recitals-61-70) · [第71—80段](#dora-base-recitals-71-80) · [第81—90段](#dora-base-recitals-81-90) · [第91—100段](#dora-base-recitals-91-100) · [第101—106段](#dora-base-recitals-101-106) |
+| 第一章：总则，第1—4条 | [事项、范围、定义和比例原则](#dora-base-chapter-i) |
+| 第二章：ICT风险管理，第5—16条 | [治理与框架](#dora-base-chapter-ii) · [响应恢复](#dora-base-article-11) · [简化框架](#dora-base-article-16) |
+| 第三章：事件管理、分类与报告，第17—23条 | [事件管理](#dora-base-chapter-iii) · [报告责任](#dora-base-article-19) |
+| 第四章：数字运营韧性测试，第24—27条 | [一般测试](#dora-base-chapter-iv) · [TLPT](#dora-base-article-26) |
+| 第五章：ICT第三方风险，第28—44条 | [一般原则](#dora-base-chapter-v) · [合同要求](#dora-base-article-30) · [关键第三方指定](#dora-base-article-31) · [监督权力](#dora-base-article-35) |
+| 第六章：信息共享，第45条 | [信息共享安排](#dora-base-chapter-vi) |
+| 第七章：主管机关，第46—56条 | [主管机关](#dora-base-chapter-vii) · [行政处罚](#dora-base-article-50) · [数据保护](#dora-base-article-56) |
+| 第八章：授权法案，第57条 | [授权的行使](#dora-base-chapter-viii) |
+| 第九章：过渡和最后条款，第58—64条 | [审查及修订](#dora-base-chapter-ix) · [生效和适用](#dora-base-article-64) |
+| 结束语、签署及脚注 | [签署](#dora-base-signatures) · [脚注1—20](#dora-base-notes) · [脚注21—39](#dora-base-notes-21-39) |
+
+<!-- @include _DORA-2022-2554英中原文-序言01.md -->
+
+<!-- @include _DORA-2022-2554英中原文-序言02.md -->
+
+<!-- @include _DORA-2022-2554英中原文-序言03.md -->
+
+<!-- @include _DORA-2022-2554英中原文-序言04.md -->
+
+<!-- @include _DORA-2022-2554英中原文-序言05.md -->
+
+<!-- @include _DORA-2022-2554英中原文-序言06.md -->
+
+<!-- @include _DORA-2022-2554英中原文-01.md -->
+
+<!-- @include _DORA-2022-2554英中原文-02.md -->
+
+<!-- @include _DORA-2022-2554英中原文-03.md -->
+
+<!-- @include _DORA-2022-2554英中原文-04.md -->
+
+<!-- @include _DORA-2022-2554英中原文-05.md -->
+
+<!-- @include _DORA-2022-2554英中原文-06.md -->
+
+<!-- @include _DORA-2022-2554英中原文-07.md -->
+
+<!-- @include _DORA-2022-2554英中原文-08.md -->
+
+<!-- @include _DORA-2022-2554英中原文-09.md -->
+
+<!-- @include _DORA-2022-2554英中原文-10.md -->
+
+<!-- @include _DORA-2022-2554英中原文-11.md -->
+
+<!-- @include _DORA-2022-2554英中原文-12.md -->
+
+<!-- @include _DORA-2022-2554英中原文-13.md -->
+
+<!-- @include _DORA-2022-2554英中原文-14.md -->
+
+<!-- @include _DORA-2022-2554英中原文-15.md -->
+
+<!-- @include _DORA-2022-2554英中原文-16.md -->
+
+<!-- @include _DORA-2022-2554英中原文-17.md -->
+
+<!-- @include _DORA-2022-2554英中原文-18.md -->
+
+<!-- @include _DORA-2022-2554英中原文-脚注01.md -->
+
+<!-- @include _DORA-2022-2554英中原文-脚注02.md -->
+
 ## 事件分类配套条例英中全文 {#dora-1772-fulltext}
 
 本节为Commission Delegated Regulation (EU) 2024/1772全文英中对照，包含制定依据、序言、全部正文和脚注。它回答如何分类及是否达到重大性阈值；下节2025/301回答报告内容与时限。中文均为非官方参考译文，解读与原文分开展示。
@@ -86,6 +166,6 @@ DORA（[Regulation (EU) 2022/2554](https://eur-lex.europa.eu/legal-content/EN/TX
 
 ## 事件报告配套条例英中全文 {#dora-301-fulltext}
 
-下方按序言和条文分组折叠，保留英文原文与中文参考译文。这里收录的是Commission Delegated Regulation (EU) 2025/301，规定事件报告内容和时限；事件分类和阈值见上节2024/1772。DORA基础法规及未列出的其他配套法规尚未在本文完整收录。
+下方按序言和条文分组折叠，保留英文原文与中文参考译文。这里收录的是Commission Delegated Regulation (EU) 2025/301，规定事件报告内容和时限；事件分类和阈值见上节2024/1772，基础法规见前文2022/2554。未列出的其他配套法规不在本文全文收录范围内。
 
 <!-- @include _DORA-2025-301英中原文.md -->

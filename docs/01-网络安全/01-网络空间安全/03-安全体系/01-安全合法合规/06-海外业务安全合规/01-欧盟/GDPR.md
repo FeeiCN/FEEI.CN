@@ -4,7 +4,6 @@ title: GDPR 欧盟通用数据保护条例
 sidebar_position: 1
 description: 从地域适用和控制者处理者角色判断GDPR义务，分别管理合法基础、个人权利、DPIA、跨境及72小时泄露通知。
 content_type: regulation
-icon: file-description-icon
 ---
 
 # GDPR 欧盟通用数据保护条例

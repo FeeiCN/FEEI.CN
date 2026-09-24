@@ -11,6 +11,9 @@ const registry = fs.readFileSync(path.join(iconRoot, 'index.tsx'), 'utf8');
 const aliasBlock = registry.split('const ICON_ALIASES')[1].split('};')[0];
 const aliases = new Map([...aliasBlock.matchAll(/(?:['"]([^'"]+)['"]|(\w+))\s*:\s*['"]([^'"]+)['"]/g)]
   .map(match => [match[1] ?? match[2], match[3]]));
+// Compliance detail pages intentionally omit presentation icons. Their parent
+// hub pages carry the icon used by navigation and section cards.
+const iconlessContentTypes = new Set(['regulation', 'standard', 'qualification']);
 const errors = [];
 let pages = 0;
 let partials = 0;
@@ -39,6 +42,7 @@ function inspect(directory) {
       continue;
     }
     pages++;
+    if (iconlessContentTypes.has(metadata.content_type)) continue;
     if (typeof metadata.icon !== 'string' || !icons.has(aliases.get(metadata.icon) ?? metadata.icon)) {
       errors.push(`${relative}: icon 缺失或未注册 (${metadata.icon ?? '空'})`);
     }

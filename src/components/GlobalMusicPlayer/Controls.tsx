@@ -50,7 +50,9 @@ export default function Controls() {
   const [scrub, setScrub] = useState<number | null>(null);
   const [following, setFollowing] = useState(true);
   const [controlsVisible, setControlsVisible] = useState(true);
+  const [mobilePanelHeight, setMobilePanelHeight] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const expandRef = useRef<HTMLButtonElement>(null);
   const vinylRef = useRef<AnimatedIconHandle>(null);
   const collapseRef = useRef<HTMLButtonElement>(null);
@@ -129,8 +131,18 @@ export default function Controls() {
 
   useEffect(() => {
     document.body.classList.toggle('music-player-expanded', expanded);
+    if (!expanded) setMobilePanelHeight(null);
     return () => document.body.classList.remove('music-player-expanded');
   }, [expanded]);
+
+  useEffect(() => {
+    if (!expanded || view !== 'playing') return;
+    const frame = window.requestAnimationFrame(() => {
+      const height = panelRef.current?.getBoundingClientRect().height;
+      if (height) setMobilePanelHeight(height);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [expanded, view, playback?.title]);
 
   useEffect(() => {
     if (expanded || !playback || playback.paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -255,7 +267,8 @@ export default function Controls() {
         <IconButton label="打开音乐库" className={styles.miniLibraryButton} onClick={() => { dispatchMusicPlayerOpen(); setView('library'); }}><MusicIcon size={20} disableHover /></IconButton>
         {playback && <div className={styles.miniProgress} style={progressStyle} />}
         {!expanded && error && <span className={styles.errorDot} title={error} aria-label={error} />}
-      </div> : <section role="dialog" aria-label="音乐播放器" className={styles.panel}>
+      </div> : <section ref={panelRef} role="dialog" aria-label="音乐播放器" className={styles.panel}
+        style={mobilePanelHeight ? {'--music-mobile-panel-height': `${mobilePanelHeight}px`} as CSSProperties : undefined}>
         <header className={styles.header}>
           <button ref={collapseRef} type="button" className={styles.iconButton} aria-label="收起播放器并继续播放" title="收起" onClick={collapse}><XIcon size={18} /></button>
           <span className={styles.headerTitle}>{view === 'playing' ? (playback?.title || '正在播放') : '音乐库'}</span>

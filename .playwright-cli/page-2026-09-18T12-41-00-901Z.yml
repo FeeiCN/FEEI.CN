@@ -1,0 +1,1754 @@
+- generic [ref=e2]:
+  - region "跳到主要内容":
+    - link "跳到主要内容" [ref=e3] [cursor=pointer]:
+      - /url: "#__docusaurus_skipToContent_fallback"
+  - navigation "主导航" [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - link "FEEI 首页" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e8]: FEEI
+        - button "网络安全" [ref=e10] [cursor=pointer]
+        - button "人生系统" [ref=e14] [cursor=pointer]
+        - button "吴飞飞" [ref=e18] [cursor=pointer]
+      - generic [ref=e21]:
+        - textbox "Search" [ref=e25]:
+          - /placeholder: 搜索
+        - button "切换浅色/暗黑模式（当前为暗黑模式）" [active] [ref=e2024] [cursor=pointer]
+  - generic [ref=e32]:
+    - complementary [ref=e33]:
+      - generic [ref=e35]:
+        - navigation "文档侧边栏" [ref=e36]:
+          - list [ref=e37]:
+            - listitem [ref=e38]:
+              - link "我的网络安全之路" [ref=e39] [cursor=pointer]:
+                - /url: /my-journey-in-cybersecurity
+                - generic "我的网络安全之路" [ref=e41]
+            - listitem [ref=e42]:
+              - link "网络空间安全" [ref=e43] [cursor=pointer]:
+                - /url: /security-engineering
+                - generic "网络空间安全" [ref=e45]
+            - listitem [ref=e46]:
+              - generic [ref=e47]:
+                - link "安全威胁" [ref=e48] [cursor=pointer]:
+                  - /url: /security-threats
+                  - generic "安全威胁" [ref=e50]
+                - button "折叠侧边栏分类 '安全威胁'" [expanded] [ref=e51] [cursor=pointer]
+              - list [ref=e52]:
+                - listitem [ref=e53]:
+                  - generic [ref=e54]:
+                    - link "历史攻击事件" [ref=e55] [cursor=pointer]:
+                      - /url: /cyber-incidents
+                      - generic "历史攻击事件" [ref=e57]
+                    - button "展开侧边栏分类 '历史攻击事件'" [ref=e58] [cursor=pointer]
+                - listitem [ref=e59]:
+                  - generic [ref=e60]:
+                    - link "攻击技术" [ref=e61] [cursor=pointer]:
+                      - /url: /attack-techniques
+                      - generic "攻击技术" [ref=e63]
+                    - button "展开侧边栏分类 '攻击技术'" [ref=e64] [cursor=pointer]
+            - listitem [ref=e65]:
+              - generic [ref=e66]:
+                - link "安全组织" [ref=e67] [cursor=pointer]:
+                  - /url: /security-organization
+                  - generic "安全组织" [ref=e69]
+                - button "折叠侧边栏分类 '安全组织'" [expanded] [ref=e70] [cursor=pointer]
+              - list [ref=e71]:
+                - listitem [ref=e72]:
+                  - generic [ref=e73]:
+                    - link "网络安全面试指南" [ref=e74] [cursor=pointer]:
+                      - /url: /sig
+                      - generic "网络安全面试指南" [ref=e76]
+                    - button "展开侧边栏分类 '网络安全面试指南'" [ref=e77] [cursor=pointer]
+            - listitem [ref=e78]:
+              - generic [ref=e79]:
+                - link "安全体系" [ref=e80] [cursor=pointer]:
+                  - /url: /security-system
+                  - generic "安全体系" [ref=e82]
+                - button "折叠侧边栏分类 '安全体系'" [expanded] [ref=e83] [cursor=pointer]
+              - list [ref=e84]:
+                - listitem [ref=e85]:
+                  - generic [ref=e86]:
+                    - link "安全合法合规" [ref=e87] [cursor=pointer]:
+                      - /url: /cybersecurity-laws
+                      - generic "安全合法合规" [ref=e89]
+                    - button "展开侧边栏分类 '安全合法合规'" [ref=e90] [cursor=pointer]
+                - listitem [ref=e91]:
+                  - generic [ref=e92]:
+                    - link "风险发现治理" [ref=e93] [cursor=pointer]:
+                      - /url: /security-risk-discovery
+                      - generic "风险发现治理" [ref=e95]
+                    - button "展开侧边栏分类 '风险发现治理'" [ref=e96] [cursor=pointer]
+                - listitem [ref=e97]:
+                  - generic [ref=e98]:
+                    - link "风险防御对抗" [ref=e99] [cursor=pointer]:
+                      - /url: /security-defense
+                      - generic "风险防御对抗" [ref=e101]
+                    - button "展开侧边栏分类 '风险防御对抗'" [ref=e102] [cursor=pointer]
+                - listitem [ref=e103]:
+                  - generic [ref=e104]:
+                    - link "安全实战检验" [ref=e105] [cursor=pointer]:
+                      - /url: /security-drill
+                      - generic "安全实战检验" [ref=e107]
+                    - button "展开侧边栏分类 '安全实战检验'" [ref=e108] [cursor=pointer]
+                - listitem [ref=e109]:
+                  - generic [ref=e110]:
+                    - link "安全框架研究" [ref=e111] [cursor=pointer]:
+                      - /url: /security-framework
+                      - generic "安全框架研究" [ref=e113]
+                    - button "折叠侧边栏分类 '安全框架研究'" [expanded] [ref=e114] [cursor=pointer]
+                  - list [ref=e115]:
+                    - listitem [ref=e116]:
+                      - generic [ref=e117]:
+                        - link "三大原生安全范式" [ref=e118] [cursor=pointer]:
+                          - /url: /security-paradigms
+                          - generic "三大原生安全范式" [ref=e120]
+                        - button "折叠侧边栏分类 '三大原生安全范式'" [expanded] [ref=e121] [cursor=pointer]
+                      - list [ref=e122]:
+                        - listitem [ref=e123]:
+                          - link "NbSP 零越范式" [ref=e124] [cursor=pointer]:
+                            - /url: /nbsp
+                            - generic "NbSP 零越范式" [ref=e126]
+                        - listitem [ref=e127]:
+                          - link "OVTP 可溯范式" [ref=e128] [cursor=pointer]:
+                            - /url: /ovtp
+                            - generic "OVTP 可溯范式" [ref=e130]
+                        - listitem [ref=e131]:
+                          - link "ARCP 攻击回报范式" [ref=e132] [cursor=pointer]:
+                            - /url: /arcp
+                            - generic "ARCP 攻击回报范式" [ref=e134]
+                    - listitem [ref=e135]:
+                      - link "C-RAF网络防卫评估框架" [ref=e136] [cursor=pointer]:
+                        - /url: /c-raf
+                        - generic "C-RAF网络防卫评估框架" [ref=e138]
+                    - listitem [ref=e139]:
+                      - link "基于原生安全范式构建可信纵深防御体系 演讲" [ref=e140] [cursor=pointer]:
+                        - /url: /building-a-trusted-in-depth-defense-system-based-on-native-security-paradigm
+                        - generic "基于原生安全范式构建可信纵深防御体系" [ref=e142]
+                        - generic [ref=e143]: 演讲
+                    - listitem [ref=e144]:
+                      - link "《数字银行安全体系构建》" [ref=e145] [cursor=pointer]:
+                        - /url: /digital-bank-cybersecurity-system-construction
+                        - generic "《数字银行安全体系构建》" [ref=e147]
+                    - listitem [ref=e148]:
+                      - link "AI时代软件与安全的范式迁移" [ref=e149] [cursor=pointer]:
+                        - /url: /rewriting-the-rules
+                        - generic "AI时代软件与安全的范式迁移" [ref=e151]
+            - listitem [ref=e152]:
+              - button "软件工程" [ref=e2015] [cursor=pointer]:
+                - generic "软件工程" [ref=e2017]
+        - button "收起侧边栏" [ref=e157] [cursor=pointer]
+    - main [ref=e162]:
+      - generic [ref=e164]:
+        - generic [ref=e166]:
+          - article [ref=e167]:
+            - navigation "页面路径" [ref=e168]:
+              - list [ref=e169]:
+                - listitem [ref=e170]:
+                  - link "主页面" [ref=e171] [cursor=pointer]:
+                    - /url: /
+                - listitem [ref=e178]:
+                  - link "安全体系" [ref=e179] [cursor=pointer]:
+                    - /url: /security-system
+                - listitem [ref=e180]:
+                  - link "安全框架研究" [ref=e181] [cursor=pointer]:
+                    - /url: /security-framework
+                - listitem [ref=e182]:
+                  - link "三大原生安全范式" [ref=e183] [cursor=pointer]:
+                    - /url: /security-paradigms
+                - listitem [ref=e184]:
+                  - generic [ref=e185]: OVTP 可溯范式
+            - generic [ref=e186]:
+              - generic [ref=e189]:
+                - button "复制 Markdown 原文" [ref=e190] [cursor=pointer]:
+                  - generic [ref=e192]: 复制Markdown
+                - button "更多操作" [ref=e194] [cursor=pointer]
+              - heading "OVTP 可溯范式" [level=1] [ref=e198]
+              - paragraph [ref=e208]:
+                - text: 网络安全的信息差，根源在于"能不能看见"，更在于"能不能看清"。前者由
+                - strong [ref=e209]: NbSP 零越范式
+                - text: （Non-bypassable Security Paradigm）解决——确保所有访问都经过访问控制点；后者由
+                - strong [ref=e210]: OVTP 可溯范式
+                - text: （Operator-Voucher-Traceable Paradigm）解决——确保每一次经过控制点的访问都携带完整的、可追溯的上下文，使防守方能获得网络攻防中的"上帝视角"。
+              - paragraph [ref=e211]:
+                - text: OVTP 与 NbSP 一同构成网络空间的两大原生范式，前者保障
+                - strong [ref=e212]: 访问透明性
+                - text: ，后者保障
+                - strong [ref=e213]: 边界完整性
+                - text: 。本文聚焦 OVTP 的提出动机、形式化框架、实战场景与完备性评估。
+              - heading [level=2] [ref=e214]:
+                - text: 一、战争是信息差的战争
+                - link "一、战争是信息差的战争的直接链接" [ref=e215] [cursor=pointer]:
+                  - /url: "#一战争是信息差的战争"
+                  - text: "#"
+              - paragraph [ref=e216]: 复盘太平洋战争的每一场海空大战，"战争是信息差的战争"被反复验证。
+              - paragraph [ref=e217]: 战术层面，中途岛战役中日本南云机动部队的侦察机因故延迟起飞，未能及时发现美军航母编队，四艘航母全数覆灭。美军因破译日军密码（"魔术"情报）提前设伏，一举扭转战局。战略层面，双方在电子战、密码战上的博弈对走势至关重要。
+              - paragraph [ref=e218]: 网络攻防同理。攻击者最大的依仗便是信息差：利用防守方不知道的漏洞，盗用不能及时发现的账号身份，绕进看不到的网络通道，隐藏在排查不出来的攻击路径上。NbSP 范式解决了"看不看得见"的问题——访问控制点不被绕过，攻击才有可能落入防守方的感知范围。但"看见"不等于"看清"——即便攻击流量经过了控制点，如果防守方无法分辨这些流量是正常业务还是攻击行为、无法追溯操作链路的来龙去脉，信息差依然存在，防守方依然被动。
+              - heading [level=2] [ref=e219]:
+                - text: 二、从"看见"到"看清"：信息差的深层根源
+                - link "二、从\"看见\"到\"看清\"：信息差的深层根源的直接链接" [ref=e220] [cursor=pointer]:
+                  - /url: "#二从看见到看清信息差的深层根源"
+                  - text: "#"
+              - paragraph [ref=e221]: NbSP 范式通过边界收敛，将 B3 型攻击（完全绕过型）和 B2+ 型攻击（部分绕过·不可感知型）的威胁降到最低。在此基础上，B2−型攻击（部分绕过·可感知型）和 B1 型攻击（滥用服务型）虽无法完全绕过访问控制点，但依然能造成巨大危害——关键在于防守方能否"看清"它们。
+              - paragraph [ref=e222]: 这种感知困境由网络空间的三重复杂性爆炸导致：
+              - list [ref=e223]:
+                - listitem [ref=e224]:
+                  - strong [ref=e225]: 时空复杂性
+                  - text: ：现代云原生系统中，一次业务请求可能穿越数十个微服务、跨越多个可用区。攻击痕迹散落在广袤的时空范围内，即使每一跳都被日志记录，也很难拼接出完整攻击链路。
+                - listitem [ref=e226]:
+                  - strong [ref=e227]: 业务复杂性
+                  - text: ：业务逻辑本身的复杂性导致"正常"与"异常"的边界极为模糊。客服查看一条用户记录是职责所在，连续查看一万条则可能是数据窃取——传统访问控制模型对此视而不见。
+                - listitem [ref=e228]:
+                  - strong [ref=e229]: 生产关系复杂性
+                  - text: ：外包运维、第三方 API、SaaS 平台、合作伙伴系统之间的信任关系错综复杂。一次合法 API 调用的背后，实际操作者可能已经经过多层委托代理，原始意图和责任主体早已模糊。
+              - paragraph [ref=e230]: 三重复杂性叠加，即便在 NbSP 范式保障下所有访问都经过控制点，防守方依然面临"看见了但看不清"的困境。信息差的本源不仅在于"能不能看见"，更在于"能不能看清"。
+              - heading [level=2] [ref=e231]:
+                - text: 三、访问控制的认知盲区：过度简化的代价
+                - link "三、访问控制的认知盲区：过度简化的代价的直接链接" [ref=e232] [cursor=pointer]:
+                  - /url: "#三访问控制的认知盲区过度简化的代价"
+                  - text: "#"
+              - paragraph [ref=e233]: 经典访问控制模型——DAC、MAC、RBAC、BLP——无一例外诞生于主机时代和局域网环境。在那个时代，操作者就坐在终端前，访问链路不过一两跳，主体与客体关系简单直接。这些模型将访问控制抽象为"主体—客体—控制策略"的简洁三元组，在当时的环境下是够用的。
+              - paragraph [ref=e234]: 后云时代，访问链路早已发生根本性变迁。起点不是主机终端，而是用户手机上的 App、智能汽车里的应用、IoT 设备上的传感服务——从起点开始，链路就在跨设备、跨主体、跨环境、跨技术形态地延伸：移动端 → API 网关 → 多云混合部署的微服务集群 → 第三方 SaaS 平台 → AI 智能体的自主工具调用。一次业务请求可能跨越十几个服务节点、穿越多个信任域。教科书上为主机和局域网设计的访问控制模型，在这种环境下已经出现严重的结构性缺口——是模型在认知层面就丢失了关键信息。
+              - paragraph [ref=e235]: 以下三个常见安全困境揭示了传统模型的系统性盲区。
+              - heading [level=3] [ref=e236]:
+                - text: 3.1 中介困境：谁在操作？
+                - link "3.1 中介困境：谁在操作？的直接链接" [ref=e237] [cursor=pointer]:
+                  - /url: "#31-中介困境谁在操作"
+                  - text: "#"
+              - paragraph [ref=e238]: 现代系统架构中，实际操作者与系统之间往往隔着漫长的中介链路。
+              - paragraph [ref=e239]: 典型的企业 IT 场景：外包运维人员通过 VPN 登录企业堡垒机，再从堡垒机跳转到生产服务器执行运维操作。在生产服务器的访问日志中，记录的"操作者"是堡垒机的服务账号，而非实际动手的外包人员。这名外包人员若窃取了敏感数据，仅凭服务器端日志根本无法定位到真正的责任人。
+              - paragraph [ref=e240]: 更普遍的场景是微服务架构中的级联调用。用户 A 通过前端发起业务请求，该请求在后端被服务 B 调用服务 C、服务 C 再调用服务 D。当服务 D 执行敏感数据库查询时，它"看到"的调用者是服务 C，而非真正发起请求的用户 A。如果用户 A 是被盗号的管理员账号，这条攻击链路在服务 D 维度上完全不可见。
+              - paragraph [ref=e241]: 中介困境的本质是：在层层代理和委托链路中，实际操作者的真实身份信息逐级衰减直至消失，访问控制系统最终只能看到直接调用者的凭据，而非真正的操作者。
+              - heading [level=3] [ref=e242]:
+                - text: 3.2 客服困境：为何而来？
+                - link "3.2 客服困境：为何而来？的直接链接" [ref=e243] [cursor=pointer]:
+                  - /url: "#32-客服困境为何而来"
+                  - text: "#"
+              - paragraph [ref=e244]: 银行客服人员处理客户投诉时需要查阅该客户的交易记录。在传统 RBAC 模型下，只要该客服具有"客服"角色，就可以查阅任意客户的交易记录——系统只检查"你是谁"（角色），不检查"你为什么要查"（任务目的）。
+              - paragraph [ref=e245]: 同一名客服、以完全相同的角色权限，可以毫无业务理由地翻阅成千上万名客户的交易记录。从模型视角看，每一次查询都是"完备"的——因为模型中根本没有"任务上下文"维度。
+              - paragraph [ref=e246]: 医疗系统中类似困境更加触目惊心。一名拥有"医生"角色的人员可以查阅全院患者的病历信息，系统无法区分他是在为自己患者诊疗，还是在猎奇或窃取名人的病历。
+              - paragraph [ref=e247]: 客服困境的本质是：传统访问控制模型只关心"主体有没有权限"，完全忽略"主体为什么要使用这个权限"——缺乏任务上下文和工单凭证的绑定，权限滥用几乎不受约束。
+              - heading [level=3] [ref=e248]:
+                - text: 3.3 链路困境：越长越盲
+                - link "3.3 链路困境：越长越盲的直接链接" [ref=e249] [cursor=pointer]:
+                  - /url: "#33-链路困境越长越盲"
+                  - text: "#"
+              - paragraph [ref=e250]: 后云时代的访问链路变得前所未有地漫长。一次业务请求从用户终端出发，经过 API 网关、认证服务、业务编排、多个微服务、数据中间件，最终抵达数据库——链路上可能多达十几个节点。每多经过一个节点，操作者的真实身份（O）和工单凭证（V）信息就可能衰减一分：中间服务用自己的服务账号替代了上游传来的用户身份，工单上下文在跨服务调用中被丢弃或简化。
+              - paragraph [ref=e251]: 信息衰减带来的后果是指数级的。O 信息在第三跳丢失时，从第三跳开始的所有后继节点都无法区分"这个请求到底是谁发起的"——安全研判能力归零。V 信息被剥离后，后继链路上每个节点都只能看到"一个有权限的服务账号发来了请求"，无法判断这个请求是否关联合法工单——访问控制退化为最粗粒度的"有权就放行"。
+              - paragraph [ref=e252]: "\"蚂蚁搬家\"式数据泄露正是这种链路困境的产物。攻击者通过多个合法账号、在不同时段、从不同入口分别获取同一批数据的不同片段，最终在体外拼接还原——单独看任何一个账号的行为都正常，串联起来就是一次精心策划的数据窃取。传统访问控制是\"逐次判定\"，每一次请求独立评估，没有能力将散落在漫长链路上的多次访问串联起来进行整体评估。"
+              - paragraph [ref=e253]: 链路困境的本质是：后云时代的访问链路越来越长，O 和 V 信息一旦在链路中丢失，后继所有节点的安全防护和追溯能力呈指数级下降。链路越长，信息衰减越严重，安全盲区越大。
+              - heading [level=2] [ref=e254]:
+                - text: 四、OVTP 可溯范式：网络空间的第二原生安全范式
+                - link "四、OVTP 可溯范式：网络空间的第二原生安全范式的直接链接" [ref=e255] [cursor=pointer]:
+                  - /url: "#四ovtp-可溯范式网络空间的第二原生安全范式"
+                  - text: "#"
+              - paragraph [ref=e256]: 三个困境指向同一个根因：传统访问控制模型丢失了关键信息。要让防守方从"看见"走向"看清"，必须系统性地补回这些缺失的信息维度。
+              - paragraph [ref=e257]:
+                - strong [ref=e258]: OVTP 可溯范式（Operator-Voucher-Traceable Paradigm）
+                - text: 是网络空间安全的第二个原生范式。如果说 NbSP 零越范式保障了网络空间的"边界完整性"——确保所有访问都经过访问控制点，那么 OVTP 可溯范式保障的是"访问透明性"——确保每一次经过控制点的访问都携带完整的、可追溯的上下文信息，使防守方能够做出精准的研判。
+              - paragraph [ref=e259]: OVTP 范式要求在访问控制全链路中，必须完整携带并可验证三类核心信息：
+              - list [ref=e260]:
+                - listitem [ref=e261]:
+                  - strong [ref=e262]: Operator（操作者）
+                  - text: ：实际操作者的真实身份。
+                - listitem [ref=e263]:
+                  - strong [ref=e264]: Voucher（工单凭证）
+                  - text: ：将授权凭据与任务上下文绑定。
+                - listitem [ref=e265]:
+                  - strong [ref=e266]: Traceable（可追溯）
+                  - text: ：全链路的操作轨迹和关联分析。
+              - heading [level=3] [ref=e267]:
+                - text: 4.1 O — Operator：真实身份的全链路传递
+                - link "4.1 O — Operator：真实身份的全链路传递的直接链接" [ref=e268] [cursor=pointer]:
+                  - /url: "#41-o--operator真实身份的全链路传递"
+                  - text: "#"
+              - paragraph [ref=e269]: 凭据 ≠ 操作者。这是 OVTP 范式的第一个关键认知纠偏。
+              - paragraph [ref=e270]: 传统系统的"身份认证"等同于"凭据验证"——持有正确的密码、Token 或证书就被视为合法操作者。但凭据可以被盗取、被共享、被委托。一个 API Token 在手，持有者可能是系统管理员本人，也可能是窃取了 Token 的攻击者，还可能是拿到 Token 的第三方外包人员。
+              - paragraph [ref=e271]: OVTP 范式要求区分并追踪实际操作者的真实身份，而非仅仅验证凭据的有效性。分级身份确认手段是这一要求的技术实现：
+              - list [ref=e272]:
+                - listitem [ref=e273]: 普通操作：依赖密码认证。
+                - listitem [ref=e274]: 关键操作（系统配置变更、敏感数据查询）：要求操作者出示随身携带的硬件密钥（安全 Token、身份证 NFC），确保持有物理不可复制的个人凭证。
+                - listitem [ref=e275]: 最敏感操作（核心资产变更、资金交易、敏感数据批量导出）：引入人脸活体检测等生物特征验证，确保屏幕前的操作者是经授权的真实自然人。
+              - paragraph [ref=e276]: 密码可以被共享，硬件密钥可以被转借，但生物特征无法被转交。
+              - paragraph [ref=e277]: 在多层代理链路中，经技术手段确认的实际操作者身份信息必须以不可篡改的方式在全链路中传递——无论经过多少层中间服务、代理、网关，最终被访问资源都能知道"到底是谁在操作"。这直接解决了中介困境。
+              - heading [level=3] [ref=e278]:
+                - text: 4.2 V — Voucher：面向任务的动态授权
+                - link "4.2 V — Voucher：面向任务的动态授权的直接链接" [ref=e279] [cursor=pointer]:
+                  - /url: "#42-v--voucher面向任务的动态授权"
+                  - text: "#"
+              - paragraph [ref=e280]: 权限 ≠ 工单凭证。这是 OVTP 范式的第二个关键认知纠偏。
+              - paragraph [ref=e281]: 传统访问控制中的"权限"是静态的、预分配的：管理员拥有 admin 权限，客服拥有 service 权限。一旦角色被赋予，权限即永久生效，直到被主动撤销。系统既不知道这次访问是为了什么任务，也不限制权限的使用范围和次数。
+              - paragraph [ref=e282]:
+                - strong [ref=e283]: 工单凭证（Voucher）
+                - text: 将授权凭据与任务上下文绑定为细粒度授权机制。它不仅标明"允许做什么"，更标明"为什么做"和"在什么条件下做"——包括关联的业务工单、任务目的、时间窗口、访问范围、数据量上限、使用次数等约束条件。
+              - paragraph [ref=e284]: "以医疗场景为例：一张工单凭证可以表述为\"张医生因处理门诊工单 #20240515-078，被授权在 2024 年 5 月 15 日 14:00—15:00 期间，查阅患者李某某与本次门诊相关的化验报告，限查阅 3 次\"。这比\"张医生拥有查阅病历的权限\"精确了数个数量级。"
+              - paragraph [ref=e285]: 工单凭证带来三个根本性转变：
+              - list [ref=e286]:
+                - listitem [ref=e287]:
+                  - strong [ref=e288]: 静态权限 → 动态任务级授权
+                  - text: ：权限生命周期从"长期持有"收窄为"任务存续期"。客服持有的工单凭证关联"处理客户张三的投诉工单"，那么他只应访问张三的交易记录——访问李四的数据即便角色允许，也会因与工单不匹配而被标记为异常。
+                - listitem [ref=e289]:
+                  - strong [ref=e290]: 访问目的从隐性假设 → 显式声明
+                  - text: ：工单凭证天然携带任务上下文和访问目的。客服困境的根源是系统不知道"为什么要访问"，工单凭证解决了这个问题。
+                - listitem [ref=e291]:
+                  - strong [ref=e292]: 最小必要原则可执行化
+                  - text: ：《个人信息保护法》等法规反复强调的"最小必要原则"，在传统访问控制模型中几乎不可执行——因为系统根本不知道"必要"的边界在哪里。工单凭证将"必要"定义为"与工单任务直接相关的最小数据集"，最小必要原则由此从抽象的法律要求变为可实现的技术约束。
+              - paragraph [ref=e293]: 工单凭证本身也是可审计的凭据——谁签发的、为什么签发、关联哪个工单、什么时候过期、被使用了几次，全部可追溯，与 T 维度形成天然闭环。
+              - heading [level=3] [ref=e294]:
+                - text: 4.3 T — Traceable：全链路审计的完整闭环
+                - link "4.3 T — Traceable：全链路审计的完整闭环的直接链接" [ref=e295] [cursor=pointer]:
+                  - /url: "#43-t--traceable全链路审计的完整闭环"
+                  - text: "#"
+              - paragraph [ref=e296]: 可追溯性是 OVTP 范式的核心骨架。它要求对每一次访问行为建立完整的、不可篡改的审计链路，使任意时刻都可以从终端结果反向追溯到起始操作者及其完整路径。
+              - paragraph [ref=e297]: 可追溯性包含三个层次：
+              - list [ref=e298]:
+                - listitem [ref=e299]:
+                  - strong [ref=e300]: 单点可追溯
+                  - text: ：每一个访问控制点记录完整的 O（操作者身份）和 V（工单凭证）信息，以及访问的时间、对象、结果。
+                - listitem [ref=e301]:
+                  - strong [ref=e302]: 链路可追溯
+                  - text: ：跨多个访问控制点的一次完整请求链路，能通过关联标识（如 TraceID，与工单凭证绑定）串联还原。
+                - listitem [ref=e303]:
+                  - strong [ref=e304]: 聚合可追溯
+                  - text: ：跨时间窗口、跨账号、跨入口的多次访问行为，能通过关联分析发现异常模式——这是解决链路困境的关键。同一操作者在不同时段、通过不同工单凭证累积的访问量，可被汇总评估。
+              - paragraph [ref=e305]: 可追溯性是防守方建立"上帝视角"的技术基础。没有完整的审计链路，事后的攻击分析、归因溯源都无从谈起。它本身也是一种强大的威慑机制——当攻击者知道自己的每一步操作都被不可篡改地记录、每一张工单凭证的使用都可复查时，攻击的预期收益将大幅降低。
+              - heading [level=3] [ref=e306]:
+                - text: 4.4 OVT 三维协同：完整的信息闭环
+                - link "4.4 OVT 三维协同：完整的信息闭环的直接链接" [ref=e307] [cursor=pointer]:
+                  - /url: "#44-ovt-三维协同完整的信息闭环"
+                  - text: "#"
+              - paragraph [ref=e308]: O、V、T 三个维度构成紧密耦合的信息闭环：
+              - table [ref=e309]:
+                - rowgroup [ref=e310]:
+                  - row [ref=e311]:
+                    - columnheader "维度" [ref=e312]
+                    - columnheader "回答的问题" [ref=e313]
+                    - columnheader "性质" [ref=e314]
+                - rowgroup [ref=e315]:
+                  - row [ref=e316]:
+                    - cell "O" [ref=e317]
+                    - cell "谁" [ref=e318]
+                    - cell "实际操作者的真实身份" [ref=e319]
+                  - row [ref=e320]:
+                    - cell "V" [ref=e321]
+                    - cell "凭什么 + 为什么" [ref=e322]
+                    - cell "工单凭证同时承载授权依据和任务目的" [ref=e323]
+                  - row [ref=e324]:
+                    - cell "T" [ref=e325]
+                    - cell "怎么做的" [ref=e326]
+                    - cell "全链路的操作轨迹和关联分析" [ref=e327]
+              - paragraph [ref=e328]: 三者合一，任何一次访问都可追溯到"谁（O），凭什么工单、为什么目的（V），通过什么路径、做了什么（T）"。传统访问控制模型之所以留下认知盲区，恰恰是因为只保留了片段信息——RBAC 只有模糊的"谁"（角色而非真实身份），没有"凭什么"（静态权限而非工单凭证），更没有"怎么做的"（逐次判定而非全链路追溯）。
+              - heading [level=3] [ref=e329]:
+                - text: 4.5 OVTP 的形式化刻画
+                - link "4.5 OVTP 的形式化刻画的直接链接" [ref=e330] [cursor=pointer]:
+                  - /url: "#45-ovtp-的形式化刻画"
+                  - text: "#"
+              - paragraph [ref=e331]: 为精确理解 OVTP 范式及其安全含义，给出形式化框架。
+              - paragraph [ref=e332]:
+                - strong [ref=e333]: 定义 1（访问事件）
+                - text: 。一次访问事件
+                - generic [ref=e334]:
+                  - math [ref=e336]:
+                    - generic [ref=e337]: e
+                  - generic [ref=e341]: e
+                - text: 表示为五元组：
+              - paragraph [ref=e342]:
+                - generic [ref=e343]:
+                  - math [ref=e345]:
+                    - generic [ref=e347]:
+                      - generic [ref=e348]: e
+                      - generic [ref=e349]: =
+                      - generic [ref=e350]: (
+                      - generic [ref=e351]: o
+                      - generic [ref=e352]: ","
+                      - generic [ref=e353]: v
+                      - generic [ref=e354]: ","
+                      - generic [ref=e355]: r
+                      - generic [ref=e356]: ","
+                      - generic [ref=e357]: t
+                      - generic [ref=e358]: ","
+                      - generic [ref=e359]: result
+                      - generic [ref=e360]: )
+                  - generic [aria-hidden] [ref=e361]:
+                    - generic [ref=e362]: e =
+                    - generic [ref=e363]:
+                      - text: (o, v, r, t,
+                      - generic [ref=e364]: result
+                      - text: )
+              - paragraph [ref=e365]:
+                - text: 其中
+                - generic [ref=e366]:
+                  - math [ref=e368]:
+                    - generic [ref=e370]:
+                      - generic [ref=e371]: o
+                      - generic [ref=e372]: ∈
+                      - generic [ref=e373]: O
+                  - generic [aria-hidden] [ref=e374]:
+                    - generic [ref=e375]: o ∈
+                    - generic [ref=e376]: O
+                - text: 为经验证的操作者真实身份，
+                - generic [ref=e377]:
+                  - math [ref=e379]:
+                    - generic [ref=e381]:
+                      - generic [ref=e382]: v
+                      - generic [ref=e383]: ∈
+                      - generic [ref=e384]: V
+                  - generic [aria-hidden] [ref=e385]:
+                    - generic [ref=e386]: v ∈
+                    - generic [ref=e387]: V
+                - text: 为工单凭证，
+                - generic [ref=e388]:
+                  - math [ref=e390]:
+                    - generic [ref=e392]:
+                      - generic [ref=e393]: r
+                      - generic [ref=e394]: ∈
+                      - generic [ref=e395]: R
+                  - generic [aria-hidden] [ref=e396]:
+                    - generic [ref=e397]: r ∈
+                    - generic [ref=e398]: R
+                - text: 为被访问资源，
+                - generic [ref=e399]:
+                  - math [ref=e401]:
+                    - generic [ref=e402]: t
+                  - generic [ref=e406]: t
+                - text: 为时间戳，
+                - generic [ref=e407]:
+                  - math [ref=e409]:
+                    - generic [ref=e411]:
+                      - generic [ref=e412]: result
+                      - generic [ref=e413]: ∈
+                      - generic [ref=e414]: "{"
+                      - generic [ref=e415]: allow
+                      - generic [ref=e416]: ","
+                      - generic [ref=e417]: deny
+                      - generic [ref=e418]: ","
+                      - generic [ref=e419]: alert
+                      - generic [ref=e420]: "}"
+                  - generic [aria-hidden] [ref=e421]:
+                    - generic [ref=e422]:
+                      - generic [ref=e423]: result
+                      - text: ∈
+                    - generic [ref=e424]:
+                      - text: "{"
+                      - generic [ref=e425]: allow
+                      - text: ","
+                      - generic [ref=e426]: deny
+                      - text: ","
+                      - generic [ref=e427]: alert
+                      - text: "}"
+                - text: 为访问结果。
+              - paragraph [ref=e428]:
+                - strong [ref=e429]: 定义 2（工单凭证）
+                - text: 。工单凭证
+                - generic [ref=e430]:
+                  - math [ref=e432]:
+                    - generic [ref=e433]: v
+                  - generic [ref=e437]: v
+                - text: 表示为约束元组：
+              - paragraph [ref=e438]:
+                - generic [ref=e439]:
+                  - math [ref=e441]:
+                    - generic [ref=e443]:
+                      - generic [ref=e444]: v
+                      - generic [ref=e445]: =
+                      - generic [ref=e446]: (
+                      - generic [ref=e447]: task
+                      - generic [ref=e448]: ","
+                      - generic [ref=e449]: scope
+                      - generic [ref=e450]: ","
+                      - generic [ref=e451]: constraints
+                      - generic [ref=e452]: ","
+                      - generic [ref=e453]: issuer
+                      - generic [ref=e454]: ","
+                      - generic [ref=e455]: expiry
+                      - generic [ref=e456]: )
+                  - generic [aria-hidden] [ref=e457]:
+                    - generic [ref=e458]: v =
+                    - generic [ref=e459]:
+                      - text: (
+                      - generic [ref=e460]: task
+                      - text: ","
+                      - generic [ref=e461]: scope
+                      - text: ","
+                      - generic [ref=e462]: constraints
+                      - text: ","
+                      - generic [ref=e463]: issuer
+                      - text: ","
+                      - generic [ref=e464]: expiry
+                      - text: )
+              - paragraph [ref=e465]:
+                - text: 其中 task 为关联的业务工单及其目的，
+                - generic [ref=e466]:
+                  - math [ref=e468]:
+                    - generic [ref=e470]:
+                      - generic [ref=e471]: scope
+                      - generic [ref=e472]: ⊆
+                      - generic [ref=e473]: R
+                  - generic [aria-hidden] [ref=e474]:
+                    - generic [ref=e475]:
+                      - generic [ref=e476]: scope
+                      - text: ⊆
+                    - generic [ref=e477]: R
+                - text: 为允许访问的资源集合，constraints 为约束条件集（时间窗口、访问次数上限、数据量限额等），issuer 为签发者，expiry 为失效时间。合法性判定：
+              - paragraph [ref=e478]:
+                - generic [ref=e479]:
+                  - math [ref=e481]:
+                    - generic [ref=e483]:
+                      - generic [ref=e484]: valid
+                      - generic [ref=e485]: (
+                      - generic [ref=e486]: v
+                      - generic [ref=e487]: ","
+                      - generic [ref=e488]: e
+                      - generic [ref=e489]: )
+                      - generic [ref=e490]: =
+                      - generic [ref=e491]: "true"
+                      - generic [ref=e492]: ⟺
+                      - generic [ref=e493]: e
+                      - generic [ref=e494]: .
+                      - generic [ref=e495]: r
+                      - generic [ref=e496]: ∈
+                      - generic [ref=e497]: v
+                      - generic [ref=e498]: .
+                      - generic [ref=e499]: scope
+                      - generic [ref=e500]: ∧
+                      - generic [ref=e501]: e
+                      - generic [ref=e502]: .
+                      - generic [ref=e503]: t
+                      - generic [ref=e504]: ≤
+                      - generic [ref=e505]: v
+                      - generic [ref=e506]: .
+                      - generic [ref=e507]: expiry
+                      - generic [ref=e508]: ∧
+                      - generic [ref=e509]: satisfy
+                      - generic [ref=e510]: (
+                      - generic [ref=e511]: e
+                      - generic [ref=e512]: ","
+                      - generic [ref=e513]: v
+                      - generic [ref=e514]: .
+                      - generic [ref=e515]: constraints
+                      - generic [ref=e516]: )
+                  - generic [aria-hidden] [ref=e517]:
+                    - generic [ref=e518]:
+                      - generic [ref=e519]: valid
+                      - text: (v, e) =
+                    - generic [ref=e520]:
+                      - generic [ref=e521]: "true"
+                      - text: ⟺
+                    - generic [ref=e522]: e.r ∈
+                    - generic [ref=e523]:
+                      - text: v.
+                      - generic [ref=e524]: scope
+                      - text: ∧
+                    - generic [ref=e525]: e.t ≤
+                    - generic [ref=e526]:
+                      - text: v.
+                      - generic [ref=e527]: expiry
+                      - text: ∧
+                    - generic [ref=e528]:
+                      - generic [ref=e529]: satisfy
+                      - text: (e, v.
+                      - generic [ref=e530]: constraints
+                      - text: )
+              - paragraph [ref=e531]:
+                - strong [ref=e532]: 定义 3（访问链路）
+                - text: 。一条完整的访问链路
+                - generic [ref=e533]:
+                  - math [ref=e535]:
+                    - generic [ref=e536]: L
+                  - generic [ref=e540]: L
+                - text: 是有序的访问事件序列：
+              - paragraph [ref=e541]:
+                - generic [ref=e542]:
+                  - math [ref=e544]:
+                    - generic [ref=e546]:
+                      - generic [ref=e547]: L
+                      - generic [ref=e548]: =
+                      - generic [ref=e549]: ⟨
+                      - generic [ref=e550]:
+                        - generic [ref=e551]: e
+                        - generic [ref=e552]: "1"
+                      - generic [ref=e553]: ","
+                      - generic [ref=e554]:
+                        - generic [ref=e555]: e
+                        - generic [ref=e556]: "2"
+                      - generic [ref=e557]: ","
+                      - generic [ref=e558]: …
+                      - generic [ref=e559]: ","
+                      - generic [ref=e560]:
+                        - generic [ref=e561]: e
+                        - generic [ref=e562]: "n"
+                      - generic [ref=e563]: ⟩
+                  - generic [aria-hidden] [ref=e564]:
+                    - generic [ref=e565]: L =
+                    - generic [ref=e566]:
+                      - text: ⟨
+                      - generic [ref=e567]:
+                        - text: e
+                        - generic [ref=e568]: "1"
+                      - text: ","
+                      - generic [ref=e576]:
+                        - text: e
+                        - generic [ref=e577]: "2"
+                      - text: ", … ,"
+                      - generic [ref=e585]:
+                        - text: e
+                        - generic [ref=e586]: "n"
+                      - text: ⟩
+              - paragraph [ref=e594]:
+                - text: 其中
+                - generic [ref=e595]:
+                  - math [ref=e597]:
+                    - generic [ref=e600]:
+                      - generic [ref=e601]: e
+                      - generic [ref=e602]: "1"
+                  - generic [ref=e605]:
+                    - text: e
+                    - generic [ref=e606]: "1"
+                - text: 为链路起点（终端用户发起），
+                - generic [ref=e614]:
+                  - math [ref=e616]:
+                    - generic [ref=e619]:
+                      - generic [ref=e620]: e
+                      - generic [ref=e621]: "n"
+                  - generic [ref=e624]:
+                    - text: e
+                    - generic [ref=e625]: "n"
+                - text: 为链路终点（最终资源被访问）。
+              - paragraph [ref=e633]:
+                - strong [ref=e634]: 定义 4（OVT 信息完整度）
+                - text: 。在链路
+                - generic [ref=e635]:
+                  - math [ref=e637]:
+                    - generic [ref=e638]: L
+                  - generic [ref=e642]: L
+                - text: 的第
+                - generic [ref=e643]:
+                  - math [ref=e645]:
+                    - generic [ref=e646]: k
+                  - generic [ref=e650]: k
+                - text: 跳，定义 OVT 信息完整度。
+                - generic [ref=e651]:
+                  - math [ref=e653]:
+                    - generic [ref=e656]:
+                      - generic [ref=e657]: I
+                      - generic [ref=e658]: O
+                  - generic [ref=e661]:
+                    - text: I
+                    - generic [ref=e662]: O
+                - text: 和
+                - generic [ref=e670]:
+                  - math [ref=e672]:
+                    - generic [ref=e675]:
+                      - generic [ref=e676]: I
+                      - generic [ref=e677]: V
+                  - generic [ref=e680]:
+                    - text: I
+                    - generic [ref=e681]: V
+                - text: 是内容维度——每一跳是否保留了"谁"和"凭什么"的信息；
+                - generic [ref=e689]:
+                  - math [ref=e691]:
+                    - generic [ref=e694]:
+                      - generic [ref=e695]: I
+                      - generic [ref=e696]: T
+                  - generic [ref=e699]:
+                    - text: I
+                    - generic [ref=e700]: T
+                - text: 是关联维度——多跳之间能否通过关联标识串联为一条完整链路。
+              - list [ref=e708]:
+                - listitem [ref=e709]:
+                  - generic [ref=e710]:
+                    - math [ref=e712]:
+                      - generic [ref=e714]:
+                        - generic [ref=e715]:
+                          - generic [ref=e716]: I
+                          - generic [ref=e717]: O
+                        - generic [ref=e718]: (
+                        - generic [ref=e719]: k
+                        - generic [ref=e720]: )
+                        - generic [ref=e721]: =
+                        - generic [ref=e722]: "1"
+                    - generic [aria-hidden] [ref=e723]:
+                      - generic [ref=e724]:
+                        - generic [ref=e725]:
+                          - text: I
+                          - generic [ref=e726]: O
+                        - text: (k) =
+                      - generic [ref=e734]: "1"
+                  - text: ，当且仅当第
+                  - generic [ref=e735]:
+                    - math [ref=e737]:
+                      - generic [ref=e738]: k
+                    - generic [ref=e742]: k
+                  - text: 跳可追溯到原始操作者
+                  - generic [ref=e743]:
+                    - math [ref=e745]:
+                      - generic [ref=e747]:
+                        - generic [ref=e748]:
+                          - generic [ref=e749]: e
+                          - generic [ref=e750]: "1"
+                        - generic [ref=e751]: .
+                        - generic [ref=e752]: o
+                    - generic [ref=e754]:
+                      - generic [ref=e755]:
+                        - text: e
+                        - generic [ref=e756]: "1"
+                      - text: .o
+                  - text: 的可验证身份。
+                - listitem [ref=e764]:
+                  - generic [ref=e765]:
+                    - math [ref=e767]:
+                      - generic [ref=e769]:
+                        - generic [ref=e770]:
+                          - generic [ref=e771]: I
+                          - generic [ref=e772]: V
+                        - generic [ref=e773]: (
+                        - generic [ref=e774]: k
+                        - generic [ref=e775]: )
+                        - generic [ref=e776]: =
+                        - generic [ref=e777]: "1"
+                    - generic [aria-hidden] [ref=e778]:
+                      - generic [ref=e779]:
+                        - generic [ref=e780]:
+                          - text: I
+                          - generic [ref=e781]: V
+                        - text: (k) =
+                      - generic [ref=e789]: "1"
+                  - text: ，当且仅当第
+                  - generic [ref=e790]:
+                    - math [ref=e792]:
+                      - generic [ref=e793]: k
+                    - generic [ref=e797]: k
+                  - text: 跳可追溯到原始工单凭证
+                  - generic [ref=e798]:
+                    - math [ref=e800]:
+                      - generic [ref=e802]:
+                        - generic [ref=e803]:
+                          - generic [ref=e804]: e
+                          - generic [ref=e805]: "1"
+                        - generic [ref=e806]: .
+                        - generic [ref=e807]: v
+                    - generic [ref=e809]:
+                      - generic [ref=e810]:
+                        - text: e
+                        - generic [ref=e811]: "1"
+                      - text: .v
+                  - text: 的完整约束。
+                - listitem [ref=e819]:
+                  - generic [ref=e820]:
+                    - math [ref=e822]:
+                      - generic [ref=e824]:
+                        - generic [ref=e825]:
+                          - generic [ref=e826]: I
+                          - generic [ref=e827]: T
+                        - generic [ref=e828]: (
+                        - generic [ref=e829]: k
+                        - generic [ref=e830]: )
+                        - generic [ref=e831]: =
+                        - generic [ref=e832]: "1"
+                    - generic [aria-hidden] [ref=e833]:
+                      - generic [ref=e834]:
+                        - generic [ref=e835]:
+                          - text: I
+                          - generic [ref=e836]: T
+                        - text: (k) =
+                      - generic [ref=e844]: "1"
+                  - text: ，当且仅当
+                  - generic [ref=e845]:
+                    - math [ref=e847]:
+                      - generic [ref=e850]:
+                        - generic [ref=e851]: e
+                        - generic [ref=e852]: "1"
+                    - generic [ref=e855]:
+                      - text: e
+                      - generic [ref=e856]: "1"
+                  - text: 到
+                  - generic [ref=e864]:
+                    - math [ref=e866]:
+                      - generic [ref=e869]:
+                        - generic [ref=e870]: e
+                        - generic [ref=e871]: k
+                    - generic [ref=e874]:
+                      - text: e
+                      - generic [ref=e875]: k
+                  - text: 的各跳可通过关联标识串联还原为完整链路。
+              - paragraph [ref=e883]:
+                - strong [ref=e884]: 性质 1（信息衰减与安全退化）
+                - text: 。若 OVT 信息在第
+                - generic [ref=e885]:
+                  - math [ref=e887]:
+                    - generic [ref=e888]: k
+                  - generic [ref=e892]: k
+                - text: 跳丢失（
+                - generic [ref=e893]:
+                  - math [ref=e895]:
+                    - generic [ref=e897]:
+                      - generic [ref=e898]: k
+                      - generic [ref=e899]: <
+                      - generic [ref=e900]: "n"
+                  - generic [aria-hidden] [ref=e901]:
+                    - generic [ref=e902]: k <
+                    - generic [ref=e903]: "n"
+                - text: ），则后继链路的安全能力发生质变：
+              - list [ref=e904]:
+                - listitem [ref=e905]:
+                  - text: 若
+                  - generic [ref=e906]:
+                    - math [ref=e908]:
+                      - generic [ref=e910]:
+                        - generic [ref=e911]:
+                          - generic [ref=e912]: I
+                          - generic [ref=e913]: O
+                        - generic [ref=e914]: (
+                        - generic [ref=e915]: k
+                        - generic [ref=e916]: )
+                        - generic [ref=e917]: =
+                        - generic [ref=e918]: "0"
+                    - generic [aria-hidden] [ref=e919]:
+                      - generic [ref=e920]:
+                        - generic [ref=e921]:
+                          - text: I
+                          - generic [ref=e922]: O
+                        - text: (k) =
+                      - generic [ref=e930]: "0"
+                  - text: ：后继链路
+                  - generic [ref=e931]:
+                    - math [ref=e933]:
+                      - generic [ref=e935]:
+                        - generic [ref=e936]: ⟨
+                        - generic [ref=e937]:
+                          - generic [ref=e938]: e
+                          - generic [ref=e939]: k
+                        - generic [ref=e940]: ","
+                        - generic [ref=e941]: …
+                        - generic [ref=e942]: ","
+                        - generic [ref=e943]:
+                          - generic [ref=e944]: e
+                          - generic [ref=e945]: "n"
+                        - generic [ref=e946]: ⟩
+                    - generic [ref=e948]:
+                      - text: ⟨
+                      - generic [ref=e949]:
+                        - text: e
+                        - generic [ref=e950]: k
+                      - text: ", … ,"
+                      - generic [ref=e958]:
+                        - text: e
+                        - generic [ref=e959]: "n"
+                      - text: ⟩
+                  - text: 上所有节点无法区分合法操作者与冒充者，身份研判能力归零。
+                - listitem [ref=e967]:
+                  - text: 若
+                  - generic [ref=e968]:
+                    - math [ref=e970]:
+                      - generic [ref=e972]:
+                        - generic [ref=e973]:
+                          - generic [ref=e974]: I
+                          - generic [ref=e975]: V
+                        - generic [ref=e976]: (
+                        - generic [ref=e977]: k
+                        - generic [ref=e978]: )
+                        - generic [ref=e979]: =
+                        - generic [ref=e980]: "0"
+                    - generic [aria-hidden] [ref=e981]:
+                      - generic [ref=e982]:
+                        - generic [ref=e983]:
+                          - text: I
+                          - generic [ref=e984]: V
+                        - text: (k) =
+                      - generic [ref=e992]: "0"
+                  - text: ：后继链路上所有节点无法判断访问是否关联合法工单、是否超出任务边界，访问控制退化为静态权限检查。
+                - listitem [ref=e993]:
+                  - text: 若
+                  - generic [ref=e994]:
+                    - math [ref=e996]:
+                      - generic [ref=e998]:
+                        - generic [ref=e999]:
+                          - generic [ref=e1000]: I
+                          - generic [ref=e1001]: T
+                        - generic [ref=e1002]: (
+                        - generic [ref=e1003]: k
+                        - generic [ref=e1004]: )
+                        - generic [ref=e1005]: =
+                        - generic [ref=e1006]: "0"
+                    - generic [aria-hidden] [ref=e1007]:
+                      - generic [ref=e1008]:
+                        - generic [ref=e1009]:
+                          - text: I
+                          - generic [ref=e1010]: T
+                        - text: (k) =
+                      - generic [ref=e1018]: "0"
+                  - text: ：从
+                  - generic [ref=e1019]:
+                    - math [ref=e1021]:
+                      - generic [ref=e1024]:
+                        - generic [ref=e1025]: e
+                        - generic [ref=e1026]: k
+                    - generic [ref=e1029]:
+                      - text: e
+                      - generic [ref=e1030]: k
+                  - text: 开始的链路无法被串联还原，事后攻击溯源、完整路径还原、跨链路责任归属和聚合异常检测全部失效。
+              - paragraph [ref=e1038]: 实践中，O/V/T 三者往往存在级联依赖。存在两种典型的链路信息承载方式：
+              - list [ref=e1039]:
+                - listitem [ref=e1040]:
+                  - strong [ref=e1041]: O/V 显式传播模式
+                  - text: ：O 和 V 作为访问上下文显式跟随每一跳传播。每一跳直接持有完整 O 和 V 信息，T 断裂不会导致 O 和 V 丢失。代价是每一跳都需承载和转发完整的访问上下文，对链路资源有较高要求。
+                - listitem [ref=e1042]:
+                  - strong [ref=e1043]: SessionID 间接查询模式
+                  - text: ：链路上不直接携带 O 和 V，而是传播 SessionID（或 TraceID），各跳通过 SessionID 查询后端服务来获取。资源开销低，是当前微服务架构的主流实践（如基于 OpenTelemetry 的分布式追踪）。但 SessionID 在跨网络域时极易因关联丢失而断裂（
+                  - generic [ref=e1044]:
+                    - math [ref=e1046]:
+                      - generic [ref=e1048]:
+                        - generic [ref=e1049]:
+                          - generic [ref=e1050]: I
+                          - generic [ref=e1051]: T
+                        - generic [ref=e1052]: (
+                        - generic [ref=e1053]: k
+                        - generic [ref=e1054]: )
+                        - generic [ref=e1055]: =
+                        - generic [ref=e1056]: "0"
+                    - generic [aria-hidden] [ref=e1057]:
+                      - generic [ref=e1058]:
+                        - generic [ref=e1059]:
+                          - text: I
+                          - generic [ref=e1060]: T
+                        - text: (k) =
+                      - generic [ref=e1068]: "0"
+                  - text: ），O 和 V 信息也随之无法查询，三者同时归零。
+              - paragraph [ref=e1069]: SessionID 模式远比 O/V 显式传播模式普遍，T 的脆弱性被严重低估。OVTP 范式要求系统性地排查链路中 O、V、T 信息的一切缺失环节，无论是 SessionID 跨域丢失导致的级联归零、中间服务替换身份导致的 O 断裂，还是工单上下文被剥离导致的 V 丢失，都必须识别为重要的隐性安全风险。
+              - paragraph [ref=e1070]:
+                - text: 更关键的是，OVT 信息的丢失模式不是逐跳的随机衰减，而是分段式的二值特征：在同一网络域、同一技术栈内部，OVT 信息要么全程转发、要么全程缺失——取决于该段架构是否设计了 OVT 传递机制。真正的断裂发生在域边界：跨网络域、跨信任域、跨技术形态。设一条链路跨越
+                - generic [ref=e1071]:
+                  - math [ref=e1073]:
+                    - generic [ref=e1074]: m
+                  - generic [ref=e1078]: m
+                - text: 个域边界，每个边界的 OVT 信息存活概率为
+                - generic [ref=e1079]:
+                  - math [ref=e1081]:
+                    - generic [ref=e1083]:
+                      - generic [ref=e1084]: (
+                      - generic [ref=e1085]: "1"
+                      - generic [ref=e1086]: −
+                      - generic [ref=e1087]:
+                        - generic [ref=e1088]: q
+                        - generic [ref=e1089]: i
+                      - generic [ref=e1090]: )
+                  - generic [aria-hidden] [ref=e1091]:
+                    - generic [ref=e1092]: (1 −
+                    - generic [ref=e1093]:
+                      - generic [ref=e1094]:
+                        - text: q
+                        - generic [ref=e1095]: i
+                      - text: )
+                - text: ，则：
+              - paragraph [ref=e1103]:
+                - generic [ref=e1104]:
+                  - math [ref=e1106]:
+                    - generic [ref=e1108]:
+                      - generic [ref=e1109]: P
+                      - generic [ref=e1110]: (
+                      - generic [ref=e1111]: 完整
+                      - generic [ref=e1112]: )
+                      - generic [ref=e1113]: =
+                      - generic [ref=e1114]:
+                        - generic [ref=e1115]: ∏
+                        - generic [ref=e1116]:
+                          - generic [ref=e1117]: i
+                          - generic [ref=e1118]: =
+                          - generic [ref=e1119]: "1"
+                        - generic [ref=e1120]: m
+                      - generic [ref=e1121]: (
+                      - generic [ref=e1122]: "1"
+                      - generic [ref=e1123]: −
+                      - generic [ref=e1124]:
+                        - generic [ref=e1125]: q
+                        - generic [ref=e1126]: i
+                      - generic [ref=e1127]: )
+                  - generic [aria-hidden] [ref=e1128]:
+                    - generic [ref=e1129]:
+                      - text: P(
+                      - generic [ref=e1130]: 完整
+                      - text: ) =
+                    - generic [ref=e1131]:
+                      - generic [ref=e1132]:
+                        - text: ∏
+                        - generic [ref=e1136]:
+                          - generic [ref=e1137]: i=1
+                          - generic [ref=e1139]: m
+                      - text: (1 −
+                    - generic [ref=e1144]:
+                      - generic [ref=e1145]:
+                        - text: q
+                        - generic [ref=e1146]: i
+                      - text: )
+              - paragraph [ref=e1154]: 链路跨越的域边界越多，OVT 信息存活概率衰减越剧烈。这就是链路困境的数学本质——风险不在域内的逐跳传递，而集中在域边界的信息交接。
+              - paragraph [ref=e1155]:
+                - strong [ref=e1156]: 定义 5（OVTP 完备性）
+                - text: 。一个系统满足 OVTP 范式，当且仅当对系统中每一条访问链路
+                - generic [ref=e1157]:
+                  - math [ref=e1159]:
+                    - generic [ref=e1161]:
+                      - generic [ref=e1162]: L
+                      - generic [ref=e1163]: =
+                      - generic [ref=e1164]: ⟨
+                      - generic [ref=e1165]:
+                        - generic [ref=e1166]: e
+                        - generic [ref=e1167]: "1"
+                      - generic [ref=e1168]: ","
+                      - generic [ref=e1169]: …
+                      - generic [ref=e1170]: ","
+                      - generic [ref=e1171]:
+                        - generic [ref=e1172]: e
+                        - generic [ref=e1173]: "n"
+                      - generic [ref=e1174]: ⟩
+                  - generic [aria-hidden] [ref=e1175]:
+                    - generic [ref=e1176]: L =
+                    - generic [ref=e1177]:
+                      - text: ⟨
+                      - generic [ref=e1178]:
+                        - text: e
+                        - generic [ref=e1179]: "1"
+                      - text: ", … ,"
+                      - generic [ref=e1187]:
+                        - text: e
+                        - generic [ref=e1188]: "n"
+                      - text: ⟩
+                - text: ，均满足：
+              - paragraph [ref=e1196]:
+                - generic [ref=e1197]:
+                  - math [ref=e1199]:
+                    - generic [ref=e1201]:
+                      - generic [ref=e1202]: ∀
+                      - generic [ref=e1203]: k
+                      - generic [ref=e1204]: ∈
+                      - generic [ref=e1205]: "["
+                      - generic [ref=e1206]: "1"
+                      - generic [ref=e1207]: ","
+                      - generic [ref=e1208]: "n"
+                      - generic [ref=e1209]: "]"
+                      - generic [ref=e1210]: ":"
+                      - generic [ref=e1211]:
+                        - generic [ref=e1212]: I
+                        - generic [ref=e1213]: O
+                      - generic [ref=e1214]: (
+                      - generic [ref=e1215]: k
+                      - generic [ref=e1216]: )
+                      - generic [ref=e1217]: =
+                      - generic [ref=e1218]: "1"
+                      - generic [ref=e1219]: ∧
+                      - generic [ref=e1220]:
+                        - generic [ref=e1221]: I
+                        - generic [ref=e1222]: V
+                      - generic [ref=e1223]: (
+                      - generic [ref=e1224]: k
+                      - generic [ref=e1225]: )
+                      - generic [ref=e1226]: =
+                      - generic [ref=e1227]: "1"
+                      - generic [ref=e1228]: ∧
+                      - generic [ref=e1229]:
+                        - generic [ref=e1230]: I
+                        - generic [ref=e1231]: T
+                      - generic [ref=e1232]: (
+                      - generic [ref=e1233]: k
+                      - generic [ref=e1234]: )
+                      - generic [ref=e1235]: =
+                      - generic [ref=e1236]: "1"
+                  - generic [aria-hidden] [ref=e1237]:
+                    - generic [ref=e1238]: ∀k ∈
+                    - generic [ref=e1239]: "[1, n] :"
+                    - generic [ref=e1240]:
+                      - generic [ref=e1241]:
+                        - text: I
+                        - generic [ref=e1242]: O
+                      - text: (k) =
+                    - generic [ref=e1250]: 1 ∧
+                    - generic [ref=e1251]:
+                      - generic [ref=e1252]:
+                        - text: I
+                        - generic [ref=e1253]: V
+                      - text: (k) =
+                    - generic [ref=e1261]: 1 ∧
+                    - generic [ref=e1262]:
+                      - generic [ref=e1263]:
+                        - text: I
+                        - generic [ref=e1264]: T
+                      - text: (k) =
+                    - generic [ref=e1272]: "1"
+              - paragraph [ref=e1273]: 即 OVT 信息在整条链路的每一跳都完整可验证。这是一个全称量词约束——任何一跳的信息丢失都会导致后继链路的安全退化。
+              - heading [level=2] [ref=e1274]:
+                - text: 五、传统模型在 OVT 维度上的全面缺失
+                - link "五、传统模型在 OVT 维度上的全面缺失的直接链接" [ref=e1275] [cursor=pointer]:
+                  - /url: "#五传统模型在-ovt-维度上的全面缺失"
+                  - text: "#"
+              - paragraph [ref=e1276]: 用 OVT 三维框架审视传统访问控制模型，可以清晰看到系统性缺失。
+              - table [ref=e1277]:
+                - rowgroup [ref=e1278]:
+                  - row [ref=e1279]:
+                    - columnheader "模型" [ref=e1280]
+                    - columnheader [ref=e1281]:
+                      - generic [ref=e1282]:
+                        - math [ref=e1284]:
+                          - generic [ref=e1287]:
+                            - generic [ref=e1288]: I
+                            - generic [ref=e1289]: O
+                        - generic [ref=e1292]:
+                          - text: I
+                          - generic [ref=e1293]: O
+                      - text: （谁）
+                    - columnheader [ref=e1301]:
+                      - generic [ref=e1302]:
+                        - math [ref=e1304]:
+                          - generic [ref=e1307]:
+                            - generic [ref=e1308]: I
+                            - generic [ref=e1309]: V
+                        - generic [ref=e1312]:
+                          - text: I
+                          - generic [ref=e1313]: V
+                      - text: （凭什么）
+                    - columnheader [ref=e1321]:
+                      - generic [ref=e1322]:
+                        - math [ref=e1324]:
+                          - generic [ref=e1327]:
+                            - generic [ref=e1328]: I
+                            - generic [ref=e1329]: T
+                        - generic [ref=e1332]:
+                          - text: I
+                          - generic [ref=e1333]: T
+                      - text: （怎么做的）
+                - rowgroup [ref=e1341]:
+                  - row [ref=e1342]:
+                    - cell [ref=e1343]:
+                      - strong [ref=e1344]: DAC
+                      - text: （自主访问控制）
+                    - cell "仅身份认证" [ref=e1345]
+                    - cell "资源所有者授权，无任务约束" [ref=e1346]
+                    - cell "无链路追溯" [ref=e1347]
+                  - row [ref=e1348]:
+                    - cell [ref=e1349]:
+                      - strong [ref=e1350]: MAC
+                      - text: （强制访问控制）
+                    - cell "身份 + 等级标签" [ref=e1351]
+                    - cell "等级策略，无任务约束" [ref=e1352]
+                    - cell "无链路追溯" [ref=e1353]
+                  - row [ref=e1354]:
+                    - cell [ref=e1355]:
+                      - strong [ref=e1356]: RBAC
+                      - text: （基于角色的访问控制）
+                    - cell "仅角色身份" [ref=e1357]
+                    - cell "角色权限，无任务约束" [ref=e1358]
+                    - cell "无链路追溯" [ref=e1359]
+                  - row [ref=e1360]:
+                    - cell [ref=e1361]:
+                      - strong [ref=e1362]: BLP
+                      - text: （Bell-LaPadula）
+                    - cell "主体等级" [ref=e1363]
+                    - cell "等级策略，无任务约束" [ref=e1364]
+                    - cell "无链路追溯" [ref=e1365]
+              - paragraph [ref=e1366]: 四种经典模型在 OVT 三个维度上几乎全面缺失。它们只回答了模糊的"谁"（角色而非真实身份），没有"凭什么"（静态权限而非工单凭证），更没有"怎么做的"（逐次判定而非全链路追溯）。
+              - paragraph [ref=e1367]:
+                - strong [ref=e1368]: 凭据泄露
+                - text: 是最典型的 OVTP 失效场景。当多个服务甚至多个团队共享同一个云服务 AK 时：O 维度——云平台只看到"AK xyz 发起了请求"，完全无法区分请求来自哪个服务、背后是哪个操作者，
+                - generic [ref=e1369]:
+                  - math [ref=e1371]:
+                    - generic [ref=e1373]:
+                      - generic [ref=e1374]:
+                        - generic [ref=e1375]: I
+                        - generic [ref=e1376]: O
+                      - generic [ref=e1377]: ≡
+                      - generic [ref=e1378]: "0"
+                  - generic [aria-hidden] [ref=e1379]:
+                    - generic [ref=e1380]:
+                      - generic [ref=e1381]:
+                        - text: I
+                        - generic [ref=e1382]: O
+                      - text: ≡
+                    - generic [ref=e1390]: "0"
+                - text: ；V 维度——AK 是无任务上下文的长期凭据，
+                - generic [ref=e1391]:
+                  - math [ref=e1393]:
+                    - generic [ref=e1395]:
+                      - generic [ref=e1396]:
+                        - generic [ref=e1397]: I
+                        - generic [ref=e1398]: V
+                      - generic [ref=e1399]: ≡
+                      - generic [ref=e1400]: "0"
+                  - generic [aria-hidden] [ref=e1401]:
+                    - generic [ref=e1402]:
+                      - generic [ref=e1403]:
+                        - text: I
+                        - generic [ref=e1404]: V
+                      - text: ≡
+                    - generic [ref=e1412]: "0"
+                - text: ；T 维度——从云平台审计日志出发，无法追溯到企业内部哪条业务链路触发了这次调用，
+                - generic [ref=e1413]:
+                  - math [ref=e1415]:
+                    - generic [ref=e1417]:
+                      - generic [ref=e1418]:
+                        - generic [ref=e1419]: I
+                        - generic [ref=e1420]: T
+                      - generic [ref=e1421]: ≈
+                      - generic [ref=e1422]: "0"
+                  - generic [aria-hidden] [ref=e1423]:
+                    - generic [ref=e1424]:
+                      - generic [ref=e1425]:
+                        - text: I
+                        - generic [ref=e1426]: T
+                      - text: ≈
+                    - generic [ref=e1434]: "0"
+                - text: 。共享 AK 在 OVT 三个维度上全面归零——是 NbSP 视角下"最脆弱的安全边界"，更是 OVTP 视角下"最不透明的访问通道"。攻击者使用泄露的 AK 访问云服务时，其行为在 OVT 维度上与合法业务访问完全无法区分。
+              - paragraph [ref=e1435]: OVTP 范式对凭据治理的指导是：即使在 NbSP 维度上无法完全杜绝凭据泄露（零日漏洞始终存在），也应通过 OVTP 化改造使凭据的使用具备可追溯性——按服务粒度签发独立凭据（恢复 O 的可区分性），将凭据与工单凭证机制绑定（注入 V 维度），对凭据使用建立完整的调用链路追踪（保障 T 维度）。
+              - heading [level=2] [ref=e1436]:
+                - text: 六、OVTP 与 NbSP 的协同
+                - link "六、OVTP 与 NbSP 的协同的直接链接" [ref=e1437] [cursor=pointer]:
+                  - /url: "#六ovtp-与-nbsp-的协同"
+                  - text: "#"
+              - paragraph [ref=e1438]: OVTP 是 NbSP 的延伸。NbSP 确保"门不可绕"，OVTP 确保"过门者必须出示完整的身份和工单凭证，并留下可追溯的记录"。二者合一，构成完整的防御纵深。
+              - paragraph [ref=e1439]: 回到 NbSP 范式中的攻击分类：
+              - list [ref=e1440]:
+                - listitem [ref=e1441]:
+                  - strong [ref=e1442]: B3 型攻击
+                  - text: （完全绕过型）：NbSP 的核心防御对象。若 B3 型攻击得逞，OVTP 的审计追溯能力也会被一并摧毁——攻击者获得底层执行权限，可篡改或清除日志。城墙失守，盘查制度形同虚设。
+                - listitem [ref=e1443]:
+                  - strong [ref=e1444]: B2− 型攻击
+                  - text: （部分绕过·可感知型）：攻击者突破部分边界但暴露在独立的感知审计体系下（
+                  - generic [ref=e1445]:
+                    - math [ref=e1447]:
+                      - generic [ref=e1449]:
+                        - generic [ref=e1450]: A
+                        - generic [ref=e1451]: (
+                        - generic [ref=e1452]: g
+                        - generic [ref=e1453]: )
+                        - generic [ref=e1454]: =
+                        - generic [ref=e1455]: "0"
+                    - generic [aria-hidden] [ref=e1456]:
+                      - generic [ref=e1457]: A(g) =
+                      - generic [ref=e1458]: "0"
+                  - text: ）。在设计完善的 OVTP 体系下，B2− 型攻击难以隐形——异常的操作模式（不持有合法工单凭证、使用了非预期的访问路径）会在审计链路中留下可识别的痕迹。
+                - listitem [ref=e1459]:
+                  - strong [ref=e1460]: B1 型攻击
+                  - text: （滥用服务型）：身份滥用和权限滥用。这是 OVTP 的核心防御对象。B1 型攻击不破坏 NbSP 边界，而是利用合法的访问接口从事非法操作。完善的 OVTP 体系通过 Operator 真实身份追溯、Voucher 工单凭证的任务级约束、Traceable 全链路审计，使 B1 型攻击无所遁形。
+              - paragraph [ref=e1461]: 军事类比：NbSP 是城墙和护城河——确保敌人不能翻墙而入；OVTP 是城门的盘查制度——每一个经过城门的人都必须出示身份文书和任务工单、留下进出记录。城墙阻挡翻墙的敌军（B3/B2+），盘查拦截混入的间谍（B2−/B1）。没有城墙，盘查形同虚设；没有盘查，城墙只能挡住最粗暴的进攻。
+              - heading [level=2] [ref=e1462]:
+                - text: 七、水平越权：OVTP 范式的实战解析
+                - link "七、水平越权：OVTP 范式的实战解析的直接链接" [ref=e1463] [cursor=pointer]:
+                  - /url: "#七水平越权ovtp-范式的实战解析"
+                  - text: "#"
+              - paragraph [ref=e1464]:
+                - text: 水平越权（Horizontal Privilege Escalation）是 Web 安全和 API 安全领域最常见、影响最广泛的漏洞类型之一，典型技术成因是
+                - strong [ref=e1465]: IDOR
+                - text: （Insecure Direct Object Reference）——接口未校验请求者与资源的归属关系，导致攻击者仅通过修改资源标识即可访问他人数据。它也是 OVTP 范式最直接的实战检验场：一个典型的 B1 型攻击——角色检查通过，权限验证通过，但操作者访问的是同权限级别下其他用户的数据。
+              - heading [level=3] [ref=e1466]:
+                - text: 7.1 水平越权的攻击本质
+                - link "7.1 水平越权的攻击本质的直接链接" [ref=e1467] [cursor=pointer]:
+                  - /url: "#71-水平越权的攻击本质"
+                  - text: "#"
+              - paragraph [ref=e1468]:
+                - text: 某三甲医院护理信息系统中，护士可在线查看所负责患者的检验报告、护理记录和医嘱信息。内科病房护士张某登录系统后，查看自己负责的患者王某的血液检验报告，页面地址为
+                - code [ref=e1469]: /api/reports/R2024051234
+                - text: 。张某将 URL 中的报告编号改为
+                - code [ref=e1470]: R2024051235
+                - text: ，页面刷新——显示的是外科病房一位术后患者的完整检验报告。
+              - paragraph [ref=e1471]: 该医院工作人员之所以能看到非自己职责范围内的患者病历，不是因为他"黑"进了系统，而是系统在角色检查通过后根本没有进一步校验数据归属。在 RBAC 模型下，内科护士张某和外科护士李某拥有相同的角色（护士），对"查看检验报告"操作拥有相同的权限——RBAC 的判定函数对两次请求给出完全相同的"允许"判定。
+              - paragraph [ref=e1472]: 水平越权之所以如此普遍、难以根治，正是因为它暴露了 RBAC 模型的结构性盲区——RBAC 只校验"角色是否匹配操作类型"，不校验"操作者与资源的归属关系"。这是模型在设计层面就没有为"资源归属"预留表达空间。
+              - heading [level=3] [ref=e1473]:
+                - text: 7.2 OVT 三维解析水平越权
+                - link "7.2 OVT 三维解析水平越权的直接链接" [ref=e1474] [cursor=pointer]:
+                  - /url: "#72-ovt-三维解析水平越权"
+                  - text: "#"
+              - paragraph [ref=e1475]:
+                - strong [ref=e1476]: O 维度：凭据合法，但操作者访问了非自己职责范围的资源
+                - text: 。
+              - paragraph [ref=e1477]:
+                - text: 传统系统在认证后将"操作者身份"与"资源归属"脱钩。张某的登录 Token 证明了"这是内科护士张某"，但在访问
+                - code [ref=e1478]: /api/reports/R2024051235
+                - text: 时，系统没有将"张某的身份及其负责的患者列表"与"报告
+                - code [ref=e1479]: R2024051235
+                - text: 的所属患者"进行比对。
+              - paragraph [ref=e1480]:
+                - text: OVTP 范式要求 O 信息贯穿到资源访问的授权判定中：每一次数据访问都必须校验
+                - generic [ref=e1481]:
+                  - math [ref=e1483]:
+                    - generic [ref=e1485]:
+                      - generic [ref=e1486]: e
+                      - generic [ref=e1487]: .
+                      - generic [ref=e1488]: o
+                  - generic [ref=e1490]: e.o
+                - text: （操作者）与
+                - generic [ref=e1491]:
+                  - math [ref=e1493]:
+                    - generic [ref=e1495]:
+                      - generic [ref=e1496]: e
+                      - generic [ref=e1497]: .
+                      - generic [ref=e1498]: r
+                  - generic [ref=e1500]: e.r
+                - text: （被访问资源）之间的归属关系：
+              - paragraph [ref=e1501]:
+                - generic [ref=e1502]:
+                  - math [ref=e1504]:
+                    - generic [ref=e1506]:
+                      - generic [ref=e1507]: allow
+                      - generic [ref=e1508]: (
+                      - generic [ref=e1509]: e
+                      - generic [ref=e1510]: )
+                      - generic [ref=e1511]: ⇒
+                      - generic [ref=e1512]: e
+                      - generic [ref=e1513]: .
+                      - generic [ref=e1514]: r
+                      - generic [ref=e1515]: ∈
+                      - generic [ref=e1516]: scope
+                      - generic [ref=e1517]: (
+                      - generic [ref=e1518]: e
+                      - generic [ref=e1519]: .
+                      - generic [ref=e1520]: o
+                      - generic [ref=e1521]: )
+                      - generic [ref=e1522]: ∨
+                      - generic [ref=e1523]: delegated
+                      - generic [ref=e1524]: (
+                      - generic [ref=e1525]: e
+                      - generic [ref=e1526]: .
+                      - generic [ref=e1527]: o
+                      - generic [ref=e1528]: ","
+                      - generic [ref=e1529]: e
+                      - generic [ref=e1530]: .
+                      - generic [ref=e1531]: r
+                      - generic [ref=e1532]: ","
+                      - generic [ref=e1533]: e
+                      - generic [ref=e1534]: .
+                      - generic [ref=e1535]: v
+                      - generic [ref=e1536]: )
+                  - generic [aria-hidden] [ref=e1537]:
+                    - generic [ref=e1538]:
+                      - generic [ref=e1539]: allow
+                      - text: (e) ⇒
+                    - generic [ref=e1540]: e.r ∈
+                    - generic [ref=e1541]:
+                      - generic [ref=e1542]: scope
+                      - text: (e.o) ∨
+                    - generic [ref=e1543]:
+                      - generic [ref=e1544]: delegated
+                      - text: (e.o, e.r, e.v)
+              - paragraph [ref=e1545]: 即：要么被访问资源在操作者的职责范围内，要么操作者持有明确的委托授权（通过工单凭证 V 声明——例如科室间会诊工单授权外科护士查阅内科患者的特定检验结果）。这条规则在 RBAC 中不存在。
+              - paragraph [ref=e1546]:
+                - strong [ref=e1547]: V 维度：无工单凭证约束访问范围
+                - text: 。
+              - paragraph [ref=e1548]:
+                - text: 没有工单凭证机制时，护士对"查看检验报告"的权限是无范围约束的静态权限——只要角色匹配，任何报告编号都可以查。如果引入工单凭证机制：每一次数据访问都隐式关联着一张范围为
+                - code [ref=e1549]: "scope = {reports where patient ∈ assigned_patients(张某)}"
+                - text: 的工单凭证。当张某试图访问报告
+                - code [ref=e1550]: R2024051235
+                - text: 时，系统校验
+                - generic [ref=e1551]:
+                  - math [ref=e1553]:
+                    - generic [ref=e1555]:
+                      - generic [ref=e1556]: e
+                      - generic [ref=e1557]: .
+                      - generic [ref=e1558]: r
+                      - generic [ref=e1559]: ∈
+                      - generic [ref=e1560]: v
+                      - generic [ref=e1561]: .
+                      - generic [ref=e1562]: scope
+                  - generic [aria-hidden] [ref=e1563]:
+                    - generic [ref=e1564]: e.r ∈
+                    - generic [ref=e1565]:
+                      - text: v.
+                      - generic [ref=e1566]: scope
+                - text: ，发现该报告所属患者不在张某的负责列表中，访问被拒绝。需要跨科查阅？走会诊工单流程，签发有明确时间窗口和数据范围的临时工单凭证。
+              - paragraph [ref=e1567]:
+                - strong [ref=e1568]: T 维度：跨链路聚合检测批量越权
+                - text: 。
+              - paragraph [ref=e1569]:
+                - text: 单独看每一次请求——护士张某查询报告
+                - code [ref=e1570]: R2024051235
+                - text: ——在缺乏 O 维度归属校验的系统中，这一请求"看起来"和正常请求无异。但当 T 维度的聚合分析能力介入：
+              - list [ref=e1571]:
+                - listitem [ref=e1572]: 单链路追溯：某护士账号在 10 分钟内连续请求 500 份不同编号的检验报告，且编号呈顺序递增——明显的遍历行为。
+                - listitem [ref=e1573]: 跨链路聚合：即使攻击者使用多个账号、分散在不同时间段、从不同终端发起请求，T 维度的关联分析仍可通过行为模式（请求频率、编号分布、访问资源的科室分布异常）识别协同攻击。
+                - listitem [ref=e1574]: 异常模式检测：正常护士只访问自己负责的十几位患者的报告，攻击者访问了跨科室的大量患者报告——T 维度的聚合统计可轻松发现偏离基线的异常。
+              - paragraph [ref=e1575]: 三维协同形成纵深防御：O 维度在请求级别阻断越权，V 维度从架构层面消除无范围约束的静态权限，T 维度在聚合层面检测已经绕过前两道防线的批量攻击。
+              - heading [level=3] [ref=e1576]:
+                - text: 7.3 OVTP 视角下的真实案件
+                - link "7.3 OVTP 视角下的真实案件的直接链接" [ref=e1577] [cursor=pointer]:
+                  - /url: "#73-ovtp-视角下的真实案件"
+                  - text: "#"
+              - paragraph [ref=e1578]: 2023 年 12 月某知名艺人去世后，其就诊电子病历截图被迅速传播至社交平台。调查发现，一名医院工作人员为炫耀将患者病历拍照发至微信群，信息随即失控扩散。同类事件在医疗系统中屡禁不止：某医院产科某护师向外部保健机构出售产妇信息数百条，每条售价数十元，信息包括姓名、住址、电话、分娩方式等完整的健康生理信息。
+              - paragraph [ref=e1579]:
+                - text: 这些案件的技术特征相同：操作者的角色检查全部通过了。RBAC 治不了水平越权，因为 RBAC 的
+                - generic [ref=e1580]:
+                  - math [ref=e1582]:
+                    - generic [ref=e1585]:
+                      - generic [ref=e1586]: I
+                      - generic [ref=e1587]: O
+                  - generic [ref=e1590]:
+                    - text: I
+                    - generic [ref=e1591]: O
+                - text: 止步于"角色确认"，不延伸到"职责归属校验"；
+                - generic [ref=e1599]:
+                  - math [ref=e1601]:
+                    - generic [ref=e1603]:
+                      - generic [ref=e1604]:
+                        - generic [ref=e1605]: I
+                        - generic [ref=e1606]: V
+                      - generic [ref=e1607]: ≡
+                      - generic [ref=e1608]: "0"
+                  - generic [aria-hidden] [ref=e1609]:
+                    - generic [ref=e1610]:
+                      - generic [ref=e1611]:
+                        - text: I
+                        - generic [ref=e1612]: V
+                      - text: ≡
+                    - generic [ref=e1620]: "0"
+                - text: ，无工单凭证；
+                - generic [ref=e1621]:
+                  - math [ref=e1623]:
+                    - generic [ref=e1625]:
+                      - generic [ref=e1626]:
+                        - generic [ref=e1627]: I
+                        - generic [ref=e1628]: T
+                      - generic [ref=e1629]: ≡
+                      - generic [ref=e1630]: "0"
+                  - generic [aria-hidden] [ref=e1631]:
+                    - generic [ref=e1632]:
+                      - generic [ref=e1633]:
+                        - text: I
+                        - generic [ref=e1634]: T
+                      - text: ≡
+                    - generic [ref=e1642]: "0"
+                - text: ，无链路追溯。这不是实现层面的疏忽，而是模型在设计层面就缺乏防御水平越权所需的信息维度。
+              - paragraph [ref=e1643]: OVTP 范式提供的是架构级的系统性解决方案：在框架层面强制要求 O 维度的职责归属校验、V 维度的范围约束绑定、T 维度的聚合异常检测——将水平越权的防御从"开发者的个人自觉"提升为"架构的强制保障"。
+              - heading [level=2] [ref=e1644]:
+                - text: 八、OVTP 视角下的智能体安全
+                - link "八、OVTP 视角下的智能体安全的直接链接" [ref=e1645] [cursor=pointer]:
+                  - /url: "#八ovtp-视角下的智能体安全"
+                  - text: "#"
+              - paragraph [ref=e1646]: AI 智能体（Agent）的快速兴起正在从根本上改变网络访问的模式——访问的发起者不再仅仅是人类用户，而是代表人类行事的自主 AI 系统。这对 OVTP 范式提出了全新的挑战，同时也使 OVTP 范式变得更加不可或缺。
+              - heading [level=3] [ref=e1647]:
+                - text: 8.1 智能体带来的 OVTP 挑战
+                - link "8.1 智能体带来的 OVTP 挑战的直接链接" [ref=e1648] [cursor=pointer]:
+                  - /url: "#81-智能体带来的-ovtp-挑战"
+                  - text: "#"
+              - paragraph [ref=e1649]:
+                - strong [ref=e1650]: Operator 维度的模糊化
+                - text: 。当 AI 智能体代替用户执行任务时，"实际操作者"的概念变得模糊——是下达指令的用户、是执行操作的智能体、还是智能体背后的大模型服务提供方？传统人类操作场景中"谁在操作"至少是明确的自然人；智能体场景中，一次数据库查询可能是由用户口头指令触发、经 AI 理解和规划后、通过工具调用接口自动执行的——操作链路中涉及多个不同性质的主体。
+              - paragraph [ref=e1651]:
+                - strong [ref=e1652]: Voucher 维度的权限放大与目的失控
+                - text: 。智能体天然具有"权限放大器"的特性——用户将一项任务委托给智能体时，智能体需要调用各种工具和接口完成任务。若智能体继承了用户的全部权限而非持有一张范围受限的工单凭证，那它实际上拥有了比用户本人更大的攻击面：用户可能只会手动查询几条数据，智能体可能在数秒内自动遍历整个数据库。
+              - paragraph [ref=e1653]: 更棘手的是任务目的的不确定性。AI 智能体的行为可能是大模型在复杂推理链路中"自主决定"的。用户要求"帮我分析竞品情况"，智能体可能自主决定去查询公司内部的客户数据库——这个操作是用户原始指令的合理推演，还是智能体的越界行为？没有工单凭证界定任务边界，这个问题无法回答。
+              - paragraph [ref=e1654]:
+                - strong [ref=e1655]: Traceable 维度的复杂化
+                - text: 。智能体的决策链路往往是非确定性的——同一个指令在不同上下文中可能触发完全不同的操作序列。传统的"操作日志"不足以追溯智能体行为的完整因果链路，还需要记录智能体的推理过程、决策依据和工具调用上下文。
+              - heading [level=3] [ref=e1656]:
+                - text: 8.2 OVTP 范式对智能体安全的指导
+                - link "8.2 OVTP 范式对智能体安全的指导的直接链接" [ref=e1657] [cursor=pointer]:
+                  - /url: "#82-ovtp-范式对智能体安全的指导"
+                  - text: "#"
+              - paragraph [ref=e1658]: 正因为这些挑战，OVTP 范式在智能体时代反而变得更加关键。
+              - paragraph [ref=e1659]:
+                - strong [ref=e1660]: O 维度要求：多层身份绑定
+                - text: 。智能体的每一次访问必须携带完整的身份链：底层用户身份 → 智能体实例身份 → 大模型服务身份。三层身份缺一不可——用于确定"谁发起的"（用户）、"谁执行的"（智能体实例）、"谁提供的智能"（模型服务方）。
+              - paragraph [ref=e1661]: 大模型服务身份的标识尤为关键：大模型在推理过程中会接收用户数据作为上下文输入，这些数据可能在模型服务端产生遗留——包括推理日志、上下文缓存、甚至因微调或 RLHF 而被间接吸收进模型参数。若模型服务方身份未被纳入 O 维度的身份链，用户数据在模型端的流动轨迹就成为审计盲区。标记大模型服务身份，正是为了保障这一段数据流动的可溯性。
+              - paragraph [ref=e1662]:
+                - strong [ref=e1663]: V 维度要求：任务级工单凭证
+                - text: 。智能体获得的是面向具体任务的工单凭证，而非用户的全部权限。用户将任务委托给智能体时，应签发一张范围受限的工单凭证——"允许在 30 分钟内查询 A 数据库中与竞品分析相关的非涉密表，限 100 次查询"。工单凭证同时明确任务目的和授权边界：智能体的每一步操作都应与工单凭证声明的任务保持可验证的对齐关系——若智能体执行的操作超出工单范围，应触发告警或中断执行，请求用户确认。
+              - paragraph [ref=e1664]:
+                - strong [ref=e1665]: T 维度要求：决策链路的完整审计
+                - text: 。不仅记录智能体做了什么，还要记录智能体为什么这么做。智能体的推理链路、工具调用序列、中间结果都应纳入审计范围，使事后可以完整还原"用户指令 → 智能体理解 → 规划决策 → 工具调用 → 数据访问"的全链路。
+              - paragraph [ref=e1666]: 智能体安全是 OVTP 范式最前沿的应用场景。随着智能体在企业、政务、金融等领域的快速渗透，缺乏 OVTP 保障的智能体系统将成为攻击者滥用的温床——攻击者可以通过注入恶意指令、劫持智能体的决策链路，以智能体的合法身份执行非法操作。
+              - heading [level=2] [ref=e1667]:
+                - text: 九、OVTP 完备性评估：从理论到实操
+                - link "九、OVTP 完备性评估：从理论到实操的直接链接" [ref=e1668] [cursor=pointer]:
+                  - /url: "#九ovtp-完备性评估从理论到实操"
+                  - text: "#"
+              - paragraph [ref=e1669]: 前文建立 OVTP 范式的形式化框架（定义 1—5、性质 1）并审视传统模型的缺陷，§7 和 §8 分别从水平越权和智能体安全两个场景展示 OVTP 范式的实战意义。一个自然的问题是：给定企业或机构的真实网络环境，如何系统性地评估其 OVTP 完备性？
+              - heading [level=3] [ref=e1670]:
+                - text: 9.1 评估流程
+                - link "9.1 评估流程的直接链接" [ref=e1671] [cursor=pointer]:
+                  - /url: "#91-评估流程"
+                  - text: "#"
+              - paragraph [ref=e1672]: OVTP 完备性评估分为四个步骤：
+              - paragraph [ref=e1673]:
+                - strong [ref=e1674]: 第一步：枚举关键访问链路
+                - text: 。梳理企业网络中所有涉及敏感资源（核心数据库、客户信息、财务系统、运维管控面等）的访问链路。每条链路从终端用户（或智能体）发起，到最终资源被访问，标记沿途经过的所有节点（终端、网关、认证服务、微服务、中间件、数据库等）。重点关注跨部门、跨系统、涉及第三方的链路——这些链路通常最长、域边界最多、OVT 信息衰减风险最高。
+              - paragraph [ref=e1675]:
+                - strong [ref=e1676]: 第二步：识别域边界
+                - text: 。在每条链路上标记所有域边界——跨网络域（内网 → 云、云 → 云）、跨信任域（本组织 → 外包方、本组织 → SaaS 平台）、跨技术形态（传统系统 → 智能体调用链）。OVT 信息在域内通常呈二值特征（要么全程转发、要么全程缺失），真正的断裂风险集中在域边界。
+              - paragraph [ref=e1677]:
+                - strong [ref=e1678]: 第三步：逐边界评估 OVT 信息交接状态
+                - text: 。在每个域边界处，分别评估三个维度：
+              - list [ref=e1679]:
+                - listitem [ref=e1680]:
+                  - generic [ref=e1681]:
+                    - math [ref=e1683]:
+                      - generic [ref=e1686]:
+                        - generic [ref=e1687]: I
+                        - generic [ref=e1688]: O
+                    - generic [ref=e1691]:
+                      - text: I
+                      - generic [ref=e1692]: O
+                  - text: ：操作者真实身份是否在跨域时被保留并可验证？还是被中间服务替换为服务账号、被网关剥离、在跨域协议转换中丢失？
+                - listitem [ref=e1700]:
+                  - generic [ref=e1701]:
+                    - math [ref=e1703]:
+                      - generic [ref=e1706]:
+                        - generic [ref=e1707]: I
+                        - generic [ref=e1708]: V
+                    - generic [ref=e1711]:
+                      - text: I
+                      - generic [ref=e1712]: V
+                  - text: ：工单凭证是否跨域传递？还是在跨域调用时被简化为静态 Token、被降级为角色权限检查、或完全被丢弃？
+                - listitem [ref=e1720]:
+                  - generic [ref=e1721]:
+                    - math [ref=e1723]:
+                      - generic [ref=e1726]:
+                        - generic [ref=e1727]: I
+                        - generic [ref=e1728]: T
+                    - generic [ref=e1731]:
+                      - text: I
+                      - generic [ref=e1732]: T
+                  - text: ：链路关联标识（TraceID/SessionID）是否在跨域时被正确接续？还是因协议不兼容、日志系统隔离、跨组织信息壁垒而断裂？
+              - paragraph [ref=e1740]: 对于采用 SessionID 间接查询模式的链路段，还需特别评估：T 断裂是否会导致 O 和 V 的级联归零（参见 §4.5）。
+              - paragraph [ref=e1741]:
+                - strong [ref=e1742]: 第四步：生成 OVTP 完备性热力图与治理优先级
+                - text: 。将评估结果可视化为以链路为行、以域边界为列的热力图，每个单元格标注
+                - generic [ref=e1743]:
+                  - math [ref=e1745]:
+                    - generic [ref=e1748]:
+                      - generic [ref=e1749]: I
+                      - generic [ref=e1750]: O
+                  - generic [ref=e1753]:
+                    - text: I
+                    - generic [ref=e1754]: O
+                - text: 、
+                - generic [ref=e1762]:
+                  - math [ref=e1764]:
+                    - generic [ref=e1767]:
+                      - generic [ref=e1768]: I
+                      - generic [ref=e1769]: V
+                  - generic [ref=e1772]:
+                    - text: I
+                    - generic [ref=e1773]: V
+                - text: 、
+                - generic [ref=e1781]:
+                  - math [ref=e1783]:
+                    - generic [ref=e1786]:
+                      - generic [ref=e1787]: I
+                      - generic [ref=e1788]: T
+                  - generic [ref=e1791]:
+                    - text: I
+                    - generic [ref=e1792]: T
+                - text: 的状态（完整/缺失）。结合 §4.5 的域边界概率模型
+                - generic [ref=e1800]:
+                  - math [ref=e1802]:
+                    - generic [ref=e1804]:
+                      - generic [ref=e1805]: P
+                      - generic [ref=e1806]: (
+                      - generic [ref=e1807]: 完整
+                      - generic [ref=e1808]: )
+                      - generic [ref=e1809]: =
+                      - generic [ref=e1810]: ∏
+                      - generic [ref=e1811]: (
+                      - generic [ref=e1812]: "1"
+                      - generic [ref=e1813]: −
+                      - generic [ref=e1814]:
+                        - generic [ref=e1815]: q
+                        - generic [ref=e1816]: i
+                      - generic [ref=e1817]: )
+                  - generic [aria-hidden] [ref=e1818]:
+                    - generic [ref=e1819]:
+                      - text: P(
+                      - generic [ref=e1820]: 完整
+                      - text: ) =
+                    - generic [ref=e1821]: ∏(1 −
+                    - generic [ref=e1822]:
+                      - generic [ref=e1823]:
+                        - text: q
+                        - generic [ref=e1824]: i
+                      - text: )
+                - text: ，可直观看到哪些链路的 OVT 信息存活概率最低、哪些域边界是系统性的断裂高发点。治理优先级依据两个维度排序：一是链路的业务敏感度（涉及核心资产的链路优先），二是 OVT 断裂的严重程度（三维同时归零的边界优先于单维缺失的边界）。
+              - heading [level=3] [ref=e1832]:
+                - text: 9.2 评估示例
+                - link "9.2 评估示例的直接链接" [ref=e1833] [cursor=pointer]:
+                  - /url: "#92-评估示例"
+                  - text: "#"
+              - paragraph [ref=e1834]: 以典型企业场景为例：外包运维人员通过 VPN 登录企业堡垒机，从堡垒机跳转到云上微服务集群，微服务调用第三方 SaaS 平台 API 完成数据分析。这条链路跨越三个域边界：
+              - table [ref=e1835]:
+                - rowgroup [ref=e1836]:
+                  - row [ref=e1837]:
+                    - columnheader "域边界" [ref=e1838]
+                    - columnheader "跨越内容" [ref=e1839]
+                    - columnheader [ref=e1840]:
+                      - generic [ref=e1841]:
+                        - math [ref=e1843]:
+                          - generic [ref=e1846]:
+                            - generic [ref=e1847]: I
+                            - generic [ref=e1848]: O
+                        - generic [ref=e1851]:
+                          - text: I
+                          - generic [ref=e1852]: O
+                    - columnheader [ref=e1860]:
+                      - generic [ref=e1861]:
+                        - math [ref=e1863]:
+                          - generic [ref=e1866]:
+                            - generic [ref=e1867]: I
+                            - generic [ref=e1868]: V
+                        - generic [ref=e1871]:
+                          - text: I
+                          - generic [ref=e1872]: V
+                    - columnheader [ref=e1880]:
+                      - generic [ref=e1881]:
+                        - math [ref=e1883]:
+                          - generic [ref=e1886]:
+                            - generic [ref=e1887]: I
+                            - generic [ref=e1888]: T
+                        - generic [ref=e1891]:
+                          - text: I
+                          - generic [ref=e1892]: T
+                - rowgroup [ref=e1900]:
+                  - row [ref=e1901]:
+                    - cell "外包终端 → 企业堡垒机" [ref=e1902]
+                    - cell "VPN 跨网络域" [ref=e1903]
+                    - cell "完整（VPN 凭据绑定自然人）" [ref=e1904]
+                    - cell "完整（堡垒机会话携带工单）" [ref=e1905]
+                    - cell "完整（SessionID 跨域接续）" [ref=e1906]
+                  - row [ref=e1907]:
+                    - cell "堡垒机 → 云微服务" [ref=e1908]
+                    - cell "内网 → 云的跨网络域 + 跨技术形态" [ref=e1909]
+                    - cell [ref=e1910]:
+                      - strong [ref=e1911]: 断裂
+                      - text: （服务账号替代操作者身份）
+                    - cell [ref=e1912]:
+                      - strong [ref=e1913]: 断裂
+                      - text: （工单上下文被剥离）
+                    - cell [ref=e1914]:
+                      - strong [ref=e1915]: 断裂
+                      - text: （日志系统跨云隔离）
+                  - row [ref=e1916]:
+                    - cell "云微服务 → SaaS 平台" [ref=e1917]
+                    - cell "跨组织 API 跨信任域" [ref=e1918]
+                    - cell [ref=e1919]:
+                      - strong [ref=e1920]: 断裂
+                    - cell [ref=e1921]:
+                      - strong [ref=e1922]: 断裂
+                    - cell [ref=e1923]:
+                      - strong [ref=e1924]: 断裂
+              - paragraph [ref=e1925]: 第二个域边界后 OVT 信息全面归零，从云微服务开始的所有后继节点完全丧失安全研判能力。若该链路涉及敏感数据访问，应作为最高优先级治理对象。治理方向包括：在堡垒机环节引入硬件密钥绑定真实身份（补 O）、建立运维工单凭证机制（补 V）、在跨域协议中显式传递 O/V 信息并接续 TraceID（补 T）。
+              - heading [level=3] [ref=e1926]:
+                - text: 9.3 评估的价值
+                - link "9.3 评估的价值的直接链接" [ref=e1927] [cursor=pointer]:
+                  - /url: "#93-评估的价值"
+                  - text: "#"
+              - paragraph [ref=e1928]: OVTP 完备性评估的核心价值在于将安全风险从模糊的"感觉不安全"转化为可定位、可度量、可排序的架构缺陷清单。传统的安全评估往往聚焦于漏洞扫描和渗透测试（本质上是 NbSP 维度的评估），对 B1 型攻击（身份滥用、权限滥用）的风险缺乏系统性的评估手段。OVTP 完备性评估填补了这一空白：它不检查"城墙有没有裂缝"，而是检查"城门的盘查制度在每个关卡是否完整"。
+              - paragraph [ref=e1929]: 对于大型企业和机构，建议将 OVTP 完备性评估纳入常规的安全架构审计流程，尤其是在系统架构变更（如上云迁移、引入新的第三方服务、部署智能体系统）时进行增量评估——因为每一次架构变更都可能引入新的域边界，从而产生新的 OVT 断裂风险。
+              - heading [level=2] [ref=e1930]:
+                - text: 十、总结
+                - link "十、总结的直接链接" [ref=e1931] [cursor=pointer]:
+                  - /url: "#十总结"
+                  - text: "#"
+              - paragraph [ref=e1932]: 网络安全的信息差，不仅在于"能不能看见"，更在于"能不能看清"。
+              - paragraph [ref=e1933]: NbSP 零越范式通过保障访问控制点不可被绕过，解决了"看见"的问题，是网络空间安全的第一原生范式。OVTP 可溯范式通过要求每一次访问携带完整的操作者真实身份（Operator）、工单凭证（Voucher）和全链路可追溯记录（Traceable），解决了"看清"的问题，是网络空间安全的第二原生范式。
+              - paragraph [ref=e1934]: OVTP 范式揭示了传统访问控制模型的系统性认知盲区——DAC、MAC、RBAC、BLP 等经典模型在设计之初就丢失了关键信息，使身份滥用、权限滥用等 B1 型攻击在合法的访问接口后几乎不受约束。OVTP 范式是对访问控制认知框架的系统性升级：区分操作者与凭据，用工单凭证取代静态权限，以全链路追溯贯穿始终。
+              - paragraph [ref=e1935]: 在 AI 智能体时代，OVTP 范式的重要性进一步凸显。当操作者从人类扩展到 AI 系统，当访问行为从人类手动操作延伸到智能体自主决策，传统访问控制模型的认知盲区被成倍放大。OVTP 范式为智能体安全提供了系统性的框架——确保人类对 AI 行为的监督和审计不因技术复杂性而丧失。
+              - paragraph [ref=e1936]: 在网络攻防中，如果有一方打开了上帝视角，那他就会战无不胜。NbSP 零越范式保障了视野的覆盖，OVTP 可溯范式保障了视野的清晰度。两大范式合一，防守方才能真正逼近网络空间的"上帝视角"——不仅看到所有攻击必须经过的关隘，更看清每一个过关者的身份、工单、去向和行迹。
+          - navigation "文章翻页导航" [ref=e1937]:
+            - link "上一篇 NbSP 零越范式" [ref=e1938] [cursor=pointer]:
+              - /url: /nbsp
+              - generic [ref=e1939]: 上一篇
+              - generic [ref=e1940]: NbSP 零越范式
+            - link "下一篇 ARCP 攻击回报范式" [ref=e1941] [cursor=pointer]:
+              - /url: /arcp
+              - generic [ref=e1942]: 下一篇
+              - generic [ref=e1943]: ARCP 攻击回报范式
+        - generic [ref=e1945]:
+          - generic [ref=e1946]: 本章内容大纲
+          - list [ref=e1948]:
+            - listitem [ref=e1949]:
+              - link "一、战争是信息差的战争" [ref=e1950] [cursor=pointer]:
+                - /url: "#一战争是信息差的战争"
+            - listitem [ref=e1951]:
+              - link "二、从\"看见\"到\"看清\"：信息差的深层根源" [ref=e1952] [cursor=pointer]:
+                - /url: "#二从看见到看清信息差的深层根源"
+            - listitem [ref=e1953]:
+              - link "三、访问控制的认知盲区：过度简化的代价" [ref=e1954] [cursor=pointer]:
+                - /url: "#三访问控制的认知盲区过度简化的代价"
+              - list [ref=e1955]:
+                - listitem [ref=e1956]:
+                  - link "3.1 中介困境：谁在操作？" [ref=e1957] [cursor=pointer]:
+                    - /url: "#31-中介困境谁在操作"
+                - listitem [ref=e1958]:
+                  - link "3.2 客服困境：为何而来？" [ref=e1959] [cursor=pointer]:
+                    - /url: "#32-客服困境为何而来"
+                - listitem [ref=e1960]:
+                  - link "3.3 链路困境：越长越盲" [ref=e1961] [cursor=pointer]:
+                    - /url: "#33-链路困境越长越盲"
+            - listitem [ref=e1962]:
+              - link "四、OVTP 可溯范式：网络空间的第二原生安全范式" [ref=e1963] [cursor=pointer]:
+                - /url: "#四ovtp-可溯范式网络空间的第二原生安全范式"
+              - list [ref=e1964]:
+                - listitem [ref=e1965]:
+                  - link "4.1 O — Operator：真实身份的全链路传递" [ref=e1966] [cursor=pointer]:
+                    - /url: "#41-o--operator真实身份的全链路传递"
+                - listitem [ref=e1967]:
+                  - link "4.2 V — Voucher：面向任务的动态授权" [ref=e1968] [cursor=pointer]:
+                    - /url: "#42-v--voucher面向任务的动态授权"
+                - listitem [ref=e1969]:
+                  - link "4.3 T — Traceable：全链路审计的完整闭环" [ref=e1970] [cursor=pointer]:
+                    - /url: "#43-t--traceable全链路审计的完整闭环"
+                - listitem [ref=e1971]:
+                  - link "4.4 OVT 三维协同：完整的信息闭环" [ref=e1972] [cursor=pointer]:
+                    - /url: "#44-ovt-三维协同完整的信息闭环"
+                - listitem [ref=e1973]:
+                  - link "4.5 OVTP 的形式化刻画" [ref=e1974] [cursor=pointer]:
+                    - /url: "#45-ovtp-的形式化刻画"
+            - listitem [ref=e1975]:
+              - link "五、传统模型在 OVT 维度上的全面缺失" [ref=e1976] [cursor=pointer]:
+                - /url: "#五传统模型在-ovt-维度上的全面缺失"
+            - listitem [ref=e1977]:
+              - link "六、OVTP 与 NbSP 的协同" [ref=e1978] [cursor=pointer]:
+                - /url: "#六ovtp-与-nbsp-的协同"
+            - listitem [ref=e1979]:
+              - link "七、水平越权：OVTP 范式的实战解析" [ref=e1980] [cursor=pointer]:
+                - /url: "#七水平越权ovtp-范式的实战解析"
+              - list [ref=e1981]:
+                - listitem [ref=e1982]:
+                  - link "7.1 水平越权的攻击本质" [ref=e1983] [cursor=pointer]:
+                    - /url: "#71-水平越权的攻击本质"
+                - listitem [ref=e1984]:
+                  - link "7.2 OVT 三维解析水平越权" [ref=e1985] [cursor=pointer]:
+                    - /url: "#72-ovt-三维解析水平越权"
+                - listitem [ref=e1986]:
+                  - link "7.3 OVTP 视角下的真实案件" [ref=e1987] [cursor=pointer]:
+                    - /url: "#73-ovtp-视角下的真实案件"
+            - listitem [ref=e1988]:
+              - link "八、OVTP 视角下的智能体安全" [ref=e1989] [cursor=pointer]:
+                - /url: "#八ovtp-视角下的智能体安全"
+              - list [ref=e1990]:
+                - listitem [ref=e1991]:
+                  - link "8.1 智能体带来的 OVTP 挑战" [ref=e1992] [cursor=pointer]:
+                    - /url: "#81-智能体带来的-ovtp-挑战"
+                - listitem [ref=e1993]:
+                  - link "8.2 OVTP 范式对智能体安全的指导" [ref=e1994] [cursor=pointer]:
+                    - /url: "#82-ovtp-范式对智能体安全的指导"
+            - listitem [ref=e1995]:
+              - link "九、OVTP 完备性评估：从理论到实操" [ref=e1996] [cursor=pointer]:
+                - /url: "#九ovtp-完备性评估从理论到实操"
+              - list [ref=e1997]:
+                - listitem [ref=e1998]:
+                  - link "9.1 评估流程" [ref=e1999] [cursor=pointer]:
+                    - /url: "#91-评估流程"
+                - listitem [ref=e2000]:
+                  - link "9.2 评估示例" [ref=e2001] [cursor=pointer]:
+                    - /url: "#92-评估示例"
+                - listitem [ref=e2002]:
+                  - link "9.3 评估的价值" [ref=e2003] [cursor=pointer]:
+                    - /url: "#93-评估的价值"
+            - listitem [ref=e2004]:
+              - link "十、总结" [ref=e2005] [cursor=pointer]:
+                - /url: "#十总结"
+  - contentinfo [ref=e2006]:
+    - generic [ref=e2009]:
+      - generic [ref=e2010]: Copyright © 2012–2026 FEEI All Rights Reserved
+      - generic [ref=e2011]:
+        - link "浙ICP备2021009229号" [ref=e2012] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn/
+        - generic [ref=e2013]: ·
+        - link "浙公网安备33011002015586号" [ref=e2014] [cursor=pointer]:
+          - /url: http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586
+  - button "打开音乐播放器" [ref=e2020] [cursor=pointer]

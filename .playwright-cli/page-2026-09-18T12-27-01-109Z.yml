@@ -1,0 +1,103 @@
+- generic [ref=e2]:
+  - region "跳到主要内容":
+    - link "跳到主要内容" [ref=e3] [cursor=pointer]:
+      - /url: "#__docusaurus_skipToContent_fallback"
+  - navigation "主导航" [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - link "FEEI 首页" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e8]: FEEI
+        - button "网络安全" [ref=e10] [cursor=pointer]
+        - button "人生系统" [ref=e14] [cursor=pointer]
+        - button "吴飞飞" [ref=e18] [cursor=pointer]
+      - generic [ref=e21]:
+        - textbox "Search" [ref=e25]:
+          - /placeholder: 搜索
+        - button "切换浅色/暗黑模式（当前为system mode）" [ref=e27] [cursor=pointer]
+  - main [ref=e31]:
+    - generic [ref=e33]:
+      - heading "吴飞飞" [level=1] [ref=e34]
+      - paragraph [ref=e35]: 写网络安全、人工智能安全，也记录生活。
+      - generic [ref=e36]:
+        - link "关于我 →" [ref=e37] [cursor=pointer]:
+          - /url: /my-journey-in-cybersecurity
+        - link "RSS ↗" [ref=e38] [cursor=pointer]:
+          - /url: /rss.xml
+    - region [ref=e39]:
+      - generic [ref=e40]:
+        - heading [level=2] [ref=e41]:
+          - text: 精选阅读
+          - link "精选阅读的直接链接" [ref=e42] [cursor=pointer]:
+            - /url: "#start-reading"
+            - text: "#"
+        - generic [ref=e43]:
+          - link [ref=e44] [cursor=pointer]:
+            - /url: /my-journey-in-cybersecurity
+            - generic [aria-hidden] [ref=e45]: "01"
+            - generic [ref=e46]:
+              - heading "我的网络安全之路" [level=3] [ref=e47]
+              - paragraph [ref=e48]: 从一台旧电脑、漏洞研究，到电商、银行与支付平台的安全建设。
+            - generic [aria-hidden] [ref=e49]: ↗
+          - link [ref=e50] [cursor=pointer]:
+            - /url: /security-system
+            - generic [aria-hidden] [ref=e51]: "02"
+            - generic [ref=e52]:
+              - heading "安全体系" [level=3] [ref=e53]
+              - paragraph [ref=e54]: 怎样把风险、组织责任与技术能力，连成持续运行的防御体系。
+            - generic [aria-hidden] [ref=e55]: ↗
+          - link [ref=e56] [cursor=pointer]:
+            - /url: /life-certainty
+            - generic [aria-hidden] [ref=e57]: "03"
+            - generic [ref=e58]:
+              - heading "创造确定性人生" [level=3] [ref=e59]
+              - paragraph [ref=e60]: 无法让未来完全确定，但可以让自己更能承受不确定性。
+            - generic [aria-hidden] [ref=e61]: ↗
+    - region [ref=e62]:
+      - generic [ref=e63]:
+        - heading "最近记录" [level=2] [ref=e64]
+        - generic [ref=e65]:
+          - generic [ref=e66]:
+            - heading [level=3] [ref=e67]:
+              - link "网络安全 · 最近复核 →" [ref=e68] [cursor=pointer]:
+                - /url: /security-engineering
+            - generic [ref=e69]:
+              - link "2026.09.17 我的网络安全之路" [ref=e70] [cursor=pointer]:
+                - /url: /my-journey-in-cybersecurity
+                - time [ref=e71]: 2026.09.17
+                - generic [ref=e72]: 我的网络安全之路
+              - link "2026.09.16 Agent 架构基础" [ref=e73] [cursor=pointer]:
+                - /url: /agent-architecture
+                - time [ref=e74]: 2026.09.16
+                - generic [ref=e75]: Agent 架构基础
+              - link "2026.09.16 Agent Loop 工程" [ref=e76] [cursor=pointer]:
+                - /url: /agent-loop-engineering
+                - time [ref=e77]: 2026.09.16
+                - generic [ref=e78]: Agent Loop 工程
+          - generic [ref=e79]:
+            - heading [level=3] [ref=e80]:
+              - link "日记 →" [ref=e81] [cursor=pointer]:
+                - /url: /2026
+            - generic [ref=e82]:
+              - link "2026.09.17 一直开到家里人都睡了" [ref=e83] [cursor=pointer]:
+                - /url: /2026-09-17
+                - time [ref=e84]: 2026.09.17
+                - generic [ref=e85]: 一直开到家里人都睡了
+              - link "2026.09.16 趵突泉和大明湖还在旁边" [ref=e86] [cursor=pointer]:
+                - /url: /2026-09-16
+                - time [ref=e87]: 2026.09.16
+                - generic [ref=e88]: 趵突泉和大明湖还在旁边
+              - link "2026.09.15 邀请了人，没邀请座位" [ref=e89] [cursor=pointer]:
+                - /url: /2026-09-15
+                - time [ref=e90]: 2026.09.15
+                - generic [ref=e91]: 邀请了人，没邀请座位
+  - contentinfo [ref=e92]:
+    - generic [ref=e95]:
+      - generic [ref=e96]: Copyright © 2012–2026 FEEI All Rights Reserved
+      - generic [ref=e97]:
+        - link "浙ICP备2021009229号" [ref=e98] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn/
+        - generic [ref=e99]: ·
+        - link "浙公网安备33011002015586号" [ref=e100] [cursor=pointer]:
+          - /url: http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586
+  - button "打开音乐播放器" [ref=e103] [cursor=pointer]

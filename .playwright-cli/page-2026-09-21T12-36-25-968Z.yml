@@ -1,0 +1,530 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - region "跳到主要内容":
+      - link "跳到主要内容" [ref=e3] [cursor=pointer]:
+        - /url: "#__docusaurus_skipToContent_fallback"
+    - navigation "主导航" [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - link "FEEI 首页" [ref=e7] [cursor=pointer]:
+            - /url: /
+            - generic [ref=e8]: FEEI
+          - button "网络安全" [ref=e10] [cursor=pointer]
+          - button "人生系统" [ref=e14] [cursor=pointer]
+          - button "吴飞飞" [ref=e18] [cursor=pointer]
+        - generic [ref=e21]:
+          - generic [ref=e24]:
+            - textbox "Search" [ref=e25]:
+              - /placeholder: 搜索
+            - generic:
+              - generic: ⌘
+              - generic: K
+          - button "切换浅色/暗黑模式（当前为system mode）" [ref=e27] [cursor=pointer]
+    - generic [ref=e32]:
+      - complementary [ref=e33]:
+        - generic [ref=e35]:
+          - navigation "文档侧边栏" [ref=e36]:
+            - list [ref=e37]:
+              - listitem [ref=e38]:
+                - link "人工智能安全" [ref=e39] [cursor=pointer]:
+                  - /url: /ai-security
+                  - generic "人工智能安全" [ref=e41]
+              - listitem [ref=e42]:
+                - button "智能工程" [expanded] [ref=e44] [cursor=pointer]:
+                  - generic "智能工程" [ref=e46]
+                - list [ref=e47]:
+                  - listitem [ref=e48]:
+                    - link "人工智能" [ref=e49] [cursor=pointer]:
+                      - /url: /ai
+                      - generic "人工智能" [ref=e51]
+                  - listitem [ref=e52]:
+                    - generic [ref=e53]:
+                      - link "AI基础认知" [ref=e54] [cursor=pointer]:
+                        - /url: /ai-foundation
+                        - generic "AI基础认知" [ref=e56]
+                      - button "折叠侧边栏分类 'AI基础认知'" [expanded] [ref=e57] [cursor=pointer]
+                    - list [ref=e58]:
+                      - listitem [ref=e59]:
+                        - link "Agent 架构基础" [ref=e60] [cursor=pointer]:
+                          - /url: /agent-architecture
+                          - generic "Agent 架构基础" [ref=e62]
+                      - listitem [ref=e63]:
+                        - link "LLM 的技术演进主线" [ref=e64] [cursor=pointer]:
+                          - /url: /llm-evolution
+                          - generic "LLM 的技术演进主线" [ref=e66]
+                      - listitem [ref=e67]:
+                        - link "上下文工程" [ref=e68] [cursor=pointer]:
+                          - /url: /context-engineering
+                          - generic "上下文工程" [ref=e70]
+                      - listitem [ref=e71]:
+                        - link "模型能力边界" [ref=e72] [cursor=pointer]:
+                          - /url: /ai-capability-boundary
+                          - generic "模型能力边界" [ref=e74]
+                  - listitem [ref=e75]:
+                    - generic [ref=e76]:
+                      - link "AI使用实践" [ref=e77] [cursor=pointer]:
+                        - /url: /ai-practice
+                        - generic "AI使用实践" [ref=e79]
+                      - button "折叠侧边栏分类 'AI使用实践'" [expanded] [ref=e80] [cursor=pointer]
+                    - list [ref=e81]:
+                      - listitem [ref=e82]:
+                        - generic [ref=e83]:
+                          - link "使用 AI" [ref=e84] [cursor=pointer]:
+                            - /url: /ai-use
+                            - generic "使用 AI" [ref=e86]
+                          - button "展开侧边栏分类 '使用 AI'" [ref=e87] [cursor=pointer]
+                      - listitem [ref=e88]:
+                        - link "AI 中转站" [ref=e89] [cursor=pointer]:
+                          - /url: /ai-relay
+                          - generic "AI 中转站" [ref=e91]
+                      - listitem [ref=e92]:
+                        - link "AI 使用数据 数据" [ref=e93] [cursor=pointer]:
+                          - /url: /ai-usage-data
+                          - generic "AI 使用数据" [ref=e95]
+                          - generic [ref=e96]: 数据
+                      - listitem [ref=e97]:
+                        - link "AI Skill" [ref=e98] [cursor=pointer]:
+                          - /url: /ai-skill
+                          - generic "AI Skill" [ref=e100]
+                      - listitem [ref=e101]:
+                        - link "AI 洗脑" [ref=e102] [cursor=pointer]:
+                          - /url: /ai-brainwashing
+                          - generic "AI 洗脑" [ref=e104]
+                      - listitem [ref=e105]:
+                        - link "AI Coding" [ref=e106] [cursor=pointer]:
+                          - /url: /ai-coding
+                          - generic "AI Coding" [ref=e108]
+                      - listitem [ref=e109]:
+                        - generic [ref=e110]:
+                          - link "Agent 实践" [ref=e111] [cursor=pointer]:
+                            - /url: /ai-agent-practice
+                            - generic "Agent 实践" [ref=e113]
+                          - button "展开侧边栏分类 'Agent 实践'" [ref=e114] [cursor=pointer]
+                      - listitem [ref=e115]:
+                        - link "Chat 与 Research" [ref=e116] [cursor=pointer]:
+                          - /url: /ai-chat-research
+                          - generic "Chat 与 Research" [ref=e118]
+                      - listitem [ref=e119]:
+                        - link "GEO" [ref=e120] [cursor=pointer]:
+                          - /url: /geo
+                          - generic "GEO" [ref=e122]
+                      - listitem [ref=e123]:
+                        - link "LLM Wiki" [ref=e124] [cursor=pointer]:
+                          - /url: /ai-llm-wiki
+                          - generic "LLM Wiki" [ref=e126]
+                      - listitem [ref=e127]:
+                        - link "Sub2API 深度解析：一笔 AI 请求如何穿过账号池并进入账本" [ref=e128] [cursor=pointer]:
+                          - /url: /sub2api
+                          - generic "Sub2API 深度解析：一笔 AI 请求如何穿过账号池并进入账本" [ref=e130]
+                      - listitem [ref=e131]:
+                        - link "图片生成" [ref=e132] [cursor=pointer]:
+                          - /url: /ai-image-gen
+                          - generic "图片生成" [ref=e134]
+                  - listitem [ref=e135]:
+                    - generic [ref=e136]:
+                      - link "AI转型" [ref=e137] [cursor=pointer]:
+                        - /url: /ai-transformation
+                        - generic "AI转型" [ref=e139]
+                      - button "折叠侧边栏分类 'AI转型'" [expanded] [ref=e140] [cursor=pointer]
+                    - list [ref=e141]:
+                      - listitem [ref=e142]:
+                        - link "AI 与个人发展" [ref=e143] [cursor=pointer]:
+                          - /url: /ai-career
+                          - generic "AI 与个人发展" [ref=e145]
+                      - listitem [ref=e146]:
+                        - link "AI 总体趋势" [ref=e147] [cursor=pointer]:
+                          - /url: /ai-trend
+                          - generic "AI 总体趋势" [ref=e149]
+                      - listitem [ref=e150]:
+                        - link "AI 组织转型" [ref=e151] [cursor=pointer]:
+                          - /url: /ai-organization
+                          - generic "AI 组织转型" [ref=e153]
+                      - listitem [ref=e154]:
+                        - link "从个人AI提效到组织AI提效 演讲" [ref=e155] [cursor=pointer]:
+                          - /url: /ai-personal-to-org-efficiency
+                          - generic "从个人AI提效到组织AI提效" [ref=e157]
+                          - generic [ref=e158]: 演讲
+                      - listitem [ref=e159]:
+                        - link "智能资本主义" [ref=e160] [cursor=pointer]:
+                          - /url: /intelligence-capitalism
+                          - generic "智能资本主义" [ref=e162]
+                  - listitem [ref=e163]:
+                    - link "AI项目" [ref=e164] [cursor=pointer]:
+                      - /url: /ai-projects
+                      - generic "AI项目" [ref=e166]
+              - listitem [ref=e167]:
+                - link "AI 数据与知识安全" [ref=e168] [cursor=pointer]:
+                  - /url: /ai-data-knowledge-security
+                  - generic "AI 数据与知识安全" [ref=e170]
+              - listitem [ref=e171]:
+                - link "模型资产与 AI 供应链安全" [ref=e172] [cursor=pointer]:
+                  - /url: /ai-model-supply-chain-security
+                  - generic "模型资产与 AI 供应链安全" [ref=e174]
+              - listitem [ref=e175]:
+                - link "模型安全：对齐与输出安全" [ref=e176] [cursor=pointer]:
+                  - /url: /ai-model-alignment-output-security
+                  - generic "模型安全：对齐与输出安全" [ref=e178]
+              - listitem [ref=e179]:
+                - link "大模型应用安全" [ref=e180] [cursor=pointer]:
+                  - /url: /llm-application-security
+                  - generic "大模型应用安全" [ref=e182]
+              - listitem [ref=e183]:
+                - link "Agent 与工具调用安全" [ref=e184] [cursor=pointer]:
+                  - /url: /ai-agent-tool-security
+                  - generic "Agent 与工具调用安全" [ref=e186]
+              - listitem [ref=e187]:
+                - link "AI 隐私与机密保护" [ref=e188] [cursor=pointer]:
+                  - /url: /ai-privacy-confidentiality
+                  - generic "AI 隐私与机密保护" [ref=e190]
+              - listitem [ref=e191]:
+                - link "合成内容与信任安全" [ref=e192] [cursor=pointer]:
+                  - /url: /synthetic-content-trust-security
+                  - generic "合成内容与信任安全" [ref=e194]
+              - listitem [ref=e195]:
+                - link "AI 滥用与攻防升级" [ref=e196] [cursor=pointer]:
+                  - /url: /ai-cybersecurity-offense-defense
+                  - generic "AI 滥用与攻防升级" [ref=e198]
+              - listitem [ref=e199]:
+                - link "AI 风险治理" [ref=e200] [cursor=pointer]:
+                  - /url: /ai-risk-governance
+                  - generic "AI 风险治理" [ref=e202]
+              - listitem [ref=e203]:
+                - link "AI 安全评测与红队" [ref=e204] [cursor=pointer]:
+                  - /url: /ai-security-evaluation-red-teaming
+                  - generic "AI 安全评测与红队" [ref=e206]
+              - listitem [ref=e207]:
+                - link "AI 运行监控与事件响应" [ref=e208] [cursor=pointer]:
+                  - /url: /ai-security-monitoring-response
+                  - generic "AI 运行监控与事件响应" [ref=e210]
+              - listitem [ref=e211]:
+                - link "AI驱动的全链路自动化网络攻击" [ref=e212] [cursor=pointer]:
+                  - /url: /ai-driven-automated-cyber-attack
+                  - generic "AI驱动的全链路自动化网络攻击" [ref=e214]
+              - listitem [ref=e215]:
+                - link "基于AI驱动的实战网络攻击 演讲" [ref=e216] [cursor=pointer]:
+                  - /url: /ai-driven-offensive-cyber-operations-in-the-real-world
+                  - generic "基于AI驱动的实战网络攻击" [ref=e218]
+                  - generic [ref=e219]: 演讲
+              - listitem [ref=e220]:
+                - link "安全大模型评测体系" [ref=e221] [cursor=pointer]:
+                  - /url: /security-llm-evaluation
+                  - generic "安全大模型评测体系" [ref=e223]
+          - button "收起侧边栏" [ref=e224] [cursor=pointer]
+      - main [ref=e229]:
+        - generic [ref=e231]:
+          - generic [ref=e233]:
+            - article [ref=e234]:
+              - navigation "页面路径" [ref=e235]:
+                - list [ref=e236]:
+                  - listitem [ref=e237]:
+                    - link "主页面" [ref=e238] [cursor=pointer]:
+                      - /url: /
+                  - listitem [ref=e245]:
+                    - generic [ref=e246]: Agent 与工具调用安全
+              - generic [ref=e247]:
+                - generic [ref=e249]:
+                  - generic [ref=e250]:
+                    - button "复制 Markdown 原文" [ref=e251] [cursor=pointer]:
+                      - generic [ref=e253]: 复制Markdown
+                    - button "更多操作" [expanded] [active] [ref=e255] [cursor=pointer]
+                  - menu [ref=e494]:
+                    - menuitem "在 GitHub 上编辑 ↗ 查看并编辑此页面的源文件" [ref=e495] [cursor=pointer]:
+                      - generic [ref=e497]:
+                        - generic [ref=e498]:
+                          - text: 在 GitHub 上编辑
+                          - generic [ref=e499]: ↗
+                        - generic [ref=e500]: 查看并编辑此页面的源文件
+                    - menuitem "文章纠错 ↗ 在 GitHub 提交问题或修改建议" [ref=e501] [cursor=pointer]:
+                      - generic [ref=e503]:
+                        - generic [ref=e504]:
+                          - text: 文章纠错
+                          - generic [ref=e505]: ↗
+                        - generic [ref=e506]: 在 GitHub 提交问题或修改建议
+                    - menuitem "Anthropic 在 Claude 中打开 ↗ 向 Claude 询问此页面的内容" [ref=e508] [cursor=pointer]:
+                      - generic [ref=e509]:
+                        - generic:
+                          - img "Anthropic"
+                      - generic [ref=e510]:
+                        - generic [ref=e511]:
+                          - text: 在 Claude 中打开
+                          - generic [ref=e512]: ↗
+                        - generic [ref=e513]: 向 Claude 询问此页面的内容
+                    - menuitem "在 ChatGPT 中打开 ↗ 向 ChatGPT 询问此页面的内容" [ref=e514] [cursor=pointer]:
+                      - generic [ref=e516]:
+                        - generic [ref=e517]:
+                          - text: 在 ChatGPT 中打开
+                          - generic [ref=e518]: ↗
+                        - generic [ref=e519]: 向 ChatGPT 询问此页面的内容
+                    - generic [ref=e521]: 本文件迭代 1 版，最后更新于 2026年9月16日
+                - heading "Agent 与工具调用安全" [level=1] [ref=e259]
+                - paragraph [ref=e276]:
+                  - text: 合同助手升级成采购 Agent 后，模型输出会进入 ERP、邮箱、文件系统和长期记忆。模型可以灵活规划，安全边界却要满足一条稳定不变量：
+                  - strong [ref=e277]: Prompt、外部文档、工具结果、记忆和其他 Agent 消息只能影响计划，不能自行扩大执行权限。
+                  - text: 新增权限必须来自模型之外的授权事件，并绑定主体、资源、参数、期限和副作用。
+                - paragraph [ref=e278]:
+                  - text: 本文把一次运行允许触达的最大权限集合称为
+                  - code [ref=e279]: Capability Envelope
+                  - text: ，把一次准备执行的具体动作称为
+                  - code [ref=e280]: Action Envelope
+                  - text: 。这两个名称是架构原语，并非某个协议已经定义的标准对象。它们的价值在于把“Agent 可以做什么”和“这次到底获准做什么”变成可由策略引擎与资源系统校验的数据。
+                - heading [level=2] [ref=e281]:
+                  - text: 攻击者寻找权限升级链
+                  - link "攻击者寻找权限升级链的直接链接" [ref=e282] [cursor=pointer]:
+                    - /url: "#攻击者寻找权限升级链"
+                    - text: "#"
+                - paragraph [ref=e283]: 攻击者可以控制供应商报价单、外部网页或恶意 MCP Server 返回的内容，也可以诱导普通员工发起正常采购任务；他没有采购经理账号和 ERP 凭证。攻击目标是借 Agent 已有的连接，把读取报价的任务升级成修改收款账号、创建订单、外发合同或写入持久记忆。
+                - paragraph [ref=e284]: 一条跨组件攻击链可能这样形成：
+                - list [ref=e285]:
+                  - listitem [ref=e286]: 员工委托 Agent 比较三份报价，只授予当前项目的只读资料访问。
+                  - listitem [ref=e287]: 恶意报价单要求模型调用“供应商维护”工具并把新账号记为已验证事实。
+                  - listitem [ref=e288]: 工具目录向模型暴露了与当前任务无关的写工具，模型生成格式合法的调用参数。
+                  - listitem [ref=e289]: Agent 宿主持有共享的高权限服务令牌，未按当前委托重新判断动作、资源和金额。
+                  - listitem [ref=e290]: MCP Server 接收令牌后继续转发，ERP 只看到服务账号，无法识别真实委托人和任务范围。
+                  - listitem [ref=e291]: 收款账号被修改；工具响应超时后，宿主又重试一次，形成第二个副作用。
+                  - listitem [ref=e292]: 模型把“修改成功”写入长期记忆，污染延续到后续运行。
+                - paragraph [ref=e293]:
+                  - link "AgentDojo" [ref=e294] [cursor=pointer]:
+                    - /url: https://arxiv.org/abs/2406.13352
+                  - text: 专门评估工具返回的不可信数据如何劫持 Agent。论文中的环境包含邮件、网银和旅行预订等 97 个正常任务及 629 个安全测试用例，并观察到现有模型在没有攻击时也会失败于部分任务。安全设计需要同时覆盖恶意注入、模型普通失误和工具异常，不能把所有危险请求都归因于攻击者。
+                - heading [level=2] [ref=e295]:
+                  - text: 编码 Agent 先守住工作区边界
+                  - link "编码 Agent 先守住工作区边界的直接链接" [ref=e296] [cursor=pointer]:
+                    - /url: "#编码-agent-先守住工作区边界"
+                    - text: "#"
+                - paragraph [ref=e297]:
+                  - link "NCC Group 2026 年的编码 Agent 安全白皮书" [ref=e298] [cursor=pointer]:
+                    - /url: https://www.nccgroup.com/research/an-introduction-to-ai-coding-agent-security/
+                  - text: 把权限模型和操作系统沙箱视为两道独立控制。权限模型决定何时需要批准，沙箱决定一个已运行进程在文件、网络和系统资源上实际能触达什么。不同产品、CLI/桌面形态、操作系统和配置的默认值并不一致，看到“有沙箱”或“会弹确认”都不足以推断完整安全边界。
+                - paragraph [ref=e299]:
+                  - text: 编码场景还要区分两类工作区。未信任工作区在用户确认前就可能通过配置加载、可执行文件搜索路径、插件或 MCP 配置触发代码；已信任工作区则可能通过 README、源码、Issue、终端输出或网页内容注入指令，再寻找沙箱逃逸、权限提示绕过、敏感文件覆盖和网络外传路径。
+                  - code [ref=e300]: .git/hooks
+                  - text: 、Agent 配置、工作区配置、Shell 启动文件和 MCP 注册信息都属于高敏感对象，写入它们的权限应独立于普通源码编辑。
+                - paragraph [ref=e301]:
+                  - text: 模型拒答和 API 护栏不能充当执行边界。白皮书明确把 Harness 视为阻止危险工具调用的最终强制点；攻击者可以把恶意动作伪装成正常构建步骤，也可能利用护栏制造拒答。
+                  - link "Shai-Hulud 样本的公开分析" [ref=e302] [cursor=pointer]:
+                    - /url: https://mp.weixin.qq.com/s/AbVCdK35qAjUgIxQ6-2vHg
+                  - text: 展示了后一种情况：恶意包在代码前放置会触发安全拒答的文本，试图让 AI 扫描器在分析混淆代码前停止。扫描系统必须把拒答、超时和空响应记为“未完成分析”，继续使用静态规则、沙箱或人工复核；任何非结论都不能自动转换成安全结论。
+                - heading [level=2] [ref=e303]:
+                  - text: Capability Envelope 限定一次运行的最大权限
+                  - link "Capability Envelope 限定一次运行的最大权限的直接链接" [ref=e304] [cursor=pointer]:
+                    - /url: "#capability-envelope-限定一次运行的最大权限"
+                    - text: "#"
+                - paragraph [ref=e305]:
+                  - code [ref=e306]: Capability Envelope
+                  - text: 在运行开始前由宿主根据登录用户、业务场景和已有批准生成。它至少描述委托主体与租户、允许的工具和动作、资源选择器、允许读取的数据级别、允许输出的目的地、费用与步骤预算、有效期、子 Agent 委托深度，以及哪些动作仍需独立批准。
+                - paragraph [ref=e307]:
+                  - text: 对一段运行时间
+                  - code [ref=e308]: t
+                  - text: ，可以用三个约束理解权限单调性：
+                - generic [ref=e310]:
+                  - code [ref=e312]:
+                    - generic [ref=e313]: 模型可见事件不能扩大 C(t)
+                    - generic [ref=e314]: 子 Agent 的 C_child 必须是 C_parent 的子集
+                    - generic [ref=e315]: 实际执行的动作 a 必须满足 a ∈ C(t)
+                  - button "复制代码到剪贴板" [ref=e317] [cursor=pointer]
+                - paragraph [ref=e323]: 用户完成强认证、采购经理批准订单或安全人员临时开放工具时，系统可以签发新版本的 Envelope。这个变化来自授权服务，并留下授权人、依据、差异、期限与撤销条件；模型输出“用户已经同意”不构成授权事件。旧 Envelope 随版本替换或到期失效，避免并行步骤继续使用过时权限。
+                - paragraph [ref=e324]:
+                  - text: 权限集合还要包含数据去向。一个只读订单工具不会修改数据库，却可能把客户资料交给公开邮件或 HTTP 工具。
+                  - code [ref=e325]: read:orders
+                  - text: 与
+                  - code [ref=e326]: send:external
+                  - text: 的组合风险高于两个 Scope 各自表达的含义，因此 Envelope 要限制允许的数据分类和 Sink，具体的信息流标签由
+                  - link "大模型应用安全" [ref=e327] [cursor=pointer]:
+                    - /url: /llm-application-security
+                  - text: 定义。
+                - heading [level=2] [ref=e328]:
+                  - text: 参考架构把规划与执行分开
+                  - link "参考架构把规划与执行分开的直接链接" [ref=e329] [cursor=pointer]:
+                    - /url: "#参考架构把规划与执行分开"
+                    - text: "#"
+                - generic [ref=e331]:
+                  - code [ref=e333]:
+                    - generic [ref=e334]: 用户 / 业务任务 ─> Run Manager ─────────────> LLM Planner
+                    - generic [ref=e335]: "| |"
+                    - generic [ref=e336]: Capability Envelope Action Proposal
+                    - generic [ref=e337]: "| |"
+                    - generic [ref=e338]: 授权服务 / 审批 ─────────┴────> PDP <──── Proposal Normalizer
+                    - generic [ref=e339]: "|"
+                    - generic [ref=e340]: allow + decision_ref
+                    - generic [ref=e341]: "|"
+                    - generic [ref=e342]: v
+                    - generic [ref=e343]: Action Envelope Builder
+                    - generic [ref=e344]: "|"
+                    - generic [ref=e345]: v
+                    - generic [ref=e346]: Tool Gateway PEP
+                    - generic [ref=e347]: "|"
+                    - generic [ref=e348]: Credential Broker / Sandbox
+                    - generic [ref=e349]: "|"
+                    - generic [ref=e350]: v
+                    - generic [ref=e351]: MCP Server / 业务资源 PEP
+                    - generic [ref=e352]: "|"
+                    - generic [ref=e353]: 权威结果 / 真实副作用
+                    - generic [ref=e354]: "|"
+                    - generic [ref=e355]: v
+                    - generic [ref=e356]: Verifier + Run Event
+                  - button "复制代码到剪贴板" [ref=e358] [cursor=pointer]
+                - paragraph [ref=e364]:
+                  - text: 模型只产生
+                  - code [ref=e365]: Action Proposal
+                  - text: ，其中的工具名和参数仍是不可信候选。Proposal Normalizer 先规范化类型、解析资源身份和计算参数摘要，再交给 PDP。PDP 使用当前 Capability Envelope、业务状态、风险级别和审批记录作决定；放行后，Envelope Builder 把规范化参数与
+                  - code [ref=e366]: decision_ref
+                  - text: 固化为 Action Envelope。Tool Gateway PEP 执行决定，校验通过后 Credential Broker 才为目标资源取得短期凭证。
+                - paragraph [ref=e367]:
+                  - link "一份 Agent 零信任架构实践" [ref=e368] [cursor=pointer]:
+                    - /url: https://mp.weixin.qq.com/s/wJSCFQkL67mT7W76GOmGtw
+                  - text: 使用容器隔离、身份认证、权限控制、Vault 和审计降低执行风险。这些组件是必要基础，仍需把强制点放到真实资源旁边：容器限制进程无法阻止一个合法 ERP Token 创建错误订单，Vault 防止密钥明文暴露也无法判断当前用户是否批准了这组参数。PDP、Tool Gateway PEP 和业务资源 PEP 的分层，正是为了让运行隔离、凭证保护和对象级授权各自承担清晰职责。
+                - paragraph [ref=e369]:
+                  - text: 凭证应限制接收方和用途。
+                  - link "RFC 8707" [ref=e370] [cursor=pointer]:
+                    - /url: https://www.rfc-editor.org/rfc/rfc8707
+                  - text: 定义了 OAuth
+                  - code [ref=e371]: resource
+                  - text: 参数，使授权服务器可以签发面向特定资源的 audience-restricted Token；规范也说明多 Audience 会扩大资源之间的信任。模型上下文无需接触 Token，MCP Server 也不应把收到的 Token 当成可转发给任意下游的通行证。
+                - paragraph [ref=e372]:
+                  - link "MCP 授权规范" [ref=e373] [cursor=pointer]:
+                    - /url: https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization
+                  - text: 解决客户端、授权服务器与资源服务器之间的协议交互，业务对象级授权仍由资源服务完成。
+                  - link "MCP Security Best Practices" [ref=e374] [cursor=pointer]:
+                    - /url: https://modelcontextprotocol.io/docs/tutorials/security/security_best_practices
+                  - text: 进一步讨论 confused deputy、Token passthrough、Scope 最小化与本地 Server 风险。Tool Gateway 的允许决定无法替代 ERP 对租户、订单和当前状态的再次校验。
+                - heading [level=2] [ref=e375]:
+                  - text: Action Envelope 绑定一次具体副作用
+                  - link "Action Envelope 绑定一次具体副作用的直接链接" [ref=e376] [cursor=pointer]:
+                    - /url: "#action-envelope-绑定一次具体副作用"
+                    - text: "#"
+                - paragraph [ref=e377]:
+                  - text: PDP 放行后，宿主生成不可由模型修改的
+                  - code [ref=e378]: Action Envelope
+                  - text: 。它把自然语言计划收敛成一个可验证动作，例如：
+                - generic [ref=e380]:
+                  - code [ref=e382]:
+                    - generic [ref=e383]: "{"
+                    - generic [ref=e384]: "\"run_id\": \"run_...\","
+                    - generic [ref=e385]: "\"action_id\": \"act_...\","
+                    - generic [ref=e386]: "\"capability_envelope\": \"cap_...@v...\","
+                    - generic [ref=e387]: "\"principal\": {"
+                    - generic [ref=e388]: "\"agent\": \"procurement-agent\","
+                    - generic [ref=e389]: "\"on_behalf_of\": \"user_...\","
+                    - generic [ref=e390]: "\"tenant\": \"tenant_...\""
+                    - generic [ref=e391]: "},"
+                    - generic [ref=e392]: "\"tool\": {\"id\": \"erp.create_order\", \"version\": \"v...\"},"
+                    - generic [ref=e393]: "\"resource\": {\"type\": \"contract\", \"id\": \"contract_...\"},"
+                    - generic [ref=e394]: "\"arguments_digest\": \"sha256:...\","
+                    - generic [ref=e395]: "\"precondition\": {\"contract_version\": \"...\", \"approval_state\": \"approved\"},"
+                    - generic [ref=e396]: "\"constraints\": {"
+                    - generic [ref=e397]: "\"allowed_recipient\": \"supplier_...\","
+                    - generic [ref=e398]: "\"expires_at\": \"...\""
+                    - generic [ref=e399]: "},"
+                    - generic [ref=e400]: "\"policy_decision_ref\": \"decision_...\","
+                    - generic [ref=e401]: "\"approval_ref\": \"approval_...\","
+                    - generic [ref=e402]: "\"idempotency_key\": \"...\","
+                    - generic [ref=e403]: "\"expected_effect\": \"create one purchase order\","
+                    - generic [ref=e404]: "\"compensation\": \"cancel_order\""
+                    - generic [ref=e405]: "}"
+                  - generic [ref=e406]:
+                    - button "切换自动换行" [ref=e407] [cursor=pointer]
+                    - button "复制代码到剪贴板" [ref=e410] [cursor=pointer]
+                - paragraph [ref=e416]:
+                  - text: 审批界面展示规范化后的主体、旧值与新值、目标资源、数据去向和可逆性。批准结果绑定
+                  - code [ref=e417]: arguments_digest
+                  - text: 与前置状态；模型改变金额、收件人或资源版本后，原批准失效。这同时处理了计划阶段到执行阶段的 TOCTOU：PEP 在调用前重新读取关键状态，发现合同版本或审批状态变化就拒绝执行。
+                - paragraph [ref=e418]:
+                  - code [ref=e419]: idempotency_key
+                  - text: 用于识别同一意图的重试。工具超时只能说明响应未知，宿主应先向权威系统查询动作状态，再决定继续、补偿或转人工。模型生成的“调用成功”以及 MCP Server 的自然语言确认都不能代替 ERP 中的订单记录。
+                - paragraph [ref=e420]: Action Envelope 可以签名或由受信服务通过引用传递，具体实现取决于跨服务边界。关键条件是业务资源 PEP 能校验其完整性、有效期、Audience 和当前策略，并把实际执行参数与批准参数对上。只在 Agent 宿主内检查一次，会让被攻破或配置错误的工具服务重新获得扩权机会。
+                - heading [level=2] [ref=e421]:
+                  - text: 工具结果、记忆与子 Agent 只能收窄权限
+                  - link "工具结果、记忆与子 Agent 只能收窄权限的直接链接" [ref=e422] [cursor=pointer]:
+                    - /url: "#工具结果记忆与子-agent-只能收窄权限"
+                    - text: "#"
+                - paragraph [ref=e423]: 工具描述和 Schema 会影响模型选择，却没有授予能力的效力。运行时只向模型展示 Envelope 内可能使用的工具子集；新 MCP Server、工具版本、目标地址或权限需求变化后，工具注册表先重新审核。一个同名工具即使返回结构完全正确，也不能跳过 Server 身份和目标地址验证。
+                - paragraph [ref=e424]: 工具结果按外部观察处理。网页、邮件、报错和数据库文本可以更新模型对任务事实的判断，无法修改 Envelope、策略或审批状态。结果进入下一轮上下文前保留来源和敏感标签，凭证、内部路径与超长内容由宿主过滤。模型需要根据结果发起新动作时，仍生成新的 Action Proposal 并重新经过 PDP。
+                - paragraph [ref=e425]: 长期记忆写入本身是一项动作。模型提出“记住供应商新账号”后，记忆 PEP 检查来源、主体、作用域、有效期和验证依据；外部文档只能形成待核实候选。业务规则、工具回执和模型摘要分区保存，摘要不能覆盖权威记录。
+                - paragraph [ref=e426]: 多 Agent 委托遵守衰减关系：子 Agent 的工具、资源、数据去向、预算和有效期均不得超过父 Envelope。子 Agent 消息回到协调者时仍是不可信观察。确需扩权的子任务回到授权服务签发新 Envelope，协调模型无权复制自己的凭证或把“紧急”当成提权理由。
+                - heading [level=2] [ref=e427]:
+                  - text: 强约束要处理自动化的现实代价
+                  - link "强约束要处理自动化的现实代价的直接链接" [ref=e428] [cursor=pointer]:
+                    - /url: "#强约束要处理自动化的现实代价"
+                    - text: "#"
+                - paragraph [ref=e429]: 严格 Envelope 会限制临时发现的新任务。低风险场景可以允许模型在只读沙箱中探索并生成计划，遇到未授权能力时暂停，由用户基于具体差异追加授权。预先授予一组宽泛 Scope 虽然减少中断，也会让一段恶意文档直接获得更大的可达后果。
+                - paragraph [ref=e430]: 短期 Token 会给长任务带来续期成本。续期应由 Run Manager 携带当前任务和 Envelope 版本向授权服务申请，授权服务重新检查用户状态、撤销信号与资源 Audience；把长期 Refresh Token 交给模型或任意 MCP Server 会重新扩大暴露面。
+                - paragraph [ref=e431]: 人工审批也可能退化为点击惯性。审批应集中在新增权限、跨域数据流和难以撤销的副作用，页面展示参数差异与前置证据；读取公开目录等低后果动作可以由预先策略自动放行。每一步都弹出相同确认框，只会提高操作成本，难以提高判断质量。
+                - paragraph [ref=e432]: 沙箱能限制进程、文件、网络与资源消耗，无法阻止一个获得合法 ERP 连接的工具提交错误订单。业务资源 PEP、幂等控制和结果核验仍然必需。相反，一个纯文本规划 Agent 没有凭证、外部 Sink 和持久记忆时，可以采用更轻的 Envelope；控制强度由最大可达副作用、可验证性和可恢复性决定。
+                - heading [level=2] [ref=e433]:
+                  - text: 用分母证明权限单调性
+                  - link "用分母证明权限单调性的直接链接" [ref=e434] [cursor=pointer]:
+                    - /url: "#用分母证明权限单调性"
+                    - text: "#"
+                - paragraph [ref=e435]: 测试从完整攻击链发起：把注入放入报价单和工具结果，篡改 MCP 工具描述，改变审批后的参数，撤销运行中的权限，模拟超时、重复响应、记忆污染和子 Agent 越权。每个用例同时检查模型请求、PDP 决定、PEP 执行和业务系统最终状态。
+                - paragraph [ref=e436]: 发布报告至少给出这些带分母指标：
+                - list [ref=e437]:
+                  - listitem [ref=e438]:
+                    - strong [ref=e439]: 未授权提议率
+                    - text: = 被 PDP 判定越权的 Action Proposal 数 / 全部 Action Proposal 数，并按正常与对抗任务分别报告。
+                  - listitem [ref=e440]:
+                    - strong [ref=e441]: 强制逃逸率
+                    - text: = 造成真实状态变化的越权动作数 / PDP 已拒绝或 Envelope 外的动作总数。
+                  - listitem [ref=e442]:
+                    - strong [ref=e443]: 审批绑定失效率
+                    - text: = 参数或前置状态改变后仍被执行的动作数 / 审批后变异测试总数。
+                  - listitem [ref=e444]:
+                    - strong [ref=e445]: 重复副作用率
+                    - text: = 形成重复业务状态的运行数 / 注入超时与重试的测试运行总数。
+                  - listitem [ref=e446]:
+                    - strong [ref=e447]: 结果核验覆盖率
+                    - text: = 已从权威系统确认后置状态的副作用动作数 / 已执行副作用动作总数。
+                  - listitem [ref=e448]:
+                    - strong [ref=e449]: 正常任务完成率
+                    - text: = 在权限约束内正确完成的正常任务数 / 正常任务总数。
+                - paragraph [ref=e450]:
+                  - text: 未授权提议率升高说明模型或上下文防护在退化；强制逃逸率检验模型外边界是否守住。两者不能合成一个总分。测试中的零逃逸只证明给定版本和样本下没有观察到突破，统计证据的强度还要按
+                  - link "AI 安全评测与红队" [ref=e451] [cursor=pointer]:
+                    - /url: /ai-security-evaluation-red-teaming
+                  - text: 中的重复次数、覆盖范围和置信上界解释。
+                - paragraph [ref=e452]: 一次发布应能证明：模型可见信息没有权限写入口；每个真实动作都属于当时有效的 Capability Envelope；每次执行都关联不可变的 Action Envelope；资源系统能够独立拒绝超范围调用；副作用能够核验、停止或进入明确的补偿流程。满足这些条件后，模型能力提升会扩大可用计划空间，不会自动扩大授权空间。
+            - navigation "文章翻页导航" [ref=e453]:
+              - link "上一篇 大模型应用安全" [ref=e454] [cursor=pointer]:
+                - /url: /llm-application-security
+                - generic [ref=e455]: 上一篇
+                - generic [ref=e456]: 大模型应用安全
+              - link "下一篇 AI 隐私与机密保护" [ref=e457] [cursor=pointer]:
+                - /url: /ai-privacy-confidentiality
+                - generic [ref=e458]: 下一篇
+                - generic [ref=e459]: AI 隐私与机密保护
+          - generic [ref=e461]:
+            - generic [ref=e462]: 本章内容大纲
+            - list [ref=e464]:
+              - listitem [ref=e465]:
+                - link "攻击者寻找权限升级链" [ref=e466] [cursor=pointer]:
+                  - /url: "#攻击者寻找权限升级链"
+              - listitem [ref=e467]:
+                - link "编码 Agent 先守住工作区边界" [ref=e468] [cursor=pointer]:
+                  - /url: "#编码-agent-先守住工作区边界"
+              - listitem [ref=e469]:
+                - link "Capability Envelope 限定一次运行的最大权限" [ref=e470] [cursor=pointer]:
+                  - /url: "#capability-envelope-限定一次运行的最大权限"
+              - listitem [ref=e471]:
+                - link "参考架构把规划与执行分开" [ref=e472] [cursor=pointer]:
+                  - /url: "#参考架构把规划与执行分开"
+              - listitem [ref=e473]:
+                - link "Action Envelope 绑定一次具体副作用" [ref=e474] [cursor=pointer]:
+                  - /url: "#action-envelope-绑定一次具体副作用"
+              - listitem [ref=e475]:
+                - link "工具结果、记忆与子 Agent 只能收窄权限" [ref=e476] [cursor=pointer]:
+                  - /url: "#工具结果记忆与子-agent-只能收窄权限"
+              - listitem [ref=e477]:
+                - link "强约束要处理自动化的现实代价" [ref=e478] [cursor=pointer]:
+                  - /url: "#强约束要处理自动化的现实代价"
+              - listitem [ref=e479]:
+                - link "用分母证明权限单调性" [ref=e480] [cursor=pointer]:
+                  - /url: "#用分母证明权限单调性"
+    - contentinfo [ref=e481]:
+      - generic [ref=e484]:
+        - generic [ref=e485]: Copyright © 2012–2026 FEEI All Rights Reserved
+        - generic [ref=e486]:
+          - link "浙ICP备2021009229号" [ref=e487] [cursor=pointer]:
+            - /url: https://beian.miit.gov.cn/
+          - generic [ref=e488]: ·
+          - link "浙公网安备33011002015586号" [ref=e489] [cursor=pointer]:
+            - /url: http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586
+  - button "展开音乐播放器" [ref=e492] [cursor=pointer]

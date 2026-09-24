@@ -1,0 +1,143 @@
+- generic [ref=f5e1]:
+  - generic [ref=f5e2]:
+    - region "跳到主要内容":
+      - link "跳到主要内容" [ref=f5e3] [cursor=pointer]:
+        - /url: "#__docusaurus_skipToContent_fallback"
+    - navigation "主导航" [ref=f5e4]:
+      - generic [ref=f5e5]:
+        - generic [ref=f5e6]:
+          - link "FEEI 首页" [ref=f5e7] [cursor=pointer]:
+            - /url: /
+            - generic [ref=f5e8]: FEEI
+          - button "网络安全" [ref=f5e10] [cursor=pointer]
+          - button "人生系统" [ref=f5e14] [cursor=pointer]
+          - button "吴飞飞" [ref=f5e18] [cursor=pointer]
+        - generic [ref=f5e21]:
+          - generic [ref=f5e24]:
+            - textbox "Search" [ref=f5e25]:
+              - /placeholder: 搜索
+            - generic:
+              - generic: ⌘
+              - generic: K
+          - button "切换浅色/暗黑模式（当前为system mode）" [ref=f5e27] [cursor=pointer]
+    - generic [ref=f5e32]:
+      - complementary [ref=f5e33]:
+        - generic [ref=f5e35]:
+          - navigation "文档侧边栏" [ref=f5e36]:
+            - list [ref=f5e37]:
+              - listitem [ref=f5e38]:
+                - link "关于吴飞飞" [ref=f5e39] [cursor=pointer]:
+                  - /url: /about
+                  - generic "关于吴飞飞" [ref=f5e41]
+              - listitem [ref=f5e42]:
+                - link "为什么我要分享自己的经验？" [ref=f5e43] [cursor=pointer]:
+                  - /url: /why-share
+                  - generic "为什么我要分享自己的经验？" [ref=f5e45]
+              - listitem [ref=f5e46]:
+                - link "我的出版物" [ref=f5e47] [cursor=pointer]:
+                  - /url: /publications
+                  - generic "我的出版物" [ref=f5e49]
+              - listitem [ref=f5e50]:
+                - link "我的演讲" [ref=f5e51] [cursor=pointer]:
+                  - /url: /speech
+                  - generic "我的演讲" [ref=f5e53]
+              - listitem [ref=f5e54]:
+                - link "我的简历" [ref=f5e55] [cursor=pointer]:
+                  - /url: /resume
+                  - generic "我的简历" [ref=f5e57]
+              - listitem [ref=f5e58]:
+                - link "我的工作室" [ref=f5e59] [cursor=pointer]:
+                  - /url: /workspace
+                  - generic "我的工作室" [ref=f5e61]
+              - listitem [ref=f5e62]:
+                - link "联系我" [ref=f5e63] [cursor=pointer]:
+                  - /url: /contact
+                  - generic "联系我" [ref=f5e65]
+              - listitem [ref=f5e66]:
+                - link "友情链接" [ref=f5e67] [cursor=pointer]:
+                  - /url: /links
+                  - generic "友情链接" [ref=f5e69]
+              - listitem [ref=f5e70]:
+                - generic [ref=f5e71]:
+                  - link "网站幕后" [ref=f5e72] [cursor=pointer]:
+                    - /url: /about-feei-cn
+                    - generic "网站幕后" [ref=f5e74]
+                  - button "展开侧边栏分类 '网站幕后'" [ref=f5e75] [cursor=pointer]
+          - button "收起侧边栏" [ref=f5e76] [cursor=pointer]
+      - main [ref=f5e81]:
+        - generic [ref=f5e85]:
+          - article [ref=f5e86]:
+            - navigation "页面路径" [ref=f5e87]:
+              - list [ref=f5e88]:
+                - listitem [ref=f5e89]:
+                  - link "主页面" [ref=f5e90] [cursor=pointer]:
+                    - /url: /
+                - listitem [ref=f5e97]:
+                  - generic [ref=f5e98]: 联系我
+            - generic [ref=f5e99]:
+              - complementary "阅读方式" [ref=f5e100]:
+                - generic [ref=f5e101]: 参考资料
+                - generic [ref=f5e102]: 这是一页持续维护的参考资料，适合按需查阅，不必从头到尾阅读。
+              - heading "联系我" [level=1] [ref=f5e104]
+              - generic [ref=f5e112]:
+                - generic [ref=f5e113]:
+                  - generic [ref=f5e114]: LET'S CONNECT
+                  - generic [ref=f5e115]: 保持联系。
+                  - paragraph [ref=f5e116]: 交流网络安全、人工智能、个人知识系统，或者分享你对本站的建议。
+                  - generic [ref=f5e117]: 通常会在看到消息后回复
+                - region "联系方式" [ref=f5e119]:
+                  - link "邮箱 feei@feei.cn 适合正式沟通、项目合作与需要保留上下文的长内容" [ref=f5e120] [cursor=pointer]:
+                    - /url: mailto:feei@feei.cn
+                    - generic [ref=f5e126]:
+                      - generic [ref=f5e127]: 邮箱
+                      - generic [ref=f5e128]: feei@feei.cn
+                      - generic [ref=f5e129]: 适合正式沟通、项目合作与需要保留上下文的长内容
+                    - generic [aria-hidden] [ref=f5e130]: ↗
+                  - button "复制微信号 FEEI_WU" [active] [ref=f5e131] [cursor=pointer]:
+                    - generic [ref=f5e135]:
+                      - generic [ref=f5e136]: 微信
+                      - generic [ref=f5e137]: FEEI_WU
+                      - generic [ref=f5e138]: 添加时请简单注明来意
+                    - generic [aria-hidden] [ref=f5e139]: 已复制
+                  - link "GitHub FeeiCN 开源项目与代码协作" [ref=f5e140] [cursor=pointer]:
+                    - /url: https://github.com/FeeiCN
+                    - generic [ref=f5e146]:
+                      - generic [ref=f5e147]: GitHub
+                      - generic [ref=f5e148]: FeeiCN
+                      - generic [ref=f5e149]: 开源项目与代码协作
+                    - generic [aria-hidden] [ref=f5e150]: ↗
+                  - link "X @feei_cn 动态、观点与公开讨论" [ref=f5e151] [cursor=pointer]:
+                    - /url: https://x.com/feei_cn
+                    - generic [ref=f5e158]:
+                      - generic [ref=f5e159]: X
+                      - generic [ref=f5e160]: "@feei_cn"
+                      - generic [ref=f5e161]: 动态、观点与公开讨论
+                    - generic [aria-hidden] [ref=f5e162]: ↗
+                  - link "微博 吴飞飞 中文动态与内容分享" [ref=f5e163] [cursor=pointer]:
+                    - /url: https://weibo.com/u/1625149801
+                    - generic [ref=f5e167]:
+                      - generic [ref=f5e168]: 微博
+                      - generic [ref=f5e169]: 吴飞飞
+                      - generic [ref=f5e170]: 中文动态与内容分享
+                    - generic [aria-hidden] [ref=f5e171]: ↗
+                - paragraph [ref=f5e172]: 如果问题需要具体回复，请优先使用邮件，并尽量附上必要的背景与上下文。
+                - generic [ref=f5e173]: 微信号已复制
+          - navigation "文章翻页导航" [ref=f5e174]:
+            - link "上一篇 我的工作室" [ref=f5e175] [cursor=pointer]:
+              - /url: /workspace
+              - generic [ref=f5e176]: 上一篇
+              - generic [ref=f5e177]: 我的工作室
+            - link "下一篇 友情链接" [ref=f5e178] [cursor=pointer]:
+              - /url: /links
+              - generic [ref=f5e179]: 下一篇
+              - generic [ref=f5e180]: 友情链接
+    - contentinfo [ref=f5e181]:
+      - generic [ref=f5e184]:
+        - generic [ref=f5e185]: Copyright © 2012–2026 FEEI All Rights Reserved
+        - generic [ref=f5e186]:
+          - link "浙ICP备2021009229号" [ref=f5e187] [cursor=pointer]:
+            - /url: https://beian.miit.gov.cn/
+          - generic [ref=f5e188]: ·
+          - link "浙公网安备33011002015586号" [ref=f5e189] [cursor=pointer]:
+            - /url: http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586
+  - button "展开音乐播放器" [ref=f5e192] [cursor=pointer]

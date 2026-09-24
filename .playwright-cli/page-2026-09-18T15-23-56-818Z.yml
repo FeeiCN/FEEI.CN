@@ -1,0 +1,235 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "跳到主要内容":
+      - link "跳到主要内容" [ref=e3] [cursor=pointer]:
+        - /url: "#__docusaurus_skipToContent_fallback"
+    - navigation "主导航" [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - link "FEEI 首页" [ref=e7] [cursor=pointer]:
+            - /url: /
+            - generic [ref=e8]: FEEI
+          - button "网络安全" [ref=e10] [cursor=pointer]
+          - button "人生系统" [ref=e14] [cursor=pointer]
+          - button "吴飞飞" [ref=e18] [cursor=pointer]
+        - generic [ref=e21]:
+          - generic [ref=e24]:
+            - textbox "Search" [ref=e25]:
+              - /placeholder: 搜索
+            - generic:
+              - generic: ⌘
+              - generic: K
+          - button "切换浅色/暗黑模式（当前为system mode）" [ref=e27] [cursor=pointer]
+    - generic [ref=e32]:
+      - complementary [ref=e33]:
+        - generic [ref=e35]:
+          - navigation "文档侧边栏" [ref=e36]:
+            - list [ref=e37]:
+              - listitem [ref=e38]:
+                - link "健康幸福" [ref=e39] [cursor=pointer]:
+                  - /url: /health
+                  - generic "健康幸福" [ref=e41]
+              - listitem [ref=e42]:
+                - generic [ref=e43]:
+                  - link "身体健康" [ref=e44] [cursor=pointer]:
+                    - /url: /body-health
+                    - generic "身体健康" [ref=e46]
+                  - button "展开侧边栏分类 '身体健康'" [ref=e47] [cursor=pointer]
+              - listitem [ref=e48]:
+                - link "心理健康" [ref=e49] [cursor=pointer]:
+                  - /url: /health/mental
+                  - generic "心理健康" [ref=e51]
+              - listitem [ref=e52]:
+                - generic [ref=e53]:
+                  - link "关系与边界" [ref=e54] [cursor=pointer]:
+                    - /url: /health/relationship/boundary
+                    - generic "关系与边界" [ref=e56]
+                  - button "展开侧边栏分类 '关系与边界'" [ref=e57] [cursor=pointer]
+              - listitem [ref=e58]:
+                - link "幸福观" [ref=e59] [cursor=pointer]:
+                  - /url: /happiness
+                  - generic "幸福观" [ref=e61]
+              - listitem [ref=e62]:
+                - link "健康数据 数据" [ref=e63] [cursor=pointer]:
+                  - /url: /health-data
+                  - generic "健康数据" [ref=e65]
+                  - generic [ref=e66]: 数据
+          - button "收起侧边栏" [ref=e67] [cursor=pointer]
+      - main [ref=e72]:
+        - generic [ref=e74]:
+          - generic [ref=e76]:
+            - article [ref=e77]:
+              - navigation "页面路径" [ref=e78]:
+                - list [ref=e79]:
+                  - listitem [ref=e80]:
+                    - link "主页面" [ref=e81] [cursor=pointer]:
+                      - /url: /
+                  - listitem [ref=e88]:
+                    - generic [ref=e89]: 健康数据
+              - generic [ref=e90]:
+                - heading "健康数据" [level=1] [ref=e92]
+                - blockquote [ref=e102]:
+                  - paragraph [ref=e103]: 数据来源：Apple Watch + Fitdays 体脂秤。
+                - status [ref=e104]: 健康摘要加载中…
+                - paragraph [ref=e105]: 健康数据的价值不在于制造更多数字，而在于发现趋势和行为链路。单日数据只适合作为提醒，连续趋势才适合用来判断：最近是在恢复、维持，还是偏离轨道。
+                - paragraph [ref=e106]: 这套仪表盘只回答三个问题：
+                - list [ref=e107]:
+                  - listitem [ref=e108]: 哪些指标正在变好或变坏。
+                  - listitem [ref=e109]: 哪些行为最可能驱动这些变化。
+                  - listitem [ref=e110]: 下一步最小调整是什么。
+                - heading [level=2] [ref=e111]:
+                  - text: 体重
+                  - link "体重的直接链接" [ref=e112] [cursor=pointer]:
+                    - /url: "#体重"
+                    - text: "#"
+                - paragraph [ref=e113]: 体脂秤记录每日清晨空腹体重，关注长期趋势而非单日波动。体重秤同时输出肌肉量、体脂率、内脏脂肪等级和基础代谢，这些数据构成代谢健康的基础读数。
+                - paragraph [ref=e114]: 体重数据的用法是看方向：连续上升、连续下降、平台期、异常波动，分别对应不同问题。真正要避免的是把一天的水分变化误读成脂肪变化。
+                - status [ref=e115]: 健康图表加载中…
+                - heading [level=2] [ref=e116]:
+                  - text: 活动
+                  - link "活动的直接链接" [ref=e117] [cursor=pointer]:
+                    - /url: "#活动"
+                    - text: "#"
+                - paragraph [ref=e118]: 活动记录来自手环每日步数、活动消耗和站立小时数。目标是维持基本活动量，避免连续多日活动量断崖式下滑。
+                - status [ref=e119]: 健康图表加载中…
+                - heading [level=2] [ref=e120]:
+                  - text: 运动记录
+                  - link "运动记录的直接链接" [ref=e121] [cursor=pointer]:
+                    - /url: "#运动记录"
+                    - text: "#"
+                - paragraph [ref=e122]: 单次运动类型、时长和强度记录在这里。关注长期运动频次的稳定性和强度分布，比单次训练表现更有意义。
+                - status [ref=e123]: 健康图表加载中…
+                - heading [level=2] [ref=e124]:
+                  - text: 睡眠
+                  - link "睡眠的直接链接" [ref=e125] [cursor=pointer]:
+                    - /url: "#睡眠"
+                    - text: "#"
+                - paragraph [ref=e126]: 睡眠数据包括就寝时间、睡眠时长、深睡比例、夜醒次数和心率变异性。睡眠是整个健康系统的稳定器，长期趋势比单晚数据重要。
+                - paragraph [ref=e127]: 可穿戴设备对睡眠阶段的判断只能作为参考。更可靠的用法是看就寝时间、总睡眠时长、夜醒频率和醒来后的主观状态是否同向变化。
+                - status [ref=e128]: 健康图表加载中…
+                - heading [level=2] [ref=e129]:
+                  - text: 心血管
+                  - link "心血管的直接链接" [ref=e130] [cursor=pointer]:
+                    - /url: "#心血管"
+                    - text: "#"
+                - paragraph [ref=e131]: 静息心率、血压、心率变异性是心血管健康的核心读数。静息心率长期下降通常是心肺能力提升的信号；心率变异性下降则提示压力或恢复不足。
+                - paragraph [ref=e132]: 血压要靠规范测量和长期记录判断，不适合只凭偶然一次读数下结论。出现持续异常时，数据只负责提醒，后续判断交给医生。
+                - status [ref=e133]: 健康图表加载中…
+                - heading [level=2] [ref=e134]:
+                  - text: 用药
+                  - link "用药的直接链接" [ref=e135] [cursor=pointer]:
+                    - /url: "#用药"
+                    - text: "#"
+                - paragraph [ref=e136]: 痛风相关药物的服用记录。漏服次数、连续服药天数、复查周期都是需要追踪的维度。
+                - status [ref=e137]: 健康图表加载中…
+                - heading [level=2] [ref=e138]:
+                  - text: 步态质量
+                  - link "步态质量的直接链接" [ref=e139] [cursor=pointer]:
+                    - /url: "#步态质量"
+                    - text: "#"
+                - paragraph [ref=e140]: 步态稳定性数据，关注平衡和行走模式的变化趋势。
+                - status [ref=e141]: 健康图表加载中…
+                - heading [level=2] [ref=e142]:
+                  - text: 环境 & 习惯
+                  - link "环境 & 习惯的直接链接" [ref=e143] [cursor=pointer]:
+                    - /url: "#环境--习惯"
+                    - text: "#"
+                - paragraph [ref=e144]: 环境变量（气温、湿度）和日常习惯触发器（起床时间、用餐时间、屏幕时间）的关联数据。
+                - status [ref=e145]: 健康图表加载中…
+                - heading [level=2] [ref=e146]:
+                  - text: 心理状态
+                  - link "心理状态的直接链接" [ref=e147] [cursor=pointer]:
+                    - /url: "#心理状态"
+                    - text: "#"
+                - paragraph [ref=e148]: 主观情绪打分、压力自评、精力水平的长期记录。心理状态的长期趋势比单日打分更有参考价值。
+                - status [ref=e149]: 健康图表加载中…
+                - heading [level=2] [ref=e150]:
+                  - text: 关联分析
+                  - link "关联分析的直接链接" [ref=e151] [cursor=pointer]:
+                    - /url: "#关联分析"
+                    - text: "#"
+                - paragraph [ref=e152]: 跨维度的关联分析是数据仪表盘的核心。识别"晚睡 → 次日体重上涨""运动日 → 睡眠质量提升""夜宵 → 静息心率上升"这类行为—结果链路，才能让数据真正驱动行动调整。
+                - generic [ref=e153]: 分析加载中…
+                - heading [level=2] [ref=e154]:
+                  - text: 参考材料
+                  - link "参考材料的直接链接" [ref=e155] [cursor=pointer]:
+                    - /url: "#参考材料"
+                    - text: "#"
+                - list [ref=e156]:
+                  - listitem [ref=e157]:
+                    - 'link "CDC: Measuring Your Blood Pressure" [ref=e158] [cursor=pointer]':
+                      - /url: https://www.cdc.gov/high-blood-pressure/measure/index.html
+                  - listitem [ref=e159]:
+                    - 'link "CDC: Adult Activity" [ref=e160] [cursor=pointer]':
+                      - /url: https://www.cdc.gov/physical-activity-basics/guidelines/adults.html
+                  - listitem [ref=e161]:
+                    - 'link "CDC: About Healthy Weight and Growth" [ref=e162] [cursor=pointer]':
+                      - /url: https://www.cdc.gov/healthy-weight-growth/about/index.html
+            - navigation "文章翻页导航" [ref=e163]:
+              - link "上一篇 幸福观" [ref=e164] [cursor=pointer]:
+                - /url: /happiness
+                - generic [ref=e165]: 上一篇
+                - generic [ref=e166]: 幸福观
+          - generic [ref=e169]:
+            - generic [ref=e170]: 本章内容大纲
+            - list [ref=e172]:
+              - listitem [ref=e173]:
+                - link "体重" [ref=e174] [cursor=pointer]:
+                  - /url: "#体重"
+              - listitem [ref=e175]:
+                - link "活动" [ref=e176] [cursor=pointer]:
+                  - /url: "#活动"
+              - listitem [ref=e177]:
+                - link "运动记录" [ref=e178] [cursor=pointer]:
+                  - /url: "#运动记录"
+              - listitem [ref=e179]:
+                - link "睡眠" [ref=e180] [cursor=pointer]:
+                  - /url: "#睡眠"
+              - listitem [ref=e181]:
+                - link "心血管" [ref=e182] [cursor=pointer]:
+                  - /url: "#心血管"
+              - listitem [ref=e183]:
+                - link "用药" [ref=e184] [cursor=pointer]:
+                  - /url: "#用药"
+              - listitem [ref=e185]:
+                - link "步态质量" [ref=e186] [cursor=pointer]:
+                  - /url: "#步态质量"
+              - listitem [ref=e187]:
+                - link "环境 & 习惯" [ref=e188] [cursor=pointer]:
+                  - /url: "#环境--习惯"
+              - listitem [ref=e189]:
+                - link "心理状态" [ref=e190] [cursor=pointer]:
+                  - /url: "#心理状态"
+              - listitem [ref=e191]:
+                - link "关联分析" [ref=e192] [cursor=pointer]:
+                  - /url: "#关联分析"
+              - listitem [ref=e193]:
+                - link "参考材料" [ref=e194] [cursor=pointer]:
+                  - /url: "#参考材料"
+    - contentinfo [ref=e195]:
+      - generic [ref=e198]:
+        - generic [ref=e199]: Copyright © 2012–2026 FEEI All Rights Reserved
+        - generic [ref=e200]:
+          - link "浙ICP备2021009229号" [ref=e201] [cursor=pointer]:
+            - /url: https://beian.miit.gov.cn/
+          - generic [ref=e202]: ·
+          - link "浙公网安备33011002015586号" [ref=e203] [cursor=pointer]:
+            - /url: http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586
+  - generic [ref=e204]:
+    - group "健康数据范围模式" [ref=e205]:
+      - button "最近" [pressed] [ref=e206] [cursor=pointer]
+      - button "按年" [ref=e207] [cursor=pointer]
+      - button "全部记录" [ref=e208] [cursor=pointer]
+    - group "健康数据范围选项" [ref=e209]:
+      - button "7天" [pressed] [ref=e210] [cursor=pointer]
+      - button "30天" [ref=e211] [cursor=pointer]
+      - button "90天" [ref=e212] [cursor=pointer]
+      - button "近1年" [ref=e213] [cursor=pointer]
+      - status [ref=e214]: 加载中…
+  - generic [ref=e216]:
+    - button "展开音乐播放器" [ref=e217] [cursor=pointer]:
+      - img "歌曲封面" [ref=e218]
+      - generic [ref=e219]:
+        - strong [ref=e220]: 音乐
+        - generic [ref=e221]: 我的音乐库
+    - button "打开音乐歌单" [ref=e222] [cursor=pointer]

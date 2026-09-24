@@ -1,0 +1,998 @@
+- generic [ref=f9e3]:
+  - banner [ref=f9e4]:
+    - heading [level=1] [ref=f9e6]:
+      - link "Schneier on Security" [ref=f9e7] [cursor=pointer]:
+        - /url: https://www.schneier.com/
+  - navigation [ref=f9e8]:
+    - generic [ref=f9e9]:
+      - generic:
+        - list:
+          - listitem:
+            - link "Blog" [ref=f9e10] [cursor=pointer]:
+              - /url: https://www.schneier.com
+          - listitem:
+            - link "Newsletter" [ref=f9e11] [cursor=pointer]:
+              - /url: https://www.schneier.com/crypto-gram/
+          - listitem:
+            - link "Books" [ref=f9e12] [cursor=pointer]:
+              - /url: https://www.schneier.com/books/
+          - listitem:
+            - link "Essays" [ref=f9e13] [cursor=pointer]:
+              - /url: https://www.schneier.com/essays/
+          - listitem:
+            - link "News" [ref=f9e14] [cursor=pointer]:
+              - /url: https://www.schneier.com/news/
+          - listitem:
+            - link "Talks" [ref=f9e15] [cursor=pointer]:
+              - /url: https://www.schneier.com/talks/
+          - listitem:
+            - link "Academic" [ref=f9e16] [cursor=pointer]:
+              - /url: https://www.schneier.com/academic/
+          - listitem:
+            - link "About Me" [ref=f9e17] [cursor=pointer]:
+              - /url: https://www.schneier.com/blog/about/
+  - complementary:
+    - generic [ref=f9e18]:
+      - generic [ref=f9e20]:
+        - heading "Search" [level=3] [ref=f9e21]
+        - paragraph [ref=f9e22]:
+          - emphasis [ref=f9e23]:
+            - text: Powered by
+            - link "DuckDuckGo" [ref=f9e24] [cursor=pointer]:
+              - /url: https://duckduckgo.com/
+        - generic [ref=f9e25]:
+          - textbox [ref=f9e26]
+          - button "Go" [ref=f9e27] [cursor=pointer]
+          - radio "Blog" [ref=f9e28]
+          - text: Blog
+          - radio "Essays" [ref=f9e29]
+          - text: Essays
+          - radio "Whole site" [checked] [ref=f9e30]
+          - text: Whole site
+      - generic [ref=f9e32]:
+        - heading "Subscribe" [level=3] [ref=f9e33]
+        - generic [ref=f9e34]:
+          - link [ref=f9e35] [cursor=pointer]:
+            - /url: https://www.schneier.com/feed/atom/
+            - img "Atom" [ref=f9e36]
+          - link [ref=f9e37] [cursor=pointer]:
+            - /url: https://www.facebook.com/bruce.schneier
+            - img "Facebook" [ref=f9e38]
+          - link [ref=f9e39] [cursor=pointer]:
+            - /url: https://twitter.com/schneierblog
+            - img "Twitter" [ref=f9e40]
+          - link [ref=f9e41] [cursor=pointer]:
+            - /url: https://www.schneier.com/crypto-gram
+            - img "Email" [ref=f9e42]
+  - generic [ref=f9e43]:
+    - paragraph [ref=f9e44]
+    - article [ref=f9e45]:
+      - generic [ref=f9e46]:
+        - heading [level=2] [ref=f9e47]:
+          - link "25 Years of Mass Surveillance Is Enough" [ref=f9e48] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/25-years-of-mass-surveillance-is-enough.html
+        - paragraph [ref=f9e49]:
+          - emphasis [ref=f9e50]:
+            - text: This essay was written with Cindy Cohn, and originally appeared in
+            - link "Lawfare" [ref=f9e51] [cursor=pointer]:
+              - /url: https://www.lawfaremedia.org/article/25-years-of-mass-surveillance-is-enough
+            - text: .
+        - paragraph [ref=f9e52]:
+          - text: One of the many legacies of the terrorist attacks of Sept. 11 is the government-wide shift from targeted surveillance—such as individual wiretaps or pen register/trap and trace orders—to mass surveillance techniques—such as tapping into the internet backbone or mass collection of telephone or internet metadata. The legal and technical architecture of modern mass surveillance, initially framed as a necessary defense against terrorist threats, has grown far beyond that justification and national security in general. Mass surveillance is now a routine tool used by law enforcement. ICE uses it in
+          - link "immigration actions" [ref=f9e53] [cursor=pointer]:
+            - /url: https://www.eff.org/deeplinks/2025/11/rights-organizations-demand-halt-mobile-fortify-ices-handheld-face-recognition
+          - text: and against
+          - link "people exercising" [ref=f9e54] [cursor=pointer]:
+            - /url: https://www.eff.org/deeplinks/2025/11/how-cops-are-using-flock-safetys-alpr-network-surveil-protesters-and-activists
+          - text: their First Amendment rights to protest. It’s also increasingly part of private security systems, such as facial recognition at venues such as
+          - link "Madison Square Garden" [ref=f9e55] [cursor=pointer]:
+            - /url: https://freespeechproject.georgetown.edu/tracker-entries/madison-square-gardens-use-of-facial-recognition-technology-to-bar-certain-lawyers-stirs-protests/
+          - text: and networked
+          - link "Flock" [ref=f9e56] [cursor=pointer]:
+            - /url: https://apnews.com/article/flock-license-plate-cameras-surveillance-deflock-2a93bc075e2f7ffcca9e04a35d75a3fe
+          - text: license plate capture systems on roads and in parking lots.
+        - paragraph [ref=f9e57]:
+          - text: The interrelation between private and governmental mass surveillance is worth examining. Surveillance is the business model of the internet; companies like Google and Facebook constantly
+          - link "spy" [ref=f9e58] [cursor=pointer]:
+            - /url: https://www.ftc.gov/news-events/news/press-releases/2024/09/ftc-staff-report-finds-large-social-media-video-streaming-companies-have-engaged-vast-surveillance
+          - text: on their users’ behavior. From the National Security Agency relying on data collected by telecommunication and internet companies, to local sheriffs and ICE agents relying on cellphone location data and privately managed automatic license plate readers, governments primarily obtain the mass surveillance information through private companies. Increasingly, access doesn’t just come through legal processes, either. FBI Director Kash Patel recently confirmed in congressional
+          - link "testimony" [ref=f9e59] [cursor=pointer]:
+            - /url: https://fedscoop.com/fbi-data-broker-loophole-purchase-dhs/
+          - text: that the agency is purchasing information on Americans from data brokers and intends to continue to do so.
+        - paragraph [ref=f9e60]:
+          - text: This pipeline from private collection to governmental collection means that as companies collect more information for
+          - link "surveillance capitalism" [ref=f9e61] [cursor=pointer]:
+            - /url: https://www.hbs.edu/faculty/Pages/item.aspx?num=56791
+          - text: purposes, more is available to law enforcement as well. And as the technology for mass surveillance and analysis improves, especially with the increased use of AI technologies, the problems attendant to mass surveillance grow as well.
+        - paragraph [ref=f9e62]:
+          - text: After 9/11, the idea that the government could surveil the population to safety took hold. In 2001, the fear of terrorism reached a frequency and intensity never before seen. Along with that came the fear that the enemy could be anyone, anywhere. As a result, the government’s response was to watch everyone, everywhere. This line of reasoning underpinned the shift from targeted to mass surveillance. Or, in the words of an internal National Security Agency (NSA)
+          - link "presentation" [ref=f9e63] [cursor=pointer]:
+            - /url: https://www.justsecurity.org/10396/newly-released-nsa-documents-reveal-omnivorous-appetite-private-data/
+          - text: "that was made public as part of Edward Snowden’s 2013 disclosures, a government that can “Collect it All,” “Process it All,” “Exploit it All,” “Partner it All,” and “Sniff it All,” will ultimately, “Know it All.” Similar rationales support the rise of domestic mass surveillance: if law enforcement could see and hear everything, it could more effectively interdict and solve serious crimes."
+        - paragraph [ref=f9e64]:
+          - text: The national security community has never provided a full analysis of the costs and benefits of these mass surveillance programs, either in terms of taxpayer dollars or diversion of resources from other efforts—or any demonstration that those techniques stopped attacks that otherwise they would not have been able to prevent. While the NSA occasionally presents
+          - link "examples" [ref=f9e65] [cursor=pointer]:
+            - /url: https://www.pclob.gov/library/215-Report_on_the_Telephone_Records_Program.pdf
+          - text: of the successes due to its mass surveillance programs, especially when those techniques are under public pressure, the examples also regularly
+          - link "fall apart" [ref=f9e66] [cursor=pointer]:
+            - /url: https://www.newamerica.org/insights/do-nsas-bulk-surveillance-programs-stop-terrorists/
+          - text: upon serious scrutiny. And even if some utility exists, it must be seriously weighed against the costs.
+        - paragraph [ref=f9e67]:
+          - text: Similarly, there has never been any comprehensive analysis about whether domestic immigration or law enforcement’s use of these techniques actually makes people safer, or whether other techniques could produce the same results. Instead, both the police and the companies selling these tools
+          - link "float anecdotes" [ref=f9e68] [cursor=pointer]:
+            - /url: https://www.cbsnews.com/boston/news/brown-university-mit-professor-shooting-flock-cameras-car/
+          - text: and
+          - link "dubious data" [ref=f9e69] [cursor=pointer]:
+            - /url: https://static1.squarespace.com/static/5edeeebc3032af28b09b6644/t/64a46a417c2a6637212e1ce3/1688496710563/2021_11_30_alpr.pdf
+          - text: . For example, Flock’s data equates the number of law enforcement hits in their database with actually solving crimes.
+        - paragraph [ref=f9e70]: Twenty-five years after 9/11, it seems reasonable to step back and evaluate the costs of this shift to mass surveillance, especially in terms of Americans’ rights and freedoms.
+        - heading "The Shift" [level=3] [ref=f9e71]
+        - paragraph [ref=f9e72]:
+          - text: The easiest place to see a shift to mass surveillance was in the government’s decision immediately after 9/11 to collect Americans’ telephone records. The program started under an
+          - link "argument" [ref=f9e73] [cursor=pointer]:
+            - /url: https://en.wikipedia.org/wiki/President%27s_Surveillance_Program
+          - text: of pure executive power as the “President’s Surveillance Program.” But in 2006, that argument secretly shifted to a
+          - link "novel interpretation" [ref=f9e74] [cursor=pointer]:
+            - /url: https://www.aclu.org/news/national-security/surveillance-memos-and-suggestion-jack-goldsmith
+          - text: of Section 215 of the Patriot. Act which had only previously authorized more targeted access to record. While some media and public interest organizations struggled to force the government to reveal the program as early as late 2005, the government only officially
+          - link "confirmed" [ref=f9e75] [cursor=pointer]:
+            - /url: https://www.dni.gov/index.php/newsroom/press-releases/press-releases-2013/item/869-dni-statement-on-the-collection-of-telephone-metadata-under-section-215-of-the-usa-patriot-act
+          - text: it after the 2013 Snowden disclosures. In 2015, the Second Circuit Court of Appeals
+          - link "rejected" [ref=f9e76] [cursor=pointer]:
+            - /url: https://www.lawfaremedia.org/article/second-circuit-strikes-down-215-program
+          - text: the government’s interpretation of Section 215 as allowing mass collection of telephone records. Later the same year, Congress passed the
+          - link "USA Freedom Act" [ref=f9e77] [cursor=pointer]:
+            - /url: https://www.govtrack.us/congress/bills/114/hr2048/text
+          - text: . While this new law still allows collection of a tremendous amount of domestic telephone records, it ended the indiscriminate mass collection that had occurred for nearly fourteen years.
+        - paragraph [ref=f9e78]:
+          - text: Other shifts to mass surveillance continue through today. The NSA launched its
+          - link "Upstream" [ref=f9e79] [cursor=pointer]:
+            - /url: https://documents.pclob.gov/prod/Documents/OversightReport/1c3c0f5a-3e4b-4f3f-9e6b-2c1b7a4e0f7b/702-Report-2.pdf
+          - text: program, which involved intercepting both metadata and content from key telecommunications junctures inside the U.S., soon after 9/11. It was also initially conducted under a claim of purely presidential authority. This program was brought under marginal congressional and programmatic (not targeted) Foreign Intelligence Surveillance Act (FISA) court review via
+          - link "Section 702" [ref=f9e80] [cursor=pointer]:
+            - /url: https://uscode.house.gov/view.xhtml?req=granuleid:USC-2010-title50-section1881a&num=0&edition=2010
+          - text: of the 2008 FISA Amendments Act. In 2017, more than15 years after its inception, the NSA
+          - link "ended" [ref=f9e81] [cursor=pointer]:
+            - /url: https://jsis.washington.edu/news/controversy-comparisons-data-collection-fisas-section-702/#_ftn27
+          - text: content searches due to FISA court pressure, but the mass collection continues.
+        - paragraph [ref=f9e82]:
+          - text: Despite the stated goal of conducting mass spying
+          - emphasis [ref=f9e83]: only
+          - text: on people outside the U.S.—which itself is problematic given international law’s requirement that surveillance be both
+          - link "necessary and proportionate" [ref=f9e84] [cursor=pointer]:
+            - /url: https://necessaryandproportionate.org/principles/
+          - text: —mass surveillance collects a tremendous amount of U.S. persons’ communications. This can happen because people communicate with people abroad, or because of overcollection—when government agencies gather far more personal data on non-targeted US persons than authorized by law. The concerns about collecting Americans’ data on U.S. soil led Congress to allow the program to officially expire in 2026, although the previously-approved mass surveillance itself continues until at least Spring of 2027.
+        - paragraph [ref=f9e85]:
+          - text: The shift to mass surveillance would be notable enough even if it remained only a strategy of the intelligence community. It has not. Americans are awash in mass surveillance. Networks of automated license plate readers such as those offered by Flock and Vigilant Solutions
+          - link "blanket" [ref=f9e86] [cursor=pointer]:
+            - /url: https://maps.deflock.org/?lat=39.8283&lng=-98.5795&zoom=4.00
+          - text: both public and private roadways and parking lots. These networks often allow searches by law enforcement, including across jurisdictions. They are, for example, being used to track people seeking abortions
+          - link "across" [ref=f9e87] [cursor=pointer]:
+            - /url: https://www.eff.org/deeplinks/2025/05/she-got-abortion-so-texas-cop-used-83000-cameras-track-her-down
+          - text: state lines. Facial recognition tools, once the province of only the more elite parts of federal law enforcement, are increasingly used by
+          - link "Immigration and Customs Enforcement" [ref=f9e88] [cursor=pointer]:
+            - /url: https://www.theguardian.com/technology/2026/jan/27/ice-facial-recognition-minnesota
+          - text: agents on immigrants and protesters, in airports by the
+          - link "Transportation Security Administration" [ref=f9e89] [cursor=pointer]:
+            - /url: https://www.msn.com/en-us/travel/news/how-tsa-facial-recognition-actually-works-and-what-travelers-should-know/ar-AA27UDf4
+          - text: ", as well as by"
+          - link "private entities" [ref=f9e90] [cursor=pointer]:
+            - /url: https://www.nytimes.com/2022/12/22/nyregion/madison-square-garden-facial-recognition.html
+          - text: . And, of course, modern phones track users’ locations constantly—and that information is readily available to law enforcement, often with only minimal process protections.
+        - heading "Constitutional Costs" [level=3] [ref=f9e91]
+        - paragraph [ref=f9e92]: Regardless of the murkiness of its actual usefulness, the shift from targeted to mass surveillance has profound implications for Americans’rights. It has created risks that have become increasingly evident, especially under the Trump administration.
+        - paragraph [ref=f9e93]:
+          - text: At a basic level, the Fourth Amendment guarantees that citizens can be secure in their “persons, houses, papers and effects” from unreasonable searches. Warrants breaching that security should be supported by probable cause and particular descriptions of the place to be searched and items to be seized. Mass surveillance turns that promise on its head, allowing access to our “papers and effects” by the government without individualized suspicion or a particularized description of what data is being seized, much less probable cause. This protection was in response to colonial British misuse of
+          - link "writs of assistance" [ref=f9e94] [cursor=pointer]:
+            - /url: https://www.eff.org/files/filenode/att/generalwarrantsmemo.pdf
+          - text: ", which authorized indiscriminate searches rather than targeted ones."
+        - paragraph [ref=f9e95]:
+          - text: The justifications for exempting mass surveillance from constitutional protection vary. For Section 702, the government has taken the
+          - link "position" [ref=f9e96] [cursor=pointer]:
+            - /url: https://www.brennancenter.org/our-work/research-reports/section-702-foreign-intelligence-surveillance-act
+          - text: that U.S. persons’ communications caught up in the dragnet, either due to overcollection or because they were communicating with someone outside the United States, do not require a warrant prior to initial collection or secondary access by the FBI and several other agencies. The argument is that if the initial collection was not aimed at Americans, the information is free from constitutional protection for any later uses, even for reasons far afield from the initial rationale for collection.
+        - paragraph [ref=f9e97]:
+          - text: Other arguments rest on the claim that metadata is outside the Fourth Amendment, despite its demonstrated
+          - link "ability" [ref=f9e98] [cursor=pointer]:
+            - /url: https://news.stanford.edu/stories/2016/05/stanford-computer-scientists-show-telephone-metadata-can-reveal-surprisingly-sensitive-personal-information
+          - text: to reveal intimate details of all of our lives. Still others rest on the Supreme Court-created
+          - link "Third Party Doctrine" [ref=f9e99] [cursor=pointer]:
+            - /url: https://supreme.justia.com/cases/federal/us/442/735/
+          - text: ", which holds that the Fourth Amendment does not apply to data shared with companies that provide us with services. Some turn on whether analysis by machine"
+          - link "counts" [ref=f9e100] [cursor=pointer]:
+            - /url: https://www.fisc.uscourts.gov/sites/default/files/BR%2013-158%20Primary%20Order.pdf
+          - text: ", claiming that only “human eyes” matter—a particularly troubling argument with the rise of artificial intelligence. What’s more, the government has used doctrines like standing to"
+          - link "limit" [ref=f9e101] [cursor=pointer]:
+            - /url: https://www.eff.org/deeplinks/2015/02/jewel-v-nsa-making-sense-disappointing-decision-over-mass-surveillance
+          - text: "the ability of those subjected to mass surveillance to seek constitutional protection. No matter the argument, the goal is the same: to place the mechanisms and fruits of mass surveillance outside the protections of the Fourth Amendment."
+        - paragraph [ref=f9e102]:
+          - text: The overarching truth is that, due to the concerted efforts by the government since 9/11, and the rise of technologies in recent years, the slice of Americans’ lives and data that are actually protected by the Fourth Amendment has shrunk significantly in the past 25 years. Together, with the technical capabilities of mass surveillance and the increased
+          - link "ability" [ref=f9e103] [cursor=pointer]:
+            - /url: https://slate.com/technology/2023/12/ai-mass-spying-internet-surveillance.html
+          - text: for that data to be analyzed using AI tools, the “security in our papers and effects” that the constitution promises seems increasingly illusory.
+        - paragraph [ref=f9e104]:
+          - text: In addition to the Fourth Amendment, mass surveillance creates tensions with the First Amendment. The Constitution has long recognized that the right to freedom of speech requires a zone of privacy against governmental surveillance. The right to anonymous speech as well as the right of association both recognize the
+          - link "chilling effect" [ref=f9e105] [cursor=pointer]:
+            - /url: https://www.cambridge.org/core/books/chilling-effects/22383D541B3BC45C9145E85DA4824E10
+          - text: that surveillance creates for people saying unpopular things or attempting to organize for political or other societal change. Mass surveillance grants the authorities the ability to track those people, both in real time and historically, that is inconsistent with actual techniques of freedom of speech and assembly.
+        - paragraph [ref=f9e106]:
+          - text: That is why the recently released
+          - link "2026 U.S. Counterterrorism Strategy" [ref=f9e107] [cursor=pointer]:
+            - /url: https://www.whitehouse.gov/wp-content/uploads/2026/05/2026-USCT-Strategy-1.pdf
+          - text: is so troubling. On page seven, the White House expressly states that it intends to target domestic activists with its heretofore foreign-targeted powers. It says that the government “will prioritize the rapid identification and neutralization of violent secular political groups whose ideology is anti-American, radically pro-transgender and anarchist” and “will use all the tools constitutionally available to us to map them at home, identify their membership, map their ties to international organizations like Antifa.” While framed as targeting “violent” groups, it’s clear that the government intends to use its national security tools, presumably including the tools of mass surveillance, against Americans in ways that will create profound tensions with the First Amendment rights of people to organize and communicate privately.
+        - heading "Costs Due to Mistakes and Abuse" [level=3] [ref=f9e108]
+        - paragraph [ref=f9e109]:
+          - text: Even assuming some utility from mass surveillance—a fact we do not dispute, even if the public record is shaky and conclusory—the history of both the national security and domestic uses of mass surveillance confirms that these tools are inevitably
+          - link "misused" [ref=f9e110] [cursor=pointer]:
+            - /url: https://www.nytimes.com/2026/09/10/opinion/911-patriot-act-trump-politics.html
+          - text: ", and that mistakes have impacted huge numbers of Americans. The past twenty-five years have demonstrated that it is not possible to surveil the entire US population while staying within the bounds of even a very generous legal framework like Section 702."
+        - paragraph [ref=f9e111]:
+          - text: As Rep. Zoe Lofgren (D-Calif.) recently stated in discussion of Section 702 in an
+          - link "interview" [ref=f9e112] [cursor=pointer]:
+            - /url: https://www.techpolicy.press/rep-zoe-lofgren-on-fisa-surveillance-and-the-fourth-amendment/
+          - text: with
+          - emphasis [ref=f9e113]: Tech Policy Press
+          - text: ": “backdoor searches have been used improperly for protestors, 19,000 campaign donors, members of Congress, journalists, government officials, a state court judge who had complained to the FBI about police misconduct. It has been abused substantially in the past.” The NSA experienced so much"
+          - link "abuse" [ref=f9e114] [cursor=pointer]:
+            - /url: https://arstechnica.com/tech-policy/2013/09/loveint-on-his-first-day-of-work-nsa-employee-spied-on-ex-girlfriend/
+          - text: "of its mass surveillance tools by actual or aspiring romantic partners and ex-spouses that an internal name emerged for it: “"
+          - link "LOVEINT" [ref=f9e115] [cursor=pointer]:
+            - /url: https://arstechnica.com/tech-policy/2013/09/loveint-on-his-first-day-of-work-nsa-employee-spied-on-ex-girlfriend/
+          - text: ",” or Love Intelligence."
+        - paragraph [ref=f9e116]:
+          - text: That same pattern of abuse is now emerging at the domestic law enforcement level. A Texas police officer
+          - link "misused" [ref=f9e117] [cursor=pointer]:
+            - /url: https://www.eff.org/deeplinks/2025/05/she-got-abortion-so-texas-cop-used-83000-cameras-track-her-down
+          - text: ", and then lied about, using license plate readers to track a woman suspected of seeking an abortion. Multiple law enforcement officials have been"
+          - link "accused" [ref=f9e118] [cursor=pointer]:
+            - /url: https://ij.org/the-ij-database-of-alpr-abuse/
+          - text: of tracking people they either wished to have a relationship with or who were their exes. And mass surveillance technologies have been used to track both
+          - link "immigration targets" [ref=f9e119] [cursor=pointer]:
+            - /url: https://www.washingtonpost.com/technology/interactive/2026/ice-surveillance-immigrants-protesters/
+          - text: and citizens
+          - link "engaging" [ref=f9e120] [cursor=pointer]:
+            - /url: https://www.democracynow.org/2026/1/29/ice_cbp_facial_recognition_technology_app
+          - text: in their First Amendment-protected right to track and record the police.
+        - paragraph [ref=f9e121]:
+          - text: Mistakes are inevitable with collections of data of this size and scope. The history of the FISA court’s reviews of Section 702 is littered with examples of the NSA not being able to
+          - link "follow" [ref=f9e122] [cursor=pointer]:
+            - /url: https://www.justsecurity.org/66595/the-fisa-courts-702-opinions-part-i-a-history-of-non-compliance-repeats-itself/
+          - text: its own rules limiting the scope of what it collects and analyzes, even after having been given multiple chances by the court. On the local level, the technical protections that Flock, for example, put in place have repeatedly been insufficient to stop
+          - link "“accidental” sharing" [ref=f9e123] [cursor=pointer]:
+            - /url: https://lookout.co/city-of-santa-cruz-pauses-statewide-license-plate-data-sharing-citing-flock-safetys-violation-of-california-law/story
+          - text: its data with out-of-state law enforcement. These mistakes have fueled growing efforts by local communities across the country to remove license plate readers. Those efforts should be the first step in a broader reconsideration of mass surveillance.
+        - paragraph [ref=f9e124]:
+          - text: More generally, ubiquitous surveillance carries a real societal cost. The chilling effects are real and
+          - link "pervasive" [ref=f9e125] [cursor=pointer]:
+            - /url: https://www.theguardian.com/commentisfree/2026/jul/06/ai-surveillance-policy
+          - text: ", and they tend to fall hardest on the most marginalized members of society. Moreover, social progress"
+          - link "requires" [ref=f9e126] [cursor=pointer]:
+            - /url: https://www.schneier.com/essays/archives/2018/11/surveillance_kills_f.html
+          - text: the ability to experiment in secret. It’s hard to imagine a society progressing morally to the point of accepting and legalizing things like marijuana use or gay marriage if the earliest signs of that shift are snuffed out because of overzealous surveillance.
+        - heading "Reversing Course" [level=3] [ref=f9e127]
+        - paragraph [ref=f9e128]: While a cost-benefit analysis is not the best frame for deciding constitutional rights, it is a place to start to evaluate government policies. If the costs are too high and the benefits too small, what should the public do? While the policy and legal frameworks can be individually complex, mass surveillance is a problem in all of its applications. So too should solutions be comprehensive rather than piecemeal.
+        - paragraph [ref=f9e129]: One comprehensive strategy is to reset the promise of the Fourth Amendment and recognize that a warrant is required prior to collection, access or use of information gathered through mass surveillance. This would apply to collections that include U.S. persons, whether done for national security or domestic purposes. This protection would apply regardless of whether the information is in the form of metadata. It would apply regardless of whether the information is held in homes or by services people rely on, such as telephones, internet or social network providers, or by private entities utilizing mass surveillance for their own purposes. By passing this legislation, Congress could ensure this rejection of mass surveillance, and include real enforcement such as a private right of action and an automatic exclusionary remedy in criminal prosecutions. The courts could also recognize this protection of “papers and effects” directly as a plain language interpretation of the Fourth Amendment.
+        - paragraph [ref=f9e130]:
+          - text: There are already a number of efforts that take on pieces of mass surveillance. Section 702 has expired and should remain so. This was due largely to efforts to block the
+          - link "“back door” access" [ref=f9e131] [cursor=pointer]:
+            - /url: https://www.brennancenter.org/our-work/research-reports/congress-must-close-backdoor-search-loophole-requiring-warrantfisa-0
+          - text: to Section 702-collected data without warrants. The bipartisan “
+          - link "Fourth Amendment is Not for Sale Act" [ref=f9e132] [cursor=pointer]:
+            - /url: https://www.wyden.senate.gov/news/press-releases/wyden-applauds-bipartisan-passage-of-his-fourth-amendment-is-not-for-sale-act-in-the-house-judiciary-committee
+          - text: ” would prevent the government from purchasing data that it would otherwise need a warrant to obtain. The Supreme Court itself has already been chipping away at the Third Party Doctrine, with a recent step in the rejection of mass geofence warrants—warrants seeking the identities of individuals based upon their proximity to a crime—in
+          - link [ref=f9e133] [cursor=pointer]:
+            - /url: https://www.supremecourt.gov/opinions/25pdf/25-112_0am4.pdf
+            - emphasis [ref=f9e134]: Chatrie v. United States
+          - text: . Now, such warrants fall, at least initially, under the Fourth Amendment.
+        - paragraph [ref=f9e135]:
+          - text: A more comprehensive approach would also address mass surveillance carried out by private companies, and to ensure that Americans have the right to encrypt and secure their data. There are many reasons the United States would benefit from a
+          - link "comprehensive privacy law" [ref=f9e136] [cursor=pointer]:
+            - /url: https://www.eff.org/deeplinks/2025/04/eff-congress-heres-what-strong-privacy-law-looks
+          - text: —and curbing mass surveillance is one of them. Addressing mass surveillance is certainly one of them. Ideas such as the banning of secondary uses of data—with roots in the
+          - link "Fair Information Practice Principles" [ref=f9e137] [cursor=pointer]:
+            - /url: https://iapp.org/news/a/50-years-and-still-kicking-an-examination-of-fipps-in-modern-regulation
+          - text: from the 1970s—are worth pushing forward. So are moves such as creating
+          - link "fiduciary duties" [ref=f9e138] [cursor=pointer]:
+            - /url: https://wustllawreview.org/wp-content/uploads/2022/02/Richards-Hartzog-A-Duty-of-Loyalty-for-Privacy.pdf
+          - text: for mass data collectors. There are many more ways to curtail private companies’ mass surveillance while staying within constitutional boundaries. But addressing the costs of mass surveillance by both companies and governments is even more important in a world where AI agents are making decisions both about the public and on their behalf based on their data and observed behavior.
+        - paragraph [ref=f9e139]: "Twenty-five years after the U.S. government embraced mass surveillance, it’s time to evaluate it as a whole, and consider responses that address the problem as a whole. Americans must ask: Is it consistent with a self-governing democracy to have systems that watch everyone everywhere? Is the public comfortable with governments—federal, state, local—that seek to “know it all” about its citizens? Is the public comfortable with private mass surveillance in its own right and as it’s being increasingly used to fuel government surveillance? These questions have long needed serious consideration. But as it becomes increasingly evident that the Trump administration is using mass surveillance to keep itself in power, stifle dissent, and undermine political opponents, these questions are now more urgent than ever."
+        - paragraph [ref=f9e140]:
+          - generic [ref=f9e141]:
+            - text: "Tags:"
+            - link "privacy" [ref=f9e142] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/privacy/
+            - text: ","
+            - link "surveillance" [ref=f9e143] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/surveillance/
+        - paragraph [ref=f9e144]:
+          - link "Posted on September 15, 2026 at 7:01 AM" [ref=f9e145] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/25-years-of-mass-surveillance-is-enough.html
+          - text: •
+          - link "14 Comments" [ref=f9e146] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/25-years-of-mass-surveillance-is-enough.html#comments
+        - complementary [ref=f9e147]:
+          - list [ref=f9e149]:
+            - listitem [ref=f9e150]:
+              - generic [ref=f9e151] [cursor=pointer]: not connected to Facebook
+              - img "Facebook \"Like\"-Dummy" [ref=f9e153] [cursor=pointer]
+            - listitem [ref=f9e154]:
+              - generic [ref=f9e155] [cursor=pointer]: not connected to Twitter
+              - img "\"Tweet this\"-Dummy" [ref=f9e157] [cursor=pointer]
+            - listitem [ref=f9e158]:
+              - link [ref=f9e160] [cursor=pointer]:
+                - /url: https://panzi.github.io/SocialSharePrivacy/
+    - article [ref=f9e162]:
+      - generic [ref=f9e163]:
+        - heading [level=2] [ref=f9e164]:
+          - link "On the NSA’s Supercomputer from the 1960s" [ref=f9e165] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/on-the-nsas-supercomputer-from-the-1960s.html
+        - paragraph [ref=f9e166]:
+          - text: Really interesting
+          - link "story" [ref=f9e167] [cursor=pointer]:
+            - /url: https://spectrum.ieee.org/cold-war-codebreaker-nsa-ibm
+          - text: about Harvest, a specialized code breaking computer built in the 1960s by IBM for the NSA.
+        - paragraph [ref=f9e168]:
+          - generic [ref=f9e169]:
+            - text: "Tags:"
+            - link "history of computing" [ref=f9e170] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/history-of-computing/
+            - text: ","
+            - link "history of cryptography" [ref=f9e171] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/history-of-cryptography/
+            - text: ","
+            - link "IBM" [ref=f9e172] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/ibm/
+            - text: ","
+            - link "intelligence" [ref=f9e173] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/intelligence/
+            - text: ","
+            - link "NSA" [ref=f9e174] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/nsa/
+        - paragraph [ref=f9e175]:
+          - link "Posted on September 15, 2026 at 6:16 AM" [ref=f9e176] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/on-the-nsas-supercomputer-from-the-1960s.html
+          - text: •
+          - link "8 Comments" [ref=f9e177] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/on-the-nsas-supercomputer-from-the-1960s.html#comments
+        - complementary [ref=f9e178]:
+          - list [ref=f9e180]:
+            - listitem [ref=f9e181]:
+              - generic [ref=f9e182] [cursor=pointer]: not connected to Facebook
+              - img "Facebook \"Like\"-Dummy" [ref=f9e184] [cursor=pointer]
+            - listitem [ref=f9e185]:
+              - generic [ref=f9e186] [cursor=pointer]: not connected to Twitter
+              - img "\"Tweet this\"-Dummy" [ref=f9e188] [cursor=pointer]
+            - listitem [ref=f9e189]:
+              - link [ref=f9e191] [cursor=pointer]:
+                - /url: https://panzi.github.io/SocialSharePrivacy/
+    - article [ref=f9e193]:
+      - generic [ref=f9e194]:
+        - heading [level=2] [ref=f9e195]:
+          - link "Upcoming Speaking Engagements" [ref=f9e196] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/upcoming-speaking-engagements-60.html
+        - paragraph [ref=f9e197]: "This is a current list of where and when I am scheduled to speak:"
+        - list [ref=f9e198]:
+          - listitem [ref=f9e199]:
+            - text: I’m speaking online (via Zoom) at a
+            - link "League of Women Voters event" [ref=f9e200] [cursor=pointer]:
+              - /url: https://www.lwvme.org/civicrm-event/2400?a0=events-month&a1=202609
+            - text: on Tuesday, September 22, 2026 at 5 PM ET.
+          - listitem [ref=f9e201]:
+            - text: I’m speaking at
+            - link "CanSecWest 2026" [ref=f9e202] [cursor=pointer]:
+              - /url: https://www.secwest.net/
+            - text: in Vancouver, Canada. The conference runs September 30–October 1, 2026; the time of my talk is TBD.
+          - listitem [ref=f9e203]:
+            - text: I’m giving a talk on “
+            - link "Free Speech and the Preservation of Democracy" [ref=f9e204] [cursor=pointer]:
+              - /url: https://events.bentley.edu/event/free-speech-and-the-preservation-of-democracy
+            - text: ” at Bentley University in Waltham, Massachusetts, USA, at 2 PM ET on Tuesday, October 6, 2026.
+          - listitem [ref=f9e205]:
+            - text: I’m speaking at
+            - 'link "ATTENTION: Democracy, Rebuilt" [ref=f9e206] [cursor=pointer]':
+              - /url: https://www.attentionconferences.com/conferences/2026-forum
+            - text: in Montreal, Canada. The event runs October 21–23, 2026, and my talk is on Wednesday, October 21.
+        - paragraph [ref=f9e207]: "Note: the Elevate Festival talk listed in last month’s newsletter is canceled."
+        - paragraph [ref=f9e208]:
+          - text: The list is maintained on
+          - link "this page" [ref=f9e209] [cursor=pointer]:
+            - /url: https://www.schneier.com/events/
+          - text: .
+        - paragraph [ref=f9e210]:
+          - generic [ref=f9e211]:
+            - text: "Tags:"
+            - link "Schneier news" [ref=f9e212] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/schneier-news/
+        - paragraph [ref=f9e213]:
+          - link "Posted on September 14, 2026 at 3:02 PM" [ref=f9e214] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/upcoming-speaking-engagements-60.html
+          - text: •
+          - link "1 Comments" [ref=f9e215] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/upcoming-speaking-engagements-60.html#comments
+        - complementary [ref=f9e216]:
+          - list [ref=f9e218]:
+            - listitem [ref=f9e219]:
+              - generic [ref=f9e220] [cursor=pointer]: not connected to Facebook
+              - img "Facebook \"Like\"-Dummy" [ref=f9e222] [cursor=pointer]
+            - listitem [ref=f9e223]:
+              - generic [ref=f9e224] [cursor=pointer]: not connected to Twitter
+              - img "\"Tweet this\"-Dummy" [ref=f9e226] [cursor=pointer]
+            - listitem [ref=f9e227]:
+              - link [ref=f9e229] [cursor=pointer]:
+                - /url: https://panzi.github.io/SocialSharePrivacy/
+    - article [ref=f9e231]:
+      - generic [ref=f9e232]:
+        - heading [level=2] [ref=f9e233]:
+          - link "Using AI for Weapons Development" [ref=f9e234] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/using-ai-for-weapons-development.html
+        - paragraph [ref=f9e235]:
+          - text: Last week, Anthropic released a long and detailed
+          - link "document" [ref=f9e236] [cursor=pointer]:
+            - /url: https://www-cdn.anthropic.com/e50be2e51e7695dc4b1366a37a245a597377d3b5/Anthropic-Detecting-and-countering-091026.pdf
+          - text: "describing current misuses of their Claude models. I’m still reading it, but I wanted to flag this:"
+        - blockquote [ref=f9e237]:
+          - paragraph [ref=f9e238]: "We identified a cell of threat actors based in northern Yemen running three weapons development programs: a guided rocket that used a commodity phone-class flight computer with final-phase homing guidance; a multi-stage ballistic missile with a stated range goal above 2,000 km; and a multi-variant missile (referred to as the “R2000” set) that included a hypersonic glide vehicle variant."
+          - paragraph [ref=f9e239]: "The actors used Claude Code in place of human software engineers to develop the guidance, navigation, and control (GNC) software that steers and stabilizes a flying vehicle. For example, they used Claude to integrate an open-source autopilot onto a phone-class flight computer, writing the control and position estimation software, tuning the control settings, running a firmware build pipeline, and performing a flight simulation. The actors managed several Claude instances at once, assigning each one a role, much as a lead would delegate work on a small engineering team: the actors tasked one instance with writing the code, another with research, and a third with reviewing the code the first instance produced."
+          - paragraph [ref=f9e240]: Our safeguards blocked many of their requests, but not all of them. The actors used a variety of tactics to evade our safeguards, including hiding their goals and the products the software was meant for, and they split their work across multiple sessions so no single session revealed their full intent.
+          - paragraph [ref=f9e241]: "These actors carried out a sustained effort to develop guided weapons, including using Claude to design guidance software. We do not have evidence the actors succeeded in fielding an operational device; but they did test-fire a guided rocket. This field test appears to have failed: within hours, the actors returned to Claude to work out why it failed."
+        - paragraph [ref=f9e242]: Expect more of this. AI systems democratize expertise and capability. Most of the time that’s a good thing, but sometimes it’s not.
+        - paragraph [ref=f9e243]:
+          - generic [ref=f9e244]:
+            - text: "Tags:"
+            - link "AI" [ref=f9e245] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/ai/
+            - text: ","
+            - link "reports" [ref=f9e246] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/reports/
+            - text: ","
+            - link "weapons" [ref=f9e247] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/weapons/
+        - paragraph [ref=f9e248]:
+          - link "Posted on September 14, 2026 at 12:07 PM" [ref=f9e249] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/using-ai-for-weapons-development.html
+          - text: •
+          - link "16 Comments" [ref=f9e250] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/using-ai-for-weapons-development.html#comments
+        - complementary [ref=f9e251]:
+          - list [ref=f9e253]:
+            - listitem [ref=f9e254]:
+              - generic [ref=f9e255] [cursor=pointer]: not connected to Facebook
+              - img "Facebook \"Like\"-Dummy" [ref=f9e257] [cursor=pointer]
+            - listitem [ref=f9e258]:
+              - generic [ref=f9e259] [cursor=pointer]: not connected to Twitter
+              - img "\"Tweet this\"-Dummy" [ref=f9e261] [cursor=pointer]
+            - listitem [ref=f9e262]:
+              - link [ref=f9e264] [cursor=pointer]:
+                - /url: https://panzi.github.io/SocialSharePrivacy/
+    - article [ref=f9e266]:
+      - generic [ref=f9e267]:
+        - heading [level=2] [ref=f9e268]:
+          - link "Microsoft’s Patching" [ref=f9e269] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/microsofts-patching.html
+        - paragraph [ref=f9e270]:
+          - text: Once a month, Microsoft pushes a security update to all Windows users. Tomorrow’s is a
+          - link "new record" [ref=f9e271] [cursor=pointer]:
+            - /url: https://arstechnica.com/security/2026/09/microsoft-patches-a-record-972-vulnerabilities-112-of-them-critical/
+          - text: ":"
+        - blockquote [ref=f9e272]:
+          - paragraph [ref=f9e273]: Microsoft’s patch for September is a doozy, with a record number of roughly 972 vulnerabilities fixed and 112 of them meeting the high critical-severity threshold.
+          - paragraph [ref=f9e274]:
+            - text: It was only two months ago that Microsoft patched a then-record 570 vulnerabilities. Then, last month, Microsoft patched some 620 of them. Google and other companies have also published record numbers of vulnerabilities in recent months. Two weeks ago, OpenAI, Anthropic, Amazon Web Services, Google, Microsoft, and 100 companies and organizations published an
+            - link "open letter" [ref=f9e275] [cursor=pointer]:
+              - /url: https://openai.com/collective-cyberdefense
+            - text: warning of a narrowing window for patching vulnerabilities ahead of an expected tsunami of AI-enabled attacks that actively exploit them first. The industry is taking the threat seriously by pumping out unprecedented numbers of patches in their software.
+        - paragraph [ref=f9e276]: This is the result of AI-powered vulnerability finding, and a good example of AI helping the defenders more than the attackers.
+        - paragraph [ref=f9e277]: What will be interesting to watch is how the number of vulnerabilities changes over the next few months. My prediction is that it will continue to increase as the AIs get better at finding software vulnerabilities, and then decrease as they run out of vulnerabilities to find. How high the number gets, how fast the trend reverses, and how quickly it declines after that are all unknown.
+        - paragraph [ref=f9e278]: "And Microsoft is right: The window to patch has shrunk to “immediately.” AIs are also good at reverse-engineering exploits from patches, which means that these vulnerabilities will be weaponized as soon as the update is published."
+        - paragraph [ref=f9e279]:
+          - generic [ref=f9e280]:
+            - text: "Tags:"
+            - link "AI" [ref=f9e281] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/ai/
+            - text: ","
+            - link "Microsoft" [ref=f9e282] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/microsoft/
+            - text: ","
+            - link "patching" [ref=f9e283] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/patching/
+            - text: ","
+            - link "vulnerabilities" [ref=f9e284] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/vulnerabilities/
+            - text: ","
+            - link "Windows" [ref=f9e285] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/windows/
+        - paragraph [ref=f9e286]:
+          - link "Posted on September 14, 2026 at 7:03 AM" [ref=f9e287] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/microsofts-patching.html
+          - text: •
+          - link "10 Comments" [ref=f9e288] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/microsofts-patching.html#comments
+        - complementary [ref=f9e289]:
+          - list [ref=f9e291]:
+            - listitem [ref=f9e292]:
+              - generic [ref=f9e293] [cursor=pointer]: not connected to Facebook
+              - img "Facebook \"Like\"-Dummy" [ref=f9e295] [cursor=pointer]
+            - listitem [ref=f9e296]:
+              - generic [ref=f9e297] [cursor=pointer]: not connected to Twitter
+              - img "\"Tweet this\"-Dummy" [ref=f9e299] [cursor=pointer]
+            - listitem [ref=f9e300]:
+              - link [ref=f9e302] [cursor=pointer]:
+                - /url: https://panzi.github.io/SocialSharePrivacy/
+    - article [ref=f9e304]:
+      - generic [ref=f9e305]:
+        - heading [level=2] [ref=f9e306]:
+          - 'link "Friday Squid Blogging: Rotting Squid on a Beached California Boat" [ref=f9e307] [cursor=pointer]':
+            - /url: https://www.schneier.com/blog/archives/2026/09/friday-squid-blogging-rotting-squid-on-a-beached-california-boat.html
+        - paragraph [ref=f9e308]:
+          - text: Smells
+          - link "awful" [ref=f9e309] [cursor=pointer]:
+            - /url: https://abc7news.com/post/tons-nasty-rotting-squid-creates-major-challenge-point-reyes-crews-prepare-salvage-operation-lake-bay-vessel/19771993/
+          - text: ":"
+        - blockquote [ref=f9e310]:
+          - paragraph [ref=f9e311]: But an estimated 30 to 50 tons of dead squid remain inside the boat’s catch tank, where they have been decomposing for days. “That is nasty. I wouldn’t want to do that,” said commercial fisherman Dick Ogg of the Bodega Bay Fishermen’s Marketing Association.
+          - paragraph [ref=f9e312]: Ogg said anyone familiar with the fishing industry understands what happens when a large catch sits for an extended period.
+          - paragraph [ref=f9e313]: “If you think about what happens after four or five days, it’s a gooey mess,” he said.
+          - paragraph [ref=f9e314]: The odor has become a defining feature of the operation, and the beach remains closed to the public while crews work on a removal plan.
+          - paragraph [ref=f9e315]: According to salvage expert Ernie English of Parker Diving Service, the squid has deteriorated into a thick mass that will be difficult to remove.
+          - paragraph [ref=f9e316]: “It’s like concrete,” English said when asked about its consistency.
+        - paragraph [ref=f9e317]: As usual, you can also use this squid post to talk about the security stories in the news that I haven’t covered.
+        - paragraph [ref=f9e318]:
+          - link "Blog moderation policy." [ref=f9e319] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2024/06/new-blog-moderation-policy.html
+        - paragraph [ref=f9e320]:
+          - generic [ref=f9e321]:
+            - text: "Tags:"
+            - link "squid" [ref=f9e322] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/squid/
+            - text: ","
+            - link "video" [ref=f9e323] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/video/
+        - paragraph [ref=f9e324]:
+          - link "Posted on September 11, 2026 at 5:03 PM" [ref=f9e325] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/friday-squid-blogging-rotting-squid-on-a-beached-california-boat.html
+          - text: •
+          - link "32 Comments" [ref=f9e326] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/friday-squid-blogging-rotting-squid-on-a-beached-california-boat.html#comments
+        - complementary [ref=f9e327]:
+          - list [ref=f9e329]:
+            - listitem [ref=f9e330]:
+              - generic [ref=f9e331] [cursor=pointer]: not connected to Facebook
+              - img "Facebook \"Like\"-Dummy" [ref=f9e333] [cursor=pointer]
+            - listitem [ref=f9e334]:
+              - generic [ref=f9e335] [cursor=pointer]: not connected to Twitter
+              - img "\"Tweet this\"-Dummy" [ref=f9e337] [cursor=pointer]
+            - listitem [ref=f9e338]:
+              - link [ref=f9e340] [cursor=pointer]:
+                - /url: https://panzi.github.io/SocialSharePrivacy/
+    - article [ref=f9e342]:
+      - generic [ref=f9e343]:
+        - heading [level=2] [ref=f9e344]:
+          - link "My Talk at DEF CON" [ref=f9e345] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/my-talk-at-def-con.html
+        - paragraph [ref=f9e346]:
+          - text: Last month, I gave a
+          - link "talk" [ref=f9e347] [cursor=pointer]:
+            - /url: https://www.youtube.com/watch?v=eEBv0STiYhI
+          - text: "at DEF CON on AI hacking: what happens when AIs become hackers. It’s a combination of the potentialities I raised in my 2022 book"
+          - link "A Hacker’s Mind" [ref=f9e348] [cursor=pointer]:
+            - /url: https://www.schneier.com/books/a-hackers-mind/
+          - text: and the lessons we’re learning from current AI models engaging in hacking behavior. I’m really proud of the talk, and the fact that it gained over 100K views on YouTube in just a few days.
+        - paragraph [ref=f9e349]:
+          - text: Also online is an
+          - link "interview" [ref=f9e350] [cursor=pointer]:
+            - /url: https://www.youtube.com/watch?v=7-sMBqPV3XU
+          - text: with me in the AI Village.
+        - paragraph [ref=f9e351]:
+          - generic [ref=f9e352]:
+            - text: "Tags:"
+            - link "AI" [ref=f9e353] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/ai/
+            - text: ","
+            - link "conferences" [ref=f9e354] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/conferences/
+            - text: ","
+            - link "hacking" [ref=f9e355] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/hacking/
+            - text: ","
+            - link "Schneier news" [ref=f9e356] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/schneier-news/
+            - text: ","
+            - link "videos" [ref=f9e357] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/videos/
+        - paragraph [ref=f9e358]:
+          - link "Posted on September 11, 2026 at 2:06 PM" [ref=f9e359] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/my-talk-at-def-con.html
+          - text: •
+          - link "4 Comments" [ref=f9e360] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/my-talk-at-def-con.html#comments
+        - complementary [ref=f9e361]:
+          - list [ref=f9e363]:
+            - listitem [ref=f9e364]:
+              - generic [ref=f9e365] [cursor=pointer]: not connected to Facebook
+              - img "Facebook \"Like\"-Dummy" [ref=f9e367] [cursor=pointer]
+            - listitem [ref=f9e368]:
+              - generic [ref=f9e369] [cursor=pointer]: not connected to Twitter
+              - img "\"Tweet this\"-Dummy" [ref=f9e371] [cursor=pointer]
+            - listitem [ref=f9e372]:
+              - link [ref=f9e374] [cursor=pointer]:
+                - /url: https://panzi.github.io/SocialSharePrivacy/
+    - article [ref=f9e376]:
+      - generic [ref=f9e377]:
+        - heading [level=2] [ref=f9e378]:
+          - link "Cliff Stoll’s DEF CON Talk" [ref=f9e379] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/cliff-stolls-def-con-talk.html
+        - paragraph [ref=f9e380]:
+          - text: In August, Cliff Stoll gave a
+          - link "talk" [ref=f9e381] [cursor=pointer]:
+            - /url: https://www.youtube.com/watch?v=656058JxTM0
+          - text: at DEF CON, remembering the wily hacker he stalked forty years ago.
+        - paragraph [ref=f9e382]: Great fun.
+        - paragraph [ref=f9e383]:
+          - generic [ref=f9e384]:
+            - text: "Tags:"
+            - link "history of security" [ref=f9e385] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/history-of-security/
+            - text: ","
+            - link "video" [ref=f9e386] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/video/
+        - paragraph [ref=f9e387]:
+          - link "Posted on September 11, 2026 at 7:09 AM" [ref=f9e388] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/cliff-stolls-def-con-talk.html
+          - text: •
+          - link "14 Comments" [ref=f9e389] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/cliff-stolls-def-con-talk.html#comments
+        - complementary [ref=f9e390]:
+          - list [ref=f9e392]:
+            - listitem [ref=f9e393]:
+              - generic [ref=f9e394] [cursor=pointer]: not connected to Facebook
+              - img "Facebook \"Like\"-Dummy" [ref=f9e396] [cursor=pointer]
+            - listitem [ref=f9e397]:
+              - generic [ref=f9e398] [cursor=pointer]: not connected to Twitter
+              - img "\"Tweet this\"-Dummy" [ref=f9e400] [cursor=pointer]
+            - listitem [ref=f9e401]:
+              - link [ref=f9e403] [cursor=pointer]:
+                - /url: https://panzi.github.io/SocialSharePrivacy/
+    - article [ref=f9e405]:
+      - generic [ref=f9e406]:
+        - heading [level=2] [ref=f9e407]:
+          - link "AIs Compress Exploit Timeline" [ref=f9e408] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/ais-compress-exploit-timeline.html
+        - paragraph [ref=f9e409]:
+          - text: Give an AI agent a mere
+          - link "rumor" [ref=f9e410] [cursor=pointer]:
+            - /url: https://anil.recoil.org/notes/rumour-is-the-exploit
+          - text: of an exploit, and it’s enough for them to find it.
+        - blockquote [ref=f9e411]:
+          - paragraph [ref=f9e412]: What’s worse, I found I could use my own agents to find the exploit just by knowing roughly what it was about and so could have been exploiting it well before the public patch was available! Given that just the rumour of a security issue seems enough to give attackers enough info to find new exploits, we’re going to need to change the way we deal with security responses in open source.
+        - paragraph [ref=f9e413]:
+          - text: Simon Willison
+          - link "comments" [ref=f9e414] [cursor=pointer]:
+            - /url: https://simonwillison.net/2026/Aug/28/just-a-rumour-of-a-bug/
+          - text: ":"
+        - blockquote [ref=f9e415]:
+          - paragraph [ref=f9e416]: Anil points out that this rate of discovery appears incompatible with existing open source embargo practices for new issues. If an issue can become an exploit this fast, we need to figure out new processes for keeping our communities safe.
+        - paragraph [ref=f9e417]:
+          - generic [ref=f9e418]:
+            - text: "Tags:"
+            - link "AI" [ref=f9e419] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/ai/
+            - text: ","
+            - link "exploits" [ref=f9e420] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/exploits/
+            - text: ","
+            - link "open source" [ref=f9e421] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/open-source/
+        - paragraph [ref=f9e422]:
+          - link "Posted on September 10, 2026 at 6:40 AM" [ref=f9e423] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/ais-compress-exploit-timeline.html
+          - text: •
+          - link "22 Comments" [ref=f9e424] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/ais-compress-exploit-timeline.html#comments
+        - complementary [ref=f9e425]:
+          - list [ref=f9e427]:
+            - listitem [ref=f9e428]:
+              - generic [ref=f9e429] [cursor=pointer]: not connected to Facebook
+              - img "Facebook \"Like\"-Dummy" [ref=f9e431] [cursor=pointer]
+            - listitem [ref=f9e432]:
+              - generic [ref=f9e433] [cursor=pointer]: not connected to Twitter
+              - img "\"Tweet this\"-Dummy" [ref=f9e435] [cursor=pointer]
+            - listitem [ref=f9e436]:
+              - link [ref=f9e438] [cursor=pointer]:
+                - /url: https://panzi.github.io/SocialSharePrivacy/
+    - article [ref=f9e440]:
+      - generic [ref=f9e441]:
+        - heading [level=2] [ref=f9e442]:
+          - link "Driver’s License Data for Sale" [ref=f9e443] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/drivers-license-data-for-sale.html
+        - paragraph [ref=f9e444]:
+          - text: A database of 153 million drivers licenses is
+          - link "for sale" [ref=f9e445] [cursor=pointer]:
+            - /url: https://arstechnica.com/security/2026/09/my-drivers-license-is-one-of-153-million-for-sale-on-a-new-dark-website/
+          - text: on the dark web. Brian Krebs has more
+          - link "detail" [ref=f9e446] [cursor=pointer]:
+            - /url: https://krebsonsecurity.com/2026/09/fbi-probes-service-selling-153m-drivers-licenses/
+          - text: .
+        - paragraph [ref=f9e447]:
+          - generic [ref=f9e448]:
+            - text: "Tags:"
+            - link "cars" [ref=f9e449] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/cars/
+            - text: ","
+            - link "dark web" [ref=f9e450] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/dark-web/
+            - text: ","
+            - link "data breaches" [ref=f9e451] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/data-breaches/
+            - text: ","
+            - link "databases" [ref=f9e452] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/databases/
+        - paragraph [ref=f9e453]:
+          - link "Posted on September 9, 2026 at 12:05 PM" [ref=f9e454] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/drivers-license-data-for-sale.html
+          - text: •
+          - link "8 Comments" [ref=f9e455] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/archives/2026/09/drivers-license-data-for-sale.html#comments
+        - complementary [ref=f9e456]:
+          - list [ref=f9e458]:
+            - listitem [ref=f9e459]:
+              - generic [ref=f9e460] [cursor=pointer]: not connected to Facebook
+              - img "Facebook \"Like\"-Dummy" [ref=f9e462] [cursor=pointer]
+            - listitem [ref=f9e463]:
+              - generic [ref=f9e464] [cursor=pointer]: not connected to Twitter
+              - img "\"Tweet this\"-Dummy" [ref=f9e466] [cursor=pointer]
+            - listitem [ref=f9e467]:
+              - link [ref=f9e469] [cursor=pointer]:
+                - /url: https://panzi.github.io/SocialSharePrivacy/
+    - link "← Earlier Entries" [ref=f9e472] [cursor=pointer]:
+      - /url: https://www.schneier.com/page/2/
+    - paragraph [ref=f9e473]: Sidebar photo of Bruce Schneier by Joe MacInnis.
+    - paragraph [ref=f9e474]:
+      - link "Powered by WordPress" [ref=f9e475] [cursor=pointer]:
+        - /url: https://wordpress.com/website-builder/?partner_domain=www.schneier.com&utm_source=Automattic&utm_medium=colophon&utm_campaign=Concierge%20Referral&utm_term=www.schneier.com
+      - link "Hosted by Pressable" [ref=f9e476] [cursor=pointer]:
+        - /url: https://pressable.com/?utm_source=Automattic&utm_medium=rpc&utm_campaign=Concierge%20Referral&utm_term=www.schneier.com
+  - complementary:
+    - generic [ref=f9e477]:
+      - generic [ref=f9e479]:
+        - heading "About Bruce Schneier" [level=3] [ref=f9e480]
+        - paragraph
+        - paragraph [ref=f9e482]:
+          - text: I am a
+          - link "public-interest technologist" [ref=f9e483] [cursor=pointer]:
+            - /url: https://public-interest-tech.com/
+          - text: ", working at the intersection of security, technology, and people. I've been writing about security issues on my"
+          - link "blog" [ref=f9e484] [cursor=pointer]:
+            - /url: /
+          - text: since 2004, and in my monthly
+          - link "newsletter" [ref=f9e485] [cursor=pointer]:
+            - /url: /crypto-gram/
+          - text: since 1998. I'm a fellow and lecturer at Harvard's
+          - link "Kennedy School" [ref=f9e486] [cursor=pointer]:
+            - /url: https://www.hks.harvard.edu/faculty/bruce-schneier
+          - text: and the
+          - link "Munk School" [ref=f9e487] [cursor=pointer]:
+            - /url: https://munkschool.utoronto.ca/
+          - text: at the University of Toronto, a board member of
+          - link "EFF" [ref=f9e488] [cursor=pointer]:
+            - /url: https://www.eff.org/
+          - text: ", and the Chief of Security Architecture at"
+          - link "Inrupt, Inc." [ref=f9e489] [cursor=pointer]:
+            - /url: https://inrupt.com/
+          - text: This personal website expresses the opinions of none of those organizations.
+        - paragraph [ref=f9e490]:
+          - link "Contact Info" [ref=f9e491] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/about/contact/
+        - paragraph
+      - generic [ref=f9e493]:
+        - heading "Featured Essays" [level=3] [ref=f9e494]
+        - list [ref=f9e495]:
+          - listitem [ref=f9e496]:
+            - link "Four Ways AI Is Being Used to Strengthen Democracies Worldwide" [ref=f9e497] [cursor=pointer]:
+              - /url: https://www.schneier.com/essays/archives/2025/11/four-ways-ai-is-being-used-to-strengthen-democracies-worldwide.html
+          - listitem [ref=f9e498]:
+            - link "The CrowdStrike Outage and Market-Driven Brittleness" [ref=f9e499] [cursor=pointer]:
+              - /url: https://www.schneier.com/essays/archives/2024/07/the-crowdstrike-outage-and-market-driven-brittleness.html
+          - listitem [ref=f9e500]:
+            - link "How Online Privacy Is Like Fishing" [ref=f9e501] [cursor=pointer]:
+              - /url: https://www.schneier.com/essays/archives/2024/06/how-online-privacy-is-like-fishing.html
+          - listitem [ref=f9e502]:
+            - link "How AI Will Change Democracy" [ref=f9e503] [cursor=pointer]:
+              - /url: https://www.schneier.com/essays/archives/2024/05/how-ai-will-change-democracy.html
+          - listitem [ref=f9e504]:
+            - link "Seeing Like a Data Structure" [ref=f9e505] [cursor=pointer]:
+              - /url: https://www.schneier.com/essays/archives/2024/05/seeing-like-a-data-structure.html
+          - listitem [ref=f9e506]:
+            - link "LLMs’ Data-Control Path Insecurity" [ref=f9e507] [cursor=pointer]:
+              - /url: https://www.schneier.com/essays/archives/2024/05/llms-data-control-path-insecurity.html
+          - listitem [ref=f9e508]:
+            - link "AI and Trust" [ref=f9e509] [cursor=pointer]:
+              - /url: https://www.schneier.com/essays/archives/2023/12/ai-and-trust.html
+          - listitem [ref=f9e510]:
+            - link "The Value of Encryption" [ref=f9e511] [cursor=pointer]:
+              - /url: https://www.schneier.com/essays/archives/2016/04/the_value_of_encrypt.html
+          - listitem [ref=f9e512]:
+            - link "The Eternal Value of Privacy" [ref=f9e513] [cursor=pointer]:
+              - /url: https://www.schneier.com/essays/archives/2006/05/the_eternal_value_of.html
+          - listitem [ref=f9e514]:
+            - link "Terrorists Don't Do Movie Plots" [ref=f9e515] [cursor=pointer]:
+              - /url: https://www.schneier.com/essays/archives/2005/09/terrorists_dont_do_m.html
+        - paragraph [ref=f9e516]:
+          - link "More Essays" [ref=f9e517] [cursor=pointer]:
+            - /url: https://www.schneier.com/essays/
+      - generic [ref=f9e519]:
+        - heading "Blog Archives" [level=3] [ref=f9e520]
+        - list [ref=f9e521]:
+          - listitem [ref=f9e522]:
+            - link "Archive by Month" [ref=f9e523] [cursor=pointer]:
+              - /url: https://www.schneier.com/blog/calendar.html/
+          - listitem [ref=f9e524]:
+            - link "100 Latest Comments" [ref=f9e525] [cursor=pointer]:
+              - /url: https://www.schneier.com/blog/newcomments.html/
+        - heading "Blog Tags" [level=4] [ref=f9e526]
+        - list [ref=f9e527]:
+          - listitem [ref=f9e528]:
+            - link "3d printers" [ref=f9e529] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/3d-printers/
+            - text: /
+          - listitem [ref=f9e530]:
+            - link "9/11" [ref=f9e531] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/9-11/
+            - text: /
+          - listitem [ref=f9e532]:
+            - link "A Hacker's Mind" [ref=f9e533] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/a-hackers-mind/
+            - text: /
+          - listitem [ref=f9e534]:
+            - link "Aaron Swartz" [ref=f9e535] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/aaron-swartz/
+            - text: /
+          - listitem [ref=f9e536]:
+            - link "academic" [ref=f9e537] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/academic/
+            - text: /
+          - listitem [ref=f9e538]:
+            - link "academic papers" [ref=f9e539] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/academic-papers/
+            - text: /
+          - listitem [ref=f9e540]:
+            - link "accountability" [ref=f9e541] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/accountability/
+            - text: /
+          - listitem [ref=f9e542]:
+            - link "ACLU" [ref=f9e543] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/aclu/
+            - text: /
+          - listitem [ref=f9e544]:
+            - link "activism" [ref=f9e545] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/activism/
+            - text: /
+          - listitem [ref=f9e546]:
+            - link "Adobe" [ref=f9e547] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/adobe/
+            - text: /
+          - listitem [ref=f9e548]:
+            - link "advanced persistent threats" [ref=f9e549] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/advanced-persistent-threats/
+            - text: /
+          - listitem [ref=f9e550]:
+            - link "advertising" [ref=f9e551] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/advertising/
+            - text: /
+          - listitem [ref=f9e552]:
+            - link "adware" [ref=f9e553] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/adware/
+            - text: /
+          - listitem [ref=f9e554]:
+            - link "AES" [ref=f9e555] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/aes/
+            - text: /
+          - listitem [ref=f9e556]:
+            - link "Afghanistan" [ref=f9e557] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/afghanistan/
+            - text: /
+          - listitem [ref=f9e558]:
+            - link "AI" [ref=f9e559] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/ai/
+            - text: /
+          - listitem [ref=f9e560]:
+            - link "air marshals" [ref=f9e561] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/air-marshals/
+            - text: /
+          - listitem [ref=f9e562]:
+            - link "air travel" [ref=f9e563] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/air-travel/
+            - text: /
+          - listitem [ref=f9e564]:
+            - link "airgaps" [ref=f9e565] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/airgaps/
+            - text: /
+          - listitem [ref=f9e566]:
+            - link "al Qaeda" [ref=f9e567] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/al-qaeda/
+            - text: /
+          - listitem [ref=f9e568]:
+            - link "alarms" [ref=f9e569] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/alarms/
+            - text: /
+          - listitem [ref=f9e570]:
+            - link "algorithms" [ref=f9e571] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/algorithms/
+            - text: /
+          - listitem [ref=f9e572]:
+            - link "alibis" [ref=f9e573] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/alibis/
+            - text: /
+          - listitem [ref=f9e574]:
+            - link "Amazon" [ref=f9e575] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/amazon/
+            - text: /
+          - listitem [ref=f9e576]:
+            - link "Android" [ref=f9e577] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/android/
+            - text: /
+          - listitem [ref=f9e578]:
+            - link "anonymity" [ref=f9e579] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/anonymity/
+            - text: /
+          - listitem [ref=f9e580]:
+            - link "Anonymous" [ref=f9e581] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/anonymous/
+            - text: /
+          - listitem [ref=f9e582]:
+            - link "antivirus" [ref=f9e583] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/antivirus/
+            - text: /
+          - listitem [ref=f9e584]:
+            - link "Apache" [ref=f9e585] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/apache/
+            - text: /
+          - listitem [ref=f9e586]:
+            - link "Apple" [ref=f9e587] [cursor=pointer]:
+              - /url: https://www.schneier.com/tag/apple/
+        - paragraph [ref=f9e588]:
+          - link "More Tags" [ref=f9e589] [cursor=pointer]:
+            - /url: https://www.schneier.com/blog/tags.html/
+      - generic [ref=f9e591]:
+        - heading "Latest Book" [level=3] [ref=f9e592]
+        - link [ref=f9e593] [cursor=pointer]:
+          - /url: https://www.schneier.com/books/rewiring-democracy/
+          - img "Rewiring Democracy" [ref=f9e594]
+        - paragraph [ref=f9e595]:
+          - link "More Books" [ref=f9e596] [cursor=pointer]:
+            - /url: https://www.schneier.com/books/
+      - generic [ref=f9e598]:
+        - link [ref=f9e599] [cursor=pointer]:
+          - /url: https://www.eff.org/issues/bloggers/legal/join
+          - img "Support Bloggers' Rights!" [ref=f9e600]
+        - link [ref=f9e601] [cursor=pointer]:
+          - /url: https://epic.org/donate-to-epic/
+          - img "Defend Privacy--Support Epic" [ref=f9e602]
+  - contentinfo [ref=f9e603]:
+    - navigation [ref=f9e604]:
+      - generic [ref=f9e605]:
+        - generic:
+          - list:
+            - listitem:
+              - link "Blog" [ref=f9e606] [cursor=pointer]:
+                - /url: https://www.schneier.com
+            - listitem:
+              - link "Newsletter" [ref=f9e607] [cursor=pointer]:
+                - /url: https://www.schneier.com/crypto-gram/
+            - listitem:
+              - link "Books" [ref=f9e608] [cursor=pointer]:
+                - /url: https://www.schneier.com/books/
+            - listitem:
+              - link "Essays" [ref=f9e609] [cursor=pointer]:
+                - /url: https://www.schneier.com/essays/
+            - listitem:
+              - link "News" [ref=f9e610] [cursor=pointer]:
+                - /url: https://www.schneier.com/news/
+            - listitem:
+              - link "Talks" [ref=f9e611] [cursor=pointer]:
+                - /url: https://www.schneier.com/talks/
+            - listitem:
+              - link "Academic" [ref=f9e612] [cursor=pointer]:
+                - /url: https://www.schneier.com/academic/
+            - listitem:
+              - link "About Me" [ref=f9e613] [cursor=pointer]:
+                - /url: https://www.schneier.com/blog/about/

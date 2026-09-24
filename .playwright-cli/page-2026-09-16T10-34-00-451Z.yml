@@ -1,0 +1,236 @@
+- generic [ref=e2]:
+  - region "跳到主要内容":
+    - link "跳到主要内容" [ref=e3] [cursor=pointer]:
+      - /url: "#__docusaurus_skipToContent_fallback"
+  - navigation "主导航" [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - link "FEEI 首页" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e8]: FEEI
+        - button "网络安全" [ref=e10] [cursor=pointer]
+        - button "人生系统" [ref=e14] [cursor=pointer]
+        - button "吴飞飞" [ref=e18] [cursor=pointer]
+      - generic [ref=e21]:
+        - textbox "Search" [ref=e25]:
+          - /placeholder: 搜索
+        - button "切换浅色/暗黑模式（当前为浅色模式）" [active] [ref=e218] [cursor=pointer]
+  - main [ref=e31]:
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - paragraph [ref=e35]: 吴飞飞 · FEEI.CN
+        - heading "让系统可靠运行， 让人生持续生长。" [level=1] [ref=e36]:
+          - text: 让系统可靠运行，
+          - generic [ref=e37]: 让人生持续生长。
+        - paragraph [ref=e38]:
+          - text: 我是吴飞飞，十余年参与电商、数字银行与支付平台的安全建设。
+          - generic [ref=e39]: 在技术系统中研究边界与治理，在自己的生活里实践记录、反馈与长期积累。
+        - generic [ref=e40]:
+          - link "先读一篇安全代表作" [ref=e41] [cursor=pointer]:
+            - /url: /ai-agent-tool-security
+          - link "查看人生系统" [ref=e42] [cursor=pointer]:
+            - /url: /life-os
+            - text: 查看人生系统
+            - generic [aria-hidden] [ref=e43]: →
+        - link "从攻击研究到体系建设：我的网络安全之路 →" [ref=e44] [cursor=pointer]:
+          - /url: /my-journey-in-cybersecurity
+      - generic "经历概览" [ref=e45]:
+        - generic [ref=e46]:
+          - strong [ref=e47]: 10+ 年
+          - generic [ref=e48]: 安全研究与体系建设
+        - generic [ref=e49]:
+          - strong [ref=e50]: 电商 · 银行 · 支付
+          - generic [ref=e51]: 跨业务场景实践
+        - generic [ref=e52]:
+          - strong [ref=e53]: 2012 至今
+          - generic [ref=e54]: 持续公开写作
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - text: START HERE
+          - heading "三个值得带走的判断" [level=2] [ref=e59]
+        - paragraph [ref=e60]: 约束真实执行权，让改变形成反馈，持续维护重要的积累。先读这些，再决定是否继续深入。
+      - generic [ref=e61]:
+        - link "专业方法 Agent 与工具调用安全 外部文档和模型输出可以影响计划，但不能自行扩大执行权限。如何把这个判断落实到工具、授权与真实副作用？" [ref=e62] [cursor=pointer]:
+          - /url: /ai-agent-tool-security
+          - generic [ref=e63]: 专业方法
+          - generic [ref=e64]:
+            - heading "Agent 与工具调用安全" [level=3] [ref=e65]
+            - paragraph [ref=e66]: 外部文档和模型输出可以影响计划，但不能自行扩大执行权限。如何把这个判断落实到工具、授权与真实副作用？
+          - generic [aria-hidden] [ref=e67]: ↗
+        - link "核心方法 人生系统 我如何把目标、数据、日记、复盘、工具和 AI Agent 连成一套持续变化的个人系统。" [ref=e68] [cursor=pointer]:
+          - /url: /life-os
+          - generic [ref=e69]: 核心方法
+          - generic [ref=e70]:
+            - heading "人生系统" [level=3] [ref=e71]
+            - paragraph [ref=e72]: 我如何把目标、数据、日记、复盘、工具和 AI Agent 连成一套持续变化的个人系统。
+          - generic [aria-hidden] [ref=e73]: ↗
+        - link "长期主义 人生是一场长期逆熵 身体、认知、财富和关系不会自动变好。记录与维护，是让过去的积累继续参与未来，而不是不断从头开始。" [ref=e74] [cursor=pointer]:
+          - /url: /life-entropy
+          - generic [ref=e75]: 长期主义
+          - generic [ref=e76]:
+            - heading "人生是一场长期逆熵" [level=3] [ref=e77]
+            - paragraph [ref=e78]: 身体、认知、财富和关系不会自动变好。记录与维护，是让过去的积累继续参与未来，而不是不断从头开始。
+          - generic [aria-hidden] [ref=e79]: ↗
+    - generic [ref=e81]:
+      - generic [ref=e82]:
+        - generic [ref=e83]:
+          - text: FIND YOUR PATH
+          - heading "从你正在解决的问题开始" [level=2] [ref=e84]
+        - paragraph [ref=e85]: 不用先读完整个知识库。选一个真实问题，从最相关的一篇开始，再进入网络安全或人生系统。
+      - generic [ref=e86]:
+        - link "负责企业安全 怎样把分散的安全能力连成闭环？ 从风险与执行权出发，梳理机制、责任和运营。 开始阅读 →" [ref=e87] [cursor=pointer]:
+          - /url: /security-system
+          - generic [ref=e88]: 负责企业安全
+          - heading "怎样把分散的安全能力连成闭环？" [level=3] [ref=e89]
+          - paragraph [ref=e90]: 从风险与执行权出发，梳理机制、责任和运营。
+          - strong [ref=e91]: 开始阅读 →
+        - link "正在落地 AI 怎样让 Agent 有能力，但不越权？ 区分模型规划与真实执行，建立授权边界。 开始阅读 →" [ref=e92] [cursor=pointer]:
+          - /url: /ai-agent-tool-security
+          - generic [ref=e93]: 正在落地 AI
+          - heading "怎样让 Agent 有能力，但不越权？" [level=3] [ref=e94]
+          - paragraph [ref=e95]: 区分模型规划与真实执行，建立授权边界。
+          - strong [ref=e96]: 开始阅读 →
+        - link "想改变生活状态 怎样不再只靠一阵意志力？ 把长期目标变成可观察、可反馈的日常系统。 开始阅读 →" [ref=e97] [cursor=pointer]:
+          - /url: /life-os
+          - generic [ref=e98]: 想改变生活状态
+          - heading "怎样不再只靠一阵意志力？" [level=3] [ref=e99]
+          - paragraph [ref=e100]: 把长期目标变成可观察、可反馈的日常系统。
+          - strong [ref=e101]: 开始阅读 →
+      - generic [ref=e102]:
+        - article [ref=e103]:
+          - generic [ref=e104]: 专业体系
+          - heading "网络安全" [level=3] [ref=e105]
+          - paragraph [ref=e106]: 从攻击研究到企业安全体系建设，持续理解复杂系统中的威胁、边界、工程与治理。
+          - generic [ref=e107]:
+            - link "网络空间安全 威胁、组织、体系与软件工程" [ref=e108] [cursor=pointer]:
+              - /url: /security-engineering
+              - strong [ref=e109]: 网络空间安全
+              - generic [ref=e110]: 威胁、组织、体系与软件工程
+              - generic [aria-hidden] [ref=e111]: →
+            - link "人工智能安全 数据、模型、应用、Agent 与治理" [ref=e112] [cursor=pointer]:
+              - /url: /ai-security
+              - strong [ref=e113]: 人工智能安全
+              - generic [ref=e114]: 数据、模型、应用、Agent 与治理
+              - generic [aria-hidden] [ref=e115]: →
+        - article [ref=e116]:
+          - generic [ref=e117]: 个人体系
+          - heading "人生系统" [level=3] [ref=e118]
+          - paragraph [ref=e119]: 用目标、数据、记录、复盘、工具和 Agent，让真正重要的事情能够长期运转。
+          - generic [ref=e120]:
+            - link "健康幸福 身体、心理、关系与生命质量" [ref=e121] [cursor=pointer]:
+              - /url: /health
+              - strong [ref=e122]: 健康幸福
+              - generic [ref=e123]: 身体、心理、关系与生命质量
+              - generic [aria-hidden] [ref=e124]: →
+            - link "事业有成 能力、结果、协作与长期事业" [ref=e125] [cursor=pointer]:
+              - /url: /capability
+              - strong [ref=e126]: 事业有成
+              - generic [ref=e127]: 能力、结果、协作与长期事业
+              - generic [aria-hidden] [ref=e128]: →
+            - link "财务自由 收入、支出、投资与风险保障" [ref=e129] [cursor=pointer]:
+              - /url: /wealth
+              - strong [ref=e130]: 财务自由
+              - generic [ref=e131]: 收入、支出、投资与风险保障
+              - generic [aria-hidden] [ref=e132]: →
+            - link "人生丰富 阅读、影视、旅行与生活体验" [ref=e133] [cursor=pointer]:
+              - /url: /experience
+              - strong [ref=e134]: 人生丰富
+              - generic [ref=e135]: 阅读、影视、旅行与生活体验
+              - generic [aria-hidden] [ref=e136]: →
+    - generic [ref=e138]:
+      - generic [ref=e139]:
+        - generic [ref=e140]:
+          - text: IN PRACTICE
+          - heading "不只写下方法，也留下实践" [level=2] [ref=e141]
+        - paragraph [ref=e142]: 设计有没有边界，数据能不能回看，行动有没有复盘。这里是可以打开查看的作品与个人记录。
+      - generic [ref=e143]:
+        - article [ref=e144]:
+          - generic [ref=e145]: 工程作品
+          - heading "从框架看到执行约束" [level=3] [ref=e146]
+          - paragraph [ref=e147]: 公开的 Agent 权限设计，包含架构原语、不变量与验证指标。它是一份可讨论、可检验的设计，不是未经披露的业务成绩。
+          - link "查看工程设计 →" [ref=e148] [cursor=pointer]:
+            - /url: /ai-agent-tool-security
+        - article [ref=e149]:
+          - generic [ref=e150]: 运行工具
+          - heading "把健康趋势放到仪表盘上" [level=3] [ref=e151]
+          - paragraph [ref=e152]: Apple Watch 与体脂秤记录汇入健康仪表盘，观察体重、睡眠与活动趋势，而不是用单日读数判断生活。
+          - link "查看真实数据 →" [ref=e153] [cursor=pointer]:
+            - /url: /health-data
+        - article [ref=e154]:
+          - generic [ref=e155]: 年度复盘
+          - heading "2025：从行动回看变化" [level=3] [ref=e156]
+          - paragraph [ref=e157]: 年度记录中，我复盘了减重 15 斤、阅读 80 本书，以及健康、家庭和事业上的变化。这是个人记录，不是方法的普遍效果承诺。
+          - link "阅读年度复盘 →" [ref=e158] [cursor=pointer]:
+            - /url: /annual-review-for-2025
+    - generic [ref=e160]:
+      - generic [ref=e161]:
+        - generic [ref=e162]:
+          - text: RECENT
+          - heading "研究在更新，生活也在继续" [level=2] [ref=e163]
+        - paragraph [ref=e164]: 专业内容持续复核，日常记录保留具体生活。复核日期不等于首次发表日期。
+      - generic [ref=e165]:
+        - generic [ref=e166]:
+          - heading "最近复核 · 网络安全" [level=3] [ref=e167]
+          - generic [ref=e168]:
+            - link "2026.09.16 人工智能生成合成内容标识办法" [ref=e169] [cursor=pointer]:
+              - /url: /ai-synthetic-content-labeling
+              - time [ref=e170]: 2026.09.16
+              - generic [ref=e171]: 人工智能生成合成内容标识办法
+            - link "2026.09.16 关键信息基础设施安全保护条例" [ref=e172] [cursor=pointer]:
+              - /url: /cii-security-protection
+              - time [ref=e173]: 2026.09.16
+              - generic [ref=e174]: 关键信息基础设施安全保护条例
+            - link "2026.09.16 促进和规范数据跨境流动规定" [ref=e175] [cursor=pointer]:
+              - /url: /cross-border-data-flow
+              - time [ref=e176]: 2026.09.16
+              - generic [ref=e177]: 促进和规范数据跨境流动规定
+        - generic [ref=e178]:
+          - heading "日常记录 · 吴飞飞" [level=3] [ref=e179]
+          - generic [ref=e180]:
+            - link "09.15 邀请了人，没邀请座位" [ref=e181] [cursor=pointer]:
+              - /url: /2026-09-15
+              - time [ref=e182]: "09.15"
+              - generic [ref=e183]: 邀请了人，没邀请座位
+              - generic [aria-hidden] [ref=e184]: →
+            - link "09.14 三箱苹果" [ref=e185] [cursor=pointer]:
+              - /url: /2026-09-14
+              - time [ref=e186]: "09.14"
+              - generic [ref=e187]: 三箱苹果
+              - generic [aria-hidden] [ref=e188]: →
+            - link "09.13 我原本是来看黄土高原的" [ref=e189] [cursor=pointer]:
+              - /url: /2026-09-13
+              - time [ref=e190]: "09.13"
+              - generic [ref=e191]: 我原本是来看黄土高原的
+              - generic [aria-hidden] [ref=e192]: →
+            - link "09.12 当时怎么看都不像能赢" [ref=e193] [cursor=pointer]:
+              - /url: /2026-09-12
+              - time [ref=e194]: "09.12"
+              - generic [ref=e195]: 当时怎么看都不像能赢
+              - generic [aria-hidden] [ref=e196]: →
+            - link "09.11 如果人生只剩一年" [ref=e197] [cursor=pointer]:
+              - /url: /2026-09-11
+              - time [ref=e198]: "09.11"
+              - generic [ref=e199]: 如果人生只剩一年
+              - generic [aria-hidden] [ref=e200]: →
+          - link "查看 2026 年记录 →" [ref=e201] [cursor=pointer]:
+            - /url: /2026
+    - region [ref=e202]:
+      - generic [ref=e203]:
+        - text: STAY IN TOUCH
+        - heading "如果这些问题，也值得你长期关注" [level=2] [ref=e204]
+        - paragraph [ref=e205]: 通过 RSS 订阅安全研究、人生实践与日常记录。更新时阅读，不固定频率，不需要留下邮箱。
+        - link "订阅 RSS 更新" [ref=e206] [cursor=pointer]:
+          - /url: /rss.xml
+        - paragraph [ref=e207]: 把 RSS 链接添加到你使用的阅读器中，即可持续收到更新。
+        - link "了解吴飞飞 →" [ref=e208] [cursor=pointer]:
+          - /url: /about
+  - contentinfo [ref=e209]:
+    - generic [ref=e212]:
+      - generic [ref=e213]: Copyright © 2012–2026 FEEI All Rights Reserved
+      - generic [ref=e214]:
+        - link "浙ICP备2021009229号" [ref=e215] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn/
+        - generic [ref=e216]: ·
+        - link "浙公网安备33011002015586号" [ref=e217] [cursor=pointer]:
+          - /url: http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586

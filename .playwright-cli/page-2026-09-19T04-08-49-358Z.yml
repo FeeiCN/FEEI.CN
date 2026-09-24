@@ -1,0 +1,93 @@
+- generic [ref=f1e2]:
+  - region "跳到主要内容":
+    - link "跳到主要内容" [ref=f1e3] [cursor=pointer]:
+      - /url: "#__docusaurus_skipToContent_fallback"
+  - navigation "主导航" [ref=f1e4]:
+    - generic [ref=f1e5]:
+      - generic [ref=f1e6]:
+        - button "切换导航栏" [ref=f1e7] [cursor=pointer]
+        - link "FEEI 首页" [ref=f1e8] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f1e9]: FEEI
+      - textbox "Search" [ref=f1e14]:
+        - /placeholder: 搜索
+  - main [ref=f1e18]:
+    - generic [ref=f1e22]:
+      - article [ref=f1e23]:
+        - navigation "页面路径" [ref=f1e24]:
+          - list [ref=f1e25]:
+            - listitem [ref=f1e26]:
+              - link "主页面" [ref=f1e27] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f1e34]:
+              - generic [ref=f1e35]: 联系我
+        - generic [ref=f1e36]:
+          - generic [ref=f1e39]:
+            - button "复制 Markdown 原文" [ref=f1e40] [cursor=pointer]
+            - button "更多操作" [ref=f1e43] [cursor=pointer]
+          - complementary "阅读方式" [ref=f1e46]:
+            - generic [ref=f1e47]: 参考资料
+            - text: 这是一页持续维护的参考资料，适合按需查阅，不必从头到尾阅读。
+          - heading "联系我" [level=1] [ref=f1e49]
+          - generic [ref=f1e52]:
+            - generic [ref=f1e53]: LET'S CONNECT
+            - generic [ref=f1e54]: 保持联系。
+            - paragraph [ref=f1e55]: 交流网络安全、人工智能、个人知识系统，或者分享你对本站的建议。
+          - generic [ref=f1e56]:
+            - link "邮箱 feei@feei.cn 适合正式沟通与长内容" [ref=f1e57] [cursor=pointer]:
+              - /url: mailto:feei@feei.cn
+              - generic [aria-hidden] [ref=f1e58]: ✉
+              - generic [ref=f1e59]:
+                - generic [ref=f1e60]: 邮箱
+                - generic [ref=f1e61]: feei@feei.cn
+                - generic [ref=f1e62]: 适合正式沟通与长内容
+              - generic [aria-hidden] [ref=f1e63]: ↗
+            - generic [ref=f1e64]:
+              - generic [aria-hidden] [ref=f1e65]: 微
+              - generic [ref=f1e66]:
+                - generic [ref=f1e67]: 微信
+                - generic [ref=f1e68]: FEEI_WU
+                - generic [ref=f1e69]: 添加时请简单注明来意
+            - link "GitHub FeeiCN 开源项目与代码协作" [ref=f1e70] [cursor=pointer]:
+              - /url: https://github.com/FeeiCN
+              - generic [aria-hidden] [ref=f1e71]: G
+              - generic [ref=f1e72]:
+                - generic [ref=f1e73]: GitHub
+                - generic [ref=f1e74]: FeeiCN
+                - generic [ref=f1e75]: 开源项目与代码协作
+              - generic [aria-hidden] [ref=f1e76]: ↗
+            - link "X @feei_cn 动态与公开讨论" [ref=f1e77] [cursor=pointer]:
+              - /url: https://x.com/feei_cn
+              - generic [aria-hidden] [ref=f1e78]: 𝕏
+              - generic [ref=f1e79]:
+                - generic [ref=f1e80]: X
+                - generic [ref=f1e81]: "@feei_cn"
+                - generic [ref=f1e82]: 动态与公开讨论
+              - generic [aria-hidden] [ref=f1e83]: ↗
+            - link "微博 吴飞飞 中文动态与内容分享" [ref=f1e84] [cursor=pointer]:
+              - /url: https://weibo.com/u/1625149801
+              - generic [aria-hidden] [ref=f1e85]: 博
+              - generic [ref=f1e86]:
+                - generic [ref=f1e87]: 微博
+                - generic [ref=f1e88]: 吴飞飞
+                - generic [ref=f1e89]: 中文动态与内容分享
+              - generic [aria-hidden] [ref=f1e90]: ↗
+          - paragraph [ref=f1e91]: 如果问题需要具体回复，请优先使用邮件，并尽量附上必要的背景与上下文。
+      - navigation "文章翻页导航" [ref=f1e92]:
+        - link "上一篇 我的工作室" [ref=f1e93] [cursor=pointer]:
+          - /url: /workspace
+          - generic [ref=f1e94]: 上一篇
+          - generic [ref=f1e95]: 我的工作室
+        - link "下一篇 友情链接" [ref=f1e96] [cursor=pointer]:
+          - /url: /links
+          - generic [ref=f1e97]: 下一篇
+          - generic [ref=f1e98]: 友情链接
+  - contentinfo [ref=f1e99]:
+    - generic [ref=f1e102]:
+      - generic [ref=f1e103]: Copyright © 2012–2026 FEEI All Rights Reserved
+      - generic [ref=f1e104]:
+        - link "浙ICP备2021009229号" [ref=f1e105] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn/
+        - generic [ref=f1e106]: ·
+        - link "浙公网安备33011002015586号" [ref=f1e107] [cursor=pointer]:
+          - /url: http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586

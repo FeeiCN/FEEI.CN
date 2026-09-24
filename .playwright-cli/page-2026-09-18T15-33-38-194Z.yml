@@ -1,0 +1,71 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "跳到主要内容":
+      - link "跳到主要内容" [ref=e3] [cursor=pointer]:
+        - /url: "#__docusaurus_skipToContent_fallback"
+    - navigation "主导航" [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - link "FEEI 首页" [ref=e7] [cursor=pointer]:
+            - /url: /
+            - generic [ref=e8]: FEEI
+          - button "网络安全" [ref=e10] [cursor=pointer]
+          - button "人生系统" [ref=e14] [cursor=pointer]
+          - button "吴飞飞" [ref=e18] [cursor=pointer]
+        - generic [ref=e21]:
+          - generic [ref=e24]:
+            - textbox "Search" [ref=e25]:
+              - /placeholder: 搜索
+            - generic:
+              - generic: ⌘
+              - generic: K
+          - button "切换浅色/暗黑模式（当前为system mode）" [ref=e27] [cursor=pointer]
+    - main [ref=e33]:
+      - article [ref=e38]:
+        - generic [ref=e40]:
+          - generic [ref=e41]:
+            - heading "三省吾身" [level=1] [ref=e43]
+            - generic [ref=e44]:
+              - generic [ref=e45]:
+                - generic [ref=e46]: 查看范围
+                - tablist "查看范围" [ref=e47]:
+                  - generic [ref=e48]:
+                    - tab "日" [selected] [ref=e49] [cursor=pointer]
+                    - tab "周" [ref=e50] [cursor=pointer]
+                    - tab "月" [ref=e51] [cursor=pointer]
+                    - tab "年" [ref=e52] [cursor=pointer]
+                    - tab "人生" [ref=e53] [cursor=pointer]
+              - generic [ref=e54]:
+                - generic [ref=e55]: 定位时间
+                - generic [ref=e56]:
+                  - generic "复盘日期" [ref=e57]:
+                    - button "前一天" [disabled] [ref=e58]: ←
+                    - textbox "选择复盘日期" [ref=e59]
+                    - button "后一天" [disabled] [ref=e60]: →
+                    - button "最新复盘" [disabled] [ref=e61]
+                    - button "今天实时" [ref=e62] [cursor=pointer]
+                  - generic [ref=e63]: 趋势 7天
+          - tabpanel "日" [ref=e64]:
+            - region "正在加载三省数据" [ref=e65]
+        - generic [ref=e78]:
+          - text: 标签：
+          - list [ref=e79]:
+            - listitem [ref=e80]:
+              - link "数据" [ref=e81] [cursor=pointer]:
+                - /url: /tags/数据
+    - contentinfo [ref=e82]:
+      - generic [ref=e85]:
+        - generic [ref=e86]: Copyright © 2012–2026 FEEI All Rights Reserved
+        - generic [ref=e87]:
+          - link "浙ICP备2021009229号" [ref=e88] [cursor=pointer]:
+            - /url: https://beian.miit.gov.cn/
+          - generic [ref=e89]: ·
+          - link "浙公网安备33011002015586号" [ref=e90] [cursor=pointer]:
+            - /url: http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586
+  - generic [ref=e92]:
+    - button "展开音乐播放器" [ref=e93] [cursor=pointer]:
+      - img "歌曲封面" [ref=e94]
+      - generic [ref=e95]:
+        - strong [ref=e96]: 音乐
+        - generic [ref=e97]: 我的音乐库
+    - button "打开音乐歌单" [ref=e98] [cursor=pointer]

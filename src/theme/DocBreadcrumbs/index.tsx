@@ -11,11 +11,19 @@ import styles from './styles.module.css';
 export default function DocBreadcrumbs(): ReactNode {
   const breadcrumbs = useSidebarBreadcrumbs();
   const homePageRoute = useHomePageRoute();
-  const {frontMatter} = useDoc();
+  const {frontMatter, metadata} = useDoc();
   if (!breadcrumbs) return null;
 
   // Keep the complete path in structured data; the H1 identifies the current page.
   const parents = breadcrumbs.slice(0, -1);
+  const isAiSecurityDoc = metadata.source.includes('/01-网络安全/02-人工智能安全/');
+  const visibleParents = isAiSecurityDoc
+    ? [
+        {type: 'category' as const, label: '网络安全', href: '/security-engineering', linkUnlisted: false},
+        {type: 'category' as const, label: '人工智能安全', href: '/ai-security', linkUnlisted: false},
+        ...parents,
+      ]
+    : parents;
   return (
     <>
       <DocBreadcrumbsStructuredData breadcrumbs={breadcrumbs} />
@@ -24,7 +32,7 @@ export default function DocBreadcrumbs(): ReactNode {
           <nav className={`${ThemeClassNames.docs.docBreadcrumbs} ${styles.breadcrumbsContainer}`} aria-label="当前位置">
             <ul className="breadcrumbs">
               {homePageRoute && <HomeBreadcrumbItem />}
-              {parents.map((item, index) => {
+              {visibleParents.map((item, index) => {
                 const href = item.type === 'category' && item.linkUnlisted ? undefined : item.href;
                 return (
                   <li className="breadcrumbs__item" key={`${item.label}-${index}`}>

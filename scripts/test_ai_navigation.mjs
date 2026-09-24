@@ -28,6 +28,13 @@ const scalar = (text, key) => {
 assert.ok(exists(engineeringRoot), '智能工程应作为人工智能安全的基础层');
 assert.ok(!exists('docs/03-智能工程'), '智能工程不应作为独立一级目录');
 assert.ok(!exists(`${engineeringRoot}/02-AI使用实践/05-使用AI`), '重复的使用 AI 层级未压平');
+assert.ok(exists(`${engineeringRoot}/02-Agent与工具工程/02-Agent与工具工程.md`), 'Agent 与工具工程应作为智能工程的独立主目录');
+assert.ok(exists(`${engineeringRoot}/02-Agent与工具工程/MCP与工具调用.md`), '缺少 MCP 与工具调用基础文章');
+assert.ok(exists(`${engineeringRoot}/03-AI应用实践/03-AI应用实践.md`), '缺少 AI 应用实践入口');
+assert.ok(exists(`${engineeringRoot}/04-AI应用与组织/04-AI应用与组织.md`), '缺少 AI 应用与组织入口');
+for (const obsolete of ['02-AI使用实践', '03-AI转型', '04-AI项目']) {
+  assert.ok(!exists(`${engineeringRoot}/${obsolete}`), `旧智能工程分组仍残留：${obsolete}`);
+}
 for (const obsolete of ['03-AI滥用与信任风险', '04-治理评测与响应']) {
   assert.ok(!exists(`${aiRoot}/${obsolete}`), `合并后仍残留旧分组：${obsolete}`);
 }
@@ -42,7 +49,7 @@ for (const [group, names] of Object.entries(groups)) {
     assert.ok(!exists(`${aiRoot}/${name}`), `旧位置仍有重复文章：${name}`);
   }
 }
-for (const name of ['01-智能工程.md', '02-AI使用实践/模型接入与部署.md', '02-AI使用实践/使用商业AI.md', '02-AI使用实践/本地部署AI.md']) {
+for (const name of ['01-智能工程.md', '03-AI应用实践/模型接入与部署.md', '03-AI应用实践/使用商业AI.md', '03-AI应用实践/本地部署AI.md']) {
   assert.ok(exists(`${engineeringRoot}/${name}`), `智能工程入口或接入文章缺失：${name}`);
 }
 assert.equal(scalar(read(`${aiRoot}/人工智能安全.md`), 'slug'), '/ai-security');
@@ -50,7 +57,11 @@ assert.equal(scalar(read(`${engineeringRoot}/01-智能工程.md`), 'slug'), '/ai
 assert.ok(!read('sidebars.ts').includes('aiEngineeringSidebar'), '不应保留独立智能工程侧边栏');
 assert.ok(!read('docusaurus.config.ts').includes("sidebarId: 'aiEngineeringSidebar'"), '不应保留独立智能工程顶栏入口');
 
-const files = git(['ls-files', '-z', '--', 'docs']).split('\0').filter(isMarkdown);
+// Validate the current worktree, including files added during a reorganization.
+// Tracked files deleted from the worktree must not be read as if they still existed.
+const trackedFiles = git(['ls-files', '-z', '--', 'docs']).split('\0');
+const untrackedFiles = git(['ls-files', '--others', '--exclude-standard', '-z', '--', 'docs']).split('\0');
+const files = [...new Set([...trackedFiles, ...untrackedFiles])].filter((file) => isMarkdown(file) && exists(file));
 const bySlug = new Map();
 for (const file of files.filter(inScope)) {
   const slug = scalar(read(file), 'slug');

@@ -2,6 +2,7 @@
 slug: /ai-vulnerability-research
 title: AI 漏洞挖掘，突破口不只在模型里
 sidebar_label: AI 漏洞挖掘
+sidebar_position: 1
 icon: target-icon
 description: 用变化、边界、状态、组合四类关系组织 AI 漏洞研究，并通过 Harness、Skill、Eval 与真实证据把研究切口转成可验证的发现能力。
 content_type: article

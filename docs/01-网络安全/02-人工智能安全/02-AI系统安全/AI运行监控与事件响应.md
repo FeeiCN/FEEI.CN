@@ -1,7 +1,7 @@
 ---
 slug: /ai-security-monitoring-response
 title: AI 运行监控与事件响应
-sidebar_position: 12
+sidebar_position: 10
 icon: gauge-icon
 description: AI 运行安全要把输入、上下文、策略、工具和现实副作用记录为 Run 因果图，据此检测跨域行为、精确熔断并验证恢复。
 content_type: article

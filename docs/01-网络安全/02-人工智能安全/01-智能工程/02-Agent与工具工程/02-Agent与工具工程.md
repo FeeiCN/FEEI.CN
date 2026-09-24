@@ -1,12 +1,13 @@
 ---
 slug: /ai-agent-practice
+title: Agent 与工具工程
 icon: github-copilot-icon
 description: Agent 实践从推理、规划、执行、循环、复用到持续优化，重点是把行动、状态、权限、验证和反馈沉淀放进可控系统。
 content_type: hub
 last_reviewed: '2026-09-23'
 ---
 
-# Agent 实践
+# Agent 与工具工程
 
 Agent 会围绕目标反复读取环境、提出行动、获得观察并调整下一步。它适合路径无法完全预先写定的任务，例如排查未知故障、跨多份资料研究，或在仓库中根据测试结果持续修改代码。
 

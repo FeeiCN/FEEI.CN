@@ -1,7 +1,7 @@
 ---
 slug: /ai-data-knowledge-security
 title: AI 数据与知识安全
-sidebar_position: 2
+sidebar_position: 1
 icon: layers-icon
 description: 向 RAG、记忆、反馈或训练集写入数据，是一次延迟生效的行为发布；来源、血缘、准入和撤销必须贯穿全部派生状态。
 content_type: article

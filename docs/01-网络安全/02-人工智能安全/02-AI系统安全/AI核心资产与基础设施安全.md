@@ -1,7 +1,7 @@
 ---
 slug: /ai-crown-jewels-infrastructure-security
 title: AI 核心资产与基础设施安全
-sidebar_position: 3
+sidebar_position: 2
 icon: shield-lock-icon
 description: 从核心资产价值和攻击者能力出发，保护模型权重、训练方法、研究知识以及训练与推理基础设施，控制访问、外传与单点失陷的爆炸半径。
 content_type: article

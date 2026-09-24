@@ -9,8 +9,7 @@ export const musicPlayerCommandEventName = 'feei:music-player-command';
 export type MusicPlayerCommand =
   | {action: 'toggle' | 'retry' | 'previous' | 'next'}
   | {action: 'seek'; value: number}
-  | {action: 'queue-next' | 'queue-add'; track: Audio}
-  | {action: 'queue-play' | 'queue-remove' | 'track'; value: number}
+  | {action: 'track'; value: number}
   | {action: 'volume'; value: number}
   | {action: 'loop'; value: 'all' | 'one' | 'none'}
   | {action: 'order'; value: 'list' | 'random'};
@@ -38,7 +37,6 @@ export type MusicPlayerStateDetail = {
   duration?: number;
   loading?: boolean;
   lyrics?: Array<[number, string]>;
-  queue?: Audio[];
   tracks?: Audio[];
   volume?: number;
   loop?: 'all' | 'one' | 'none';

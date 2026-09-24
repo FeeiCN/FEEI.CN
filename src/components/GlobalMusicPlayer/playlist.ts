@@ -373,12 +373,7 @@ export const siteMusicGroups: PlaylistGroup[] = [
   {
     id: 'favorites',
     label: '我喜欢的音乐',
-    tracks: favoriteTracks,
-  },
-  {
-    id: 'jay',
-    label: '周杰伦',
-    tracks: jayTracks,
+    tracks: [...favoriteTracks, ...jayTracks],
   },
   {
     id: 'ambient',
@@ -512,4 +507,4 @@ export const buildAllDerivedGroups = (groups: PlaylistGroup[]): PlaylistGroup[] 
   ...buildArtistGroups(groups),
 ];
 
-export const siteMusicPlaylist: Audio[] = favoriteTracks;
+export const siteMusicPlaylist: Audio[] = [...favoriteTracks, ...jayTracks];

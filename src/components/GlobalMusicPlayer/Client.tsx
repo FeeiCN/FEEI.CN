@@ -42,9 +42,6 @@ const initialGroups = [...siteMusicGroups, ...buildAllDerivedGroups(siteMusicGro
 let engine: Engine | null = null;
 let mount: HTMLDivElement | null = null;
 let activeGroup: PlaylistGroup | null = null;
-let queue: Audio[] = [];
-let queueReturnIndex: number | null = null;
-let queueEndsPlaylist = false;
 let loading = false;
 let generation = 0;
 let preferences: Preferences = {loop: 'all', order: 'list', volume: 0.45};
@@ -84,7 +81,7 @@ function reportState() {
     duration: Number.isFinite(engine.audio.duration) ? engine.audio.duration : 0,
     volume: engine.audio.volume, loop: preferences.loop, order: preferences.order,
     loading, lyrics: lyrics.filter(([time]) => typeof time === 'number'),
-    queue: [...queue], tracks: activeGroup.tracks,
+    tracks: activeGroup.tracks,
   });
 }
 
@@ -97,33 +94,6 @@ function play(player: Engine) {
     reportError(player.audio.error ? '音频暂不可用，请重试或选择另一首。' : '暂时无法播放，请点击重试。');
     reportState();
   });
-}
-
-function playQueued(index = 0) {
-  if (!engine || index < 0 || index >= queue.length) return;
-  const [track] = queue.splice(index, 1);
-  if (queueReturnIndex === null) {
-    queueReturnIndex = engine.nextIndex();
-    queueEndsPlaylist = preferences.loop === 'none' && (preferences.order === 'list'
-      ? engine.list.index === (activeGroup?.tracks.length ?? 0) - 1
-      : engine.randomOrder.indexOf(engine.list.index) === engine.randomOrder.length - 1);
-  }
-  engine.list.add(track);
-  engine.list.switch(engine.list.audios.length - 1);
-  play(engine);
-  reportState();
-}
-
-function returnToPlaylist(autoplay: boolean) {
-  if (!engine || !activeGroup || queueReturnIndex === null) return;
-  const next = Math.min(queueReturnIndex, activeGroup.tracks.length - 1);
-  queueReturnIndex = null;
-  engine.pause();
-  engine.list.switch(next);
-  while (engine.list.audios.length > activeGroup.tracks.length) engine.list.remove(engine.list.audios.length - 1);
-  engine.randomOrder = engine.randomOrder.filter((index) => index < activeGroup!.tracks.length);
-  if (autoplay) play(engine);
-  reportState();
 }
 
 async function prepare(group: PlaylistGroup, requestedIndex?: number, autoplay = false) {
@@ -147,9 +117,6 @@ async function prepare(group: PlaylistGroup, requestedIndex?: number, autoplay =
     engine?.destroy();
     mount.replaceChildren();
     activeGroup = group;
-    queue = [];
-    queueReturnIndex = null;
-    queueEndsPlaylist = false;
     loading = false;
     const player = new APlayer({container: mount, audio: group.tracks.map((track) => ({...track})),
       autoplay: false, loop: preferences.loop, order: preferences.order, volume: preferences.volume,
@@ -173,13 +140,6 @@ async function prepare(group: PlaylistGroup, requestedIndex?: number, autoplay =
       loading = false;
       reportError('音频暂不可用，请重试或选择另一首。');
       reportState();
-    }, {capture: true});
-    player.audio.addEventListener('ended', (event) => {
-      if (engine !== player) return;
-      if (!queue.length && queueReturnIndex === null) return;
-      event.stopImmediatePropagation();
-      if (queue.length) playQueued();
-      else returnToPlaylist(!queueEndsPlaylist);
     }, {capture: true});
     for (const name of ['play', 'pause', 'seeked', 'ended', 'volumechange', 'durationchange', 'loadedmetadata']) {
       player.on(name, () => { if (engine === player) { persist(); reportState(); } });
@@ -216,7 +176,6 @@ async function prepare(group: PlaylistGroup, requestedIndex?: number, autoplay =
   }
   if (request !== generation || !engine) return;
   if (requestedIndex !== undefined) {
-    if (queueReturnIndex !== null) returnToPlaylist(false);
     const index = Number.isInteger(requestedIndex) && requestedIndex >= 0 && requestedIndex < group.tracks.length ? requestedIndex : 0;
     engine.list.switch(index);
   }
@@ -266,15 +225,8 @@ export default function GlobalMusicPlayerClient() {
       const command = (event as CustomEvent<MusicPlayerCommand>).detail;
       if (command.action === 'toggle') { if (engine.audio.paused) play(engine); else engine.pause(); }
       else if (command.action === 'retry') { engine.audio.load(); play(engine); }
-      else if (command.action === 'previous') {
-        if (queueReturnIndex !== null) returnToPlaylist(!engine.audio.paused);
-        else engine.skipBack();
-      }
-      else if (command.action === 'next') {
-        if (queue.length) playQueued();
-        else if (queueReturnIndex !== null) returnToPlaylist(!engine.audio.paused);
-        else engine.skipForward();
-      }
+      else if (command.action === 'previous') engine.skipBack();
+      else if (command.action === 'next') engine.skipForward();
       else if (command.action === 'seek') {
         const duration = engine.audio.duration;
         if (Number.isFinite(duration)) engine.seek(Math.max(0, Math.min(duration, command.value)));
@@ -282,12 +234,8 @@ export default function GlobalMusicPlayerClient() {
       else if (command.action === 'loop' || command.action === 'order') {
         Object.assign(preferences, {[command.action]: command.value});
         Object.assign(engine.options, {[command.action]: command.value});
-      } else if (command.action === 'queue-next') queue.unshift({...command.track});
-      else if (command.action === 'queue-add') queue.push({...command.track});
-      else if (command.action === 'queue-remove') queue.splice(command.value, 1);
-      else if (command.action === 'queue-play') playQueued(command.value);
+      }
       else if (command.action === 'track' && command.value >= 0 && command.value < engine.list.audios.length) {
-        if (queueReturnIndex !== null) returnToPlaylist(false);
         engine.list.switch(command.value); play(engine);
       }
       persist(); reportState();

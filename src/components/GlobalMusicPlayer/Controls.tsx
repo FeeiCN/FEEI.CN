@@ -4,6 +4,7 @@ import {createPortal} from 'react-dom';
 import {useHistory, useLocation} from '@docusaurus/router';
 import {MusicIcon, getItsHoverIcon, type AnimatedIconHandle} from '@site/src/components/ItsHoverIcon';
 import ListIcon from '@site/src/components/ItsHoverIcon/icons/unordered-list-icon';
+import LibraryIcon from '@site/src/components/ItsHoverIcon/icons/library-icon';
 import VolumeIcon from '@site/src/components/ItsHoverIcon/icons/volume-2-icon';
 import AlignCenterIcon from '@site/src/components/ItsHoverIcon/icons/align-center-icon';
 import RefreshIcon from '@site/src/components/ItsHoverIcon/icons/refresh-icon';
@@ -18,7 +19,7 @@ import type {MusicPlayerStateDetail} from './playerEvents';
 import styles from './controls.module.css';
 
 const MusicLibrary = lazy(() => import('@site/src/components/MusicLibrary'));
-type View = 'playing' | 'library' | 'queue';
+type View = 'playing' | 'library';
 const defaultCover = '/music/feei-site-theme-cover.webp';
 const PlayerIcon = getItsHoverIcon('player-icon')!;
 
@@ -62,6 +63,11 @@ export default function Controls() {
   const duration = playback?.duration ?? 0;
   const currentTime = scrub ?? playback?.currentTime ?? 0;
   const lyrics = playback?.lyrics ?? [];
+  const hasCustomCover = Boolean(playback?.cover && playback.cover !== defaultCover);
+  const artistSeed = playback?.artist?.split(/[&,，、/]/)[0]?.trim().slice(0, 2);
+  const coverLabel = artistSeed ? `${artistSeed}精选` : '我的音乐';
+  const tonearmProgress = duration > 0 ? Math.min(1, Math.max(0, (playback?.currentTime ?? 0) / duration)) : 0;
+  const tonearmStyle = {'--tonearm-angle': `${-34 + tonearmProgress * 16}deg`} as CSSProperties;
   let currentLine = -1;
   for (let index = 0; index < lyrics.length; index++) {
     if (lyrics[index][0] <= (playback?.currentTime ?? 0)) currentLine = index;
@@ -86,8 +92,8 @@ export default function Controls() {
   useEffect(() => {
     const onState = (event: Event) => setPlayback((event as CustomEvent<MusicPlayerStateDetail>).detail);
     const onError = (event: Event) => setError(String((event as CustomEvent).detail ?? ''));
-    const onOpen = () => { setExpanded(true); setView('library'); };
-    const onPlay = () => { setNotice(''); };
+    const onOpen = () => { setExpanded(true); setView('playing'); };
+    const onPlay = () => { setError(''); setNotice(''); };
     const onClose = () => { setExpanded(false); setLyricsOpen(false); };
     window.addEventListener(musicPlayerStateEventName, onState);
     window.addEventListener(musicPlayerErrorEventName, onError);
@@ -223,9 +229,10 @@ export default function Controls() {
     </IconButton>
   </div>;
   const progress = <div className={styles.progress}>
+    {scrub !== null && <span className={styles.scrubTime} role="status">{timeLabel(currentTime)} / {timeLabel(duration)}</span>}
     <input type="range" aria-label="播放进度" min="0" max={duration || 1} step="1" disabled={!duration}
       value={Math.min(currentTime, duration || 1)} style={progressStyle}
-      aria-valuetext={timeLabel(currentTime)}
+      aria-valuetext={`${timeLabel(currentTime)} / ${timeLabel(duration)}`}
       onChange={(event) => setScrub(Number(event.target.value))}
       onPointerUp={commitScrub} onPointerCancel={() => setScrub(null)} onKeyUp={commitScrub} onBlur={commitScrub} />
     <div className={styles.times}><span>{timeLabel(currentTime)}</span><span>−{timeLabel(duration - currentTime)}</span></div>
@@ -233,68 +240,63 @@ export default function Controls() {
   const status = (error || notice) && <div className={styles.status} role="status">
     <span>{error || notice}</span>{error && <button type="button" onClick={() => dispatchMusicPlayerCommand({action: 'retry'})}>重试</button>}
   </div>;
+  const libraryActive = view === 'library';
 
   return createPortal(<>
     {expanded && <div className={styles.scrim} aria-hidden="true" />}
     <div ref={rootRef} className={`${styles.player} ${expanded ? styles.expanded : ''}`}>
       {!expanded ? <div className={styles.mini}>
         <button ref={expandRef} type="button" className={styles.miniTrack} aria-label="展开音乐播放器"
-          aria-haspopup="dialog" onClick={() => { dispatchMusicPlayerOpen(); setView(playback ? 'playing' : 'library'); }}>
-          <span className={styles.miniVinyl} aria-hidden="true"><MusicIcon ref={vinylRef} size={25} strokeWidth={1.7} disableHover /></span>
+          aria-haspopup="dialog" onClick={() => { dispatchMusicPlayerOpen(); setView('playing'); }}>
+          <span className={styles.miniVinyl} aria-hidden="true"><MusicIcon ref={vinylRef} size={26} strokeWidth={1.8} disableHover /></span>
           <span className={styles.miniText}><strong>{playback?.title || '音乐'}</strong><span>{playback?.artist || '我的音乐库'}</span></span>
         </button>
         {playback && playButton()}
-        <IconButton label="打开音乐歌单" className={styles.miniLibraryButton} onClick={() => dispatchMusicPlayerOpen()}><MusicIcon size={20} disableHover /></IconButton>
+        <IconButton label="打开音乐库" className={styles.miniLibraryButton} onClick={() => { dispatchMusicPlayerOpen(); setView('library'); }}><MusicIcon size={20} disableHover /></IconButton>
         {playback && <div className={styles.miniProgress} style={progressStyle} />}
         {!expanded && error && <span className={styles.errorDot} title={error} aria-label={error} />}
       </div> : <section role="dialog" aria-label="音乐播放器" className={styles.panel}>
         <header className={styles.header}>
           <button ref={collapseRef} type="button" className={styles.iconButton} aria-label="收起播放器并继续播放" title="收起" onClick={collapse}><XIcon size={18} /></button>
-          <span>{view === 'playing' ? '正在播放' : view === 'library' ? '音乐' : '待播列表'}</span>
+          <span className={styles.headerTitle}>{view === 'playing' ? (playback?.title || '正在播放') : '音乐库'}</span>
           <span className={styles.headerSpacer} aria-hidden="true" />
         </header>
         <div className={styles.views} role="tablist" aria-label="播放器视图">
-          {([['playing', '正在播放'], ['library', '音乐'], ['queue', '待播']] as const).map(([value, label]) =>
+          {([['playing', '正在播放'], ['library', '音乐']] as const).map(([value, label]) =>
             <button key={value} type="button" role="tab" id={`music-tab-${value}`} aria-controls={`music-view-${value}`}
               aria-selected={view === value} tabIndex={view === value ? 0 : -1}
               onKeyDown={(event) => {
                 if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
                 event.preventDefault(); event.stopPropagation();
-                const views: View[] = ['playing', 'library', 'queue'];
-                const next = views[(views.indexOf(value) + (event.key === 'ArrowRight' ? 1 : 2)) % 3];
+                const views: View[] = ['playing', 'library'];
+                const next = views[(views.indexOf(value) + (event.key === 'ArrowRight' ? 1 : views.length - 1)) % views.length];
                 setView(next);
                 window.requestAnimationFrame(() => rootRef.current?.querySelector<HTMLButtonElement>(`#music-tab-${next}`)?.focus());
               }} onClick={() => setView(value)}>{label}</button>)}
         </div>
         <div className={styles.view} role="tabpanel" id={`music-view-${view}`} aria-labelledby={`music-tab-${view}`}>
           {view === 'playing' && <div className={styles.nowPlaying}>
-            <Cover src={playback?.cover} className={styles.artwork} />
-            <div className={styles.trackInfo}><h2>{playback?.title || '音乐'}</h2><p>{playback?.artist || '我的音乐库'}{playback?.loading && !playback.paused && <span className={styles.loading} role="status">正在加载…</span>}</p></div>
+            <div className={`${styles.turntable} ${error ? styles.turntableError : ''}`} aria-label="唱片机">
+              <div className={`${styles.vinyl} ${playback && !playback.paused ? styles.vinylPlaying : ''}`}>
+                {hasCustomCover ? <Cover src={playback?.cover} className={styles.vinylLabel} /> : <div className={`${styles.vinylLabel} ${styles.genericLabel}`} aria-label={`${coverLabel}通用封面`}><span className={styles.genericLabelText}>{coverLabel}</span></div>}
+                <span className={styles.vinylCenter} aria-hidden="true" />
+              </div>
+              <span className={styles.tonearmDock} aria-hidden="true" />
+              <span style={tonearmStyle} className={`${styles.tonearm} ${playback && !playback.paused ? styles.tonearmPlaying : styles.tonearmRest}`} aria-hidden="true" />
+              {playback?.loading && !playback.paused && <span className={styles.turntableStatus} role="status">正在加载</span>}
+            </div>
+            <div className={styles.trackInfo}><h2>{playback?.title || '音乐'}</h2><p>{playback?.artist || '我的音乐库'}</p></div>
             {progress}{transport}
             <div className={styles.volume}><VolumeIcon size={17} /><input type="range" aria-label="音量" min="0" max="1" step="0.05" value={playback?.volume ?? 0.45}
               style={{'--progress': `${(playback?.volume ?? 0.45) * 100}%`} as CSSProperties}
               onChange={(event) => dispatchMusicPlayerCommand({action: 'volume', value: Number(event.target.value)})} /></div>
             <div className={styles.secondary}>
-              <IconButton label="全屏歌词" onClick={openLyrics}><AlignCenterIcon size={21} /></IconButton>
-              <IconButton label="查看待播列表" onClick={() => setView('queue')}><ListIcon size={21} /></IconButton>
+              <div className={`${styles.secondaryItem} ${lyricsOpen ? styles.secondaryItemActive : ''}`}><IconButton label="全屏歌词" pressed={lyricsOpen} onClick={openLyrics}><AlignCenterIcon size={21} /></IconButton><span>歌词</span></div>
+              <div className={`${styles.secondaryItem} ${libraryActive ? styles.secondaryItemActive : ''}`}><IconButton label="打开音乐库" pressed={libraryActive} onClick={() => setView('library')}><LibraryIcon size={21} /></IconButton><span>音乐库</span></div>
             </div>
           </div>}
           {view === 'library' && <div id="global-music-panel" className={styles.library}>
-            <Suspense fallback={<p role="status">正在加载音乐…</p>}><MusicLibrary compact onQueued={() => setNotice('已加入待播')} /></Suspense>
-          </div>}
-          {view === 'queue' && <div className={styles.queue}>
-            <h3>接下来播放</h3>
-            {(playback?.queue ?? []).map((track, index) => <div key={`${track.url}-${index}`} className={styles.queueRow}>
-              <button type="button" className={styles.queueTrack} onClick={() => dispatchMusicPlayerCommand({action: 'queue-play', value: index})}>
-                <Cover src={track.cover} /><span><strong>{track.name}</strong><small>{track.artist}</small></span>
-              </button><IconButton label={`移除待播 ${track.name}`} onClick={() => dispatchMusicPlayerCommand({action: 'queue-remove', value: index})}><XIcon size={16} /></IconButton>
-            </div>)}
-            {!(playback?.queue?.length) && <p className={styles.empty}>没有手动添加的歌曲</p>}
-            <h3>当前歌单</h3>
-            {(playback?.tracks ?? []).map((track, index) => <button type="button" key={`${track.url}-${index}`} className={`${styles.queueTrack} ${index === playback?.trackIndex ? styles.currentTrack : ''}`}
-              aria-current={index === playback?.trackIndex ? 'true' : undefined} onClick={() => dispatchMusicPlayerCommand({action: 'track', value: index})}>
-              <span className={styles.trackNumber}>{index === playback?.trackIndex ? '♫' : index + 1}</span><span><strong>{track.name}</strong><small>{track.artist}</small></span>
-            </button>)}
+            <Suspense fallback={<p role="status">正在加载音乐…</p>}><MusicLibrary compact /></Suspense>
           </div>}
         </div>
         {status}

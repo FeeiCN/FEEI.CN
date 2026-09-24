@@ -2,7 +2,6 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
 import clsx from 'clsx';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {Audio} from 'aplayer';
-import DotsIcon from '@site/src/components/ItsHoverIcon/icons/dots-horizontal-icon';
 import ArrowDownIcon from '@site/src/components/ItsHoverIcon/icons/arrow-narrow-down-icon';
 import MagnifierIcon from '@site/src/components/ItsHoverIcon/icons/magnifier-icon';
 import PlayerIcon from '@site/src/components/ItsHoverIcon/icons/player-icon';
@@ -20,7 +19,6 @@ import type {
 } from '@site/src/components/GlobalMusicPlayer/playlist';
 import {
   dispatchMusicPlayerPlay,
-  dispatchMusicPlayerCommand,
   musicPlayerStateEventName,
   musicPlayerStateRequestEventName,
 } from '@site/src/components/GlobalMusicPlayer/playerEvents';
@@ -34,9 +32,9 @@ const babyMusicManifestUrl = '/music/baby-music/manifest.json';
 
 type TrackLocation = {groupId: string; index: number};
 
-type MusicLibraryProps = {compact?: boolean; onQueued?: () => void};
+type MusicLibraryProps = {compact?: boolean};
 
-function MusicLibraryClient({compact = false, onQueued}: MusicLibraryProps) {
+function MusicLibraryClient({compact = false}: MusicLibraryProps) {
   // Core groups are static (shipped in playlist.ts). The baby-music manifest
   // loads asynchronously and is appended to extensionGroups so we can keep
   // the two lifecycles separate and reason about cache invalidation per side.
@@ -55,7 +53,6 @@ function MusicLibraryClient({compact = false, onQueued}: MusicLibraryProps) {
   const receivedInitialState = useRef(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [trackMenu, setTrackMenu] = useState<Audio | null>(null);
 
   useEffect(() => {
     if (compact && window.innerWidth > 640 && !window.matchMedia('(pointer: coarse)').matches) searchInputRef.current?.focus({preventScroll: true});
@@ -233,7 +230,6 @@ function MusicLibraryClient({compact = false, onQueued}: MusicLibraryProps) {
         target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
 
       if (event.key === 'Escape') {
-        if (trackMenu) { event.preventDefault(); setTrackMenu(null); return; }
         if (singerDrawerOpen) {
           event.preventDefault();
           setSingerDrawerOpen(false);
@@ -275,7 +271,7 @@ function MusicLibraryClient({compact = false, onQueued}: MusicLibraryProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [flatTracks, highlightedIndex, playTrack, searchQuery, singerDrawerOpen, trackMenu]);
+  }, [flatTracks, highlightedIndex, playTrack, searchQuery, singerDrawerOpen]);
 
   if (!activeGroup && !searchActive) return null;
 
@@ -441,12 +437,6 @@ function MusicLibraryClient({compact = false, onQueued}: MusicLibraryProps) {
                       <span className={styles.trackArtist}>{track.artist}</span>
                     )}
                   </button>
-                  {compact && <button type="button" className={styles.trackMore} aria-label={`更多 ${track.name} ${track.artist}`} title="歌曲选项"
-                    aria-expanded={trackMenu === track} onClick={() => setTrackMenu(trackMenu === track ? null : track)}><DotsIcon size={18} /></button>}
-                  {compact && trackMenu === track && <div className={styles.trackMenu} role="menu" aria-label={`${track.name} 的选项`}>
-                    <button type="button" role="menuitem" onClick={() => { dispatchMusicPlayerCommand({action: 'queue-next', track}); setTrackMenu(null); onQueued?.(); }}>播放下一首</button>
-                    <button type="button" role="menuitem" onClick={() => { dispatchMusicPlayerCommand({action: 'queue-add', track}); setTrackMenu(null); onQueued?.(); }}>加入待播列表</button>
-                  </div>}
                   </div>
                 );
               })}

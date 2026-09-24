@@ -142,6 +142,7 @@ export default function DocActionsMenu(): ReactNode {
               className={styles.triggerMain}
               onClick={handleCopy}
               aria-label={triggerLabel}
+              title={triggerLabel}
               data-state={copyState}
             >
               {TriggerIcon && (

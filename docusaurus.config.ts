@@ -36,7 +36,7 @@ const config: Config = {
         {type: 'docSidebar', sidebarId: 'financeFreedomSidebar', label: '财务自由', icon: 'brand-bags-fm-icon'},
         {type: 'docSidebar', sidebarId: 'exploreWorldSidebar', label: '人生丰富', icon: 'compass'},
       ]},
-      {type: 'dropdown', position: 'left', label: '吴飞飞', icon: 'at-sign-icon', to: '/about', items: [
+      {type: 'dropdown', position: 'left', label: '关于', icon: 'at-sign-icon', to: '/about', items: [
         {type: 'docSidebar', sidebarId: 'aboutMeSidebar', label: '关于', icon: 'user'},
         {type: 'docSidebar', sidebarId: 'annualReviewSidebar', label: '年度总结', icon: 'history-circle-icon'},
       ]},

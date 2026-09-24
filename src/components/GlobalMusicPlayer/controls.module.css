@@ -6,6 +6,8 @@
 }
 .player *, .lyricScene * { box-sizing: border-box; }
 :global(body.music-player-active) { padding-bottom: env(safe-area-inset-bottom); }
+:global(body.music-player-active .theme-back-to-top-button) { right: max(16px, env(safe-area-inset-right)); bottom: calc(max(16px, env(safe-area-inset-bottom)) + 56px); width: 44px; height: 44px; }
+:global(body.music-player-expanded .theme-back-to-top-button) { visibility: hidden; opacity: 0; pointer-events: none; }
 .scrim { display: none; }
 .iconButton { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 44px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; transition: background 180ms ease, transform 180ms ease; }
 .iconButton:hover { background: var(--music-line, rgba(255,255,255,0.08)); }
@@ -20,7 +22,7 @@
 .miniText strong, .miniText span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .miniProgress { position: absolute; bottom: 0; left: 0; height: 2px; width: var(--progress); background: var(--music-accent); transition: width 250ms linear; }
 .errorDot { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--music-accent); right: 9px; top: 7px; }
-.player:not(.expanded) { width: 48px; }
+.player:not(.expanded) { width: 44px; }
 .player:not(.expanded) .mini { width: 44px; height: 44px; min-height: 44px; padding: 0; gap: 0; border: 1px solid rgba(0,0,0,0.1); border-radius: 50%; background: #ededee; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 .player:not(.expanded) .miniTrack { position: relative; z-index: 1; flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; align-items: center; justify-content: center; }
 .miniVinyl { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 44px; color: #596273; }
@@ -156,6 +158,7 @@
 :global([data-theme='dark']) .tonearm { background: #d0cbd0; }
 :global([data-theme='dark']) .tonearmDock { border-color: #aaa4aa; background: #2e2a31; }
 @media (max-width: 640px) {
+  :global(body.music-player-active .theme-back-to-top-button) { right: max(12px, env(safe-area-inset-right)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 56px); }
   :global(body.music-player-active) { padding-bottom: env(safe-area-inset-bottom); }
   :global(body.music-player-expanded) { padding-bottom: env(safe-area-inset-bottom); }
   .scrim { display: block; position: fixed; inset: 0; z-index: calc(var(--ifm-z-index-fixed) + 5); background: rgba(0,0,0,0.38); backdrop-filter: blur(3px); animation: fadeIn 180ms ease both; }

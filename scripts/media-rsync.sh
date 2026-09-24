@@ -15,6 +15,31 @@ direction="${MEDIA_SYNC_DIRECTION:-two-way}"
 interval="${MEDIA_SYNC_INTERVAL:-300}"
 lock_file="${MEDIA_SYNC_LOCK_FILE:-$repo_root/.media-rsync.lock}"
 
+case "${1:-}" in
+  --pull)
+    direction=pull
+    shift
+    ;;
+  --push)
+    direction=push
+    shift
+    ;;
+  --two-way)
+    direction=two-way
+    shift
+    ;;
+  --help|-h)
+    cat <<'EOF'
+Usage: bash scripts/media-rsync.sh [--pull|--push|--two-way]
+
+The default direction comes from MEDIA_SYNC_DIRECTION in config/media-rsync.env.
+Use --pull for local development to fetch the server media cache without
+changing the configured default.
+EOF
+    exit 0
+    ;;
+esac
+
 if [ -z "$remote" ]; then
   echo "MEDIA_SYNC_REMOTE is required, for example: user@example.com:/data/wufeifei.com-site/shared/media"
   exit 2

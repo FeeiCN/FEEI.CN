@@ -18,6 +18,8 @@
     "sync-health": "node scripts/sync_health_data.mjs",
     "migrate-docs-media": "node scripts/migrate_docs_media.mjs",
     "sync-media": "bash scripts/media-rsync.sh",
+    "sync-media:pull": "bash scripts/media-rsync.sh --pull",
+    "start:media": "npm run sync-media:pull && npm run start",
     "sync-assets": "bash scripts/sync-static-assets.sh",
     "typecheck": "tsc",
     "test": "npm run test:unit",

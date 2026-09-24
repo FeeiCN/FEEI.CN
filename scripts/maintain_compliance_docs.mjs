@@ -5,7 +5,7 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
-export const ROOT = 'docs/01-网络安全/01-网络空间安全/03-安全体系/03-安全合法合规';
+export const ROOT = 'docs/01-网络安全/01-网络空间安全/03-安全体系/01-安全合法合规';
 const BASE = `${ROOT}/01-网络与基础设施安全`;
 const QUAL = `${ROOT}/09-认证测评与资质`;
 const GUIDE = 'docs/05-吴飞飞/01-关于/关于FEEI.CN/网站开发规范.md';
@@ -45,7 +45,7 @@ function page(slug, title, type, body, position = 1) {
 export function semanticType(file) {
   if (!inScope(file) || !markdown(file) || partial(file)) return null;
   const name = path.posix.basename(file);
-  if (name === 'index.md' || name === '03-安全合法合规.md'
+  if (name === 'index.md' || name === '01-安全合法合规.md'
       || name === '金融网络与数据安全标准体系.md') return 'hub';
   if (file.startsWith(`${QUAL}/`)) return 'qualification';
   if (/^(?:GB|GA|GM|JR)-T-\d/.test(name)) return 'standard';
@@ -129,7 +129,7 @@ function once(source, old, replacement, label) {
 
 export function planChanges(input) {
   const files = new Map(input);
-  const main = `${ROOT}/03-安全合法合规.md`;
+  const main = `${ROOT}/01-安全合法合规.md`;
   if (files.has(main)) {
     const source = files.get(main);
     const marker = '## 法规关系与适用顺序 {#legal-map}';

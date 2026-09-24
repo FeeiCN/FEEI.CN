@@ -55,7 +55,7 @@ if (includeErrors.length > 0) {
 }
 
 // Validate the whole compliance subtree, including inbound links after moves.
-if (existsSync('docs/01-网络安全/01-网络空间安全/03-安全体系/03-安全合法合规')) {
+if (existsSync('docs/01-网络安全/01-网络空间安全/03-安全体系/01-安全合法合规')) {
   const compliance = spawnSync(process.execPath, ['scripts/maintain_compliance_docs.mjs', '--check'], {stdio: 'inherit'});
   if (compliance.error) throw compliance.error;
   if (compliance.status !== 0) process.exit(compliance.status ?? 1);

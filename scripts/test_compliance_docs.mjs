@@ -69,7 +69,7 @@ test('include errors, collisions and non-hub icons remain errors', () => {
 test('whole-site inbound links to moved compliance documents are included', () => {
   const target = `${ROOT}/02-数据与隐私安全/数据安全法.md`;
   const outside = 'docs/01-网络安全/01-网络空间安全/README.md';
-  const source = '[法](./03-安全体系/03-安全合法合规/数据安全法.md)';
+  const source = '[法](./03-安全体系/01-安全合法合规/数据安全法.md)';
   const next = repairLinks(outside, source, new Set([target]));
   assert.match(next.source, /02-数据与隐私安全\/数据安全法.md/);
 });

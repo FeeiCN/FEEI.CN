@@ -1,6 +1,7 @@
 import React, {type ReactNode} from 'react';
 import {ThemeClassNames} from '@docusaurus/theme-common';
-import {useDoc, useSidebarBreadcrumbs} from '@docusaurus/plugin-content-docs/client';
+import {findFirstSidebarItemLink, useDoc, useDocsSidebar, useSidebarBreadcrumbs} from '@docusaurus/plugin-content-docs/client';
+import {useThemeConfig} from '@docusaurus/theme-common';
 import {useHomePageRoute} from '@docusaurus/theme-common/internal';
 import Link from '@docusaurus/Link';
 import HomeBreadcrumbItem from '@theme/DocBreadcrumbs/Items/Home';
@@ -8,22 +9,58 @@ import DocBreadcrumbsStructuredData from '@theme/DocBreadcrumbs/StructuredData';
 import DocActionsMenu from '@site/src/components/DocActionsMenu';
 import styles from './styles.module.css';
 
+type BreadcrumbItem = {
+  type: 'category';
+  label: string;
+  href: string;
+  linkUnlisted: false;
+};
+
+type NavbarEntry = {
+  type?: string;
+  label?: string;
+  to?: string;
+  sidebarId?: string;
+  items?: NavbarEntry[];
+};
+
+const contextBreadcrumb = (label: string, href: string): BreadcrumbItem => ({
+  type: 'category',
+  label,
+  href,
+  linkUnlisted: false,
+});
+
+function getNavigationBreadcrumbs(sidebar: ReturnType<typeof useDocsSidebar>, navbarItems: NavbarEntry[]): BreadcrumbItem[] {
+  if (!sidebar) return [];
+
+  const group = navbarItems.find((item) => (
+    item.type === 'dropdown' && item.items?.some((child) => child.type === 'docSidebar' && child.sidebarId === sidebar.name)
+  ));
+  const section = group?.items?.find((item) => item.type === 'docSidebar' && item.sidebarId === sidebar.name);
+  const firstSidebarItem = sidebar.items[0];
+  const sectionHref = section?.to ?? (firstSidebarItem ? findFirstSidebarItemLink(firstSidebarItem) : undefined);
+  const context: BreadcrumbItem[] = [];
+
+  if (group?.label && group.to) context.push(contextBreadcrumb(group.label, group.to));
+  if (section?.label && sectionHref) context.push(contextBreadcrumb(section.label, sectionHref));
+  return context;
+}
+
 export default function DocBreadcrumbs(): ReactNode {
   const breadcrumbs = useSidebarBreadcrumbs();
+  const sidebar = useDocsSidebar();
+  const themeConfig = useThemeConfig();
   const homePageRoute = useHomePageRoute();
-  const {frontMatter, metadata} = useDoc();
+  const {frontMatter} = useDoc();
   if (!breadcrumbs) return null;
 
   // Keep the complete path in structured data; the H1 identifies the current page.
   const parents = breadcrumbs.slice(0, -1);
-  const isAiSecurityDoc = metadata.source.includes('/01-网络安全/02-人工智能安全/');
-  const visibleParents = isAiSecurityDoc
-    ? [
-        {type: 'category' as const, label: '网络安全', href: '/security-engineering', linkUnlisted: false},
-        {type: 'category' as const, label: '人工智能安全', href: '/ai-security', linkUnlisted: false},
-        ...parents,
-      ]
-    : parents;
+  const contextParents = getNavigationBreadcrumbs(sidebar, themeConfig.navbar.items as NavbarEntry[]);
+  const visibleParents = [...contextParents, ...parents].filter((item, index, all) => (
+    index === 0 || item.label !== all[index - 1].label
+  ));
   return (
     <>
       <DocBreadcrumbsStructuredData breadcrumbs={breadcrumbs} />

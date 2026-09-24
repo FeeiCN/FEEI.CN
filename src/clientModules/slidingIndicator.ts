@@ -80,10 +80,17 @@ function setup({container, links, id, axis}: IndicatorConfig) {
   }
 
   function findActiveLink(): HTMLElement | null {
-    return containerEl!.querySelector<HTMLElement>(`${links}--active, ${links}[aria-current='page']`);
+    return containerEl!.querySelector<HTMLElement>(`${links}[aria-current='page']`)
+      ?? containerEl!.querySelector<HTMLElement>(`${links}--active`);
   }
 
   function moveToActiveLink() {
+    // Vertical navigation already has a static current marker. Animate on hover
+    // only so scrolling the TOC cannot leave a second marker on an old section.
+    if (axis === 'y') {
+      indicator.style.opacity = '0';
+      return;
+    }
     const activeLink = findActiveLink();
     if (activeLink) {
       moveTo(activeLink);

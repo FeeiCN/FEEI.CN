@@ -3,15 +3,16 @@
   position: relative;
   display: inline-block;
   flex-shrink: 0;
+  font-family: var(--ifm-font-family-base);
 }
 
 /* ── Trigger — split pill ───────────────────────────── */
 .trigger {
   display: inline-flex;
   align-items: stretch;
-  border: 1px solid var(--ifm-color-emphasis-300);
-  border-radius: 999px;
-  background: var(--ifm-background-color);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
   color: var(--ifm-color-emphasis-700);
   font-size: 0.78rem;
   font-weight: 500;
@@ -20,23 +21,31 @@
   transition: border-color 0.15s, box-shadow 0.15s;
   vertical-align: middle;
   position: relative;
-  top: -1px;
   overflow: hidden;
 }
 
-.trigger:hover { border-color: var(--ifm-color-emphasis-400); box-shadow: 0 1px 5px rgba(0, 0, 0, 0.07); }
+.wrapper[data-open='true'] .trigger {
+  border-color: transparent;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.trigger:hover { border-color: var(--ifm-color-emphasis-200); background: var(--ifm-color-emphasis-100); }
 .trigger[data-state='copied'] { border-color: var(--ifm-color-success); color: var(--ifm-color-success); }
 .trigger[data-state='error'] { border-color: var(--ifm-color-danger); color: var(--ifm-color-danger); }
 
 .triggerMain {
-  display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px 5px 11px;
+  display: inline-flex; align-items: center; justify-content: center; width: 29px; padding: 0;
   border: none; background: transparent; color: inherit; font: inherit; cursor: pointer; transition: background 0.1s;
 }
-.triggerMain:hover { background: var(--ifm-color-emphasis-100); }
-.triggerIcon { display: flex; align-items: center; opacity: 0.75; }
-.triggerSep { width: 1px; background: var(--ifm-color-emphasis-300); flex-shrink: 0; align-self: stretch; }
+.triggerMain,
 .triggerChevron {
-  display: inline-flex; align-items: center; padding: 5px 9px; border: none; background: transparent;
+  min-height: 28px;
+}
+.triggerMain:hover { background: transparent; }
+.triggerIcon { display: flex; align-items: center; opacity: 0.75; }
+.triggerSep { display: none; }
+.triggerChevron {
+  display: inline-flex; align-items: center; justify-content: center; width: 19px; padding: 0; border: none; background: transparent;
   color: var(--ifm-color-emphasis-500); cursor: pointer; transition: background 0.1s;
 }
 .triggerChevron:hover { background: var(--ifm-color-emphasis-100); }
@@ -45,7 +54,7 @@
 .menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 8px);
+  top: calc(100% + 6px);
   min-width: 280px;
   background: var(--ifm-background-color);
   border: 1px solid var(--ifm-color-emphasis-200);
@@ -83,8 +92,8 @@
 
 /* ── Mobile ─────────────────────────────────────────── */
 @media (max-width: 996px) {
-  .triggerText { display: none; }
-  .triggerMain { padding: 5px 7px 5px 9px; }
+  .triggerMain,
+  .triggerChevron { min-height: 32px; }
 
   /* The trigger sits at the right edge of the article header. Anchor the
      dropdown to that same right edge so it expands inward (to the left),

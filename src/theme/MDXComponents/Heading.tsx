@@ -4,16 +4,7 @@ import {useDoc} from '@docusaurus/plugin-content-docs/client';
 import Heading from '@theme/Heading';
 import type {Props} from '@theme/MDXComponents/Heading';
 import DocTitleWithIcon from '@site/src/components/DocTitleWithIcon';
-
-function useOptionalDocIcon(): string | undefined {
-  try {
-    const {frontMatter} = useDoc();
-    const icon = (frontMatter as Record<string, unknown>).icon;
-    return typeof icon === 'string' ? icon : undefined;
-  } catch {
-    return undefined;
-  }
-}
+import DocArticleHeader from '@site/src/components/DocArticleHeader';
 
 function textFromChildren(children: ReactNode): string {
   if (typeof children === 'string' || typeof children === 'number') {
@@ -37,11 +28,20 @@ function hasManualNumber(children: ReactNode): boolean {
 }
 
 export default function MDXHeading(props: Props): ReactNode {
-  const icon = useOptionalDocIcon();
+  let iconValue: unknown;
+  let hasExplicitTitle = false;
+  try {
+    const {frontMatter, contentTitle} = useDoc();
+    iconValue = (frontMatter as Record<string, unknown>).icon;
+    hasExplicitTitle = typeof contentTitle !== 'undefined';
+  } catch {
+    iconValue = undefined;
+  }
+  const icon = typeof iconValue === 'string' ? iconValue : undefined;
   const shouldDecorate = props.as === 'h1' && !!icon;
   const manualNumber = (props.as === 'h2' || props.as === 'h3') && hasManualNumber(props.children);
 
-  return (
+  const heading = (
     <Heading
       {...props}
       className={clsx(props.className, manualNumber && 'doc-heading--manual-number')}
@@ -52,5 +52,11 @@ export default function MDXHeading(props: Props): ReactNode {
         props.children
       )}
     </Heading>
+  );
+
+  return props.as === 'h1' && hasExplicitTitle ? (
+    <DocArticleHeader as="div">{heading}</DocArticleHeader>
+  ) : (
+    heading
   );
 }

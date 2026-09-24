@@ -6,7 +6,7 @@ import Heading from '@theme/Heading';
 import MDXContent from '@theme/MDXContent';
 import type {Props} from '@theme/DocItem/Content';
 import DocTitleWithIcon from '@site/src/components/DocTitleWithIcon';
-import DocActionsMenu from '@site/src/components/DocActionsMenu';
+import DocArticleHeader from '@site/src/components/DocArticleHeader';
 import styles from './styles.module.css';
 
 function useSyntheticTitle(): string | null {
@@ -43,25 +43,18 @@ function ReadingMode(): ReactNode {
 
 export default function DocItemContent({children}: Props): ReactNode {
   const syntheticTitle = useSyntheticTitle();
-  const {frontMatter, contentTitle} = useDoc();
+  const {frontMatter} = useDoc();
   const iconValue = (frontMatter as Record<string, unknown>).icon;
   const icon = typeof iconValue === 'string' ? iconValue : undefined;
-  const hasContentTitle = typeof contentTitle !== 'undefined' && !frontMatter.hide_title;
 
   return (
-    <div className={clsx(ThemeClassNames.docs.docMarkdown, 'markdown')}>
+    <div className={clsx(ThemeClassNames.docs.docMarkdown, 'markdown', styles.themeDocMarkdown)}>
       {syntheticTitle && (
-        <header style={{display: 'flex', alignItems: 'baseline', gap: '0.6rem'}}>
-          <Heading as="h1" style={{marginBottom: 0, flex: 1}}>
+        <DocArticleHeader>
+          <Heading as="h1">
             <DocTitleWithIcon icon={icon}>{syntheticTitle}</DocTitleWithIcon>
           </Heading>
-          <DocActionsMenu />
-        </header>
-      )}
-      {hasContentTitle && (
-        <div style={{float: 'right', marginTop: '0.45rem', marginLeft: '0.6rem', clear: 'right'}}>
-          <DocActionsMenu />
-        </div>
+        </DocArticleHeader>
       )}
       <ReadingMode />
       <MDXContent>{children}</MDXContent>

@@ -38,3 +38,8 @@
 [data-theme='dark'] .sliding-line-indicator {
   background: #fff;
 }
+
+/* The animated navbar indicator replaces the static underline when ready. */
+.navbar__items:has(> #sliding-line-navbar) .navbar__link--active {
+  box-shadow: none;
+}

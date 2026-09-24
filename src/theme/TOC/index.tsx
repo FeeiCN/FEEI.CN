@@ -14,7 +14,7 @@ export default function TOC({className, ...props}: Props): ReactNode {
     <div className={clsx(styles.tableOfContents, 'thin-scrollbar', className)}>
       <div className="tocHeader">
         <SidebarIcon icon="list-tree" className="tocHeaderIcon" />
-        <span>本章内容大纲</span>
+        <span>本页目录</span>
       </div>
       <TOCItems
         {...props}

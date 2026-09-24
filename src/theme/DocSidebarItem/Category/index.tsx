@@ -40,11 +40,13 @@ function useAutoExpandActiveCategory({
   collapsed,
   updateCollapsed,
   activePath,
+  autoCollapseCategories,
 }: {
   isActive: boolean;
   collapsed: boolean;
   updateCollapsed: (b: boolean) => void;
   activePath: string;
+  autoCollapseCategories: boolean;
 }) {
   const wasActive = usePrevious(isActive);
   const previousActivePath = usePrevious(activePath);
@@ -55,6 +57,9 @@ function useAutoExpandActiveCategory({
     if ((justBecameActive || stillActiveButPathChanged) && collapsed) {
       updateCollapsed(false);
     }
+    if (autoCollapseCategories && !isActive && activePath !== previousActivePath && !collapsed) {
+      updateCollapsed(true);
+    }
   }, [
     isActive,
     wasActive,
@@ -62,6 +67,7 @@ function useAutoExpandActiveCategory({
     updateCollapsed,
     activePath,
     previousActivePath,
+    autoCollapseCategories,
   ]);
 }
 
@@ -210,7 +216,7 @@ function DocSidebarItemCategoryCollapsible({
       if (!collapsible) {
         return false;
       }
-      return isActive ? false : item.collapsed;
+      return isActive ? false : autoCollapseCategories || item.collapsed;
     },
   });
 
@@ -224,6 +230,7 @@ function DocSidebarItemCategoryCollapsible({
     collapsed,
     updateCollapsed,
     activePath,
+    autoCollapseCategories: Boolean(collapsible && autoCollapseCategories),
   });
   useEffect(() => {
     if (
@@ -272,7 +279,8 @@ function DocSidebarItemCategoryCollapsible({
           className={clsx(styles.categoryLink, styles.categoryLinkWithIcon, 'menu__link', {
             'menu__link--sublist': collapsible,
             'menu__link--sublist-caret': !href && collapsible,
-            'menu__link--active': isActive,
+            'menu__link--active': isCurrentPage,
+            'menu__link--active-parent': isActive && !isCurrentPage,
           })}
           onClick={handleItemClick}
           aria-current={isCurrentPage ? 'page' : undefined}

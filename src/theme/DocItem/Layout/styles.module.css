@@ -1,0 +1,47 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1050px);
+  justify-content: center;
+  gap: 2rem;
+}
+
+.content {
+  min-width: 0;
+}
+
+.desktopTOC {
+  display: none;
+  min-width: 0;
+}
+
+.mobileTOC :global(.theme-doc-toc-mobile) {
+  display: block;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+@media (min-width: 1280px) {
+  .withTOC {
+    grid-template-columns: minmax(0, 1040px) 220px;
+    gap: 1.5rem;
+  }
+
+  .desktopTOC {
+    display: block;
+  }
+
+  .mobileTOC {
+    display: none;
+  }
+}
+
+@media print {
+  .layout {
+    display: block;
+  }
+
+  .desktopTOC,
+  .mobileTOC {
+    display: none;
+  }
+}

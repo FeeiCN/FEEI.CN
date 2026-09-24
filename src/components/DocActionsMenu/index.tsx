@@ -130,10 +130,10 @@ export default function DocActionsMenu(): ReactNode {
   }
 
   const TriggerIcon = copyState === 'copied' ? IconCopied : IconCopy;
-  const triggerLabel = copyState === 'copied' ? '已复制' : copyState === 'error' ? '失败' : '复制Markdown';
+  const triggerLabel = copyState === 'copied' ? '已复制' : copyState === 'error' ? '复制失败' : '复制 Markdown';
 
   return (
-    <div className={styles.wrapper} ref={wrapperRef}>
+    <div className={styles.wrapper} ref={wrapperRef} data-open={open ? 'true' : undefined}>
       {/* Split-pill: left clicks copy directly, right clicks open dropdown */}
       <div className={styles.trigger} data-state={copyState}>
         {canCopyMarkdown && (
@@ -141,7 +141,7 @@ export default function DocActionsMenu(): ReactNode {
             <button
               className={styles.triggerMain}
               onClick={handleCopy}
-              aria-label="复制 Markdown 原文"
+              aria-label={triggerLabel}
               data-state={copyState}
             >
               {TriggerIcon && (
@@ -149,7 +149,6 @@ export default function DocActionsMenu(): ReactNode {
                   <TriggerIcon size={ICON_SIZE} disableHover />
                 </span>
               )}
-              <span className={styles.triggerText}>{triggerLabel}</span>
             </button>
             <span className={styles.triggerSep} aria-hidden="true" />
           </>

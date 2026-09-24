@@ -1,7 +1,7 @@
 ---
 slug: /data-cross-border-compliance
 title: 数据跨境
-icon: shield-check
+icon: globe-icon
 sidebar_position: 4
 description: 从数据出境场景、数据类型、数量和主体条件判断安全评估、标准合同、认证或豁免路径。
 content_type: hub

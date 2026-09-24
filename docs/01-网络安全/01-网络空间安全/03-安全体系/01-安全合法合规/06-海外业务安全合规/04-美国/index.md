@@ -1,7 +1,7 @@
 ---
 slug: /overseas-compliance-us
 title: 美国
-icon: globe-2
+icon: globe-icon
 sidebar_position: 4
 description: 用经营实体、资金活动、州与数据主体的适用问卷定位美国联邦和州安全规则，提供FTC、NYDFS、州隐私和FinCEN官方入口。
 content_type: hub

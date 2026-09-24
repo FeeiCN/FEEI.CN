@@ -2,7 +2,7 @@
 slug: /ai-evaluation-experiment-methods
 title: AI 评测与实验方法
 sidebar_position: 5
-icon: chart-mixed-icon
+icon: chart-histogram-icon
 description: 把模型演示变成可复核证据：定义任务、建立基线、设计指标、记录环境、分析失败，并判断结论能否迁移。
 content_type: article
 published_at: '2026-09-24'

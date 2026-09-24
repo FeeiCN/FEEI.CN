@@ -208,7 +208,7 @@ function DocSidebarItemCategoryCollapsible({
   const isActive = isActiveSidebarItem(item, activePath);
   const isCurrentPage = isSamePath(href, activePath);
   const icon =
-    typeof customProps?.icon === 'string' ? customProps.icon : undefined;
+    level <= 2 && typeof customProps?.icon === 'string' ? customProps.icon : undefined;
   const iconAnimation = useControlledIconAnimation(Boolean(icon));
 
   const {collapsed, setCollapsed} = useCollapsible({

@@ -52,7 +52,7 @@ export default function DocSidebarItemLink({
   const isActive = isActiveSidebarItem(item, activePath);
   const isInternalLink = isInternalUrl(href);
   const icon =
-    typeof customProps?.icon === 'string' ? customProps.icon : undefined;
+    level <= 2 && typeof customProps?.icon === 'string' ? customProps.icon : undefined;
   const iconAnimation = useControlledIconAnimation(Boolean(icon));
   const badge = (customProps?.sidebar_badge ?? null) as {
     text: string;

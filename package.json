@@ -22,7 +22,8 @@
     "typecheck": "tsc",
     "test": "npm run test:unit",
     "test:unit": "node scripts/test_docs_quality.mjs && node scripts/test_fast_search_plugin.mjs && python3 -m unittest scripts.test_upsert_drive_event && node --test scripts/test_compliance_docs.mjs",
-    "check:docs": "node scripts/check_docs_quality_gate.mjs --changed",
+    "check:docs": "npm run check:icons && node scripts/check_docs_quality_gate.mjs --changed",
+    "check:icons": "node scripts/check_doc_icons.mjs",
     "audit:docs": "node scripts/check_docs_quality.mjs --all",
     "check:compliance": "node scripts/maintain_compliance_docs.mjs --check"
   },

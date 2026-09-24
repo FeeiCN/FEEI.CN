@@ -1,7 +1,7 @@
 ---
 slug: /overseas-compliance-eu
 title: 欧盟
-icon: globe-2
+icon: globe-icon
 sidebar_position: 1
 description: 按个人数据处理和金融实体身份进入GDPR与DORA，继续核对经营国、牌照、第三方和跨境链路。
 content_type: hub

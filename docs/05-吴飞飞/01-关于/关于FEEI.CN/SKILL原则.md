@@ -80,7 +80,7 @@ SKILL 文档应该沉淀“做事方式”，而不是堆积案例原文。好�
 ---
 slug: /xxx-skill           # 英文路径
 title: ...                 # 中文标题
-icon: code-icon            # 统一使用 code-icon
+icon: code-icon            # 开发配置规则使用 code-icon，其他主题按网站开发规范选择
 description: ...           # 必填，≤160 字
 content_type: reference    # SKILL 是可查询、可执行的规则资料
 last_reviewed: 'YYYY-MM-DD' # 全文规则最后完成复核的日期
@@ -90,14 +90,14 @@ sidebar_badge:
 ---
 ```
 
-- `icon` 一律 `code-icon`，保证视觉一致
+- `icon` 按 `网站开发规范` 的主题约定选择；开发配置规则使用 `code-icon`，写作规则可使用 `pen-icon` 或 `book-icon`，数据复盘规则可使用 `gauge-icon`
 - `sidebar_badge` 一律 `{ text: 'SKILL', color: success }`，让 SKILL 文档在 sidebar 中可识别
 - 文件名用中文，`slug` 用英文短路径
 - `description` 必填，概括文档覆盖的规则或主题
 - `content_type` 一律使用 `reference`
 - `last_reviewed` 在全文规则和引用路径完成复核后更新，只改措辞时不更新
 
-**icon 必须带 `-icon` 后缀**。ItsHoverIcon 的 slug 来自文件名（如 `code-icon.tsx` → `code-icon`），缺后缀会导致 icon 无法渲染。
+**icon 必须与实际文件名或注册别名一致**。例如 `code-icon.tsx` 对应 `code-icon`，`shield-check.tsx` 对应 `shield-check`，不要仅凭后缀判断有效性。
 
 ## 路由表
 

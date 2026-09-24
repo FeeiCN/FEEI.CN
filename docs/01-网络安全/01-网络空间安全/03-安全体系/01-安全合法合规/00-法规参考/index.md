@@ -1,7 +1,7 @@
 ---
 slug: /cybersecurity-legal-reference
 title: 法规关系、时间与责任索引
-icon: shield-check
+icon: library-icon
 sidebar_position: 1
 description: 集中核对法规效力关系、公布施行时间和责任条件；业务适用与建设验收统一进入各治理域，避免重复维护。
 content_type: hub

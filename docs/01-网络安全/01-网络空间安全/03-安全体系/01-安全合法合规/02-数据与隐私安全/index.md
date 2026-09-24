@@ -1,7 +1,7 @@
 ---
 slug: /data-privacy-compliance
 title: 数据与隐私安全
-icon: shield-check
+icon: lock-icon
 sidebar_position: 3
 description: 从数据类型和处理活动判断数据安全、个人信息保护、风险评估与合规审计义务，并进入对应监管规则。
 content_type: hub

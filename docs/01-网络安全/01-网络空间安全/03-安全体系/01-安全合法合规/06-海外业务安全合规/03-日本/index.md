@@ -1,7 +1,7 @@
 ---
 slug: /overseas-compliance-japan
 title: 日本
-icon: globe-2
+icon: globe-icon
 sidebar_position: 3
 description: 从日本个人信息处理、支付与金融服务身份选择APPI和FSA官方要求，分别核对跨境、数据事件和行业事件。
 content_type: hub

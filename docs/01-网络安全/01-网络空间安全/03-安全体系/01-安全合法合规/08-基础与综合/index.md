@@ -1,7 +1,7 @@
 ---
 slug: /foundational-compliance
 title: 基础与综合
-icon: shield-check
+icon: book-icon
 sidebar_position: 9
 description: 从综合法律背景进入具体业务的网络、数据、关基和审查规则，区分主题关联、效力层级与企业控制依据。
 content_type: hub

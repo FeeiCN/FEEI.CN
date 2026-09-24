@@ -1,7 +1,7 @@
 ---
 slug: /payment-financial-compliance
 title: 支付与金融安全
-icon: shield-check
+icon: credit-card
 sidebar_position: 5
 description: 从支付机构、银行保险等主体出发判断业务准入、数据安全、网络事件、反诈和金融网络安全标准要求。
 content_type: hub

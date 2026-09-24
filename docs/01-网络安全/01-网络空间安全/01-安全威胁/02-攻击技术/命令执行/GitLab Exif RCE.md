@@ -1,7 +1,7 @@
 ---
 slug: /gitlab-exif-rce
 title: GitLab Workhorse ExifTool RCE：4 个低危缺陷链式组合的真实案例
-icon: triangle-alert
+icon: triangle-alert-icon
 description: 2021 年 GitLab Workhorse 漏洞是教科书级的"多低危链式组合 RCE"案例——扩展名白名单、内容识别、eval 反模式、字符串延续 4 个缺陷各自不严重，链式组合后形成完整利用链。
 ---
 

@@ -1,7 +1,7 @@
 ---
 slug: /supply-chain-vulnerability-compliance
 title: 供应链与漏洞
-icon: shield-check
+icon: bug-icon
 sidebar_position: 4
 description: 按采购、漏洞接报、修复披露和供应商退出选择合规路径，区分产品提供者、运营者与研究平台的责任。
 content_type: hub

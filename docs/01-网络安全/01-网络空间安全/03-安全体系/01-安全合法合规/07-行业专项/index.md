@@ -1,7 +1,7 @@
 ---
 slug: /industry-compliance
 title: 行业专项
-icon: shield-check
+icon: layers-icon
 sidebar_position: 8
 description: 按业务和数据场景识别通用安全制度之外的行业专项要求，优先进入汽车数据规则并复用其他治理域。
 content_type: hub

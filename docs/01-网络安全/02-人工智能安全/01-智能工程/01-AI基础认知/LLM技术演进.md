@@ -1,7 +1,7 @@
 ---
 slug: /llm-evolution
 sidebar_position: 1
-icon: route
+icon: history-circle-icon
 description: 从文字表示、上下文建模、预训练、后训练到工具和推理时计算，解释 LLM 为什么能够回答问题，以及每一步留下的能力边界。
 content_type: article
 ---

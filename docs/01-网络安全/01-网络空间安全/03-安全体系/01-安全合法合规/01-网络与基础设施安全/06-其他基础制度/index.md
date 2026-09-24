@@ -1,7 +1,7 @@
 ---
 slug: /foundational-cybersecurity-laws
 title: 其他基础制度
-icon: shield-check
+icon: router-icon
 sidebar_position: 6
 description: 按网络运营、可信身份和电子签约三个场景选择基础制度，并衔接系统保护、个人信息、密码和事件专项要求。
 content_type: hub

@@ -1,7 +1,7 @@
 ---
 slug: /ai-personal-to-org-efficiency
 title: 从个人AI提效到组织AI提效
-icon: target
+icon: users-group-icon
 sidebar_badge:
   text: 演讲
   color: secondary

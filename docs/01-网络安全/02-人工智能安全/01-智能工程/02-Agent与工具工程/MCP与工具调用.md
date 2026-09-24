@@ -1,7 +1,7 @@
 ---
 slug: /mcp-tool-calling
 title: MCP 与工具调用
-icon: plug-icon
+icon: plug-connected-icon
 description: 从模型提出工具请求，到 Host 校验、MCP Client 连接 Server 并返回结果，理解 AI 如何通过协议接入外部能力。
 content_type: article
 ---

@@ -37,26 +37,24 @@ function withRepository(run) {
   }
 }
 
-function document(type, extra = '', body = '我在工作中记录了一次实践。') {
-  return `---\nslug: /test\nicon: target-icon\ndescription: 测试文档。\ncontent_type: ${type}\npublished_at: '2026-01-01'\n${extra}---\n\n# 测试\n\n${body}\n`;
+function document(extra = '', body = '我在工作中记录了一次实践。') {
+  return `---\nslug: /test\nicon: target-icon\ndescription: 测试文档。\npublished_at: '2026-01-01'\n${extra}---\n\n# 测试\n\n${body}\n`;
 }
 
-for (const type of ['hub', 'article', 'tutorial', 'reference', 'review', 'regulation', 'standard', 'qualification']) {
-  test(`${type} does not require a review date in a security directory`, () => {
-    withRepository(({writeDoc, check}) => {
-      writeDoc('docs/01-网络安全/01-网络空间安全/测试.md', document(type));
-      for (const gate of [false, true]) {
-        const result = check(gate);
-        assert.equal(result.status, 0, result.stdout + result.stderr);
-        assert.doesNotMatch(result.stdout, /复核日期|LAST_REVIEWED/);
-      }
-    });
+test('documents do not require a content classification or review date', () => {
+  withRepository(({writeDoc, check}) => {
+    writeDoc('docs/01-网络安全/01-网络空间安全/测试.md', document());
+    for (const gate of [false, true]) {
+      const result = check(gate);
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.doesNotMatch(result.stdout, /复核日期|LAST_REVIEWED|content_type/);
+    }
   });
-}
+});
 
 test('obsolete review metadata is ignored rather than validated', () => {
   withRepository(({writeDoc, check}) => {
-    writeDoc('docs/02-人生系统/01-健康幸福/测试.md', document('reference', "last_reviewed: 'not-a-date'\n"));
+    writeDoc('docs/02-人生系统/01-健康幸福/测试.md', document("last_reviewed: 'not-a-date'\n"));
     const result = check();
     assert.equal(result.status, 0, result.stdout + result.stderr);
   });
@@ -65,7 +63,7 @@ test('obsolete review metadata is ignored rather than validated', () => {
 test('modifying a historical article does not require invented dates', () => {
   withRepository(({git, writeDoc, check}) => {
     const file = 'docs/01-网络安全/01-网络空间安全/我的网络安全之路.md';
-    const source = document('article').replace("published_at: '2026-01-01'\n", '');
+    const source = document().replace("published_at: '2026-01-01'\n", '');
     writeDoc(file, source);
     git('add', 'docs');
     git('commit', '-qm', 'historical article');
@@ -77,25 +75,25 @@ test('modifying a historical article does not require invented dates', () => {
 
 test('publication date validation is retained', () => {
   withRepository(({writeDoc, check}) => {
-    writeDoc('docs/测试.md', document('article').replace('2026-01-01', '2026-02-30'));
+    writeDoc('docs/测试.md', document().replace('2026-01-01', '2026-02-30'));
     const result = check();
     assert.equal(result.status, 1);
-    assert.match(result.stdout, /首次发布日期/);
+    assert.match(result.stdout, /published_at/);
   });
 });
 
-test('invalid content types still block the gate', () => {
+test('legacy content_type fields are ignored by the checker', () => {
   withRepository(({writeDoc, check}) => {
-    writeDoc('docs/测试.md', document('invalid-type'));
+    writeDoc('docs/测试.md', document('content_type: legacy\n'));
     const result = check(true);
-    assert.equal(result.status, 1);
-    assert.match(result.stdout, /content_type 非法/);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.doesNotMatch(result.stdout, /content_type/);
   });
 });
 
 test('invalid front matter still blocks the gate', () => {
   withRepository(({writeDoc, check}) => {
-    writeDoc('docs/测试.md', document('article', 'slug: /duplicate\n'));
+    writeDoc('docs/测试.md', document('slug: /duplicate\n'));
     const result = check(true);
     assert.equal(result.status, 1);
     assert.match(result.stdout, /front matter 语法/);
@@ -104,7 +102,7 @@ test('invalid front matter still blocks the gate', () => {
 
 test('missing Markdown includes still block the gate', () => {
   withRepository(({git, writeDoc, check}) => {
-    writeDoc('docs/测试.md', document('article', '', '<!-- @include missing.md -->'));
+    writeDoc('docs/测试.md', document('', '<!-- @include missing.md -->'));
     git('add', 'docs');
     const result = check(true);
     assert.equal(result.status, 1);

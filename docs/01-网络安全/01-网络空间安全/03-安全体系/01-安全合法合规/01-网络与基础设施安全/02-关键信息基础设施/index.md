@@ -4,7 +4,6 @@ title: 关键信息基础设施安全保护体系
 icon: router-icon
 sidebar_position: 2
 description: 串联关基保护条例、GB/T 39204、GA/T 2182、GM/T 0133以及边界识别、检测评估、供应链、监测预警和主动防御标准项目。
-content_type: hub
 last_reviewed: '2026-09-23'
 ---
 

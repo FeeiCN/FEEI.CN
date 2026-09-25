@@ -2,7 +2,6 @@
 slug: /ai-llm-wiki
 icon: book-open
 description: LLM Wiki 用原始资料、派生知识、状态规则和公开输出四层结构，让 AI 整理知识，同时保留来源、冲突与人工判断。
-content_type: article
 last_reviewed: '2026-07-10'
 ---
 

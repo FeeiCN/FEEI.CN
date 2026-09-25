@@ -2,7 +2,6 @@
 slug: /ai-coding
 icon: code-xml-icon
 description: AI Coding 的交付物应是范围受限、经过测试且可审查的补丁；任务契约、仓库上下文和外部验证决定协作质量。
-content_type: tutorial
 last_reviewed: '2026-09-23'
 ---
 

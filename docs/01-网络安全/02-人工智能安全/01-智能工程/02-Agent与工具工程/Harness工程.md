@@ -3,7 +3,6 @@ slug: /harness-engineering
 title: Harness 工程
 icon: gear-icon
 description: 从 Identity、Work Object、Capability、State、Gate、Recovery 定义 Harness 控制面，并以仓库任务展示隔离执行、验证与恢复的实现参考。
-content_type: reference
 last_reviewed: '2026-09-23'
 ---
 

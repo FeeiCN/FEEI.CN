@@ -39,7 +39,6 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
       const records = dailyRecords.slice(0, 3);
       const updates: HomeRecord[] = docs
         .filter((doc) => doc.source.startsWith('@site/docs/01-网络安全/') && !doc.frontMatter.sidebar_badge
-          && ['article', 'tutorial'].includes(String(doc.frontMatter.content_type))
           && doc.slug.replace(/\/$/, '') !== '/ai-agent-tool-security')
         .map((doc) => ({updatedAt: docMetadata?.[doc.source]?.updatedAt ?? 0, title: doc.title, to: doc.permalink}))
         .filter((doc) => Number.isFinite(doc.updatedAt) && doc.updatedAt > 0 && doc.updatedAt <= Date.now())
@@ -54,7 +53,7 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
         .filter((doc) => {
           const badge = doc.frontMatter.sidebar_badge;
           return !(badge && typeof badge === 'object' && 'text' in badge && badge.text === 'SKILL')
-            && ['article', 'tutorial', 'review', 'essay'].includes(String(doc.frontMatter.content_type));
+            && typeof doc.frontMatter.published_at === 'string';
         })
         .map((doc) => ({
           date: String(doc.frontMatter.published_at ?? ''),

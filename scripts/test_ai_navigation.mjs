@@ -24,6 +24,7 @@ const scalar = (text, key) => {
   const value = frontMatter(text).match(new RegExp(`^${key}:\\s*(.*?)\\s*$`, 'm'))?.[1];
   return value?.replace(/^(['"])(.*)\1$/, '$2');
 };
+const withoutLegacyClassification = (text) => text.replace(/^content_type:.*(?:\r?\n|$)/m, '');
 
 assert.ok(exists(engineeringRoot), '智能工程应作为人工智能安全的基础层');
 assert.ok(!exists('docs/03-智能工程'), '智能工程不应作为独立一级目录');
@@ -41,7 +42,7 @@ for (const obsolete of ['03-AI滥用与信任风险', '04-治理评测与响应'
 for (const [group, names] of Object.entries(groups)) {
   const hub = `${aiRoot}/${group}/${group}.md`;
   assert.ok(exists(hub), `缺少分组入口：${hub}`);
-  assert.equal(scalar(read(hub), 'content_type'), 'hub');
+  assert.equal(scalar(read(hub), 'content_type'), undefined);
   const category = JSON.parse(read(`${aiRoot}/${group}/_category_.json`));
   assert.ok(category.label && Number.isInteger(category.position), `分组配置无效：${group}`);
   for (const name of names) {
@@ -88,8 +89,8 @@ if (base) {
     assert.ok(after, `迁移丢失文档或改变 URL：${before} (${slug})`);
     const newText = read(after);
     assert.equal(scalar(newText, 'published_at'), scalar(oldText, 'published_at'), `首次发布日期被改变：${before}`);
-    if (/text:\s*['"]?演讲/.test(frontMatter(oldText)) || scalar(oldText, 'content_type') === 'archive') {
-      assert.equal(newText, oldText, `历史快照必须原样保存：${before}`);
+    if (/text:\s*['"]?演讲/.test(frontMatter(oldText))) {
+      assert.equal(withoutLegacyClassification(newText), withoutLegacyClassification(oldText), `历史快照正文必须原样保存：${before}`);
     }
     preserved += 1;
   }

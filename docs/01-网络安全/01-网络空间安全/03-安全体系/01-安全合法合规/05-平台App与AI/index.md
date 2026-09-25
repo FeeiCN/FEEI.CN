@@ -4,7 +4,6 @@ title: 平台App与AI
 icon: cpu-icon
 sidebar_position: 6
 description: 从互联网服务、App、算法、深度合成和生成式AI功能判断内容、个人信息、未成年人及AI专项监管要求。
-content_type: hub
 ---
 
 # 平台App与AI

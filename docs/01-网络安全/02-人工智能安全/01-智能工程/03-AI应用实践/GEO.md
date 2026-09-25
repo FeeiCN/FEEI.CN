@@ -3,7 +3,6 @@ slug: /geo
 title: GEO
 icon: magnifier-icon
 description: 用问题集、权威页面、技术检查、固定观测与对照实验，检验内容是否被检索、正确引用并带来有效转化。
-content_type: tutorial
 last_reviewed: '2026-07-10'
 ---
 

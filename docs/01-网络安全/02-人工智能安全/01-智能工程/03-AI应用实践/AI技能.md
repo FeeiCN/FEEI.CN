@@ -2,7 +2,6 @@
 slug: /ai-skill
 icon: stack-icon
 description: Skill 应封装经过验证的重复方法：从登录回跳修复提炼 repo-bugfix，并用触发描述、权限边界、未知 Bug 验收和版本回归保证可复用性。
-content_type: tutorial
 last_reviewed: '2026-07-10'
 ---
 

@@ -3,7 +3,6 @@ slug: /agent-loop-engineering
 title: Agent 执行循环
 icon: refresh-icon
 description: Agent 执行循环用外部反馈、停止条件、权限和预算约束单次任务内的反复执行，让任务在可验证条件下收敛。
-content_type: article
 last_reviewed: '2026-07-11'
 ---
 

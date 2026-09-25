@@ -2,7 +2,6 @@
 slug: /agent-architecture
 icon: cpu-icon
 description: Agent 的可靠性来自受约束的控制循环：用状态、工具、权限、验证、恢复和停止条件约束模型行动。
-content_type: article
 last_reviewed: '2026-07-10'
 ---
 

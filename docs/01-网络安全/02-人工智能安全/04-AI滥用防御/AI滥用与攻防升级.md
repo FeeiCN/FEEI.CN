@@ -4,7 +4,6 @@ title: AI 滥用与攻防升级
 sidebar_position: 1
 icon: bug-icon
 description: AI 对攻击的放大取决于环境能否持续提供廉价、快速、可机器验证的反馈；防守要打断闭环并提高每次试错的成本。
-content_type: article
 ---
 
 # AI 滥用与攻防升级

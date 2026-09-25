@@ -1,24 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {ROOT, field, planChanges, repairLinks, semanticType, validate} from './maintain_compliance_docs.mjs';
+import {ROOT, field, planChanges, repairLinks, validate} from './maintain_compliance_docs.mjs';
 
-const doc = (slug, type = 'reference', body = '') => `---\nslug: ${slug}\ntitle: 测试\nicon: shield-check\ndescription: 测试资料。\ncontent_type: ${type}\n---\n\n# 测试\n\n${body}\n`;
-
-test('semantic types keep source partials and other site content outside migration', () => {
-  assert.equal(semanticType(`${ROOT}/01-网络与基础设施安全/index.md`), 'hub');
-  assert.equal(semanticType(`${ROOT}/数据安全法.md`), 'regulation');
-  assert.equal(semanticType(`${ROOT}/GB-T-39204-2022-要求.md`), 'standard');
-  assert.equal(semanticType(`${ROOT}/09-认证测评与资质/01-企业与组织.md`), 'qualification');
-  assert.equal(semanticType(`${ROOT}/_原文.md`), null);
-  assert.equal(semanticType('docs/其他.md'), null);
-});
+const doc = (slug, body = '') => `---\nslug: ${slug}\ntitle: 测试\nicon: shield-check\ndescription: 测试资料。\n---\n\n# 测试\n\n${body}\n`;
 
 test('migration is idempotent and preserves URL, text, and partial front matter', () => {
   const file = `${ROOT}/数据安全法.md`;
-  const original = new Map([[file, doc('/data-law', 'reference', '**正文不改。**')], [`${ROOT}/_原文.md`, '原文，不修改。']]);
+  const original = new Map([[file, doc('/data-law', '**正文不改。**')], [`${ROOT}/_原文.md`, '原文，不修改。']]);
   const once = planChanges(original).files;
   assert.equal(field(once.get(file), 'slug'), '/data-law');
-  assert.equal(field(once.get(file), 'content_type'), 'regulation');
+  assert.equal(field(once.get(file), 'content_type'), '');
   assert.equal(field(once.get(file), 'icon'), '');
   assert.match(once.get(file), /\*\*正文不改。\*\*/);
   assert.equal(once.get(`${ROOT}/_原文.md`), '原文，不修改。');
@@ -51,14 +42,14 @@ test('ambiguous destinations are not guessed and missing links fail validation',
   const file = `${ROOT}/index.md`;
   const paths = new Set([`${ROOT}/a/同名.md`, `${ROOT}/b/同名.md`]);
   assert.equal(repairLinks(file, '[链接](./同名.md)', paths).changes.length, 0);
-  const result = validate(new Map([[file, doc('/hub', 'hub', '[链接](./同名.md)')]]));
+  const result = validate(new Map([[file, doc('/hub', '[链接](./同名.md)')]]));
   assert.ok(result.errors.some((e) => e.includes('broken Markdown link')));
 });
 
 test('include errors, collisions and non-hub icons remain errors', () => {
   const files = new Map([
-    [`${ROOT}/index.md`, doc('/same', 'hub', '<!-- @include _missing.md -->')],
-    [`${ROOT}/数据安全法.md`, doc('/same', 'regulation')],
+    [`${ROOT}/index.md`, doc('/same', '<!-- @include _missing.md -->')],
+    [`${ROOT}/数据安全法.md`, doc('/same')],
   ]);
   const errors = validate(files).errors.join('\n');
   assert.match(errors, /include/);

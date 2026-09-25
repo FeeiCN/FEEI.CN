@@ -67,7 +67,6 @@ const blockingRuleNames = new Set([
   'front matter 缺失',
   'front matter 未闭合',
   'front matter 语法',
-  'content_type 非法',
   '元数据缺失',
   'description 过长',
   'Markdown include 缺失',

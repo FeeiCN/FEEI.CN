@@ -4,7 +4,6 @@ title: 事件与应急
 icon: triangle-alert-icon
 sidebar_position: 5
 description: 从主体、系统、数据和影响判断并行事件报告义务，分别管理分级、起算点、接报机关、续报与总结。
-content_type: hub
 ---
 
 # 事件与应急

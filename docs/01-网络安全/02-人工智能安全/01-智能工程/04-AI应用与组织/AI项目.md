@@ -3,7 +3,6 @@ slug: /ai-projects
 title: AI 项目
 icon: library-icon
 description: 通过开源项目和真实实践，检验 AI 技术是否解决了工作流中的关键瓶颈，以及方法能否安装、复现和维护。
-content_type: hub
 ---
 
 # AI 项目

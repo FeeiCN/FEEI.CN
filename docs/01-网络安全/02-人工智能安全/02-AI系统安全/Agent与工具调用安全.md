@@ -4,7 +4,6 @@ title: Agent 与工具调用安全
 sidebar_position: 6
 icon: brain-circuit-icon
 description: Agent 安全要用 Capability Envelope 限定一次运行可达的权限，再以 Action Envelope、逐次授权和资源侧执行约束每个真实副作用。
-content_type: article
 last_reviewed: '2026-09-23'
 ---
 

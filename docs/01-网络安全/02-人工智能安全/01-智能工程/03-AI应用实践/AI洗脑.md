@@ -2,7 +2,6 @@
 slug: /ai-brainwashing
 icon: brain-circuit-icon
 description: AI 的流畅回答可能让人提前停止核查；高影响判断应拆成主张、证据与责任，并由人保留最终判定权。
-content_type: article
 last_reviewed: '2026-07-10'
 ---
 

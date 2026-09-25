@@ -4,7 +4,6 @@ title: AI 系统安全评测与红队
 sidebar_position: 9
 icon: target-icon
 description: 对精确 AI 系统版本、任务分布、攻击者能力和判定方法给出条件性安全证据，发布门禁报告失败率上界与覆盖边界。
-content_type: article
 ---
 
 # AI 系统安全评测与红队

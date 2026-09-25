@@ -2,7 +2,6 @@
 slug: /sub2api
 icon: router-icon
 description: Sub2API 将多协议兼容、上游账号池、负载调度、分布式并发和幂等计费连成一条请求链路；理解它，要从一笔请求如何被执行并入账开始。
-content_type: reference
 last_reviewed: '2026-07-11'
 ---
 

@@ -9,41 +9,18 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
 const docsRoot = path.join(repoRoot, 'docs');
 
-const CONTENT_TYPES = new Set([
-  'hub',
-  'article',
-  'tutorial',
-  'reference',
-  'regulation',
-  'standard',
-  'qualification',
-  'review',
-  'archive',
-  'essay',
-  'gallery',
-  'dashboard',
-]);
-
-const MAX_H2 = {
-  hub: 5,
-  article: 8,
-};
-
 const RULE_NAMES = {
   FRONTMATTER_MISSING: 'front matter 缺失',
   FRONTMATTER_UNCLOSED: 'front matter 未闭合',
   FRONTMATTER_SYNTAX: 'front matter 语法',
-  CONTENT_TYPE_INVALID: 'content_type 非法',
   METADATA_REQUIRED: '元数据缺失',
   DESCRIPTION_LENGTH: 'description 过长',
   PUBLISHED_AT: '首次发布日期',
-  TOO_MANY_H2: 'H2 过多',
   HEADING_DEPTH: '标题层级过深',
   NUMBERED_HEADING: '手写标题编号',
   STRONG_ASSERTION: '强断言',
   WIDE_TABLE: '宽表格',
   SUMMARY_SECTION: '总结节',
-  ARTICLE_EVIDENCE: '观点文证据',
 };
 
 function usage() {
@@ -629,29 +606,14 @@ function validDate(value) {
     && date.getUTCDate() === day;
 }
 
-function metadataChecks(document, parsed, mode, issues) {
+function metadataChecks(document, parsed, issues) {
   const {file, state} = document;
   const {fields} = parsed;
-  const contentType = fieldValue(fields, 'content_type');
   const description = fieldValue(fields, 'description');
-  const isAll = mode === 'all';
   const isAdded = state === 'added';
 
-  if (contentType && !CONTENT_TYPES.has(contentType)) {
-    addIssue(
-      issues,
-      'error',
-      'CONTENT_TYPE_INVALID',
-      file,
-      fields.get('content_type').line,
-      `content_type 必须是 ${[...CONTENT_TYPES].join('/')}，当前为 ${contentType}。`,
-    );
-  }
-
   if (isAdded) {
-    for (const key of (['regulation', 'standard', 'qualification'].includes(contentType)
-      ? ['slug', 'description', 'content_type']
-      : ['slug', 'icon', 'description', 'content_type'])) {
+    for (const key of ['slug', 'icon', 'description']) {
       if (!fieldValue(fields, key)) {
         addIssue(
           issues,
@@ -664,7 +626,7 @@ function metadataChecks(document, parsed, mode, issues) {
       }
     }
   } else {
-    for (const key of ['description', 'content_type']) {
+    for (const key of ['description']) {
       if (!fieldValue(fields, key)) {
         addIssue(
           issues,
@@ -672,7 +634,7 @@ function metadataChecks(document, parsed, mode, issues) {
           'METADATA_REQUIRED',
           file,
           fields.get(key)?.line ?? 1,
-          `${isAll ? '历史文档' : '修改文档'}缺少 ${key}，建议迁移时补齐。`,
+          `文档缺少 ${key}，建议补齐。`,
         );
       }
     }
@@ -691,19 +653,16 @@ function metadataChecks(document, parsed, mode, issues) {
   }
 
   const publishedAt = fieldValue(fields, 'published_at');
-  if ((publishedAt && !validDate(publishedAt))
-    || (isAdded && ['article', 'tutorial', 'review', 'essay'].includes(contentType) && !publishedAt)) {
+  if (publishedAt && !validDate(publishedAt)) {
     addIssue(
       issues,
-      isAll ? 'warning' : 'error',
+      isAdded ? 'error' : 'warning',
       'PUBLISHED_AT',
       file,
-      fields.get('published_at')?.line ?? fields.get('content_type')?.line ?? 1,
-      '新文章必须手动填写真实有效的 YYYY-MM-DD 格式 published_at；历史文章只补可确认的首次发表日期。',
+      fields.get('published_at')?.line ?? 1,
+      'published_at 必须是真实有效的 YYYY-MM-DD 日期。',
     );
   }
-
-  return CONTENT_TYPES.has(contentType) ? contentType : null;
 }
 
 function markdownBodyLines(parsed) {
@@ -748,66 +707,17 @@ function hasManualNumber(title) {
   return /^(?:[1-9]\d?(?:\.\d+)*(?:[.、．)）]\s*|\s+)|[一二三四五六七八九十百]+[、.．)）]\s*)/.test(cleaned);
 }
 
-function structureChecks(document, contentType, lines, mode, issues) {
-  if (!contentType) return;
+function structureChecks(document, lines, issues) {
   const headings = headingsFrom(lines);
-  const severity = mode === 'all' ? 'warning' : 'error';
-  const proseTypes = new Set(['hub', 'article', 'review', 'essay']);
-
-  if (contentType === 'hub' || contentType === 'article') {
-    const h2 = headings.filter((heading) => heading.level === 2);
-    if (h2.length > MAX_H2[contentType]) {
-      addIssue(
-        issues,
-        severity,
-        'TOO_MANY_H2',
-        document.file,
-        h2[MAX_H2[contentType]].line,
-        `${contentType} 有 ${h2.length} 个 H2，最多允许 ${MAX_H2[contentType]} 个。`,
-      );
-    }
+  const deep = headings.filter((heading) => heading.level >= 5);
+  if (deep.length > 0) {
+    addIssue(issues, 'warning', 'HEADING_DEPTH', document.file, deep[0].line,
+      `标题层级达到 H5 或更深，共发现 ${deep.length} 处；请确认层级确有必要。`);
   }
-
-  if (proseTypes.has(contentType)) {
-    const deep = headings.filter((heading) => heading.level >= 4);
-    if (deep.length > 0) {
-      addIssue(
-        issues,
-        severity,
-        'HEADING_DEPTH',
-        document.file,
-        deep[0].line,
-        `${contentType} 不使用 H4 及更深标题，共发现 ${deep.length} 处。`,
-      );
-    }
-
-    const numbered = headings.filter(
-      (heading) => heading.level >= 2 && hasManualNumber(heading.title),
-    );
-    if (numbered.length > 0) {
-      addIssue(
-        issues,
-        severity,
-        'NUMBERED_HEADING',
-        document.file,
-        numbered[0].line,
-        `章节标题由主题自动编号，共发现 ${numbered.length} 处手写编号。`,
-      );
-    }
-  }
-
-  if (['tutorial', 'reference', 'regulation', 'standard', 'qualification'].includes(contentType)) {
-    const deep = headings.filter((heading) => heading.level >= 5);
-    if (deep.length > 0) {
-      addIssue(
-        issues,
-        severity,
-        'HEADING_DEPTH',
-        document.file,
-        deep[0].line,
-        `${contentType} 可使用到 H4，共发现 ${deep.length} 处 H5 或更深标题。`,
-      );
-    }
+  const numbered = headings.filter((heading) => heading.level >= 2 && hasManualNumber(heading.title));
+  if (numbered.length > 0) {
+    addIssue(issues, 'warning', 'NUMBERED_HEADING', document.file, numbered[0].line,
+      `章节标题包含手写编号，共发现 ${numbered.length} 处；可交给主题自动编号。`);
   }
 }
 
@@ -856,11 +766,10 @@ function isTableDelimiter(cells) {
   return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 
-function semanticChecks(document, contentType, lines, issues) {
+function semanticChecks(document, lines, issues) {
   const strongPattern = /(?:唯一(?:的|是)?|永远(?:不会|都是|是)?|绝对(?:不会|不能|是)?|必然(?:会|是|导致)?|毫无疑问|无一例外|所有人都|任何人都|一定(?:会|能|是)|本质(?:上)?(?:就是|是))/;
   const strongMatches = lines.filter((line) => strongPattern.test(line.text));
-  const proseTypes = new Set(['hub', 'article', 'review', 'essay']);
-  if (proseTypes.has(contentType) && strongMatches.length > 0) {
+  if (strongMatches.length > 0) {
     addIssue(
       issues,
       'warning',
@@ -871,7 +780,7 @@ function semanticChecks(document, contentType, lines, issues) {
     );
   }
 
-  if (proseTypes.has(contentType)) {
+  {
     for (let index = 0; index < lines.length - 1; index += 1) {
       const header = splitTableCells(lines[index].text);
       const delimiter = splitTableCells(lines[index + 1].text);
@@ -888,7 +797,7 @@ function semanticChecks(document, contentType, lines, issues) {
     }
   }
 
-  if (contentType === 'hub' || contentType === 'article') {
+  {
     const summaryHeadings = headingsFrom(lines).filter((heading) => {
       if (heading.level < 2) return false;
       const title = cleanHeading(heading.title);
@@ -906,32 +815,6 @@ function semanticChecks(document, contentType, lines, issues) {
     }
   }
 
-  if (contentType !== 'article') return;
-  let body = lines.map((line) => line.text).join('\n');
-  body = body
-    .replace(/!\[[^\]]*]\(https?:\/\/[^)]+\)/g, '')
-    .replace(/<img\b[^>]*>/gi, '');
-  const hasExternalLink = /(?<!!)\[[^\]]+]\(https?:\/\/[^)]+\)/.test(body)
-    || /<a\b[^>]*href=["']https?:\/\//i.test(body)
-    || /<https?:\/\/[^>]+>/.test(body)
-    || /^\s*\[[^\]]+]:\s*<?https?:\/\//m.test(body)
-    || /(?:^|[\s（(])https?:\/\/\S+/.test(body);
-  const hasFirstPerson = /我(?:们)?/.test(body);
-  const hasSceneMarker = /(?:我在|我曾|我亲自|我记得|我的经历|当时|那次|有一次|后来|工作中|生活中|实践中|经历过|遇到过)/.test(body);
-  if (!hasExternalLink && !(hasFirstPerson && hasSceneMarker)) {
-    addIssue(
-      issues,
-      'warning',
-      'ARTICLE_EVIDENCE',
-      document.file,
-      parsedBodyFirstLine(lines),
-      '观点文没有可识别的外部来源或个人场景；重要判断至少需要其中一种证据。',
-    );
-  }
-}
-
-function parsedBodyFirstLine(lines) {
-  return lines.find((line) => line.text.trim())?.line ?? 1;
 }
 
 function inspectDocument(document, mode) {
@@ -951,10 +834,10 @@ function inspectDocument(document, mode) {
     return issues.map(annotate);
   }
 
-  const contentType = metadataChecks(document, parsed, mode, issues);
+  metadataChecks(document, parsed, issues);
   const lines = markdownBodyLines(parsed);
-  structureChecks(document, contentType, lines, mode, issues);
-  semanticChecks(document, contentType, lines, issues);
+  structureChecks(document, lines, issues);
+  semanticChecks(document, lines, issues);
   return issues.map(annotate);
 }
 

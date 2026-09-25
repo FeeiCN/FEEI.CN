@@ -3,7 +3,6 @@ slug: /security-engineering
 icon: shield
 sidebar_position: 0
 description: 从安全威胁、安全组织、安全体系和软件工程四个方向整理网络空间安全知识与实践。
-content_type: hub
 ---
 
 # 网络空间安全

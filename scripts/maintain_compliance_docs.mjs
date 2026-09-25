@@ -8,13 +8,11 @@ import {fileURLToPath} from 'node:url';
 export const ROOT = 'docs/01-网络安全/01-网络空间安全/03-安全体系/01-安全合法合规';
 const BASE = `${ROOT}/01-网络与基础设施安全`;
 const QUAL = `${ROOT}/09-认证测评与资质`;
-const GUIDE = 'docs/05-吴飞飞/01-关于/关于FEEI.CN/网站开发规范.md';
 const aliases = new Map([
   ['网络安全等级保护制度.md', `${BASE}/01-等级保护/index.md`],
   ['关键信息基础设施安全保护体系.md', `${BASE}/02-关键信息基础设施/index.md`],
   ['密码应用与密评体系.md', `${BASE}/03-密码与密评/index.md`],
 ]);
-const concrete = ['regulation', 'standard', 'qualification'];
 const markdown = (file) => /\.mdx?$/i.test(file);
 const partial = (file) => path.posix.basename(file).startsWith('_');
 const inScope = (file) => file.startsWith(`${ROOT}/`);
@@ -38,18 +36,15 @@ function setField(source, name, value) {
   return next + source.slice(fm.length);
 }
 
-function page(slug, title, type, body, position = 1) {
-  return `---\nslug: ${slug}\ntitle: ${title}\n${type === 'hub' ? 'icon: shield-check\n' : ''}sidebar_position: ${position}\ndescription: ${title}的适用范围、阅读路径与证据要求。\ncontent_type: ${type}\n---\n\n# ${title}\n\n${body.trim()}\n`;
+function page(slug, title, body, position = 1) {
+  return `---\nslug: ${slug}\ntitle: ${title}\nicon: shield-check\nsidebar_position: ${position}\ndescription: ${title}的适用范围、阅读路径与证据要求。\n---\n\n# ${title}\n\n${body.trim()}\n`;
 }
 
-export function semanticType(file) {
+function isComplianceHub(file) {
   if (!inScope(file) || !markdown(file) || partial(file)) return null;
   const name = path.posix.basename(file);
-  if (name === 'index.md' || name === '01-安全合法合规.md'
-      || name === '金融网络与数据安全标准体系.md') return 'hub';
-  if (file.startsWith(`${QUAL}/`)) return 'qualification';
-  if (/^(?:GB|GA|GM|JR)-T-\d/.test(name)) return 'standard';
-  return 'regulation';
+  return name === 'index.md' || name === '01-安全合法合规.md'
+    || name === '金融网络与数据安全标准体系.md';
 }
 
 // Do not edit Markdown examples in fenced or inline code.
@@ -138,7 +133,7 @@ export function planChanges(input) {
       const destination = `${ROOT}/00-法规参考/index.md`;
       if (files.has(destination)) throw new Error('Legal reference destination already exists; reconcile manually');
       const legacy = source.slice(offset);
-      files.set(destination, page('/cybersecurity-legal-reference', '法规关系、时间与责任索引', 'hub',
+      files.set(destination, page('/cybersecurity-legal-reference', '法规关系、时间与责任索引',
         `本页保存原总览中的法规关系、时间索引、责任条件和治理映射。目录整理不代表重新核验全部法规状态；具体适用以对应官方文本为准。\n\n${legacy}`, 1));
       let intro = source.slice(0, offset).trimEnd();
       intro = intro.replace(/^(###) [1-5]\. /gm, '$1 ');
@@ -183,40 +178,15 @@ export function planChanges(input) {
   for (const [file, source] of files) {
     if (!inScope(file) || !markdown(file)) continue;
     if (partial(file)) continue;
-    const type = semanticType(file);
-    let next = setField(source, 'content_type', type);
-    if (concrete.includes(type)) next = setField(next, 'icon', null);
-    if (type === 'hub' && !field(next, 'icon')) next = setField(next, 'icon', 'shield-check');
+    const hub = isComplianceHub(file);
+    let next = setField(source, 'content_type', null);
+    if (hub && !field(next, 'icon')) next = setField(next, 'icon', 'shield-check');
+    if (!hub) next = setField(next, 'icon', null);
     // Chat citation tokens are not portable references; retain official links.
     next = next.replace(/\uE200cite\uE202[^\uE201]*\uE201/g, '');
     files.set(file, next);
   }
 
-  const quality = 'scripts/check_docs_quality.mjs';
-  if (files.has(quality)) {
-    let source = files.get(quality);
-    source = once(source, "  'reference',\n", "  'reference',\n  'regulation',\n  'standard',\n  'qualification',\n", 'content type enum');
-    source = once(source, "contentType === 'tutorial' || contentType === 'reference'",
-      "['tutorial', 'reference', 'regulation', 'standard', 'qualification'].includes(contentType)", 'reference structure rules');
-    source = once(source, "for (const key of ['slug', 'icon', 'description', 'content_type']) {",
-      "for (const key of (['regulation', 'standard', 'qualification'].includes(contentType)\n      ? ['slug', 'description', 'content_type']\n      : ['slug', 'icon', 'description', 'content_type'])) {", 'icon policy');
-    files.set(quality, source);
-  }
-  const tests = 'scripts/test_docs_quality.mjs';
-  if (files.has(tests)) files.set(tests, once(files.get(tests),
-    "['hub', 'article', 'tutorial', 'reference', 'review']",
-    "['hub', 'article', 'tutorial', 'reference', 'review', 'regulation', 'standard', 'qualification']", 'type tests'));
-  if (files.has(GUIDE)) {
-    let source = files.get(GUIDE);
-    const marker = '- `reference`：数据、法律原文、清单、术语或长期查询资料。';
-    const addition = `${marker}\n- \`regulation\`：单项法律法规、规章或监管文件的义务解读。\n- \`standard\`：单项国家、行业或技术标准的建设与测评要求。\n- \`qualification\`：认证、测评、鉴证及人员或机构资质的适用范围与证明方式。`;
-    source = once(source, marker, addition, 'writing guide');
-    const note = '\n安全合法合规目录使用 hub / regulation / standard / qualification：入口负责关系与导航，明细页负责具体要求。该目录只在 hub 页面配置 icon；具体法规、标准及资质页不配置 icon。其他栏目既有 reference 等类型继续有效；原文 partial 不单独参与导航。\n';
-    if (!source.includes('安全合法合规目录使用 hub / regulation / standard / qualification')) {
-      source = source.replace('### `published_at`', note + '\n### `published_at`');
-    }
-    files.set(GUIDE, source);
-  }
   const gate = 'scripts/check_docs_quality_gate.mjs';
   if (files.has(gate)) files.set(gate, once(files.get(gate),
     'if (result.status === 0) process.exit(0);',
@@ -256,13 +226,10 @@ export function validate(files) {
         const slug = field(source, 'slug');
         if (slug) slugs.set(slug, [...(slugs.get(slug) ?? []), file]);
         if (inScope(file)) {
-          const type = field(source, 'content_type');
-          if (type !== semanticType(file)) errors.push(`${file}: incorrect content_type ${type}`);
           if (!slug.startsWith('/')) errors.push(`${file}: missing stable absolute slug`);
           if (!field(source, 'description')) errors.push(`${file}: missing description`);
-          if (concrete.includes(type) && field(source, 'icon')) errors.push(`${file}: detail page has icon`);
-          if (type === 'hub' && !field(source, 'icon')) errors.push(`${file}: hub icon missing`);
-          counts[type] = (counts[type] ?? 0) + 1;
+          if (isComplianceHub(file) && !field(source, 'icon')) errors.push(`${file}: hub icon missing`);
+          if (!isComplianceHub(file) && field(source, 'icon')) errors.push(`${file}: detail page has icon`);
         }
       } catch (error) { if (inScope(file)) errors.push(`${file}: ${error.message}`); }
     }

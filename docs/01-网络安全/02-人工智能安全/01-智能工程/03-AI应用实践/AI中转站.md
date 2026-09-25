@@ -2,7 +2,6 @@
 slug: /ai-relay
 icon: router-icon
 description: AI 接入应优先使用官方 API；需要统一治理时再建设企业网关。订阅账号网关受服务条款、凭证、隐私、滥用归因和可用性约束。
-content_type: reference
 last_reviewed: '2026-07-10'
 ---
 

@@ -2,7 +2,6 @@
 slug: /plan-and-execute-loop
 icon: layout-dashboard-icon
 description: 用登录回跳缺陷演示 Plan-and-Execute：让计划携带依赖和完成条件，并在新观察推翻假设时有预算地重规划。
-content_type: tutorial
 last_reviewed: '2026-07-10'
 ---
 

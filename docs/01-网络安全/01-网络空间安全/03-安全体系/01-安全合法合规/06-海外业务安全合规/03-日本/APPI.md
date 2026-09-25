@@ -3,7 +3,6 @@ slug: /japan-appi
 title: APPI 日本个人信息保护法
 sidebar_position: 1
 description: 区分APPI的数据对象、第三方与境外提供，按四类泄露触发条件管理速报、30日或60日确报和本人通知。
-content_type: regulation
 ---
 
 # APPI 日本个人信息保护法

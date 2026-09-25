@@ -2,7 +2,6 @@
 slug: /commercial-ai
 icon: credit-card
 description: 基于专业评测与官方价格比较商业 AI 的推理、写作、编程、Agent、速度、成本、生态和数据边界，并给出按任务选型方法。
-content_type: reference
 last_reviewed: '2026-07-11'
 ---
 

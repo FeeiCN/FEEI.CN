@@ -2,7 +2,6 @@
 slug: /react-agent-loop
 icon: brain-circuit-icon
 description: 用一个可运行的仓库排障示例实现 ReAct：校验行动请求，把工具结果作为待验证观察，并由权威状态和完成标准控制停止。
-content_type: tutorial
 last_reviewed: '2026-07-10'
 ---
 

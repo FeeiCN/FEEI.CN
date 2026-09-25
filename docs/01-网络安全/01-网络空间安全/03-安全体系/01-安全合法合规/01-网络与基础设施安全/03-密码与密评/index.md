@@ -4,7 +4,6 @@ title: 密码应用与密评体系
 icon: lock-icon
 sidebar_position: 30
 description: 串联密码法、商用密码法规、GB/T 39786、GB/T 43206、密评管理办法及关基密码要求。
-content_type: hub
 last_reviewed: '2026-09-23'
 ---
 

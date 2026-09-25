@@ -4,7 +4,6 @@ title: AI 隐私与机密保护
 sidebar_position: 7
 icon: lock-icon
 description: 隐私风险取决于数据敏感度、派生物扩散范围和可撤销性；目的、接收者、训练与删除约束必须随副本传播。
-content_type: article
 last_reviewed: '2026-07-11'
 ---
 

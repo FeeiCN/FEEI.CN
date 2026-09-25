@@ -3,7 +3,6 @@ slug: /singapore-mas-psn05-trm
 title: MAS PSN05 Technology Risk Management
 sidebar_position: 1
 description: 保留PSN05历史入口，核对后续FSM-N13及适用主体，将关键系统、恢复、事件报告和客户信息保护转成验证记录。
-content_type: regulation
 ---
 
 # MAS PSN05 Technology Risk Management

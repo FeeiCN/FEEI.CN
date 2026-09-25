@@ -4,7 +4,6 @@ title: 模型资产与 AI 供应链安全
 sidebar_position: 3
 icon: cpu-icon
 description: 生产模型身份是权重、Tokenizer、Adapter、量化、运行时、Prompt 与策略的组合承诺，并须绑定来源、评测和加载证明。
-content_type: article
 last_reviewed: '2026-09-23'
 ---
 

@@ -4,7 +4,6 @@ title: 海外业务安全合规
 icon: globe-icon
 sidebar_position: 7
 description: 从法律实体、牌照、用户和数据流选择海外市场规则，连接现有国家页面，分别管理中国出境与当地安全义务。
-content_type: hub
 ---
 
 # 海外业务安全合规

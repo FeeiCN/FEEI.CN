@@ -2,7 +2,6 @@
 slug: /ai-chat-research
 icon: messages-square
 description: Chat 用于澄清问题和迭代方案；当结论依赖当前事实、多个来源或高影响判断时，应升级为可追溯的 Research。
-content_type: tutorial
 last_reviewed: '2026-07-10'
 ---
 

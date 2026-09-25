@@ -3,7 +3,6 @@ slug: /local-ai-deployment
 title: 本地部署 AI
 icon: cpu-icon
 description: 本地 AI 选型需要同时匹配硬件、权重格式、上下文和并发；能启动只是起点，还要测试质量、速度、内存、API 与安全边界。
-content_type: reference
 last_reviewed: '2026-07-10'
 ---
 

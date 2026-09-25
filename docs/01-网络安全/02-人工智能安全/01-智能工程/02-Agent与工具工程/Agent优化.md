@@ -3,7 +3,6 @@ slug: /agent-optimization
 title: Agent 持续优化
 icon: chart-line-icon
 description: Agent 持续优化把跨任务的评测、真实反馈、错误归因和 Skill/Harness 更新组成可审计的长期改进闭环。
-content_type: article
 last_reviewed: '2026-09-23'
 ---
 

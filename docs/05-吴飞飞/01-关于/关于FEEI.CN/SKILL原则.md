@@ -2,9 +2,7 @@
 slug: /skill-principles
 title: SKILL 原则
 icon: code-icon
-description: 创建与维护 SKILL 文档的规范：统一放在 关于FEEI.CN/ 子目录、front matter 字段、AGENTS.md 路由表登记、写作语气。
-content_type: reference
-last_reviewed: '2026-07-10'
+description: 创建与维护 SKILL 文档的规范：统一位置、必要字段、AGENTS.md 路由登记和可执行的写作语气。
 sidebar_badge:
   text: SKILL
   color: success
@@ -74,7 +72,7 @@ SKILL 文档应该沉淀“做事方式”，而不是堆积案例原文。好�
 
 ## front matter 必填字段
 
-新增 SKILL 文档必须包含下面的 front matter；结构性修改旧 SKILL 时同步补齐，存量文档不做无依据的批量日期迁移：
+新增 SKILL 文档必须包含下面的 front matter；结构性修改旧 SKILL 时同步补齐，存量文档不做无依据的批量字段迁移：
 
 ```yaml
 ---
@@ -82,8 +80,6 @@ slug: /xxx-skill           # 英文路径
 title: ...                 # 中文标题
 icon: code-icon            # 开发配置规则使用 code-icon，其他主题按网站开发规范选择
 description: ...           # 必填，≤160 字
-content_type: reference    # SKILL 是可查询、可执行的规则资料
-last_reviewed: 'YYYY-MM-DD' # 全文规则最后完成复核的日期
 sidebar_badge:
   text: SKILL
   color: success
@@ -94,8 +90,6 @@ sidebar_badge:
 - `sidebar_badge` 一律 `{ text: 'SKILL', color: success }`，让 SKILL 文档在 sidebar 中可识别
 - 文件名用中文，`slug` 用英文短路径
 - `description` 必填，概括文档覆盖的规则或主题
-- `content_type` 一律使用 `reference`
-- `last_reviewed` 在全文规则和引用路径完成复核后更新，只改措辞时不更新
 
 **icon 必须与实际文件名或注册别名一致**。例如 `code-icon.tsx` 对应 `code-icon`，`shield-check.tsx` 对应 `shield-check`，不要仅凭后缀判断有效性。
 

@@ -3,7 +3,6 @@ slug: /app-necessary-personal-info
 title: 常见类型移动互联网应用程序必要个人信息范围规定
 sidebar_position: 16
 description: 将《常见类型移动互联网应用程序必要个人信息范围规定》整理为可落实、可检查的最小必要个人信息控制。
-content_type: regulation
 last_reviewed: '2026-09-16'
 ---
 

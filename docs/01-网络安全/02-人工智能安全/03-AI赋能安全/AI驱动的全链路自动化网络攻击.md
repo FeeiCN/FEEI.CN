@@ -5,7 +5,6 @@ sidebar_label: AI 自动化渗透
 sidebar_position: 2
 icon: bug-icon
 description: 将授权渗透组织成有范围、状态、反馈和独立验证的搜索系统，分开处理探索难题、运行约束与发布证据。
-content_type: article
 ---
 
 # AI 自动化渗透：架构与工程挑战

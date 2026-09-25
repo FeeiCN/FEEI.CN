@@ -4,7 +4,6 @@ title: 新加坡
 icon: globe-icon
 sidebar_position: 2
 description: 从个人数据、支付业务和实际牌照识别新加坡要求，区分MAS通知、技术风险指南和PDPA，并提示现行原文核验限制。
-content_type: hub
 ---
 
 # 新加坡

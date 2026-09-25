@@ -4,7 +4,6 @@ title: 网络与基础设施安全
 icon: router-icon
 sidebar_position: 2
 description: 网络与基础设施安全相关法律法规、监管要求与实施材料的治理域导航。
-content_type: hub
 ---
 
 # 网络与基础设施安全

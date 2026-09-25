@@ -3,7 +3,6 @@ slug: /eu-dora
 title: DORA 欧盟数字运营韧性法案
 sidebar_position: 2
 description: 按金融实体及豁免判断DORA，串联ICT风险、重大事件报告、韧性测试和第三方依赖，收录基础法规及事件分类、报告配套条例英中对照。
-content_type: regulation
 ---
 
 # DORA 欧盟数字运营韧性法案

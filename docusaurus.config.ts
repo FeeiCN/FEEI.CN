@@ -34,7 +34,7 @@ const config: Config = {
         {type: 'docSidebar', sidebarId: 'healthHappinessSidebar', label: '健康幸福', icon: 'heart'},
         {type: 'docSidebar', sidebarId: 'careerSuccessSidebar', label: '事业有成', icon: 'rocket'},
         {type: 'docSidebar', sidebarId: 'financeFreedomSidebar', label: '财务自由', icon: 'brand-bags-fm-icon'},
-        {type: 'docSidebar', sidebarId: 'exploreWorldSidebar', label: '人生丰富', icon: 'compass'},
+        {type: 'link', label: '人生丰富', icon: 'compass', to: '/life-thickness'},
       ]},
       {type: 'dropdown', position: 'left', label: '关于', icon: 'at-sign-icon', to: '/about', items: [
         {type: 'docSidebar', sidebarId: 'aboutMeSidebar', label: '关于', icon: 'user'},

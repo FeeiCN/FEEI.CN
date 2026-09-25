@@ -2,6 +2,7 @@ import React, {type ReactNode} from 'react';
 import {useEffect, useState} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import {FREQUENCIES, STATUS_MANIFEST, type Frequency, type StatusEntry} from './manifest';
+import ResponsiveTable from '@site/src/components/ResponsiveTable';
 
 type RowState =
   | {kind: 'loading'}
@@ -129,7 +130,7 @@ function StatusTableInner(): ReactNode {
   const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
 
   return (
-    <table>
+    <ResponsiveTable>
       <thead>
         <tr>
           <th>任务</th>
@@ -170,7 +171,7 @@ function StatusTableInner(): ReactNode {
           );
         })}
       </tbody>
-    </table>
+    </ResponsiveTable>
   );
 }
 

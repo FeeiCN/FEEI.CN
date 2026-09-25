@@ -66,6 +66,7 @@
   background: #f5f5f3;
 }
 
+[data-theme='dark'].docs-doc-page,
 [data-theme='dark'] .docs-doc-page {
   --docs-rail-background: #181818;
   background: #181818;
@@ -1651,6 +1652,30 @@
 .feei-table-wrap[data-columns='3'] > table th:nth-child(3),
 .feei-table-wrap[data-columns='3'] > table td:nth-child(3) {
   width: 43%;
+}
+
+.feei-table-wrap[data-columns='4'] > table {
+  table-layout: fixed;
+}
+
+.feei-table-wrap[data-columns='4'] > table th:nth-child(1),
+.feei-table-wrap[data-columns='4'] > table td:nth-child(1) {
+  width: 30%;
+}
+
+.feei-table-wrap[data-columns='4'] > table th:nth-child(2),
+.feei-table-wrap[data-columns='4'] > table td:nth-child(2) {
+  width: 20%;
+}
+
+.feei-table-wrap[data-columns='4'] > table th:nth-child(3),
+.feei-table-wrap[data-columns='4'] > table td:nth-child(3) {
+  width: 16%;
+}
+
+.feei-table-wrap[data-columns='4'] > table th:nth-child(4),
+.feei-table-wrap[data-columns='4'] > table td:nth-child(4) {
+  width: 34%;
 }
 
 .feei-table-scroll-hint {

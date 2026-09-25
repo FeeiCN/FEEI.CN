@@ -58,18 +58,58 @@
 }
 
 .docs-doc-page {
-  --doc-sidebar-width: 240px;
+  --doc-sidebar-width: 260px;
   --ifm-container-width: 1360px;
   --ifm-container-width-xl: 1360px;
   --ifm-toc-border-color: var(--feei-border);
+  --docs-rail-background: #f5f5f3;
+  background: #f5f5f3;
+}
+
+[data-theme='dark'] .docs-doc-page {
+  --docs-rail-background: #181818;
+  background: #181818;
 }
 
 .docs-doc-page .theme-doc-sidebar-container {
+  margin-top: calc(-1 * var(--ifm-navbar-height));
+  background: var(--docs-rail-background);
   border-right-color: color-mix(in srgb, var(--feei-border) 68%, transparent);
 }
 
 .docs-doc-page .theme-doc-toc-desktop {
   opacity: 0.88;
+}
+
+@media (min-width: 997px) {
+  .docs-doc-page .padding-top--md {
+    padding-top: 0 !important;
+  }
+
+  .docs-doc-page .padding-bottom--lg {
+    padding-bottom: 0 !important;
+  }
+
+  main[class*='docMainContainer'] > .container.padding-top--md.padding-bottom--lg {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    background: var(--ifm-background-surface-color);
+  }
+}
+
+/* Keep the three-column document frame flush with the navbar.  Infima's
+ * spacing utilities live in the docusaurus.infima layer, so this override
+ * stays in that layer to win the cascade without relying on DOM hacks. */
+@layer docusaurus.infima {
+  @media (min-width: 997px) {
+    .docs-doc-page main[class*='docMainContainer'] > .container.padding-top--md.padding-bottom--lg {
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+  }
 }
 
 .theme-doc-markdown {

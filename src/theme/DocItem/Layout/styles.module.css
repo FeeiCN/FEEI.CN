@@ -1,17 +1,28 @@
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1050px);
+  grid-template-columns: minmax(0, 940px);
+  width: 100%;
+  gap: 1.5rem;
   justify-content: center;
-  gap: 2rem;
 }
 
 .content {
   min-width: 0;
+  padding-block: 1rem 2rem;
+  padding-inline: 1rem;
 }
 
 .desktopTOC {
   display: none;
   min-width: 0;
+}
+
+.tocContent {
+  min-width: 0;
+}
+
+.tocCollapseButton {
+  display: none;
 }
 
 .mobileTOC :global(.theme-doc-toc-mobile) {
@@ -21,13 +32,90 @@
 }
 
 @media (min-width: 1280px) {
+  .content {
+    padding-inline: 1.5rem;
+  }
+
   .layout {
-    grid-template-columns: minmax(0, 1040px) 220px;
-    gap: 1.5rem;
+    grid-template-columns: minmax(0, 940px) minmax(240px, 1fr);
+    align-items: stretch;
+    justify-content: stretch;
   }
 
   .desktopTOC {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    min-height: 0;
+    margin-top: calc(-1 * var(--ifm-navbar-height));
+    border-left: 1px solid var(--ifm-toc-border-color);
+    background: var(--docs-rail-background);
+  }
+
+  .tocContent {
+    position: sticky;
+    top: 0;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding: calc(1rem + var(--ifm-navbar-height)) 1rem 1rem;
+  }
+
+  .tocCollapseButton {
+    position: static;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 2.25rem;
+    margin-top: auto;
+    border: 0;
+    border-top: 1px solid var(--ifm-toc-border-color);
+    border-radius: 0;
+    background: transparent;
+    color: var(--feei-text-muted);
+    cursor: pointer;
+  }
+
+  .tocCollapseButton:hover,
+  .tocCollapseButton:focus-visible {
+    background: rgba(115, 115, 115, 0.07);
+    color: var(--ifm-font-color-base);
+  }
+
+  .tocCollapseButton svg {
+    transform: rotate(180deg);
+  }
+
+  .tocCollapsed {
+    grid-template-columns: minmax(0, 1fr) 30px;
+  }
+
+  .tocCollapsed .desktopTOC {
+    width: 30px;
+    border-left: 0;
+  }
+
+  .tocCollapsed .tocContent {
+    display: none;
+  }
+
+  .tocCollapsed .tocCollapseButton {
+    position: absolute;
+    top: 0;
+    right: 1px;
+    width: calc(100% - 1px);
+    height: 100vh;
+    min-height: 0;
+    margin-top: 0;
+    border: 0;
+    background: var(--docusaurus-collapse-button-bg);
+  }
+
+  .tocCollapsed .tocCollapseButton svg {
+    transform: none;
   }
 
   .mobileTOC {

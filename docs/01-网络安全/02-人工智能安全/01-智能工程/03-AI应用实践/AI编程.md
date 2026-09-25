@@ -35,7 +35,7 @@ AI Coding 的目标是让模型在真实仓库中产生**可运行、可验证�
 
 ## 让 Agent 先理解仓库
 
-编辑前先读取与任务相关的项目说明、目录结构、测试和现有实现。仓库可以在 `AGENTS.md`、`CLAUDE.md` 或自有规则文件中记录：
+编辑前先读取与任务相关的项目说明、目录结构、测试和现有实现。仓库可以在 `AGENTS.md` 或目录内规则文件中记录：
 
 - 项目结构和模块边界。
 - 安装、测试、构建和格式化命令。
@@ -65,11 +65,11 @@ Knowledge / Skill / Reference
 
 **Knowledge / Skill / Reference** 保存真正的领域知识、复杂流程、Rubric、测试、设计稿和实现参考，并按任务渐进加载。详细内容不因为“未来也许有用”就全部预置进 Context。
 
-这也意味着 **Context Duplication 是一种技术债**。同一规则如果同时存在于 System Prompt、`AGENTS.md`、`CLAUDE.md`、Skill 和 Tool Description，迟早会出现版本漂移和冲突。更稳的原则是：
+这也意味着 **Context Duplication 是一种技术债**。同一规则如果同时存在于 System Prompt、`AGENTS.md`、Skill 和 Tool Description，迟早会出现版本漂移和冲突。更稳的原则是：
 
 > **One rule, one owner; reference it elsewhere.**
 
-FEEI.CN 当前让 `AI.md` 作为 Agent 入口规则的单一来源，再生成 `AGENTS.md` 与 `CLAUDE.md`，就是这种做法；更细的任务知识通过路由进入独立 Skill，而不是复制到三个入口文件。
+FEEI.CN 当前让 `AGENTS.md` 作为 Agent 入口规则的单一来源；更细的任务知识通过路由进入独立 Skill，而不是复制到多个入口文件。
 
 ### Interface 比示例更值得长期维护
 

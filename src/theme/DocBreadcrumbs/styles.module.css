@@ -19,6 +19,10 @@
   font-size: 0.8rem;
 }
 
+.mobileBreadcrumbs {
+  display: none;
+}
+
 .actions {
   display: flex;
   align-items: center;
@@ -74,18 +78,61 @@
   opacity: 0.55;
 }
 
-@media (max-width: 640px) {
+.ellipsisButton {
+  display: inline-flex;
+  align-items: center;
+  min-width: 1.6rem;
+  min-height: 1.4rem;
+  padding: 0 0.25rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--feei-text-muted);
+  font: inherit;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.ellipsisButton:hover,
+.ellipsisButton:focus-visible {
+  background: color-mix(in srgb, var(--feei-border) 35%, transparent);
+  color: var(--ifm-font-color-base);
+}
+
+@media (max-width: 996px) {
   .breadcrumbsRow {
     align-items: flex-start;
     gap: 0.5rem;
   }
 
-  .breadcrumbsContainer :global(.breadcrumbs) {
-    flex-wrap: wrap;
-    row-gap: 0.25rem;
+  .desktopBreadcrumbs {
+    display: none;
   }
 
-  .breadcrumbsContainer :global(.breadcrumbs__link) {
-    max-width: 12rem;
+  .mobileBreadcrumbs {
+    display: block;
+  }
+
+  .mobileBreadcrumbs :global(.breadcrumbs) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    white-space: nowrap;
+  }
+
+  .mobileBreadcrumbs :global(.breadcrumbs)::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobileBreadcrumbs :global(.breadcrumbs__item) {
+    flex: 0 0 auto;
+  }
+
+  .mobileBreadcrumbs :global(.breadcrumbs__link) {
+    max-width: 9rem;
+  }
+
+  .mobileBreadcrumbs :global(.breadcrumbs__item:last-child .breadcrumbs__link) {
+    max-width: 10rem;
   }
 }

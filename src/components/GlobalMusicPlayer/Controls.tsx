@@ -50,6 +50,7 @@ export default function Controls() {
   const [scrub, setScrub] = useState<number | null>(null);
   const [following, setFollowing] = useState(true);
   const [controlsVisible, setControlsVisible] = useState(true);
+  const [isScrolling, setIsScrolling] = useState(false);
   const [mobilePanelHeight, setMobilePanelHeight] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -60,6 +61,7 @@ export default function Controls() {
   const lyricSceneRef = useRef<HTMLElement>(null);
   const lineRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const location = useLocation();
   const history = useHistory();
   const duration = playback?.duration ?? 0;
@@ -133,6 +135,25 @@ export default function Controls() {
     document.body.classList.toggle('music-player-expanded', expanded);
     if (!expanded) setMobilePanelHeight(null);
     return () => document.body.classList.remove('music-player-expanded');
+  }, [expanded]);
+
+  useEffect(() => {
+    if (expanded) {
+      setIsScrolling(false);
+      return undefined;
+    }
+
+    const onScroll = () => {
+      setIsScrolling(true);
+      if (scrollTimer.current) clearTimeout(scrollTimer.current);
+      scrollTimer.current = setTimeout(() => setIsScrolling(false), 700);
+    };
+
+    window.addEventListener('scroll', onScroll, {passive: true});
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (scrollTimer.current) clearTimeout(scrollTimer.current);
+    };
   }, [expanded]);
 
   useEffect(() => {
@@ -256,7 +277,7 @@ export default function Controls() {
 
   return createPortal(<>
     {expanded && <div className={styles.scrim} aria-hidden="true" />}
-    <div ref={rootRef} className={`${styles.player} ${expanded ? styles.expanded : ''}`}>
+    <div ref={rootRef} className={`${styles.player} ${expanded ? styles.expanded : ''} ${isScrolling ? styles.scrolling : ''}`}>
       {!expanded ? <div className={styles.mini}>
         <button ref={expandRef} type="button" className={styles.miniTrack} aria-label="展开音乐播放器"
           aria-haspopup="dialog" onClick={() => { dispatchMusicPlayerOpen(); setView('playing'); }}>

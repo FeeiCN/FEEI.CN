@@ -31,4 +31,9 @@
     margin-top: 0.8rem;
     margin-bottom: 1.5rem;
   }
+
+  :global(.theme-doc-markdown) .header h1 {
+    font-size: clamp(1.55rem, 6.7vw, 1.75rem);
+    line-height: 1.28;
+  }
 }

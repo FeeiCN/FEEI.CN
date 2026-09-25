@@ -151,6 +151,25 @@
   letter-spacing: 0;
 }
 
+@media (max-width: 640px) {
+  .theme-doc-markdown > h1:first-child,
+  .theme-doc-markdown > div:first-child + h1 {
+    font-size: clamp(1.55rem, 6.7vw, 1.75rem);
+    line-height: 1.28;
+    margin-top: 0.85rem;
+  }
+
+  .theme-doc-markdown h2 {
+    font-size: 1.3rem;
+    line-height: 1.3;
+    margin-top: 2rem;
+  }
+
+  .theme-doc-markdown p {
+    line-height: 1.75;
+  }
+}
+
 .theme-doc-markdown h2::before {
   display: inline-block;
   margin-right: 0.42rem;
@@ -1599,6 +1618,51 @@
 }
 
 /* Give dense reference tables a stable reading hierarchy. */
+.feei-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 0 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.feei-table-wrap > table {
+  display: table;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  table-layout: auto;
+}
+
+.feei-table-wrap[data-columns='3'] > table {
+  table-layout: fixed;
+}
+
+.feei-table-wrap[data-columns='3'] > table th:nth-child(1),
+.feei-table-wrap[data-columns='3'] > table td:nth-child(1) {
+  width: 14%;
+}
+
+.feei-table-wrap[data-columns='3'] > table th:nth-child(2),
+.feei-table-wrap[data-columns='3'] > table td:nth-child(2),
+.feei-table-wrap[data-columns='3'] > table th:nth-child(3),
+.feei-table-wrap[data-columns='3'] > table td:nth-child(3) {
+  width: 43%;
+}
+
+.feei-table-scroll-hint {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--feei-text-muted);
+  font-family: var(--ifm-font-family-base);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  text-align: right;
+}
+
 .theme-doc-markdown table thead th {
   background: rgba(115, 115, 115, 0.07);
   color: var(--ifm-font-color-base);
@@ -1613,9 +1677,49 @@
 }
 
 @media (min-width: 768px) {
+  .feei-table-wrap[data-columns='3'] > table th:first-child,
+  .feei-table-wrap[data-columns='3'] > table td:first-child {
+    min-width: 0;
+  }
+
   .theme-doc-markdown table th:first-child,
   .theme-doc-markdown table td:first-child {
     min-width: 8rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .feei-table-wrap[data-columns] {
+    padding-bottom: 0.05rem;
+  }
+
+  .feei-table-wrap[data-columns] > table {
+    width: max-content;
+    min-width: 36rem;
+  }
+
+  .feei-table-wrap[data-scrollable='true']::after {
+    content: '›';
+    position: sticky;
+    right: 0;
+    float: right;
+    display: block;
+    width: 1.35rem;
+    height: 1.35rem;
+    margin-top: -2.1rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--ifm-background-surface-color) 88%, transparent);
+    color: var(--feei-text-muted);
+    font-family: var(--ifm-font-family-base);
+    font-size: 1.1rem;
+    line-height: 1.15rem;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .feei-table-wrap[data-columns='3'] > table th:first-child,
+  .feei-table-wrap[data-columns='3'] > table td:first-child {
+    min-width: 0;
   }
 }
 

@@ -1,4 +1,4 @@
-import React, {type ReactNode} from 'react';
+import React, {useState, type ReactNode} from 'react';
 import {ThemeClassNames} from '@docusaurus/theme-common';
 import {findFirstSidebarItemLink, useDoc, useDocsSidebar, useSidebarBreadcrumbs} from '@docusaurus/plugin-content-docs/client';
 import {useThemeConfig} from '@docusaurus/theme-common';
@@ -53,6 +53,7 @@ export default function DocBreadcrumbs(): ReactNode {
   const themeConfig = useThemeConfig();
   const homePageRoute = useHomePageRoute();
   const {frontMatter} = useDoc();
+  const [mobileExpanded, setMobileExpanded] = useState(false);
   if (!breadcrumbs) return null;
 
   // Keep the complete path in structured data; the H1 identifies the current page.
@@ -61,22 +62,63 @@ export default function DocBreadcrumbs(): ReactNode {
   const visibleParents = [...contextParents, ...parents].filter((item, index, all) => (
     index === 0 || item.label !== all[index - 1].label
   ));
+  const shouldCollapseMobile = visibleParents.length > 3;
+  const compactMobileParents = shouldCollapseMobile
+    ? [visibleParents[0], visibleParents[visibleParents.length - 1]]
+    : visibleParents;
+  const renderItems = (items: typeof visibleParents) => items.map((item, index) => {
+    const href = item.type === 'category' && item.linkUnlisted ? undefined : item.href;
+    return (
+      <li className="breadcrumbs__item" key={`${item.label}-${index}`}>
+        {href ? <Link className="breadcrumbs__link" to={href}>{item.label}</Link> : <span className="breadcrumbs__link">{item.label}</span>}
+      </li>
+    );
+  });
+
   return (
     <>
       <DocBreadcrumbsStructuredData breadcrumbs={breadcrumbs} />
       <div className={styles.breadcrumbsRow}>
         {(parents.length > 0 || homePageRoute) && (
-          <nav className={`${ThemeClassNames.docs.docBreadcrumbs} ${styles.breadcrumbsContainer}`} aria-label="当前位置">
+          <nav className={`${ThemeClassNames.docs.docBreadcrumbs} ${styles.breadcrumbsContainer} ${styles.desktopBreadcrumbs}`} aria-label="当前位置">
             <ul className="breadcrumbs">
               {homePageRoute && <HomeBreadcrumbItem />}
-              {visibleParents.map((item, index) => {
-                const href = item.type === 'category' && item.linkUnlisted ? undefined : item.href;
-                return (
-                  <li className="breadcrumbs__item" key={`${item.label}-${index}`}>
-                    {href ? <Link className="breadcrumbs__link" to={href}>{item.label}</Link> : <span className="breadcrumbs__link">{item.label}</span>}
+              {renderItems(visibleParents)}
+            </ul>
+          </nav>
+        )}
+        {(parents.length > 0 || homePageRoute) && (
+          <nav className={`${ThemeClassNames.docs.docBreadcrumbs} ${styles.breadcrumbsContainer} ${styles.mobileBreadcrumbs}`} aria-label="当前位置">
+            <ul className="breadcrumbs">
+              {homePageRoute && <HomeBreadcrumbItem />}
+              {mobileExpanded || !shouldCollapseMobile ? renderItems(mobileExpanded ? visibleParents : compactMobileParents) : (
+                <>
+                  {renderItems([compactMobileParents[0]])}
+                  <li className="breadcrumbs__item">
+                    <button
+                      type="button"
+                      className={styles.ellipsisButton}
+                      aria-expanded={false}
+                      aria-label="展开完整路径"
+                      onClick={() => setMobileExpanded(true)}>
+                      …
+                    </button>
                   </li>
-                );
-              })}
+                  {renderItems([compactMobileParents[1]])}
+                </>
+              )}
+              {shouldCollapseMobile && mobileExpanded && (
+                <li className="breadcrumbs__item">
+                  <button
+                    type="button"
+                    className={styles.ellipsisButton}
+                    aria-expanded
+                    aria-label="收起完整路径"
+                    onClick={() => setMobileExpanded(false)}>
+                    收起
+                  </button>
+                </li>
+              )}
             </ul>
           </nav>
         )}

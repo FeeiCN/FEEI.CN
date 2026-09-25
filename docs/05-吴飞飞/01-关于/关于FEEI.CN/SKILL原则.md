@@ -2,7 +2,7 @@
 slug: /skill-principles
 title: SKILL 原则
 icon: code-icon
-description: 创建与维护 SKILL 文档的规范：统一放在 关于FEEI.CN/ 子目录、front matter 字段、CLAUDE.md 路由表登记、写作语气。
+description: 创建与维护 SKILL 文档的规范：统一放在 关于FEEI.CN/ 子目录、front matter 字段、AGENTS.md 路由表登记、写作语气。
 content_type: reference
 last_reviewed: '2026-07-10'
 sidebar_badge:
@@ -101,7 +101,7 @@ sidebar_badge:
 
 ## 路由表
 
-新增、移动、删除 SKILL 文档时，必须同步更新 `AI.md` 的 Context Loading 路由表。`CLAUDE.md` 和 `AGENTS.md` 是由 `AI.md` 生成的入口文件，不要直接编辑生成文件。
+新增、移动、删除 SKILL 文档时，必须同步更新 `AGENTS.md` 的 Context Loading 路由表。`AGENTS.md` 是唯一规则入口和规则源，直接编辑它。
 
 - 新增：在表中加一行 `任务类型 | 文档路径`
 - 移动：更新该行路径
@@ -130,6 +130,6 @@ SKILL 文档的内容遵循本站通用文风：
 
 ## bootstrap 例外
 
-本文档作为元规则，在创建时已经位于合适的目录、front matter 完整、CLAUDE.md 已登记——这是预先建立的初值。后续如果修改本文档本身，仍需遵循上述所有规则。
+本文档作为元规则，在创建时已经位于合适的目录、front matter 完整、AGENTS.md 已登记——这是预先建立的初值。后续如果修改本文档本身，仍需遵循上述所有规则。
 
 如果将来需要"创建 SKILL 文档"的脚手架或模板，应另建一个 SKILL 文档覆盖，不要让本元规则与具体实现耦合。

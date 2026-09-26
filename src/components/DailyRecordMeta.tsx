@@ -414,20 +414,12 @@ export default function DailyRecordMeta() {
       <div className={styles.metaLine}>
         <span>{dateLabel}</span>
         <span>{weekday}</span>
-        {dayStatus?.holiday && <span>{dayStatus.holiday}</span>}
+        {dayStatus?.holiday && <span className={styles.specialDay}>{dayStatus.holiday}</span>}
         {dayStatus && <span>{dayStatus.label}</span>}
-        {!isMultiLocation && location && <span>{location}</span>}
-        {!isMultiLocation && weather.length > 0 ? (
-          <span className={styles.weather}>{renderWeather(weather[0])}</span>
-        ) : !isMultiLocation && location && weatherLoading ? (
-          <span className={styles.weatherPlaceholder}>天气…</span>
-        ) : !isMultiLocation && location ? (
-          <span className={styles.weatherUnavailable}>天气暂无</span>
-        ) : null}
       </div>
 
-      {isMultiLocation && (
-        <div className={styles.routeLine} aria-label="当天行程天气">
+      {location && (
+        <div className={styles.routeLine} aria-label={isMultiLocation ? '当天行程天气' : '当天地点天气'}>
           {locations.map((place, index) => {
             const item = weather.find((entry) => entry.location === place);
             return (

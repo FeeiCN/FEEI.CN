@@ -4,13 +4,26 @@ type SidebarItemWithProps = {
   items?: SidebarItemWithProps[];
   customProps?: Record<string, unknown>;
   collapsed?: boolean;
+  label?: string;
   link?: {type?: string; id?: string};
 };
 
 type LoadedDocWithFrontMatter = {
   id: string;
+  source?: string;
+  title?: string;
   frontMatter?: Record<string, unknown>;
 };
+
+function getDailyRecordSidebarLabel(doc?: LoadedDocWithFrontMatter): string | undefined {
+  if (!doc?.source?.startsWith('@site/docs/05-吴飞飞/02-年度总结/')) return undefined;
+  const slug = doc.frontMatter?.slug;
+  if (typeof slug !== 'string' || !/^\/\d{4}-\d{2}-\d{2}\/?$/.test(slug)) return undefined;
+
+  const date = slug.replace(/^\//, '').replace(/\/$/, '');
+  const title = typeof doc.title === 'string' ? doc.title.trim() : '';
+  return title ? `${date.slice(5)} · ${title}` : undefined;
+}
 
 function getDocIcon(doc?: LoadedDocWithFrontMatter): string | undefined {
   const icon = doc?.frontMatter?.icon;
@@ -56,6 +69,8 @@ export function attachDocFrontMatterToSidebar<
     const nextItem = {...item};
     if (item.type === 'doc' && item.id) {
       nextItem.customProps = applyDocFields(item, item.id);
+      const dailyRecordLabel = getDailyRecordSidebarLabel(docsById.get(item.id));
+      if (dailyRecordLabel) nextItem.label = dailyRecordLabel;
     }
     if (item.type === 'category') {
       if (typeof item.collapsed === 'undefined') nextItem.collapsed = depth > 0;

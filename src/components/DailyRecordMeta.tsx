@@ -1,17 +1,24 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {useDoc} from '@docusaurus/plugin-content-docs/client';
+import {
+  summarizeWeather,
+  type RawWeatherDay,
+  type WeatherSummary,
+} from '@site/src/utils/weather';
 import styles from './DailyRecordMeta.module.css';
 
-type WeatherDay = {
-  location: string;
-  label: string;
-  min: number;
-  max: number;
-  precipitation?: number;
+type GeocodingResult = {
+  latitude: number;
+  longitude: number;
+  name?: string;
+  country_code?: string;
+  admin1?: string;
+  population?: number;
+  feature_code?: string;
 };
 
 type GeocodingResponse = {
-  results?: Array<{latitude: number; longitude: number; name?: string}>;
+  results?: GeocodingResult[];
 };
 
 type WeatherResponse = {
@@ -19,7 +26,12 @@ type WeatherResponse = {
     weather_code?: number[];
     temperature_2m_max?: number[];
     temperature_2m_min?: number[];
-    precipitation_sum?: number[];
+  };
+  hourly?: {
+    weather_code?: number[];
+    rain?: number[];
+    showers?: number[];
+    snowfall?: number[];
   };
 };
 
@@ -35,15 +47,23 @@ type DayStatus = {
 type CachedGeo = {
   latitude: number;
   longitude: number;
+  canonicalName?: string;
+  countryCode?: string;
+  admin1?: string;
 };
 
 type CachedWeather = {
-  value: WeatherDay;
+  value: RawWeatherDay;
   cachedAt: number;
 };
 
-const GEO_CACHE_PREFIX = 'feei:daily-geo:v3:';
-const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v5:';
+type LocationAlias = {
+  names: string[];
+  countryCode?: string;
+};
+
+const GEO_CACHE_PREFIX = 'feei:daily-geo:v4:';
+const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v6:';
 
 function readCache<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -60,53 +80,37 @@ function writeCache(key: string, value: unknown): void {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // Storage may be unavailable in private/restricted browsing. Ignore it.
+    // Storage may be unavailable in private/restricted browsing.
   }
 }
 
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
-const locationAliases: Record<string, string[]> = {
-  '札幌': ['札幌市', 'Sapporo'],
-  '千叶': ['千葉市', 'Chiba'],
-  '千葉': ['千葉市', 'Chiba'],
+const locationAliases: Record<string, LocationAlias> = {
+  '札幌': {names: ['札幌市', 'Sapporo'], countryCode: 'JP'},
+  '千叶': {names: ['千葉市', 'Chiba'], countryCode: 'JP'},
+  '千葉': {names: ['千葉市', 'Chiba'], countryCode: 'JP'},
+  '横滨': {names: ['横浜市', 'Yokohama'], countryCode: 'JP'},
+  '冲绳': {names: ['沖縄', 'Okinawa'], countryCode: 'JP'},
+  '函馆': {names: ['函館市', 'Hakodate'], countryCode: 'JP'},
 };
 
 function geocodingNames(location: string): string[] {
-  const names = [location, ...(locationAliases[location] ?? [])];
+  const alias = locationAliases[location];
+  const names = [location, ...(alias?.names ?? [])];
   if (/^[\u3400-\u9fff]{2,}$/.test(location) && !/[市区县縣]$/.test(location)) {
     names.push(`${location}市`);
   }
   return [...new Set(names)];
 }
 
-function rainIntensity(precipitation?: number): string | null {
-  if (typeof precipitation !== 'number' || precipitation < 0.1) return null;
-  if (precipitation < 10) return '小雨';
-  if (precipitation < 25) return '中雨';
-  if (precipitation < 50) return '大雨';
-  if (precipitation < 100) return '暴雨';
-  if (precipitation < 250) return '大暴雨';
-  return '特大暴雨';
-}
-
-function weatherLabel(code: number, precipitation?: number): string {
-  const rain = rainIntensity(precipitation);
-
-  if (code === 0) return '晴';
-  if (code === 1) return '晴间多云';
-  if (code === 2) return '多云';
-  if (code === 3) return '阴';
-  if (code === 45 || code === 48) return '雾';
-  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return rain ?? '小雨';
-  if (code >= 71 && code <= 77) return '雪';
-  if (code >= 85 && code <= 86) return '阵雪';
-  if (code >= 95) return rain ? `雷雨 · ${rain}` : '雷雨';
-  return rain ?? '天气';
-}
-
 function splitLocations(value: string): string[] {
-  return [...new Set(value.split(/\s*(?:→|\/|、)\s*/).map((part) => part.trim()).filter(Boolean))].slice(0, 4);
+  return [...new Set(
+    value
+      .split(/\s*(?:→|\/|、)\s*/)
+      .map((part) => part.trim())
+      .filter(Boolean),
+  )].slice(0, 4);
 }
 
 function dayDistance(date: string): number {
@@ -114,6 +118,55 @@ function dayDistance(date: string): number {
   const now = new Date();
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   return Math.floor((today - target) / 86400000);
+}
+
+function chooseGeocodingResult(location: string, results: GeocodingResult[]): GeocodingResult | undefined {
+  const expectedCountry = locationAliases[location]?.countryCode;
+  const candidates = expectedCountry
+    ? results.filter((item) => item.country_code === expectedCountry)
+    : results;
+  const pool = candidates.length > 0 ? candidates : results;
+
+  return [...pool].sort((a, b) => {
+    const aPlace = a.feature_code?.startsWith('PPL') ? 1 : 0;
+    const bPlace = b.feature_code?.startsWith('PPL') ? 1 : 0;
+    if (aPlace !== bPlace) return bPlace - aPlace;
+    return (b.population ?? 0) - (a.population ?? 0);
+  })[0];
+}
+
+async function resolveLocation(location: string, signal: AbortSignal): Promise<CachedGeo | null> {
+  const geoKey = `${GEO_CACHE_PREFIX}${location}`;
+  const cached = readCache<CachedGeo>(geoKey);
+  if (cached) return cached;
+
+  for (const name of geocodingNames(location)) {
+    for (const language of ['zh', 'ja', 'en']) {
+      const geocodingUrl = new URL('https://geocoding-api.open-meteo.com/v1/search');
+      geocodingUrl.searchParams.set('name', name);
+      geocodingUrl.searchParams.set('count', '8');
+      geocodingUrl.searchParams.set('language', language);
+      geocodingUrl.searchParams.set('format', 'json');
+
+      const response = await fetch(geocodingUrl, {signal});
+      if (!response.ok) continue;
+      const data = await response.json() as GeocodingResponse;
+      const result = chooseGeocodingResult(location, data.results ?? []);
+      if (!result) continue;
+
+      const resolved: CachedGeo = {
+        latitude: result.latitude,
+        longitude: result.longitude,
+        canonicalName: result.name,
+        countryCode: result.country_code,
+        admin1: result.admin1,
+      };
+      writeCache(geoKey, resolved);
+      return resolved;
+    }
+  }
+
+  return null;
 }
 
 async function loadDayStatus(date: string, weekday: number, signal: AbortSignal): Promise<DayStatus | null> {
@@ -137,65 +190,94 @@ async function loadDayStatus(date: string, weekday: number, signal: AbortSignal)
   return {label: weekday === 0 || weekday === 6 ? '休息' : '工作'};
 }
 
-async function loadWeather(location: string, date: string, signal: AbortSignal): Promise<WeatherDay | null> {
-  const geoKey = `${GEO_CACHE_PREFIX}${location}`;
-  let place = readCache<CachedGeo>(geoKey);
+function parseWeatherResponse(
+  location: string,
+  source: RawWeatherDay['source'],
+  data: WeatherResponse,
+): RawWeatherDay | null {
+  const max = data.daily?.temperature_2m_max?.[0];
+  const min = data.daily?.temperature_2m_min?.[0];
+  const hourlyCodes = data.hourly?.weather_code ?? [];
+  if (typeof max !== 'number' || typeof min !== 'number') return null;
+  if (hourlyCodes.length === 0 && typeof data.daily?.weather_code?.[0] !== 'number') return null;
 
-  if (!place) {
-    for (const name of geocodingNames(location)) {
-      for (const language of ['zh', 'ja', 'en']) {
-        const geocodingUrl = new URL('https://geocoding-api.open-meteo.com/v1/search');
-        geocodingUrl.searchParams.set('name', name);
-        geocodingUrl.searchParams.set('count', '5');
-        geocodingUrl.searchParams.set('language', language);
-        geocodingUrl.searchParams.set('format', 'json');
+  return {
+    location,
+    min,
+    max,
+    dailyCode: data.daily?.weather_code?.[0],
+    hourlyCodes,
+    hourlyRain: data.hourly?.rain ?? [],
+    hourlyShowers: data.hourly?.showers ?? [],
+    hourlySnowfall: data.hourly?.snowfall ?? [],
+    source,
+  };
+}
 
-        const geocoding = await fetch(geocodingUrl, {signal});
-        if (!geocoding.ok) continue;
-        const geocodingData = await geocoding.json() as GeocodingResponse;
-        const result = geocodingData.results?.[0];
-        if (!result) continue;
-
-        place = {latitude: result.latitude, longitude: result.longitude};
-        writeCache(geoKey, place);
-        break;
-      }
-      if (place) break;
-    }
-  }
-
-  if (!place) return null;
-
-  const distance = dayDistance(date);
-  const endpoint = distance <= 0
-    ? 'https://api.open-meteo.com/v1/forecast'
-    : date >= '2021-01-01'
-      ? 'https://historical-forecast-api.open-meteo.com/v1/forecast'
-      : 'https://archive-api.open-meteo.com/v1/archive';
+async function fetchWeatherEndpoint(
+  endpoint: string,
+  source: RawWeatherDay['source'],
+  location: string,
+  place: CachedGeo,
+  date: string,
+  signal: AbortSignal,
+): Promise<RawWeatherDay | null> {
   const weatherUrl = new URL(endpoint);
   weatherUrl.searchParams.set('latitude', String(place.latitude));
   weatherUrl.searchParams.set('longitude', String(place.longitude));
   weatherUrl.searchParams.set('start_date', date);
   weatherUrl.searchParams.set('end_date', date);
-  weatherUrl.searchParams.set('daily', 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum');
+  weatherUrl.searchParams.set('daily', 'weather_code,temperature_2m_max,temperature_2m_min');
+  weatherUrl.searchParams.set(
+    'hourly',
+    source === 'archive'
+      ? 'weather_code,rain,snowfall'
+      : 'weather_code,rain,showers,snowfall',
+  );
   weatherUrl.searchParams.set('timezone', 'auto');
 
-  const weather = await fetch(weatherUrl, {signal});
-  if (!weather.ok) return null;
-  const data = await weather.json() as WeatherResponse;
-  const code = data.daily?.weather_code?.[0];
-  const max = data.daily?.temperature_2m_max?.[0];
-  const min = data.daily?.temperature_2m_min?.[0];
-  const precipitation = data.daily?.precipitation_sum?.[0];
-  if (typeof code !== 'number' || typeof max !== 'number' || typeof min !== 'number') return null;
+  const response = await fetch(weatherUrl, {signal});
+  if (!response.ok) return null;
+  const data = await response.json() as WeatherResponse;
+  return parseWeatherResponse(location, source, data);
+}
 
-  return {
+async function loadWeather(location: string, date: string, signal: AbortSignal): Promise<RawWeatherDay | null> {
+  const place = await resolveLocation(location, signal);
+  if (!place) return null;
+
+  const distance = dayDistance(date);
+  if (distance <= 0) {
+    return fetchWeatherEndpoint(
+      'https://api.open-meteo.com/v1/forecast',
+      'forecast',
+      location,
+      place,
+      date,
+      signal,
+    );
+  }
+
+  if (date >= '2022-01-01') {
+    const historicalForecast = await fetchWeatherEndpoint(
+      'https://historical-forecast-api.open-meteo.com/v1/forecast',
+      'historical-forecast',
+      location,
+      place,
+      date,
+      signal,
+    );
+    if (historicalForecast) return historicalForecast;
+  }
+
+  return fetchWeatherEndpoint(
+    'https://archive-api.open-meteo.com/v1/archive',
+    'archive',
     location,
-    label: weatherLabel(code, precipitation),
-    min: Math.round(min),
-    max: Math.round(max),
-    precipitation: typeof precipitation === 'number' ? precipitation : undefined,
-  };
+    place,
+    date,
+    signal,
+  );
 }
 
 export default function DailyRecordMeta() {
@@ -206,10 +288,14 @@ export default function DailyRecordMeta() {
   const location = typeof values.location === 'string' ? values.location.trim() : '';
   const locations = useMemo(() => splitLocations(location), [location]);
   const isMultiLocation = locations.length > 1;
-  const [weather, setWeather] = useState<WeatherDay[]>([]);
+  const [rawWeather, setRawWeather] = useState<RawWeatherDay[]>([]);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
 
+  const weather = useMemo<WeatherSummary[]>(
+    () => rawWeather.map(summarizeWeather),
+    [rawWeather],
+  );
   const date = match ? `${match[1]}-${match[2]}-${match[3]}` : '';
   const dateLabel = match ? `${match[1]}年${Number(match[2])}月${Number(match[3])}日` : '';
   const weekdayIndex = useMemo(() => {
@@ -229,7 +315,7 @@ export default function DailyRecordMeta() {
   }, [date, weekdayIndex]);
 
   useEffect(() => {
-    setWeather([]);
+    setRawWeather([]);
     setWeatherLoading(false);
     if (!date || !location) return;
 
@@ -243,36 +329,40 @@ export default function DailyRecordMeta() {
     );
 
     if (validCached) {
-      setWeather(cached.map((item) => item!.value));
+      setRawWeather(cached.map((item) => item!.value));
       return;
     }
 
     const availableCached = cached
       .filter((item): item is CachedWeather => Boolean(item))
       .map((item) => item.value);
-    if (availableCached.length > 0) setWeather(availableCached);
+    if (availableCached.length > 0) setRawWeather(availableCached);
     setWeatherLoading(availableCached.length !== locations.length);
 
     const controller = new AbortController();
-    Promise.all(locations.map((place) => loadWeather(place, date, controller.signal)))
-      .then((items) => {
-        const values = items.filter((item): item is WeatherDay => Boolean(item));
+    Promise.allSettled(locations.map((place) => loadWeather(place, date, controller.signal)))
+      .then((results) => {
+        const values = results
+          .filter((result): result is PromiseFulfilledResult<RawWeatherDay | null> => result.status === 'fulfilled')
+          .map((result) => result.value)
+          .filter((item): item is RawWeatherDay => Boolean(item));
+
         values.forEach((item) =>
           writeCache(`${WEATHER_CACHE_PREFIX}${date}:${item.location}`, {
             value: item,
             cachedAt: Date.now(),
           } satisfies CachedWeather),
         );
-        setWeather(values);
+        setRawWeather(values);
       })
-      .catch(() => {})
       .finally(() => setWeatherLoading(false));
+
     return () => controller.abort();
   }, [date, location, locations]);
 
   if (!match) return null;
 
-  const renderWeather = (item: WeatherDay) => (
+  const renderWeather = (item: WeatherSummary) => (
     <>
       {item.label} {item.min}–{item.max}°
     </>

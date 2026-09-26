@@ -27,9 +27,17 @@
 .routeLine {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.48rem;
+  gap: 0.25rem 0.55rem;
   align-items: center;
   margin-top: 0.3rem;
+  margin-bottom: 0.25rem;
+}
+
+.routeSegment {
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: baseline;
+  white-space: nowrap;
 }
 
 .routeStop {
@@ -41,11 +49,16 @@
 
 .routePlace {
   color: var(--ifm-color-emphasis-700);
-  font-weight: 550;
+  font-weight: 600;
+}
+
+.routeWeather {
+  color: var(--ifm-color-emphasis-550);
+  font-weight: 400;
 }
 
 .routeArrow {
-  color: var(--ifm-color-emphasis-400);
+  color: var(--ifm-color-emphasis-300);
 }
 
 .weatherPlaceholder {
@@ -71,8 +84,13 @@
   }
 
   .routeLine {
-    gap: 0.22rem 0.4rem;
+    gap: 0.22rem 0.45rem;
     margin-top: 0.25rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .routeSegment {
+    gap: 0.45rem;
   }
 }
 

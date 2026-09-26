@@ -172,7 +172,7 @@ export default function DocBreadcrumbs(): ReactNode {
 
   return (
     <>
-      <DocBreadcrumbsStructuredData breadcrumbs={structuredBreadcrumbs} />
+      <DocBreadcrumbsStructuredData breadcrumbs={structuredBreadcrumbs as any} />
       <div className={styles.breadcrumbsRow}>
         {(parents.length > 0 || homePageRoute) && (
           <nav className={`${ThemeClassNames.docs.docBreadcrumbs} ${styles.breadcrumbsContainer} ${styles.desktopBreadcrumbs}`} aria-label="当前位置">

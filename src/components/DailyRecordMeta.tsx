@@ -43,7 +43,7 @@ type CachedWeather = {
 };
 
 const GEO_CACHE_PREFIX = 'feei:daily-geo:';
-const WEATHER_CACHE_PREFIX = 'feei:daily-weather:';
+const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v2:';
 
 function readCache<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -134,9 +134,11 @@ async function loadWeather(location: string, date: string, signal: AbortSignal):
   }
 
   const distance = dayDistance(date);
-  const endpoint = distance >= 0 && distance <= 92
+  const endpoint = distance <= 0
     ? 'https://api.open-meteo.com/v1/forecast'
-    : 'https://archive-api.open-meteo.com/v1/archive';
+    : date >= '2021-01-01'
+      ? 'https://historical-forecast-api.open-meteo.com/v1/forecast'
+      : 'https://archive-api.open-meteo.com/v1/archive';
   const weatherUrl = new URL(endpoint);
   weatherUrl.searchParams.set('latitude', String(place.latitude));
   weatherUrl.searchParams.set('longitude', String(place.longitude));

@@ -111,9 +111,8 @@ export function attachDocFrontMatterToSidebar<
         }
       }
 
-      // generated-index and doc links both disappear from the category itself:
-      // clicking a directory always expands/collapses it.
-      delete nextItem.link;
+      // Keep explicitly configured category index documents as navigation targets.
+      if (item.link?.type !== 'doc') delete nextItem.link;
 
       const visitedChildren = children.map((child) => visit(child, depth + 1));
       nextItem.items = visitedChildren.map((child) => {

@@ -7,6 +7,7 @@ import MDXContent from '@theme/MDXContent';
 import type {Props} from '@theme/DocItem/Content';
 import DocTitleWithIcon from '@site/src/components/DocTitleWithIcon';
 import DocArticleHeader from '@site/src/components/DocArticleHeader';
+import DailyRecordMeta from '@site/src/components/DailyRecordMeta';
 import styles from './styles.module.css';
 
 function useSyntheticTitle(): string | null {
@@ -56,6 +57,7 @@ export default function DocItemContent({children}: Props): ReactNode {
           </Heading>
         </DocArticleHeader>
       )}
+      <DailyRecordMeta />
       <ReadingMode />
       <MDXContent>{children}</MDXContent>
     </div>

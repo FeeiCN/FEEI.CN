@@ -458,7 +458,7 @@ export default function DailyRecordMeta() {
     const amount = absolute >= 10000
       ? `${(absolute / 10000).toFixed(2)}万`
       : absolute.toFixed(2);
-    return `${snapshot.exact ? '' : '≈'}${sign}${amount}`;
+    return `${sign}${amount}`;
   };
 
   const hasResultSnapshot = Boolean(weightSnapshot || sleepSnapshot || pnlSnapshot);

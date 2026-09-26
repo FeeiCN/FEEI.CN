@@ -110,6 +110,7 @@ export default function DailyRecordMeta() {
   }, [date]);
 
   useEffect(() => {
+    setWeather([]);
     if (!date || !location) return;
     const controller = new AbortController();
     Promise.all(splitLocations(location).map((place) => loadWeather(place, date, controller.signal)))

@@ -80,9 +80,24 @@ export function attachDocFrontMatterToSidebar<
     if (item.type === 'category') {
       if (typeof item.collapsed === 'undefined') nextItem.collapsed = depth > 0;
 
-      let children = [...(item.items ?? [])];
+      const originalChildren = [...(item.items ?? [])];
 
-      // Categories are navigation nodes only. If a legacy category linked directly
+      // A folder that only wraps a single index document is file organization,
+      // not information architecture. Render it as a normal article instead of
+      // "category → overview".
+      if (item.link?.type === 'doc' && item.link.id && originalChildren.length === 0) {
+        const linkedDoc = docsById.get(item.link.id);
+        return visit({
+          type: 'doc',
+          id: item.link.id,
+          label: linkedDoc?.title ?? item.label,
+          customProps: item.customProps,
+        }, depth);
+      }
+
+      let children = originalChildren;
+
+      // Real categories are navigation nodes only. If a legacy category linked directly
       // to a document, keep that document as the first child before removing the link.
       if (item.link?.type === 'doc' && item.link.id) {
         nextItem.customProps = applyDocFields(item, item.link.id);

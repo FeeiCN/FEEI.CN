@@ -32,6 +32,38 @@ type DayStatus = {
   holiday?: string;
 };
 
+type CachedGeo = {
+  latitude: number;
+  longitude: number;
+};
+
+type CachedWeather = {
+  value: WeatherDay;
+  cachedAt: number;
+};
+
+const GEO_CACHE_PREFIX = 'feei:daily-geo:';
+const WEATHER_CACHE_PREFIX = 'feei:daily-weather:';
+
+function readCache<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) as T : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(key: string, value: unknown): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Storage may be unavailable in private/restricted browsing. Ignore it.
+  }
+}
+
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
 function weatherLabel(code: number): string {
@@ -82,17 +114,24 @@ async function loadDayStatus(date: string, weekday: number, signal: AbortSignal)
 }
 
 async function loadWeather(location: string, date: string, signal: AbortSignal): Promise<WeatherDay | null> {
-  const geocodingUrl = new URL('https://geocoding-api.open-meteo.com/v1/search');
-  geocodingUrl.searchParams.set('name', location);
-  geocodingUrl.searchParams.set('count', '1');
-  geocodingUrl.searchParams.set('language', 'zh');
-  geocodingUrl.searchParams.set('format', 'json');
+  const geoKey = `${GEO_CACHE_PREFIX}${location}`;
+  let place = readCache<CachedGeo>(geoKey);
 
-  const geocoding = await fetch(geocodingUrl, {signal});
-  if (!geocoding.ok) return null;
-  const geocodingData = await geocoding.json() as GeocodingResponse;
-  const place = geocodingData.results?.[0];
-  if (!place) return null;
+  if (!place) {
+    const geocodingUrl = new URL('https://geocoding-api.open-meteo.com/v1/search');
+    geocodingUrl.searchParams.set('name', location);
+    geocodingUrl.searchParams.set('count', '1');
+    geocodingUrl.searchParams.set('language', 'zh');
+    geocodingUrl.searchParams.set('format', 'json');
+
+    const geocoding = await fetch(geocodingUrl, {signal});
+    if (!geocoding.ok) return null;
+    const geocodingData = await geocoding.json() as GeocodingResponse;
+    const result = geocodingData.results?.[0];
+    if (!result) return null;
+    place = {latitude: result.latitude, longitude: result.longitude};
+    writeCache(geoKey, place);
+  }
 
   const distance = dayDistance(date);
   const endpoint = distance >= 0 && distance <= 92
@@ -131,6 +170,7 @@ export default function DailyRecordMeta() {
   const match = slug.match(/^\/(\d{4})-(\d{2})-(\d{2})\/?$/);
   const location = typeof values.location === 'string' ? values.location.trim() : '';
   const [weather, setWeather] = useState<WeatherDay[]>([]);
+  const [weatherLoading, setWeatherLoading] = useState(false);
   const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
 
   const date = match ? `${match[1]}-${match[2]}-${match[3]}` : '';
@@ -153,11 +193,44 @@ export default function DailyRecordMeta() {
 
   useEffect(() => {
     setWeather([]);
+    setWeatherLoading(false);
     if (!date || !location) return;
+
+    const locations = splitLocations(location);
+    const distance = dayDistance(date);
+    const maxAge = distance > 1 ? 30 * 24 * 60 * 60 * 1000 : 3 * 60 * 60 * 1000;
+    const cached = locations.map((place) =>
+      readCache<CachedWeather>(`${WEATHER_CACHE_PREFIX}${date}:${place}`),
+    );
+    const validCached = cached.every(
+      (item) => item && Date.now() - item.cachedAt < maxAge,
+    );
+
+    if (validCached) {
+      setWeather(cached.map((item) => item!.value));
+      return;
+    }
+
+    const availableCached = cached
+      .filter((item): item is CachedWeather => Boolean(item))
+      .map((item) => item.value);
+    if (availableCached.length > 0) setWeather(availableCached);
+    setWeatherLoading(availableCached.length !== locations.length);
+
     const controller = new AbortController();
-    Promise.all(splitLocations(location).map((place) => loadWeather(place, date, controller.signal)))
-      .then((items) => setWeather(items.filter((item): item is WeatherDay => Boolean(item))))
-      .catch(() => {});
+    Promise.all(locations.map((place) => loadWeather(place, date, controller.signal)))
+      .then((items) => {
+        const values = items.filter((item): item is WeatherDay => Boolean(item));
+        values.forEach((item) =>
+          writeCache(`${WEATHER_CACHE_PREFIX}${date}:${item.location}`, {
+            value: item,
+            cachedAt: Date.now(),
+          } satisfies CachedWeather),
+        );
+        setWeather(values);
+      })
+      .catch(() => {})
+      .finally(() => setWeatherLoading(false));
     return () => controller.abort();
   }, [date, location]);
 
@@ -170,7 +243,7 @@ export default function DailyRecordMeta() {
       {dayStatus?.holiday && <span>{dayStatus.holiday}</span>}
       {dayStatus && <span>{dayStatus.label}</span>}
       {location && <span>{location}</span>}
-      {weather.length > 0 && (
+      {weather.length > 0 ? (
         <span className={styles.weather}>
           {weather.map((item) => (
             <span key={item.location}>
@@ -182,7 +255,9 @@ export default function DailyRecordMeta() {
             </span>
           ))}
         </span>
-      )}
+      ) : location && weatherLoading ? (
+        <span className={styles.weatherPlaceholder}>天气…</span>
+      ) : null}
     </div>
   );
 }

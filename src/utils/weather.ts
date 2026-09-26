@@ -103,6 +103,7 @@ export function summarizeWeather(raw: RawWeatherDay): WeatherSummary {
     family(code) === 'snow' || (raw.hourlySnowfall[index] ?? 0) > 0,
   ).length;
   const thunderHours = codes.filter((code) => family(code) === 'thunder').length;
+  const maxHourlyRain = rainByHour.length > 0 ? Math.max(...rainByHour) : 0;
 
   const dryCodes = codes.filter((code) => !['rain', 'snow', 'thunder'].includes(family(code)));
   const dominantCode = mostCommonCode(dryCodes.length > 0 ? dryCodes : codes) ?? raw.dailyCode;
@@ -117,16 +118,18 @@ export function summarizeWeather(raw: RawWeatherDay): WeatherSummary {
     label = rainLabel && totalRain >= 10 ? `雷雨 · ${rainLabel}` : '雷雨';
   } else if (snowHours >= 6 || (codes.length > 0 && snowHours >= Math.ceil(codes.length / 3))) {
     label = snowLabel;
+  } else if (thunderHours > 0) {
+    label = `${dominantLabel} · 短时雷雨`;
   } else if (rainLabel) {
     if (rainHours >= 6 || totalRain >= 25 || (codes.length > 0 && rainHours >= Math.ceil(codes.length / 3))) {
       label = rainLabel;
     } else {
-      label = `${dominantLabel} · 短时${rainLabel}`;
+      label = maxHourlyRain >= 16
+        ? `${dominantLabel} · 短时强降雨`
+        : `${dominantLabel} · 短时有雨`;
     }
   } else if (snowHours > 0) {
     label = `${dominantLabel} · 短时${snowLabel}`;
-  } else if (thunderHours > 0) {
-    label = `${dominantLabel} · 短时雷雨`;
   }
 
   return {

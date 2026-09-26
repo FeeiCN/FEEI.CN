@@ -80,19 +80,29 @@ function geocodingNames(location: string): string[] {
   return [...new Set(names)];
 }
 
-function weatherLabel(code: number): string {
+function rainIntensity(precipitation?: number): string | null {
+  if (typeof precipitation !== 'number' || precipitation < 0.1) return null;
+  if (precipitation < 10) return '小雨';
+  if (precipitation < 25) return '中雨';
+  if (precipitation < 50) return '大雨';
+  if (precipitation < 100) return '暴雨';
+  if (precipitation < 250) return '大暴雨';
+  return '特大暴雨';
+}
+
+function weatherLabel(code: number, precipitation?: number): string {
+  const rain = rainIntensity(precipitation);
+
   if (code === 0) return '晴';
   if (code === 1) return '晴间多云';
   if (code === 2) return '多云';
-  if (code === 3) return '阴';
+  if (code === 3) return rain ?? '阴';
   if (code === 45 || code === 48) return '雾';
-  if (code >= 51 && code <= 57) return '毛毛雨';
-  if (code >= 61 && code <= 67) return '雨';
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return rain ?? '小雨';
   if (code >= 71 && code <= 77) return '雪';
-  if (code >= 80 && code <= 82) return '阵雨';
   if (code >= 85 && code <= 86) return '阵雪';
-  if (code >= 95) return '雷雨';
-  return '天气';
+  if (code >= 95) return rain ? `雷雨 · ${rain}` : '雷雨';
+  return rain ?? '天气';
 }
 
 function splitLocations(value: string): string[] {
@@ -181,7 +191,7 @@ async function loadWeather(location: string, date: string, signal: AbortSignal):
 
   return {
     location,
-    label: weatherLabel(code),
+    label: weatherLabel(code, precipitation),
     min: Math.round(min),
     max: Math.round(max),
     precipitation: typeof precipitation === 'number' ? precipitation : undefined,
@@ -264,10 +274,7 @@ export default function DailyRecordMeta() {
 
   const renderWeather = (item: WeatherDay) => (
     <>
-      {item.label} {item.min}–{item.max}°C
-      {typeof item.precipitation === 'number' && item.precipitation >= 0.1
-        ? ` · 降水 ${item.precipitation.toFixed(1)}mm`
-        : ''}
+      {item.label} {item.min}–{item.max}°
     </>
   );
 
@@ -291,19 +298,19 @@ export default function DailyRecordMeta() {
           {locations.map((place, index) => {
             const item = weather.find((entry) => entry.location === place);
             return (
-              <React.Fragment key={place}>
+              <span className={styles.routeSegment} key={place}>
                 {index > 0 && <span className={styles.routeArrow}>→</span>}
                 <span className={styles.routeStop}>
                   <span className={styles.routePlace}>{place}</span>
                   {item ? (
-                    <span>{renderWeather(item)}</span>
+                    <span className={styles.routeWeather}>{renderWeather(item)}</span>
                   ) : weatherLoading ? (
                     <span className={styles.weatherPlaceholder}>天气…</span>
                   ) : (
                     <span className={styles.weatherUnavailable}>天气暂无</span>
                   )}
                 </span>
-              </React.Fragment>
+              </span>
             );
           })}
         </div>

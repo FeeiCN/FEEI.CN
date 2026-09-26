@@ -4,8 +4,7 @@ name: Apple Health sleep score
 # GitHub Actions cron 使用 UTC，北京时间 09:00 = UTC 01:00。
 
 on:
-  schedule:
-    - cron: '0 1 * * *'
+  # 已暂停定时执行；保留 workflow_dispatch 供手动触发。
   workflow_dispatch:
 
 concurrency:

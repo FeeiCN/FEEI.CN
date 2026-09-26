@@ -26,17 +26,17 @@ const config: Config = {
   themeConfig: {
     docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: 'music/feei-site-theme-cover.webp', colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
     navbar: {hideOnScroll: false, logo: {alt: 'FEEI', src: 'img/feei-icon.svg'}, items: [
-      {type: 'dropdown', position: 'left', label: '网络安全', icon: 'shield', to: '/security-engineering', items: [
+      {type: 'dropdown', position: 'left', label: '网络安全', icon: 'shield', items: [
         {type: 'docSidebar', sidebarId: 'securityEngineeringSidebar', label: '网络空间安全', icon: 'shield'},
         {type: 'docSidebar', sidebarId: 'aiSecuritySidebar', label: '人工智能安全', icon: 'brand-openai-icon'},
       ]},
-      {type: 'dropdown', position: 'left', label: '人生系统', icon: 'biceps-flexed', to: '/life-certainty', items: [
+      {type: 'dropdown', position: 'left', label: '人生系统', icon: 'biceps-flexed', items: [
         {type: 'docSidebar', sidebarId: 'healthHappinessSidebar', label: '健康幸福', icon: 'heart'},
         {type: 'docSidebar', sidebarId: 'careerSuccessSidebar', label: '事业有成', icon: 'rocket'},
         {type: 'docSidebar', sidebarId: 'financeFreedomSidebar', label: '财务自由', icon: 'brand-bags-fm-icon'},
         {type: 'doc', docId: '人生系统/人生丰富/人生厚度', label: '人生丰富', icon: 'compass'},
       ]},
-      {type: 'dropdown', position: 'left', label: '关于', icon: 'at-sign-icon', to: '/about', items: [
+      {type: 'dropdown', position: 'left', label: '关于', icon: 'at-sign-icon', items: [
         {type: 'docSidebar', sidebarId: 'aboutMeSidebar', label: '关于', icon: 'user'},
         {type: 'docSidebar', sidebarId: 'annualReviewSidebar', label: '年度总结', icon: 'history-circle-icon'},
       ]},

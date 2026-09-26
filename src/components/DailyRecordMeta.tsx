@@ -365,16 +365,16 @@ export default function DailyRecordMeta() {
     if (!date) return;
 
     let cancelled = false;
-    Promise.all([
-      loadWeightSnapshot(date),
-      loadSleepScoreSnapshot(date),
-      loadDailyPnlSnapshot(date),
-    ]).then(([weight, sleep, pnl]) => {
-      if (cancelled) return;
-      setWeightSnapshot(weight);
-      setSleepSnapshot(sleep);
-      setPnlSnapshot(pnl);
-    }).catch(() => {});
+
+    loadWeightSnapshot(date)
+      .then((value) => { if (!cancelled) setWeightSnapshot(value); })
+      .catch(() => {});
+    loadSleepScoreSnapshot(date)
+      .then((value) => { if (!cancelled) setSleepSnapshot(value); })
+      .catch(() => {});
+    loadDailyPnlSnapshot(date)
+      .then((value) => { if (!cancelled) setPnlSnapshot(value); })
+      .catch(() => {});
 
     return () => {
       cancelled = true;
@@ -443,10 +443,12 @@ export default function DailyRecordMeta() {
   );
 
   const formatWeight = (snapshot: WeightSnapshot) => {
-    const value = `${Number(snapshot.kg.toFixed(2))}kg`;
+    const jin = snapshot.kg * 2;
+    const value = `${Number(jin.toFixed(1))}斤`;
     if (typeof snapshot.change30dKg !== 'number' || snapshot.change30dKg === 0) return value;
-    const arrow = snapshot.change30dKg < 0 ? '↓' : '↑';
-    return `${value} ${arrow}${Math.abs(snapshot.change30dKg).toFixed(2)}`;
+    const changeJin = snapshot.change30dKg * 2;
+    const arrow = changeJin < 0 ? '↓' : '↑';
+    return `${value} ${arrow}${Math.abs(changeJin).toFixed(1)}`;
   };
 
   const formatPnl = (snapshot: DailyPnlSnapshot) => {

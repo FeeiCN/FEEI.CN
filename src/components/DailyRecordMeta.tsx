@@ -290,5 +290,5 @@ export default function DailyRecordMeta() {
         </div>
       )}
     </div>
-  );}
+  );
 }

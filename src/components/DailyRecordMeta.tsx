@@ -42,8 +42,8 @@ type CachedWeather = {
   cachedAt: number;
 };
 
-const GEO_CACHE_PREFIX = 'feei:daily-geo:';
-const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v2:';
+const GEO_CACHE_PREFIX = 'feei:daily-geo:v2:';
+const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v3:';
 
 function readCache<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -118,20 +118,26 @@ async function loadWeather(location: string, date: string, signal: AbortSignal):
   let place = readCache<CachedGeo>(geoKey);
 
   if (!place) {
-    const geocodingUrl = new URL('https://geocoding-api.open-meteo.com/v1/search');
-    geocodingUrl.searchParams.set('name', location);
-    geocodingUrl.searchParams.set('count', '1');
-    geocodingUrl.searchParams.set('language', 'zh');
-    geocodingUrl.searchParams.set('format', 'json');
+    for (const language of ['zh', 'ja', 'en']) {
+      const geocodingUrl = new URL('https://geocoding-api.open-meteo.com/v1/search');
+      geocodingUrl.searchParams.set('name', location);
+      geocodingUrl.searchParams.set('count', '5');
+      geocodingUrl.searchParams.set('language', language);
+      geocodingUrl.searchParams.set('format', 'json');
 
-    const geocoding = await fetch(geocodingUrl, {signal});
-    if (!geocoding.ok) return null;
-    const geocodingData = await geocoding.json() as GeocodingResponse;
-    const result = geocodingData.results?.[0];
-    if (!result) return null;
-    place = {latitude: result.latitude, longitude: result.longitude};
-    writeCache(geoKey, place);
+      const geocoding = await fetch(geocodingUrl, {signal});
+      if (!geocoding.ok) continue;
+      const geocodingData = await geocoding.json() as GeocodingResponse;
+      const result = geocodingData.results?.[0];
+      if (!result) continue;
+
+      place = {latitude: result.latitude, longitude: result.longitude};
+      writeCache(geoKey, place);
+      break;
+    }
   }
+
+  if (!place) return null;
 
   const distance = dayDistance(date);
   const endpoint = distance <= 0

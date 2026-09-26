@@ -5,13 +5,6 @@ import {
   type RawWeatherDay,
   type WeatherSummary,
 } from '@site/src/utils/weather';
-import {loadWeightSnapshot, type WeightSnapshot} from '@site/src/utils/personalMetrics';
-import {
-  loadDailyPnlSnapshot,
-  loadSleepScoreSnapshot,
-  type DailyPnlSnapshot,
-  type SleepScoreSnapshot,
-} from '@site/src/utils/dailyResultMetrics';
 import styles from './DailyRecordMeta.module.css';
 
 type GeocodingResult = {
@@ -332,9 +325,6 @@ export default function DailyRecordMeta() {
   const [rawWeather, setRawWeather] = useState<RawWeatherDay[]>([]);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
-  const [weightSnapshot, setWeightSnapshot] = useState<WeightSnapshot | null>(null);
-  const [sleepSnapshot, setSleepSnapshot] = useState<SleepScoreSnapshot | null>(null);
-  const [pnlSnapshot, setPnlSnapshot] = useState<DailyPnlSnapshot | null>(null);
 
   const weather = useMemo<WeatherSummary[]>(
     () => rawWeather.map(summarizeWeather),
@@ -358,28 +348,6 @@ export default function DailyRecordMeta() {
     return () => controller.abort();
   }, [date, weekdayIndex]);
 
-  useEffect(() => {
-    setWeightSnapshot(null);
-    setSleepSnapshot(null);
-    setPnlSnapshot(null);
-    if (!date) return;
-
-    let cancelled = false;
-
-    loadWeightSnapshot(date)
-      .then((value) => { if (!cancelled) setWeightSnapshot(value); })
-      .catch(() => {});
-    loadSleepScoreSnapshot(date)
-      .then((value) => { if (!cancelled) setSleepSnapshot(value); })
-      .catch(() => {});
-    loadDailyPnlSnapshot(date)
-      .then((value) => { if (!cancelled) setPnlSnapshot(value); })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [date]);
 
   useEffect(() => {
     setRawWeather([]);
@@ -442,26 +410,6 @@ export default function DailyRecordMeta() {
     </>
   );
 
-  const formatWeight = (snapshot: WeightSnapshot) => {
-    const jin = snapshot.kg * 2;
-    const value = `${Number(jin.toFixed(1))}斤`;
-    if (typeof snapshot.change30dKg !== 'number' || snapshot.change30dKg === 0) return value;
-    const changeJin = snapshot.change30dKg * 2;
-    const arrow = changeJin < 0 ? '↓' : '↑';
-    return `${value} ${arrow}${Math.abs(changeJin).toFixed(1)}`;
-  };
-
-  const formatPnl = (snapshot: DailyPnlSnapshot) => {
-    const value = snapshot.total;
-    const sign = value > 0 ? '+' : value < 0 ? '-' : '';
-    const absolute = Math.abs(value);
-    const amount = absolute >= 10000
-      ? `${(absolute / 10000).toFixed(2)}万`
-      : absolute.toFixed(2);
-    return `${sign}${amount}`;
-  };
-
-  const hasResultSnapshot = Boolean(weightSnapshot || sleepSnapshot || pnlSnapshot);
 
   return (
     <div className={styles.dailyMeta} aria-label="当天基本信息">
@@ -495,28 +443,6 @@ export default function DailyRecordMeta() {
         </div>
       )}
 
-      {hasResultSnapshot && (
-        <div className={styles.resultLine} aria-label="当天结果快照">
-          {weightSnapshot && (
-            <span title={weightSnapshot.baselineDate ? `较 ${weightSnapshot.baselineDate}` : undefined}>
-              <span className={styles.resultLabel}>体重</span>
-              <span className={styles.resultValue}>{formatWeight(weightSnapshot)}</span>
-            </span>
-          )}
-          {sleepSnapshot && (
-            <span>
-              <span className={styles.resultLabel}>睡眠</span>
-              <span className={styles.resultValue}>{sleepSnapshot.score}</span>
-            </span>
-          )}
-          {pnlSnapshot && (
-            <span title={pnlSnapshot.accounts.map((item) => `${item.account} ${item.value >= 0 ? '+' : ''}${item.value.toFixed(2)}`).join(' · ')}>
-              <span className={styles.resultLabel}>投资</span>
-              <span className={styles.resultValue}>{formatPnl(pnlSnapshot)}</span>
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 }

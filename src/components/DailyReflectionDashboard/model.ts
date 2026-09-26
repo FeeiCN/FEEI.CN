@@ -1,4 +1,7 @@
 import type React from 'react';
+import {getWeatherCodeLabel, WEATHER_CODE_LABELS} from '@site/src/utils/weather';
+
+export {getWeatherCodeLabel, WEATHER_CODE_LABELS};
 
 export type DailyReflectionDashboardProps = {
   initialYear?: number;
@@ -289,37 +292,6 @@ export const AUTHORED_PERIOD_REVIEWS: Record<string, AuthoredPeriodReview> = {
     load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2024/december-2024-in-review-trend/index.md'),
   },
 };
-export const WEATHER_CODE_LABELS: Record<number, string> = {
-  0: '晴',
-  1: '大部晴朗',
-  2: '局部多云',
-  3: '阴',
-  45: '雾',
-  48: '雾凇',
-  51: '小毛毛雨',
-  53: '毛毛雨',
-  55: '强毛毛雨',
-  56: '冻毛毛雨',
-  57: '强冻毛毛雨',
-  61: '小雨',
-  63: '中雨',
-  65: '大雨',
-  66: '冻雨',
-  67: '强冻雨',
-  71: '小雪',
-  73: '中雪',
-  75: '大雪',
-  77: '雪粒',
-  80: '小阵雨',
-  81: '阵雨',
-  82: '强阵雨',
-  85: '小阵雪',
-  86: '强阵雪',
-  95: '雷暴',
-  96: '雷暴伴小冰雹',
-  99: '雷暴伴强冰雹',
-};
-
 export function dateToPath(date: string, suffix: string): string {
   const [year, month, day] = date.split('-');
   return `${year}/${month}/${day}.${suffix}`;
@@ -656,12 +628,6 @@ export function getNestedValue(source: unknown, path: Array<string | number>): u
     if (current === null || current === undefined) return undefined;
     return (current as Record<string | number, unknown>)[key];
   }, source);
-}
-
-export function getWeatherCodeLabel(code: unknown): string {
-  const value = Number(code);
-  if (!Number.isFinite(value)) return '天气';
-  return WEATHER_CODE_LABELS[value] || `天气代码 ${value}`;
 }
 
 export function getOpenMeteoValue(weather: unknown, section: 'daily' | 'hourly', key: string, index = 0): unknown {

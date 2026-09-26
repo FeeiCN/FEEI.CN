@@ -342,18 +342,25 @@ export default function DailyRecordMeta() {
     const controller = new AbortController();
     Promise.allSettled(locations.map((place) => loadWeather(place, date, controller.signal)))
       .then((results) => {
-        const values = results
+        const freshValues = results
           .filter((result): result is PromiseFulfilledResult<RawWeatherDay | null> => result.status === 'fulfilled')
           .map((result) => result.value)
           .filter((item): item is RawWeatherDay => Boolean(item));
 
-        values.forEach((item) =>
+        freshValues.forEach((item) =>
           writeCache(`${WEATHER_CACHE_PREFIX}${date}:${item.location}`, {
             value: item,
             cachedAt: Date.now(),
           } satisfies CachedWeather),
         );
-        setRawWeather(values);
+
+        const freshByLocation = new Map(freshValues.map((item) => [item.location, item]));
+        const cachedByLocation = new Map(availableCached.map((item) => [item.location, item]));
+        setRawWeather(
+          locations
+            .map((place) => freshByLocation.get(place) ?? cachedByLocation.get(place))
+            .filter((item): item is RawWeatherDay => Boolean(item)),
+        );
       })
       .finally(() => setWeatherLoading(false));
 
@@ -380,6 +387,8 @@ export default function DailyRecordMeta() {
           <span className={styles.weather}>{renderWeather(weather[0])}</span>
         ) : !isMultiLocation && location && weatherLoading ? (
           <span className={styles.weatherPlaceholder}>天气…</span>
+        ) : !isMultiLocation && location ? (
+          <span className={styles.weatherUnavailable}>天气暂无</span>
         ) : null}
       </div>
 

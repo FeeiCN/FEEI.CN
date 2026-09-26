@@ -59,6 +59,7 @@ function RecentSection(): ReactNode {
   const {records, updates} = usePluginData('home-records-plugin') as {records: HomeRecord[]; updates: HomeRecord[]};
   if (!records.length && !updates.length) return null;
   const recordsYear = records[0]?.date.slice(0, 4);
+  const recordsMonth = records[0]?.date.slice(0, 7);
   const updatesYear = updates[0]?.date.slice(0, 4);
   return (
     <section className={styles.section} aria-labelledby="recent-heading">
@@ -74,7 +75,7 @@ function RecentSection(): ReactNode {
             ))}</div>
           </div>}
           {records.length > 0 && <div>
-            <h3><Link to={`/${recordsYear}`}>日记 →</Link></h3>
+            <h3><Link to={`/${recordsMonth}`}>日记 →</Link></h3>
             <div className={styles.recentList}>{records.map((item) => (
               <Link key={item.to} to={item.to} className={styles.recentItem}>
                 <time dateTime={item.date}>{formatHomeDate(item.date, recordsYear)}</time><span>{item.title}</span>

@@ -20,7 +20,7 @@ function getDailyRecordSidebarLabel(doc?: LoadedDocWithFrontMatter): string | un
   if (typeof slug !== 'string' || !/^\/\d{4}-\d{2}-\d{2}\/?$/.test(slug)) return undefined;
 
   const date = slug.replace(/^\//, '').replace(/\/$/, '');
-  const title = typeof doc.title === 'string' ? doc.title.trim() : '';
+  const title = typeof doc?.title === 'string' ? doc.title.trim() : '';
   return title ? `${date.slice(5)} · ${title}` : undefined;
 }
 

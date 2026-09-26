@@ -4,8 +4,7 @@ name: iOS device assets
 # GitHub Actions cron 使用 UTC，北京时间 12:00 = UTC 04:00。
 
 on:
-  schedule:
-    - cron: '0 4 * * *'
+  # 已暂停定时执行；保留 workflow_dispatch 供手动触发。
   workflow_dispatch:
 
 concurrency:

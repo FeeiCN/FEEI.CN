@@ -177,6 +177,8 @@ export default function DailyRecordMeta() {
   const slug = typeof values.slug === 'string' ? values.slug : '';
   const match = slug.match(/^\/(\d{4})-(\d{2})-(\d{2})\/?$/);
   const location = typeof values.location === 'string' ? values.location.trim() : '';
+  const locations = useMemo(() => splitLocations(location), [location]);
+  const isMultiLocation = locations.length > 1;
   const [weather, setWeather] = useState<WeatherDay[]>([]);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
@@ -204,7 +206,6 @@ export default function DailyRecordMeta() {
     setWeatherLoading(false);
     if (!date || !location) return;
 
-    const locations = splitLocations(location);
     const distance = dayDistance(date);
     const maxAge = distance > 1 ? 30 * 24 * 60 * 60 * 1000 : 3 * 60 * 60 * 1000;
     const cached = locations.map((place) =>
@@ -240,32 +241,54 @@ export default function DailyRecordMeta() {
       .catch(() => {})
       .finally(() => setWeatherLoading(false));
     return () => controller.abort();
-  }, [date, location]);
+  }, [date, location, locations]);
 
   if (!match) return null;
 
+  const renderWeather = (item: WeatherDay) => (
+    <>
+      {item.label} {item.min}–{item.max}°C
+      {typeof item.precipitation === 'number' && item.precipitation >= 0.1
+        ? ` · 降水 ${item.precipitation.toFixed(1)}mm`
+        : ''}
+    </>
+  );
+
   return (
     <div className={styles.dailyMeta} aria-label="当天基本信息">
-      <span>{dateLabel}</span>
-      <span>{weekday}</span>
-      {dayStatus?.holiday && <span>{dayStatus.holiday}</span>}
-      {dayStatus && <span>{dayStatus.label}</span>}
-      {location && <span>{location}</span>}
-      {weather.length > 0 ? (
-        <span className={styles.weather}>
-          {weather.map((item) => (
-            <span key={item.location}>
-              {weather.length > 1 && `${item.location} `}
-              {item.label} {item.min}–{item.max}°C
-              {typeof item.precipitation === 'number' && item.precipitation >= 0.1
-                ? ` · 降水 ${item.precipitation.toFixed(1)}mm`
-                : ''}
-            </span>
-          ))}
-        </span>
-      ) : location && weatherLoading ? (
-        <span className={styles.weatherPlaceholder}>天气…</span>
-      ) : null}
+      <div className={styles.metaLine}>
+        <span>{dateLabel}</span>
+        <span>{weekday}</span>
+        {dayStatus?.holiday && <span>{dayStatus.holiday}</span>}
+        {dayStatus && <span>{dayStatus.label}</span>}
+        {!isMultiLocation && location && <span>{location}</span>}
+        {!isMultiLocation && weather.length > 0 ? (
+          <span className={styles.weather}>{renderWeather(weather[0])}</span>
+        ) : !isMultiLocation && location && weatherLoading ? (
+          <span className={styles.weatherPlaceholder}>天气…</span>
+        ) : null}
+      </div>
+
+      {isMultiLocation && (
+        <div className={styles.routeLine} aria-label="当天行程天气">
+          {locations.map((place, index) => {
+            const item = weather.find((entry) => entry.location === place);
+            return (
+              <React.Fragment key={place}>
+                {index > 0 && <span className={styles.routeArrow}>→</span>}
+                <span className={styles.routeStop}>
+                  <span className={styles.routePlace}>{place}</span>
+                  {item ? (
+                    <span>{renderWeather(item)}</span>
+                  ) : weatherLoading ? (
+                    <span className={styles.weatherPlaceholder}>天气…</span>
+                  ) : null}
+                </span>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      )}
     </div>
-  );
+  );}
 }

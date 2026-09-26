@@ -42,7 +42,7 @@ const config: Config = {
       ]},
       {type: 'search', position: 'right'},
     ]},
-    footer: {copyright: `<span class="footer-copyright">Copyright © 2012–${new Date().getFullYear()} FEEI&nbsp;&nbsp;All Rights Reserved</span><span class="footer-beian"><a class="footer-beian-link" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">浙ICP备2021009229号</a><span class="footer-beian-dot">·</span><a class="footer-beian-link" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586" target="_blank" rel="noopener noreferrer">浙公网安备33011002015586号</a><span class="footer-beian-dot">·</span><a class="footer-beian-link" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Weather: Open-Meteo</a></span>`},
+    footer: {copyright: `<span class="footer-copyright">Copyright © 2012–${new Date().getFullYear()} FEEI&nbsp;&nbsp;All Rights Reserved</span><span class="footer-beian"><a class="footer-beian-link" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">浙ICP备2021009229号</a><span class="footer-beian-dot">·</span><a class="footer-beian-link" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33011002015586" target="_blank" rel="noopener noreferrer">浙公网安备33011002015586号</a></span>`},
     prism: {theme: prismThemes.github, darkTheme: prismThemes.dracula},
   } satisfies Preset.ThemeConfig,
 };

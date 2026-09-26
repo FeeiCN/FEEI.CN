@@ -43,7 +43,7 @@ type CachedWeather = {
 };
 
 const GEO_CACHE_PREFIX = 'feei:daily-geo:v3:';
-const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v4:';
+const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v5:';
 
 function readCache<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -96,7 +96,7 @@ function weatherLabel(code: number, precipitation?: number): string {
   if (code === 0) return '晴';
   if (code === 1) return '晴间多云';
   if (code === 2) return '多云';
-  if (code === 3) return rain ?? '阴';
+  if (code === 3) return '阴';
   if (code === 45 || code === 48) return '雾';
   if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return rain ?? '小雨';
   if (code >= 71 && code <= 77) return '雪';

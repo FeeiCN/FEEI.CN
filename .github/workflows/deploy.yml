@@ -103,7 +103,18 @@ jobs:
           cd "$repo_dir"
           restore_data_source
           old_head="$(git rev-parse HEAD)"
-          git pull origin main
+          pull_ok=false
+          for pull_attempt in 1 2 3 4 5; do
+            echo "git pull attempt $pull_attempt of 5"
+            if git pull origin main; then
+              pull_ok=true
+              break
+            fi
+            if [ "$pull_attempt" -lt 5 ]; then
+              sleep $((pull_attempt * 10))
+            fi
+          done
+          [ "$pull_ok" = true ] || { echo "ERROR: git pull failed after 5 attempts"; exit 1; }
           new_head="$(git rev-parse HEAD)"
           deployed_head=""
           previous_release=""

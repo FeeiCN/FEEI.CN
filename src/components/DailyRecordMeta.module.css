@@ -1,0 +1,38 @@
+.dailyMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  align-items: center;
+  margin: -0.55rem 0 1.55rem;
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.dailyMeta > span:not(:last-child)::after {
+  content: '·';
+  margin-left: 0.85rem;
+  color: var(--ifm-color-emphasis-300);
+}
+
+.weather {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.7rem;
+}
+
+@media (max-width: 640px) {
+  .dailyMeta {
+    gap: 0.2rem 0.55rem;
+    margin-top: -0.35rem;
+    font-size: 0.78rem;
+  }
+
+  .dailyMeta > span:not(:last-child)::after {
+    margin-left: 0.55rem;
+  }
+
+  .weather {
+    flex-basis: 100%;
+  }
+}

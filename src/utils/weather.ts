@@ -115,21 +115,21 @@ export function summarizeWeather(raw: RawWeatherDay): WeatherSummary {
   let label = dominantLabel;
 
   if (thunderHours >= 3 || (thunderHours > 0 && totalRain >= 25)) {
-    label = rainLabel && totalRain >= 10 ? `雷雨 · ${rainLabel}` : '雷雨';
+    label = rainLabel && totalRain >= 10 ? `雷雨，${rainLabel}` : '雷雨';
   } else if (snowHours >= 6 || (codes.length > 0 && snowHours >= Math.ceil(codes.length / 3))) {
     label = snowLabel;
   } else if (thunderHours > 0) {
-    label = `${dominantLabel} · 短时雷雨`;
+    label = `${dominantLabel}，短时雷雨`;
   } else if (rainLabel) {
     if (rainHours >= 6 || totalRain >= 25 || (codes.length > 0 && rainHours >= Math.ceil(codes.length / 3))) {
       label = rainLabel;
     } else {
       label = maxHourlyRain >= 16
-        ? `${dominantLabel} · 短时强降雨`
-        : `${dominantLabel} · 短时有雨`;
+        ? `${dominantLabel}，短时强降雨`
+        : `${dominantLabel}，短时有雨`;
     }
   } else if (snowHours > 0) {
-    label = `${dominantLabel} · 短时${snowLabel}`;
+    label = `${dominantLabel}，短时${snowLabel}`;
   }
 
   return {

@@ -23,6 +23,15 @@ type WeatherResponse = {
   };
 };
 
+type HolidayData = {
+  days?: Array<{name: string; date: string; isOffDay: boolean}>;
+};
+
+type DayStatus = {
+  label: string;
+  holiday?: string;
+};
+
 const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
 
 function weatherLabel(code: number): string {
@@ -49,6 +58,27 @@ function dayDistance(date: string): number {
   const now = new Date();
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   return Math.floor((today - target) / 86400000);
+}
+
+async function loadDayStatus(date: string, weekday: number, signal: AbortSignal): Promise<DayStatus | null> {
+  const year = date.slice(0, 4);
+  const response = await fetch(
+    `https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/${year}.json`,
+    {signal},
+  );
+  if (!response.ok) return null;
+
+  const data = await response.json() as HolidayData;
+  if (!Array.isArray(data.days)) return null;
+  const specialDay = data.days.find((item) => item.date === date);
+
+  if (specialDay) {
+    return specialDay.isOffDay
+      ? {label: '休息', holiday: specialDay.name}
+      : {label: '调休上班', holiday: specialDay.name};
+  }
+
+  return {label: weekday === 0 || weekday === 6 ? '休息' : '工作'};
 }
 
 async function loadWeather(location: string, date: string, signal: AbortSignal): Promise<WeatherDay | null> {
@@ -101,13 +131,25 @@ export default function DailyRecordMeta() {
   const match = slug.match(/^\/(\d{4})-(\d{2})-(\d{2})\/?$/);
   const location = typeof values.location === 'string' ? values.location.trim() : '';
   const [weather, setWeather] = useState<WeatherDay[]>([]);
+  const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
 
   const date = match ? `${match[1]}-${match[2]}-${match[3]}` : '';
   const dateLabel = match ? `${match[1]}年${Number(match[2])}月${Number(match[3])}日` : '';
-  const weekday = useMemo(() => {
-    if (!match) return '';
-    return weekdays[new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))).getUTCDay()];
+  const weekdayIndex = useMemo(() => {
+    if (!match) return -1;
+    return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))).getUTCDay();
   }, [date]);
+  const weekday = weekdayIndex >= 0 ? weekdays[weekdayIndex] : '';
+
+  useEffect(() => {
+    setDayStatus(null);
+    if (!date || weekdayIndex < 0) return;
+    const controller = new AbortController();
+    loadDayStatus(date, weekdayIndex, controller.signal)
+      .then(setDayStatus)
+      .catch(() => {});
+    return () => controller.abort();
+  }, [date, weekdayIndex]);
 
   useEffect(() => {
     setWeather([]);
@@ -125,6 +167,8 @@ export default function DailyRecordMeta() {
     <div className={styles.dailyMeta} aria-label="当天基本信息">
       <span>{dateLabel}</span>
       <span>{weekday}</span>
+      {dayStatus?.holiday && <span>{dayStatus.holiday}</span>}
+      {dayStatus && <span>{dayStatus.label}</span>}
       {location && <span>{location}</span>}
       {weather.length > 0 && (
         <span className={styles.weather}>

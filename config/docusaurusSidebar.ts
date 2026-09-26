@@ -45,6 +45,10 @@ function getDocSidebarBadge(
   };
 }
 
+function overviewLabel(categoryLabel: string | undefined): string {
+  return categoryLabel === '人工智能安全' ? '人工智能安全体系' : '总览';
+}
+
 export function attachDocFrontMatterToSidebar<
   Item extends SidebarItemWithProps,
   Doc extends LoadedDocWithFrontMatter,
@@ -66,20 +70,50 @@ export function attachDocFrontMatterToSidebar<
 
   function visit(item: SidebarItemWithProps, depth: number): SidebarItemWithProps {
     const nextItem = {...item};
+
     if (item.type === 'doc' && item.id) {
       nextItem.customProps = applyDocFields(item, item.id);
       const dailyRecordLabel = getDailyRecordSidebarLabel(docsById.get(item.id));
       if (dailyRecordLabel) nextItem.label = dailyRecordLabel;
     }
+
     if (item.type === 'category') {
       if (typeof item.collapsed === 'undefined') nextItem.collapsed = depth > 0;
+
+      let children = [...(item.items ?? [])];
+
+      // Categories are navigation nodes only. If a legacy category linked directly
+      // to a document, keep that document as the first child before removing the link.
       if (item.link?.type === 'doc' && item.link.id) {
         nextItem.customProps = applyDocFields(item, item.link.id);
+        if (!children.some((child) => child.type === 'doc' && child.id === item.link?.id)) {
+          const linkedDoc = docsById.get(item.link.id);
+          children.unshift({
+            type: 'doc',
+            id: item.link.id,
+            label: linkedDoc?.title,
+          });
+        }
       }
-      if (item.items) {
-        nextItem.items = item.items.map((child) => visit(child, depth + 1));
-      }
+
+      // generated-index and doc links both disappear from the category itself:
+      // clicking a directory always expands/collapses it.
+      delete nextItem.link;
+
+      const visitedChildren = children.map((child) => visit(child, depth + 1));
+      nextItem.items = visitedChildren.map((child) => {
+        if (
+          child.type === 'doc'
+          && typeof item.label === 'string'
+          && typeof child.label === 'string'
+          && child.label.trim() === item.label.trim()
+        ) {
+          return {...child, label: overviewLabel(item.label)};
+        }
+        return child;
+      });
     }
+
     return nextItem;
   }
 

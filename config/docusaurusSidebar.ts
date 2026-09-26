@@ -16,8 +16,7 @@ type LoadedDocWithFrontMatter = {
 };
 
 function getDailyRecordSidebarLabel(doc?: LoadedDocWithFrontMatter): string | undefined {
-  if (!doc?.source?.startsWith('@site/docs/05-吴飞飞/02-年度总结/')) return undefined;
-  const slug = doc.frontMatter?.slug;
+  const slug = doc?.frontMatter?.slug;
   if (typeof slug !== 'string' || !/^\/\d{4}-\d{2}-\d{2}\/?$/.test(slug)) return undefined;
 
   const date = slug.replace(/^\//, '').replace(/\/$/, '');

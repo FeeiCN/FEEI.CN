@@ -57,10 +57,9 @@ export default function DocBreadcrumbs(): ReactNode {
   const [mobileTailCount, setMobileTailCount] = useState(1);
   const mobileNavRef = useRef<HTMLElement>(null);
   const measureRef = useRef<HTMLUListElement>(null);
-  if (!breadcrumbs) return null;
 
   // Keep the complete path in structured data; the H1 identifies the current page.
-  const parents = breadcrumbs.slice(0, -1);
+  const parents = breadcrumbs?.slice(0, -1) ?? [];
   const contextParents = getNavigationBreadcrumbs(sidebar, themeConfig.navbar.items as NavbarEntry[]);
   const visibleParents = [...contextParents, ...parents].filter((item, index, all) => (
     index === 0 || item.label !== all[index - 1].label
@@ -91,9 +90,12 @@ export default function DocBreadcrumbs(): ReactNode {
     const updateVisibleParents = () => {
       const available = nav.clientWidth;
       const children = Array.from(measure.children) as HTMLElement[];
-      const home = children.find((item) => item.dataset.breadcrumbMeasure === 'home');
       const ellipsis = children.find((item) => item.dataset.breadcrumbMeasure === 'ellipsis');
       const parents = children.filter((item) => item.dataset.breadcrumbMeasure === 'parent');
+      const home = children.find((item) => (
+        item.dataset.breadcrumbMeasure !== 'ellipsis' &&
+        item.dataset.breadcrumbMeasure !== 'parent'
+      ));
       if (parents.length !== visibleParents.length) return;
 
       const homeWidth = home?.getBoundingClientRect().width ?? 0;
@@ -125,6 +127,8 @@ export default function DocBreadcrumbs(): ReactNode {
     return () => observer.disconnect();
   }, [maxTailCount, visibleParents.map((item) => item.label).join('|')]);
 
+  if (!breadcrumbs) return null;
+
   return (
     <>
       <DocBreadcrumbsStructuredData breadcrumbs={breadcrumbs} />
@@ -143,7 +147,7 @@ export default function DocBreadcrumbs(): ReactNode {
             className={`${ThemeClassNames.docs.docBreadcrumbs} ${styles.breadcrumbsContainer} ${styles.mobileBreadcrumbs}`}
             aria-label="当前位置">
             <ul ref={measureRef} className={`breadcrumbs ${styles.measureBreadcrumbs}`} aria-hidden="true">
-              {homePageRoute && <li className="breadcrumbs__item" data-breadcrumb-measure="home"><span className="breadcrumbs__link">⌂</span></li>}
+              {homePageRoute && <HomeBreadcrumbItem />}
               {renderItems(visibleParents, true)}
               <li className="breadcrumbs__item" data-breadcrumb-measure="ellipsis">
                 <span className={styles.ellipsisButton}>…</span>

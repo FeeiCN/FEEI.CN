@@ -47,12 +47,9 @@ jobs:
 
       - name: Deploy on server
         run: |
-          github_ip="$(getent ahostsv4 github.com | awk 'NR==1 {print $1}')"
-          [ -n "$github_ip" ] || { echo "::error::GitHub runner could not resolve github.com"; exit 1; }
-          echo "GitHub fallback IP resolved by runner: $github_ip"
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' GITHUB_FALLBACK_IP='$github_ip' bash -se" <<'EOF'
+            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' bash -se" <<'EOF'
           set -euo pipefail
 
           timer_start=0
@@ -107,18 +104,17 @@ jobs:
           restore_data_source
           old_head="$(git rev-parse HEAD)"
           pull_ok=false
-
-          echo "git pull using server DNS"
-          if git pull origin main; then
-            pull_ok=true
-          else
-            echo "Server DNS pull failed; retrying GitHub SSH via runner-resolved IP: $GITHUB_FALLBACK_IP"
-            if git -c core.sshCommand="ssh -o HostName=$GITHUB_FALLBACK_IP -o HostKeyAlias=github.com -o ConnectTimeout=20" pull origin main; then
+          for pull_attempt in 1 2 3 4 5; do
+            echo "git pull attempt $pull_attempt of 5"
+            if git pull origin main; then
               pull_ok=true
+              break
             fi
-          fi
-
-          [ "$pull_ok" = true ] || { echo "ERROR: git pull failed via both server DNS and runner-resolved GitHub IP"; exit 1; }
+            if [ "$pull_attempt" -lt 5 ]; then
+              sleep $((pull_attempt * 10))
+            fi
+          done
+          [ "$pull_ok" = true ] || { echo "ERROR: git pull failed after 5 attempts"; exit 1; }
           new_head="$(git rev-parse HEAD)"
           deployed_head=""
           previous_release=""

@@ -2,6 +2,7 @@
 slug: /the-happiness-of-nov-2024
 title: 'November 2024 in Review: "Happiness"'
 icon: history-circle-icon
+sidebar_position: 2
 ---
 
 

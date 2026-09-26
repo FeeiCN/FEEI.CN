@@ -259,13 +259,13 @@ export const AUTHORED_PERIOD_REVIEWS: Record<string, AuthoredPeriodReview> = {
     title: '2019 年度总结：一个安全工程师的七年之痒',
     summary: '从蘑菇街到蚂蚁金服，复盘七年安全工程经历、平台选择与职业阶段转换。',
     href: '/a-security-engineer-2019',
-    load: () => import('@site/docs/05-吴飞飞/02-年度总结/a-security-engineer-2019/index.md'),
+    load: () => import('@site/docs/05-吴飞飞/02-年度总结/a-security-engineer-2019.md'),
   },
   'year:2023': {
     title: '2023 年度总结：成家立业',
     summary: '这一年完成从网商银行到支付宝的职业转折，也建立家庭，在变化与压力中重新寻找平衡。',
     href: '/annual-review-2023',
-    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-2023/index.md'),
+    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-2023.md'),
   },
   'year:2024': {
     title: '2024 年度总结',
@@ -277,19 +277,19 @@ export const AUTHORED_PERIOD_REVIEWS: Record<string, AuthoredPeriodReview> = {
     title: '2025 年度总结：量变到质变',
     summary: '围绕健康幸福、事业有成、财务自由与探索世界持续积累，个人成长系统开始显现复利。',
     href: '/annual-review-for-2025',
-    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2025/index.md'),
+    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2025.md'),
   },
   'month:2024-11': {
     title: '2024 年 11 月复盘：Happiness',
     summary: '以 Happiness 为关键词，记录工作反馈、知识结构、AI 实践与生活空间带来的幸福感。',
     href: '/the-happiness-of-nov-2024',
-    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2024/the-happiness-of-nov-2024/index.md'),
+    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2024/the-happiness-of-nov-2024.md'),
   },
   'month:2024-12': {
     title: '2024 年 12 月复盘：Trend',
     summary: '以 Trend 为关键词，复盘工作、行业、投资与健康中的趋势，以及下一阶段判断。',
     href: '/december-2024-in-review-trend',
-    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2024/december-2024-in-review-trend/index.md'),
+    load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2024/december-2024-in-review-trend.md'),
   },
 };
 export function dateToPath(date: string, suffix: string): string {

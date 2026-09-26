@@ -2,6 +2,7 @@
 slug: /december-2024-in-review-trend
 title: 'December 2024 in Review: "Trend"'
 icon: history-circle-icon
+sidebar_position: 1
 ---
 
 

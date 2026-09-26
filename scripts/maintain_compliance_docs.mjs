@@ -130,7 +130,7 @@ export function planChanges(input) {
     const marker = '## 法规关系与适用顺序 {#legal-map}';
     const offset = source.indexOf(marker);
     if (offset !== -1) {
-      const destination = `${ROOT}/00-法规参考/index.md`;
+      const destination = `${ROOT}/00-法规参考.md`;
       if (files.has(destination)) throw new Error('Legal reference destination already exists; reconcile manually');
       const legacy = source.slice(offset);
       files.set(destination, page('/cybersecurity-legal-reference', '法规关系、时间与责任索引',
@@ -143,7 +143,7 @@ export function planChanges(input) {
       const refs = [
         ['legal-map', '法规关系与适用顺序'], ['legal-dates', '公布与施行时间'],
         ['legal-liability', '处罚条件与其他法律后果'], ['implementation', '企业治理详细映射'],
-      ].map(([id, label]) => `<a id="${id}"></a>\n\n[${label}](./00-法规参考/index.md#${id})。`).join('\n\n');
+      ].map(([id, label]) => `<a id="${id}"></a>\n\n[${label}](./00-法规参考.md#${id})。`).join('\n\n');
       files.set(main, `${intro}\n\n## 法规依据与详细资料\n\n${refs}\n`);
     }
   }

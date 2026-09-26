@@ -1,6 +1,6 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {useDoc} from '@docusaurus/plugin-content-docs/client';
-import styles from './styles.module.css';
+import styles from './DailyRecordMeta.module.css';
 
 type WeatherDay = {
   location: string;

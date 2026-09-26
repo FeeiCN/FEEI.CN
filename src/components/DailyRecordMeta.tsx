@@ -62,8 +62,8 @@ type LocationAlias = {
   countryCode?: string;
 };
 
-const GEO_CACHE_PREFIX = 'feei:daily-geo:v4:';
-const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v6:';
+const GEO_CACHE_PREFIX = 'feei:daily-geo:v5:';
+const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v7:';
 
 function readCache<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -107,10 +107,29 @@ function geocodingNames(location: string): string[] {
 function splitLocations(value: string): string[] {
   return [...new Set(
     value
-      .split(/\s*(?:→|\/|、)\s*/)
+      .split(/\s*→\s*/)
       .map((part) => part.trim())
       .filter(Boolean),
   )].slice(0, 4);
+}
+
+function weatherLocationCandidates(location: string): string[] {
+  const hierarchy = location
+    .split(/\s*·\s*/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const candidates: string[] = [];
+  for (let index = hierarchy.length - 1; index >= 0; index -= 1) {
+    const level = hierarchy[index];
+    const places = level
+      .split(/\s*(?:\/|、)\s*/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+    candidates.push(...places);
+  }
+  candidates.push(location);
+  return [...new Set(candidates)];
 }
 
 function dayDistance(date: string): number {
@@ -135,7 +154,7 @@ function chooseGeocodingResult(location: string, results: GeocodingResult[]): Ge
   })[0];
 }
 
-async function resolveLocation(location: string, signal: AbortSignal): Promise<CachedGeo | null> {
+async function resolveAtomicLocation(location: string, signal: AbortSignal): Promise<CachedGeo | null> {
   const geoKey = `${GEO_CACHE_PREFIX}${location}`;
   const cached = readCache<CachedGeo>(geoKey);
   if (cached) return cached;
@@ -164,6 +183,21 @@ async function resolveLocation(location: string, signal: AbortSignal): Promise<C
       writeCache(geoKey, resolved);
       return resolved;
     }
+  }
+
+  return null;
+}
+
+async function resolveLocation(location: string, signal: AbortSignal): Promise<CachedGeo | null> {
+  const descriptorKey = `${GEO_CACHE_PREFIX}descriptor:${location}`;
+  const cached = readCache<CachedGeo>(descriptorKey);
+  if (cached) return cached;
+
+  for (const candidate of weatherLocationCandidates(location)) {
+    const resolved = await resolveAtomicLocation(candidate, signal);
+    if (!resolved) continue;
+    writeCache(descriptorKey, resolved);
+    return resolved;
   }
 
   return null;

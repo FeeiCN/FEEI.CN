@@ -6,10 +6,7 @@ name: Macnimi data sync
 # - 每小时 30 分同步健康数据
 
 on:
-  schedule:
-    - cron: '0 22 * * *'
-    - cron: '10 22 * * *'
-    - cron: '30 * * * *'
+  # 已暂停定时执行；保留 workflow_dispatch 供手动触发。
   workflow_dispatch:
     inputs:
       task:

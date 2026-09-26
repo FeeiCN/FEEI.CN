@@ -42,8 +42,8 @@ type CachedWeather = {
   cachedAt: number;
 };
 
-const GEO_CACHE_PREFIX = 'feei:daily-geo:v2:';
-const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v3:';
+const GEO_CACHE_PREFIX = 'feei:daily-geo:v3:';
+const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v4:';
 
 function readCache<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -65,6 +65,20 @@ function writeCache(key: string, value: unknown): void {
 }
 
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+const locationAliases: Record<string, string[]> = {
+  '札幌': ['札幌市', 'Sapporo'],
+  '千叶': ['千葉市', 'Chiba'],
+  '千葉': ['千葉市', 'Chiba'],
+};
+
+function geocodingNames(location: string): string[] {
+  const names = [location, ...(locationAliases[location] ?? [])];
+  if (/^[\u3400-\u9fff]{2,}$/.test(location) && !/[市区县縣]$/.test(location)) {
+    names.push(`${location}市`);
+  }
+  return [...new Set(names)];
+}
 
 function weatherLabel(code: number): string {
   if (code === 0) return '晴';
@@ -118,22 +132,25 @@ async function loadWeather(location: string, date: string, signal: AbortSignal):
   let place = readCache<CachedGeo>(geoKey);
 
   if (!place) {
-    for (const language of ['zh', 'ja', 'en']) {
-      const geocodingUrl = new URL('https://geocoding-api.open-meteo.com/v1/search');
-      geocodingUrl.searchParams.set('name', location);
-      geocodingUrl.searchParams.set('count', '5');
-      geocodingUrl.searchParams.set('language', language);
-      geocodingUrl.searchParams.set('format', 'json');
+    for (const name of geocodingNames(location)) {
+      for (const language of ['zh', 'ja', 'en']) {
+        const geocodingUrl = new URL('https://geocoding-api.open-meteo.com/v1/search');
+        geocodingUrl.searchParams.set('name', name);
+        geocodingUrl.searchParams.set('count', '5');
+        geocodingUrl.searchParams.set('language', language);
+        geocodingUrl.searchParams.set('format', 'json');
 
-      const geocoding = await fetch(geocodingUrl, {signal});
-      if (!geocoding.ok) continue;
-      const geocodingData = await geocoding.json() as GeocodingResponse;
-      const result = geocodingData.results?.[0];
-      if (!result) continue;
+        const geocoding = await fetch(geocodingUrl, {signal});
+        if (!geocoding.ok) continue;
+        const geocodingData = await geocoding.json() as GeocodingResponse;
+        const result = geocodingData.results?.[0];
+        if (!result) continue;
 
-      place = {latitude: result.latitude, longitude: result.longitude};
-      writeCache(geoKey, place);
-      break;
+        place = {latitude: result.latitude, longitude: result.longitude};
+        writeCache(geoKey, place);
+        break;
+      }
+      if (place) break;
     }
   }
 
@@ -282,7 +299,9 @@ export default function DailyRecordMeta() {
                     <span>{renderWeather(item)}</span>
                   ) : weatherLoading ? (
                     <span className={styles.weatherPlaceholder}>天气…</span>
-                  ) : null}
+                  ) : (
+                    <span className={styles.weatherUnavailable}>天气暂无</span>
+                  )}
                 </span>
               </React.Fragment>
             );

@@ -1,15 +1,18 @@
 .dailyMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.2rem 0.72rem;
-  align-items: center;
   margin: -0.7rem 0 1.15rem;
   color: var(--ifm-color-emphasis-650);
   font-size: 0.82rem;
   line-height: 1.5;
 }
 
-.dailyMeta > span:not(:last-child)::after {
+.metaLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.72rem;
+  align-items: center;
+}
+
+.metaLine > span:not(:last-child)::after {
   content: '·';
   margin-left: 0.72rem;
   color: var(--ifm-color-emphasis-400);
@@ -21,23 +24,54 @@
   gap: 0.2rem 0.65rem;
 }
 
-@media (max-width: 640px) {
-  .dailyMeta {
-    gap: 0.15rem 0.42rem;
-    margin: -0.6rem 0 1rem;
-    font-size: 0.78rem;
-    line-height: 1.45;
-  }
-
-  .dailyMeta > span:not(:last-child)::after {
-    margin-left: 0.42rem;
-  }
+.routeLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.48rem;
+  align-items: center;
+  margin-top: 0.3rem;
 }
 
+.routeStop {
+  display: inline-flex;
+  gap: 0.32rem;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.routePlace {
+  color: var(--ifm-color-emphasis-700);
+  font-weight: 550;
+}
+
+.routeArrow {
+  color: var(--ifm-color-emphasis-400);
+}
 
 .weatherPlaceholder {
   display: inline-block;
   min-width: 4.2em;
   color: var(--ifm-color-emphasis-400);
   opacity: 0.72;
+}
+
+@media (max-width: 640px) {
+  .dailyMeta {
+    margin: -0.6rem 0 1rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .metaLine {
+    gap: 0.15rem 0.42rem;
+  }
+
+  .metaLine > span:not(:last-child)::after {
+    margin-left: 0.42rem;
+  }
+
+  .routeLine {
+    gap: 0.22rem 0.4rem;
+    margin-top: 0.25rem;
+  }
 }

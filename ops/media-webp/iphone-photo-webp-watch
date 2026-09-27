@@ -149,6 +149,7 @@ watch_loop() {
     inotifywait -m -r -e close_write,moved_to --format '%w%f' "$ROOT" 2>>"$LOG" |
     while IFS= read -r f; do
         run_scan
+    "$INDEX" "$ROOT" 2>>"$LOG" || log "ERROR_INDEX_SCAN $ROOT"
     done
 }
 watch_loop &
@@ -156,6 +157,7 @@ WATCH_PID=$!
 trap 'kill "$WATCH_PID" 2>/dev/null || true' EXIT
 while kill -0 "$WATCH_PID" 2>/dev/null; do
     run_scan
+    "$INDEX" "$ROOT" 2>>"$LOG" || log "ERROR_INDEX_SCAN $ROOT"
     sleep 30
 done
 exit 1

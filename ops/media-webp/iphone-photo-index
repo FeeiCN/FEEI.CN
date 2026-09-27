@@ -1,25 +1,72 @@
 #!/usr/bin/env python3
-import json, re, sys, tempfile
+import fcntl
+import json
+import re
+import sys
+import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
-name_re = re.compile(r"^(?P<yy>\d{2})(?P<mm>\d{2})(?P<dd>\d{2})\d{6}(?:-\d+)?\.webp$", re.I)
-def write_index(d):
-    names=sorted(p.name for p in d.iterdir() if p.is_file() and p.suffix.lower()==".webp")
-    days={}
-    for n in names:
-        m=name_re.match(n)
-        if not m: continue
-        date="20{}-{}-{}".format(m.group("yy"),m.group("mm"),m.group("dd"))
-        if date[:7] != "{}-{}".format(d.parent.name,d.name): continue
-        days.setdefault(date,[]).append(n)
-    payload={"month":"{}-{}".format(d.parent.name,d.name),"days":dict(sorted(days.items()))}
-    fd,tmp=tempfile.mkstemp(prefix=".index.",suffix=".json",dir=d)
-    with open(fd,"w",encoding="utf-8") as f:
-        json.dump(payload,f,ensure_ascii=False,indent=2); f.write("\n")
-    Path(tmp).replace(d/"index.json")
-    (d / "index.json").chmod(0o644)
+
+NAME_RE = re.compile(r"^(?P<yy>\d{2})(?P<mm>\d{2})(?P<dd>\d{2})(?P<hh>\d{2})(?P<mi>\d{2})(?P<ss>\d{2})(?:-\d+)?\.webp$", re.I)
+LOCK = Path("/run/iphone-photo-index.lock")
+
+def write_index(month_dir):
+    year, month = month_dir.parent.name, month_dir.name
+    files = []
+    for path in sorted(month_dir.iterdir(), key=lambda p: p.name):
+        if not path.is_file() or path.suffix.lower() != ".webp":
+            continue
+        match = NAME_RE.match(path.name)
+        if not match:
+            continue
+        date = "20{}-{}-{}".format(match["yy"], match["mm"], match["dd"])
+        if date[:7] != "{}-{}".format(year, month):
+            continue
+        taken_at = "{}-{}-{}T{}:{}:{}+08:00".format(
+            date[:4], date[5:7], date[8:10],
+            match["hh"], match["mi"], match["ss"]
+        )
+        files.append((date, {
+            "name": path.name,
+            "url": "/media/{}/{}/{}".format(year, month, path.name),
+            "taken_at": taken_at,
+        }))
+
+    days = {}
+    for date, item in files:
+        days.setdefault(date, []).append(item)
+    days = {
+        date: {"count": len(items), "files": items}
+        for date, items in sorted(days.items())
+    }
+    payload = {
+        "schema_version": 1,
+        "month": "{}-{}".format(year, month),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "days": days,
+    }
+
+    fd, temp_name = tempfile.mkstemp(prefix=".index.", suffix=".json", dir=month_dir)
+    try:
+        with open(fd, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+        Path(temp_name).chmod(0o644)
+        Path(temp_name).replace(month_dir / "index.json")
+    finally:
+        Path(temp_name).unlink(missing_ok=True)
+
 def main():
-    root=Path(sys.argv[1] if len(sys.argv)>1 else "/data/wufeifei-assets/media/2026")
-    dirs=[Path(sys.argv[2])] if len(sys.argv)>2 else sorted(p for p in root.iterdir() if p.is_dir() and p.name.isdigit())
-    for d in dirs:
-        if d.is_dir(): write_index(d)
-if __name__=="__main__": main()
+    root = Path(sys.argv[1] if len(sys.argv) > 1 else "/data/wufeifei-assets/media/2026")
+    dirs = [Path(sys.argv[2])] if len(sys.argv) > 2 else sorted(
+        p for p in root.iterdir() if p.is_dir() and p.name.isdigit()
+    )
+    LOCK.parent.mkdir(parents=True, exist_ok=True)
+    with LOCK.open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        for month_dir in dirs:
+            if month_dir.is_dir():
+                write_index(month_dir)
+
+if __name__ == "__main__":
+    main()

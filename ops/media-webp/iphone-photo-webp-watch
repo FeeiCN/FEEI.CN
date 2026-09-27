@@ -1,30 +1,151 @@
 #!/usr/bin/env bash
 set -u
+
 ROOT=/data/wufeifei-assets/media/2026
 LOG=/var/log/iphone-photo-webp-watch.log
-J=/usr/bin/jpegtran; C=/usr/bin/cwebp; H=/usr/local/bin/heif-convert; E=/usr/bin/exiftool; D=/usr/bin/dwebp
-log(){ printf '%s %s\n' "$(date -Is)" "$*" >> "$LOG"; }
-stable(){ local a b; [ -f "$1" ] || return 1; a=$(stat -c '%s:%Y' "$1") || return 1; sleep 3; b=$(stat -c '%s:%Y' "$1") || return 1; [ "$a" = "$b" ]; }
-stamp(){ local s; s=$("$E" -s3 -d '%y%m%d%H%M%S' -DateTimeOriginal -CreateDate -MediaCreateDate -TrackCreateDate "$1" 2>/dev/null|head -1|tr -d '\r\n'); [[ "$s" =~ ^[0-9]{12}$ ]] && printf '%s' "$s" || date -d "$(stat -c '%y' "$1")" +%y%m%d%H%M%S; }
-dest(){ local d="$1" s="$2" p n=1; p="$d/$s.webp"; while [ -e "$p" ]; do p=$(printf '%s/%s-%02d.webp' "$d" "$s" "$n"); n=$((n+1)); done; printf '%s' "$p"; }
-orient(){ local o; o=$("$E" -s3 -Orientation# "$1" 2>/dev/null|head -1|tr -d '\r\n'); case "$o" in 2) echo "-flip horizontal";;3) echo "-rotate 180";;4) echo "-flip vertical";;5) echo "-transpose";;6) echo "-rotate 90";;7) echo "-transverse";;8) echo "-rotate 270";;esac; }
-convert_one(){
- local f="$1" d t w p q s before after out
- [ -f "$f" ] || return 0; stable "$f" || { log "SKIP_UNSTABLE $f"; return 0; }
- d=${f%/*}; s=$(stamp "$f"); out=$(dest "$d" "$s"); before=$(stat -c '%s:%Y' "$f") || return 1
- t=$(mktemp "$d/.webp.XXXXXX.webp") || return 1; w=$(mktemp "$d/.work.XXXXXX.jpg") || { rm -f "$t"; return 1; }
- case "${f##*.}" in
-  jpg|JPG|jpeg|JPEG) if ! "$J" -copy none $(orient "$f") -optimize -progressive -outfile "$w" "$f" 2>>"$LOG" || ! "$C" -quiet -metadata none -q 82 "$w" -o "$t" 2>>"$LOG"; then rm -f "$t" "$w"; log "ERROR_CONVERT $f"; return 1; fi ;;
-  heic|HEIC|heif|HEIF) p=$(mktemp "$d/.heic.XXXXXX.y4m") || { rm -f "$t" "$w"; return 1; }; q=$(mktemp "$d/.heic.XXXXXX.ppm") || { rm -f "$t" "$w" "$p"; return 1; }; rm -f "$p" "$q"; if ! "$H" "$f" "$p" 2>>"$LOG" || ! ffmpeg -loglevel error -y -i "$p" -frames:v 1 "$q" 2>>"$LOG" || ! "$C" -quiet -metadata none -q 82 "$q" -o "$t" 2>>"$LOG"; then rm -f "$t" "$w" "$p" "$q"; log "ERROR_CONVERT $f"; return 1; fi; rm -f "$p" "$q" ;;
-  *) rm -f "$t" "$w"; return 0 ;;
- esac
- "$D" -quiet "$t" -o /dev/null 2>>"$LOG" || { rm -f "$t" "$w"; log "ERROR_VERIFY $f"; return 1; }
- after=$(stat -c '%s:%Y' "$f" 2>/dev/null) || { rm -f "$t" "$w"; return 1; }
- [ "$before" = "$after" ] || { rm -f "$t" "$w"; log "SKIP_CHANGED $f"; return 1; }
- chmod --reference="$f" "$t"; chown --reference="$f" "$t"
- [ -e "$out" ] && out=$(dest "$d" "$s")
- mv -- "$t" "$out" || { rm -f "$t" "$w"; log "ERROR_SAVE $f"; return 1; }
- rm -f -- "$w" "$f"; log "GENERATED $out from $f; DELETED_SOURCE"
+J=/usr/bin/jpegtran
+C=/usr/bin/cwebp
+H=/usr/local/bin/heif-convert
+E=/usr/bin/exiftool
+D=/usr/bin/dwebp
+F=/usr/bin/ffmpeg
+MAX_WORKERS=${PHOTO_WEBP_WORKERS:-3}
+
+log() { printf '%s %s\n' "$(date -Is)" "*" >> "$LOG"; }
+
+stable() {
+    local a b
+    [ -f "$1" ] || return 1
+    a=$(stat -c '%s:%Y' "$1") || return 1
+    sleep 1
+    b=$(stat -c '%s:%Y' "$1") || return 1
+    [ "$a" = "$b" ]
 }
-find "$ROOT" ! -name ".*" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.heic' -o -iname '*.heif' \) -print0 | while IFS= read -r -d '' f; do convert_one "$f"; done
-inotifywait -m -r -e close_write,moved_to --format '%w%f' "$ROOT" 2>>"$LOG" | while IFS= read -r f; do [ -f "$f" ] || continue; case "${f##*.}" in jpg|JPG|jpeg|JPEG|heic|HEIC|heif|HEIF) convert_one "$f";; esac; done
+
+stamp() {
+    local s
+    s=$( "$E" -s3 -d '%y%m%d%H%M%S' -DateTimeOriginal -CreateDate -MediaCreateDate -TrackCreateDate "$1" 2>/dev/null | grep -E '^[0-9]{12}$' | head -1 | tr -d '\r\n' )
+    [[ "$s" =~ ^[0-9]{12}$ ]] && printf '%s' "$s" || date -d "$(stat -c '%y' "$1")" +%y%m%d%H%M%S
+}
+
+dest() {
+    local d="$1" s="$2" p n=1
+    p="$d/$s.webp"
+    while [ -e "$p" ]; do
+        p=$(printf '%s/%s-%02d.webp' "$d" "$s" "$n")
+        n=$((n + 1))
+    done
+    printf '%s' "$p"
+}
+
+orient() {
+    local o
+    o=$( "$E" -s3 -Orientation# "$1" 2>/dev/null | head -1 | tr -d '\r\n' )
+    case "$o" in
+        2) echo "-flip horizontal" ;;
+        3) echo "-rotate 180" ;;
+        4) echo "-flip vertical" ;;
+        5) echo "-transpose" ;;
+        6) echo "-rotate 90" ;;
+        7) echo "-transverse" ;;
+        8) echo "-rotate 270" ;;
+    esac
+}
+
+convert_one() {
+    local f="$1" d t w p q s before after out
+    [ -f "$f" ] || return 0
+    stable "$f" || { log "SKIP_UNSTABLE $f"; return 0; }
+
+    d=${f%/*}
+    s=$(stamp "$f")
+    out=$(dest "$d" "$s")
+    before=$(stat -c '%s:%Y' "$f") || return 1
+    t=$(mktemp "$d/.webp.XXXXXX.webp") || return 1
+    w=$(mktemp "$d/.work.XXXXXX.jpg") || { rm -f "$t"; return 1; }
+
+    case "${f##*.}" in
+        jpg|JPG|jpeg|JPEG)
+            if ! "$J" -copy none $(orient "$f") -optimize -progressive -outfile "$w" "$f" 2>>"$LOG" ||
+               ! "$C" -quiet -metadata none -q 82 "$w" -o "$t" 2>>"$LOG"; then
+                rm -f "$t" "$w"
+                log "ERROR_CONVERT $f"
+                return 1
+            fi
+            ;;
+        heic|HEIC|heif|HEIF)
+            p=$(mktemp "$d/.heic.XXXXXX.y4m") || { rm -f "$t" "$w"; return 1; }
+            q=$(mktemp "$d/.heic.XXXXXX.ppm") || { rm -f "$t" "$w" "$p"; return 1; }
+            rm -f "$p" "$q"
+            if ! "$H" "$f" "$p" 2>>"$LOG" ||
+               ! "$F" -loglevel error -y -i "$p" -frames:v 1 "$q" 2>>"$LOG" ||
+               ! "$C" -quiet -metadata none -q 82 "$q" -o "$t" 2>>"$LOG"; then
+                rm -f "$t" "$w" "$p" "$q"
+                log "ERROR_CONVERT $f"
+                return 1
+            fi
+            rm -f "$p" "$q"
+            ;;
+        *)
+            rm -f "$t" "$w"
+            return 0
+            ;;
+    esac
+
+    if ! "$D" -quiet "$t" -o /dev/null 2>>"$LOG"; then
+        rm -f "$t" "$w"
+        log "ERROR_VERIFY $f"
+        return 1
+    fi
+
+    after=$(stat -c '%s:%Y' "$f" 2>/dev/null) || { rm -f "$t" "$w"; return 1; }
+    if [ "$before" != "$after" ]; then
+        rm -f "$t" "$w"
+        log "SKIP_CHANGED $f"
+        return 1
+    fi
+
+    chmod --reference="$f" "$t"
+    chown --reference="$f" "$t"
+    [ -e "$out" ] && out=$(dest "$d" "$s")
+    if ! mv -- "$t" "$out"; then
+        rm -f "$t" "$w"
+        log "ERROR_SAVE $f"
+        return 1
+    fi
+    rm -f -- "$w" "$f"
+    log "GENERATED $out from $f; DELETED_SOURCE"
+}
+
+run_one() {
+    local f="$1" lock="$1.lock"
+    exec 9>"$lock"
+    flock -n 9 || return 0
+    convert_one "$f"
+    rm -f -- "$lock"
+}
+
+run_scan() {
+    local f count=0
+    while IFS= read -r -d '' f; do
+        run_one "$f" &
+        count=$((count + 1))
+        if [ "$count" -ge "$MAX_WORKERS" ]; then
+            wait -n || true
+            count=$((count - 1))
+        fi
+    done < <(find "$ROOT" ! -name ".*" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.heic' -o -iname '*.heif' \) -print0)
+    wait
+}
+
+run_scan
+
+inotifywait -m -r -e close_write,moved_to --format '%w%f' "$ROOT" 2>>"$LOG" |
+while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    case "${f##*.}" in
+        jpg|JPG|jpeg|JPEG|heic|HEIC|heif|HEIF)
+            run_one "$f" &
+            ;;
+    esac
+done

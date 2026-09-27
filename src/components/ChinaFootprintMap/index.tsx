@@ -29,8 +29,8 @@ type YearFootprintRow = {
 };
 
 const visitedProvinces: ProvinceVisit[] = [
-  {name: '上海市', shortName: '上海', value: 7, trips: [{year: 2013, places: ['上海']}, {year: 2017, places: ['上海']}, {year: 2018, places: ['上海']}, {year: 2019, places: ['上海']}, {year: 2021, places: ['上海']}, {year: 2023, places: ['上海']}, {year: 2024, places: ['上海']}]},
-  {name: '浙江省', shortName: '浙江', value: 10, trips: [{year: 2014, places: ['安吉']}, {year: 2015, places: ['安吉']}, {year: 2016, places: ['千岛湖', '舟山东极岛']}, {year: 2017, places: ['千岛湖', '舟山']}, {year: 2020, places: ['千岛湖']}, {year: 2021, places: ['千岛湖', '嘉兴']}, {year: 2022, places: ['千岛湖', '大明山', '临安']}, {year: 2023, places: ['千岛湖']}, {year: 2024, places: ['莫干山']}, {year: 2025, places: ['温州', '衢州', '开化']}]},
+  {name: '上海市', shortName: '上海', value: 8, trips: [{year: 2013, places: ['上海']}, {year: 2017, places: ['上海']}, {year: 2018, places: ['上海']}, {year: 2019, places: ['上海']}, {year: 2021, places: ['上海']}, {year: 2023, places: ['上海']}, {year: 2024, places: ['上海']}, {year: 2026, places: ['上海']}]},
+  {name: '浙江省', shortName: '浙江', value: 11, trips: [{year: 2014, places: ['安吉']}, {year: 2015, places: ['安吉']}, {year: 2016, places: ['千岛湖', '舟山东极岛']}, {year: 2017, places: ['千岛湖', '舟山']}, {year: 2020, places: ['千岛湖']}, {year: 2021, places: ['千岛湖', '嘉兴']}, {year: 2022, places: ['千岛湖', '大明山', '临安']}, {year: 2023, places: ['千岛湖']}, {year: 2024, places: ['莫干山']}, {year: 2025, places: ['温州', '衢州', '开化']}, {year: 2026, places: ['西天目山', '蝴蝶谷']}]},
   {name: '安徽省', shortName: '安徽', value: 4, trips: [{year: 2015, places: ['黄山']}, {year: 2016, places: ['黄山']}, {year: 2022, places: ['黟县']}, {year: 2023, places: ['黄山']}]},
   {name: '江苏省', shortName: '江苏', value: 2, trips: [{year: 2016, places: ['苏州']}, {year: 2024, places: ['苏州', '南京', '南浔']}]},
   {name: '江西省', shortName: '江西', value: 2, trips: [{year: 2021, places: ['九江']}, {year: 2022, places: ['庐山']}]},
@@ -39,7 +39,7 @@ const visitedProvinces: ProvinceVisit[] = [
   {name: '香港特别行政区', shortName: '中国香港', value: 1, trips: [{year: 2019, places: ['香港']}]},
   {name: '台湾省', shortName: '中国台湾', value: 1, trips: [{year: 2016, places: ['台湾']}]},
   {name: '福建省', shortName: '福建', value: 3, trips: [{year: 2018, places: ['泉州', '石狮']}, {year: 2019, places: ['宁德']}, {year: 2024, places: ['石狮', '晋江', '厦门']}]},
-  {name: '山东省', shortName: '山东', value: 1, trips: [{year: 2024, places: ['青岛']}]},
+  {name: '山东省', shortName: '山东', value: 2, trips: [{year: 2024, places: ['青岛']}, {year: 2026, places: ['济南']}]},
   {name: '广西壮族自治区', shortName: '广西', value: 2, trips: [{year: 2025, places: ['南宁', '钦州', '崇左', '百色']}, {year: 2025, places: ['北海']}]},
   {name: '贵州省', shortName: '贵州', value: 2, trips: [{year: 2024, places: ['贵阳', '黔西南', '黄果树瀑布', '万峰林']}, {year: 2025, places: ['贵阳']}]},
   {name: '云南省', shortName: '云南', value: 2, trips: [{year: 2024, places: ['西双版纳', '大理', '泸沽湖']}, {year: 2025, places: ['文山', '昆明']}]},
@@ -63,7 +63,7 @@ const visitedCountries: CountryVisit[] = [
   {name: 'China', label: '中国', displayName: '中国(China)', value: 26},
   {name: 'Hong Kong', label: '中国香港', displayName: '中国香港(Hong Kong)', value: 1, coord: [114.1694, 22.3193]},
   {name: 'Taiwan', label: '中国台湾', displayName: '中国台湾(Taiwan)', value: 1},
-  {name: 'Japan', label: '日本', displayName: '日本(Japan)', value: 2},
+  {name: 'Japan', label: '日本', displayName: '日本(Japan)', value: 3},
   {name: 'Vietnam', label: '越南', displayName: '越南(Vietnam)', value: 1},
   {name: 'Singapore', label: '新加坡', displayName: '新加坡(Singapore)', value: 1, coord: [103.8198, 1.3521]},
   {name: 'Malaysia', label: '马来西亚', displayName: '马来西亚(Malaysia)', value: 1},
@@ -254,6 +254,15 @@ const WORLD_NAME_ZH: Record<string, string> = {
 };
 
 const worldYearRows: YearFootprintRow[] = [
+  {
+    year: 2026,
+    footprints: [
+      '日本(Japan)：登别、札幌、北海道、千叶',
+      '中国(China) · 山东：济南',
+      '中国(China) · 浙江：西天目山、蝴蝶谷',
+      '中国(China) · 上海：上海',
+    ],
+  },
   {
     year: 2025,
     footprints: [
@@ -503,7 +512,7 @@ function buildWorldOption(isDark: boolean, isMobile: boolean, yearRows: YearFoot
   const countryMap = new Map(visitedCountries.map((item) => [item.name, item]));
   const pointCountries = visitedCountries.filter((item) => item.coord);
 
-  // 同一色系 teal：中国饱和度高（居住地），其他国家半透明（旅行目的地）
+  // 同一色系 teal：中国饱和度高（居住地），其他国家半透明（到访足迹）
   const homeColor = isDark ? 'rgba(45, 212, 191, 0.95)' : 'rgba(13, 148, 136, 0.92)';
   const visitedColor = isDark ? 'rgba(45, 212, 191, 0.55)' : 'rgba(13, 148, 136, 0.5)';
   const emphasisColor = isDark ? '#5eead4' : '#0d9488';
@@ -768,7 +777,7 @@ function ChinaFootprintMapInner() {
           </span>
           <span className={styles.legendItem}>
             <span className={`${styles.legendSwatch} ${styles.legendSwatchVisited}`} />
-            旅行目的地（{visitedCountriesCount - 1} 个国家与地区）
+            到访国家与地区（{visitedCountriesCount - 1} 个）
           </span>
           <span className={styles.legendHint}>
             悬停查看详情，点击国家/地区可筛选下方足迹表

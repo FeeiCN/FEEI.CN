@@ -6,17 +6,7 @@
 }
 
 .metaLine {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.2rem 0.72rem;
-  align-items: center;
   color: var(--ifm-color-emphasis-550);
-}
-
-.metaLine > span:not(:last-child)::after {
-  content: '·';
-  margin-left: 0.72rem;
-  color: var(--ifm-color-emphasis-350);
 }
 
 .specialDay {
@@ -77,14 +67,6 @@
     margin: -0.6rem 0 1rem;
     font-size: 0.78rem;
     line-height: 1.45;
-  }
-
-  .metaLine {
-    gap: 0.15rem 0.42rem;
-  }
-
-  .metaLine > span:not(:last-child)::after {
-    margin-left: 0.42rem;
   }
 
   .routeLine {

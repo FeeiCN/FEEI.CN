@@ -414,10 +414,9 @@ export default function DailyRecordMeta() {
   return (
     <div className={styles.dailyMeta} aria-label="当天基本信息">
       <div className={styles.metaLine}>
-        <span>{dateLabel}</span>
-        <span>{weekday}</span>
-        {dayStatus?.holiday && <span className={styles.specialDay}>{dayStatus.holiday}</span>}
-        {dayStatus && <span>{dayStatus.label}</span>}
+        {dateLabel}（{weekday}
+        {dayStatus?.holiday && <>，<span className={styles.specialDay}>{dayStatus.holiday}</span></>}）
+        {dayStatus && <>，{dayStatus.label}</>}
       </div>
 
       {location && (

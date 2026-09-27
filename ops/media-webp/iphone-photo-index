@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+import json, re, sys, tempfile
+from pathlib import Path
+name_re = re.compile(r"^(?P<yy>\d{2})(?P<mm>\d{2})(?P<dd>\d{2})\d{6}(?:-\d+)?\.webp$", re.I)
+def write_index(d):
+    names=sorted(p.name for p in d.iterdir() if p.is_file() and p.suffix.lower()==".webp")
+    days={}
+    for n in names:
+        m=name_re.match(n)
+        if not m: continue
+        date="20{}-{}-{}".format(m.group("yy"),m.group("mm"),m.group("dd"))
+        if date[:7] != "{}-{}".format(d.parent.name,d.name): continue
+        days.setdefault(date,[]).append(n)
+    payload={"month":"{}-{}".format(d.parent.name,d.name),"days":dict(sorted(days.items()))}
+    fd,tmp=tempfile.mkstemp(prefix=".index.",suffix=".json",dir=d)
+    with open(fd,"w",encoding="utf-8") as f:
+        json.dump(payload,f,ensure_ascii=False,indent=2); f.write("\n")
+    Path(tmp).replace(d/"index.json")
+    (d / "index.json").chmod(0o644)
+def main():
+    root=Path(sys.argv[1] if len(sys.argv)>1 else "/data/wufeifei-assets/media/2026")
+    dirs=[Path(sys.argv[2])] if len(sys.argv)>2 else sorted(p for p in root.iterdir() if p.is_dir() and p.name.isdigit())
+    for d in dirs:
+        if d.is_dir(): write_index(d)
+if __name__=="__main__": main()

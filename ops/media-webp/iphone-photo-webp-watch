@@ -8,6 +8,7 @@ C=/usr/bin/cwebp
 H=/usr/local/bin/heif-convert
 E=/usr/bin/exiftool
 D=/usr/bin/dwebp
+INDEX=/usr/local/sbin/iphone-photo-index
 F=/usr/bin/ffmpeg
 MAX_WORKERS=${PHOTO_WEBP_WORKERS:-5}
 
@@ -115,6 +116,7 @@ convert_one() {
     fi
     rm -f -- "$w" "$f"
     log "GENERATED $out from $f; DELETED_SOURCE"
+    "$INDEX" "$d" 2>>"$LOG" || log "ERROR_INDEX $d"
 }
 
 run_one() {

@@ -1,0 +1,37 @@
+.archive {
+  width: min(100% - 2.5rem, 840px);
+  margin: 2rem auto 4rem;
+}
+
+.archive h1 { margin-top: 1.5rem; }
+.archive p, .meta { color: var(--ifm-color-emphasis-700); }
+.search { display: grid; gap: 0.5rem; }
+.search input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--ifm-color-emphasis-400);
+  border-radius: 6px;
+  color: var(--ifm-font-color-base);
+  background: var(--ifm-background-color);
+  font: inherit;
+}
+.filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
+.filters button {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--ifm-color-emphasis-400);
+  border-radius: 6px;
+  color: var(--ifm-font-color-base);
+  background: var(--ifm-background-color);
+  font: inherit;
+  cursor: pointer;
+}
+.filters button[aria-pressed='true'] {
+  background: var(--ifm-color-emphasis-200);
+  border-color: var(--ifm-font-color-base);
+  font-weight: 700;
+}
+.list { list-style: none; padding: 0; }
+.list li { display: grid; gap: 0.25rem; padding: 1rem 0; border-top: 1px solid var(--ifm-color-emphasis-300); }
+.list a { color: var(--ifm-font-color-base); overflow-wrap: anywhere; }
+.meta { font-size: 0.8rem; }
+.archive :is(a, button, input):focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 3px; }

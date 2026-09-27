@@ -25,7 +25,8 @@ function HeroSection(): ReactNode {
         <p className={styles.heroIntro}>写网络安全、人工智能安全，也记录生活。</p>
         <p className={styles.heroGuide}>我把这些年的工作、思考和生活记录在这里。第一次来，可以先从下面三篇开始。</p>
         <div className={styles.compactActions}>
-          <a href="#start-reading">从这里开始 ↓</a>
+          <a href="#start-reading">精选文章 ↓</a>
+          <Link to="/articles">全部文章 →</Link>
           <Link to="/about">关于我 →</Link>
           <a href="/rss.xml">RSS ↗</a>
         </div>
@@ -39,7 +40,7 @@ function ReadingSection(): ReactNode {
   return (
     <section className={styles.section} aria-labelledby="start-reading">
       <div className={styles.inner}>
-        <Heading as="h2" id="start-reading" className={styles.compactHeading}>从这里开始</Heading>
+        <Heading as="h2" id="start-reading" className={styles.compactHeading}>精选文章</Heading>
         <div className={styles.featuredList}>
           {featured.map((item, index) => (
             <Link key={item.to} to={item.to} className={styles.featuredItem}>

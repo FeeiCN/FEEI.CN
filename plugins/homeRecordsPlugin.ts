@@ -4,6 +4,7 @@ import type {Compiler} from 'webpack';
 import type {DocMetadataMap} from './docMtimePlugin';
 
 export type HomeRecord = {date: string; title: string; to: string; location?: string};
+export type ArticleRecord = {title: string; to: string; topic: string; date: string};
 
 function validPublicationDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -45,7 +46,24 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
         .sort((first, second) => second.updatedAt - first.updatedAt || first.to.localeCompare(second.to))
         .slice(0, 3)
         .map((doc) => ({date: new Date(doc.updatedAt + 8 * 60 * 60 * 1000).toISOString().slice(0, 10), title: doc.title, to: doc.to}));
-      actions.setGlobalData({records, dailyRecords, updates});
+      const articles: ArticleRecord[] = docs
+        .filter((doc) => {
+          const badge = doc.frontMatter.sidebar_badge;
+          return !(badge && typeof badge === 'object' && 'text' in badge && badge.text === 'SKILL');
+        })
+        .map((doc) => {
+          const source = doc.source;
+          const topic = source.startsWith('@site/docs/01-网络安全/02-人工智能安全/') ? '人工智能安全'
+            : source.startsWith('@site/docs/01-网络安全/') ? '网络安全'
+              : source.startsWith('@site/docs/02-人生系统/') ? '人生系统'
+                : source.startsWith('@site/docs/05-吴飞飞/02-年度总结/') ? '日记与年度总结' : '其他';
+          const publishedAt = doc.frontMatter.published_at;
+          return {title: doc.title, to: doc.permalink, topic,
+            date: typeof publishedAt === 'string' && validPublicationDate(publishedAt) ? publishedAt : ''};
+        })
+        .sort((first, second) => second.date.localeCompare(first.date)
+          || first.title.localeCompare(second.title, 'zh-CN') || first.to.localeCompare(second.to));
+      actions.setGlobalData({records, dailyRecords, updates, articles});
 
       const siteUrl = context.siteConfig.url;
       const feedUrl = new URL(`${context.siteConfig.baseUrl}rss.xml`, siteUrl).href;

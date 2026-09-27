@@ -4,11 +4,25 @@ import json
 import re
 import sys
 import tempfile
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
 NAME_RE = re.compile(r"^(?P<yy>\d{2})(?P<mm>\d{2})(?P<dd>\d{2})(?P<hh>\d{2})(?P<mi>\d{2})(?P<ss>\d{2})(?:-\d+)?\.webp$", re.I)
 LOCK = Path("/run/iphone-photo-index.lock")
+
+def dimensions(path):
+    result = subprocess.run(["/usr/bin/webpinfo", str(path)], capture_output=True, text=True, check=True)
+    width = height = None
+    for line in result.stdout.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("Width:"):
+            width = int(stripped.split(":", 1)[1])
+        elif stripped.startswith("Height:"):
+            height = int(stripped.split(":", 1)[1])
+    if width is None or height is None:
+        raise ValueError("missing WebP dimensions: {}".format(path))
+    return width, height
 
 def write_index(month_dir):
     year, month = month_dir.parent.name, month_dir.name
@@ -26,10 +40,16 @@ def write_index(month_dir):
             date[:4], date[5:7], date[8:10],
             match["hh"], match["mi"], match["ss"]
         )
+        try:
+            width, height = dimensions(path)
+        except (OSError, ValueError, subprocess.CalledProcessError):
+            width = height = None
         files.append((date, {
             "name": path.name,
             "url": "/media/{}/{}/{}".format(year, month, path.name),
             "taken_at": taken_at,
+            "width": width,
+            "height": height,
         }))
 
     days = {}

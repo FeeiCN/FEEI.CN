@@ -57,6 +57,9 @@ orient() {
 convert_one() {
     local f="$1" d t w p q s before after out
     [ -f "$f" ] || return 0
+    case "${f##*/}" in
+        .*) log "SKIP_HIDDEN $f"; return 0 ;;
+    esac
     stable "$f" || { log "SKIP_UNSTABLE $f"; return 0; }
 
     d=${f%/*}

@@ -78,7 +78,7 @@ convert_one() {
             q=$(mktemp "$d/.heic.XXXXXX.ppm") || { rm -f "$t" "$w" "$p"; return 1; }
             rm -f "$p" "$q"
             if ! "$H" "$f" "$p" 2>>"$LOG" ||
-               ! "$F" -loglevel error -y -i "$p" -frames:v 1 "$q" 2>>"$LOG" ||
+               ! "$F" -nostdin -loglevel error -y -i "$p" -frames:v 1 "$q" 2>>"$LOG" ||
                ! "$C" -quiet -metadata none -q 82 "$q" -o "$t" 2>>"$LOG"; then
                 rm -f "$t" "$w" "$p" "$q"
                 log "ERROR_CONVERT $f"
@@ -122,13 +122,16 @@ run_one() {
     exec 9>"$lock"
     flock -n 9 || return 0
     convert_one "$f"
-    rm -f -- "$lock"
+    flock -u 9
+    exec 9>&-
 }
 
-run_scan() {
+run_scan() (
+    exec 8>/run/iphone-photo-webp-scan.lock
+    flock -n 8 || exit 0
     local f count=0
     while IFS= read -r -d '' f; do
-        run_one "$f" &
+        run_one "$f" </dev/null &
         count=$((count + 1))
         if [ "$count" -ge "$MAX_WORKERS" ]; then
             wait -n || true
@@ -136,16 +139,21 @@ run_scan() {
         fi
     done < <(find "$ROOT" ! -name ".*" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.heic' -o -iname '*.heif' \) -print0)
     wait
+)
+
+
+
+watch_loop() {
+    inotifywait -m -r -e close_write,moved_to --format '%w%f' "$ROOT" 2>>"$LOG" |
+    while IFS= read -r f; do
+        run_scan
+    done
 }
-
-run_scan
-
-inotifywait -m -r -e close_write,moved_to --format '%w%f' "$ROOT" 2>>"$LOG" |
-while IFS= read -r f; do
-    [ -f "$f" ] || continue
-    case "${f##*.}" in
-        jpg|JPG|jpeg|JPEG|heic|HEIC|heif|HEIF)
-            run_one "$f" &
-            ;;
-    esac
+watch_loop &
+WATCH_PID=$!
+trap 'kill "$WATCH_PID" 2>/dev/null || true' EXIT
+while kill -0 "$WATCH_PID" 2>/dev/null; do
+    run_scan
+    sleep 30
 done
+exit 1

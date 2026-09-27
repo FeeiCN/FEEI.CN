@@ -53,7 +53,7 @@ const visitedProvinces: ProvinceVisit[] = [
   {name: '湖北省', shortName: '湖北', value: 5, trips: [{year: 2015, places: ['武汉']}, {year: 2016, places: ['武汉']}, {year: 2018, places: ['蕲春']}, {year: 2020, places: ['武汉', '蕲春']}, {year: 2021, places: ['蕲春']}]},
   {name: '北京市', shortName: '北京', value: 5, trips: [{year: 2014, places: ['北京']}, {year: 2015, places: ['北京']}, {year: 2017, places: ['北京']}, {year: 2019, places: ['北京']}, {year: 2021, places: ['北京']}]},
   {name: '黑龙江省', shortName: '黑龙江', value: 2, trips: [{year: 2019, places: ['牡丹江']}, {year: 2021, places: ['牡丹江市（雪乡）', '哈尔滨']}]},
-  {name: '陕西省', shortName: '陕西', value: 2, trips: [{year: 2017, places: ['西安']}, {year: 2018, places: ['西安']}]},
+  {name: '陕西省', shortName: '陕西', value: 3, trips: [{year: 2017, places: ['西安']}, {year: 2018, places: ['西安']}, {year: 2026, places: ['延安', '壶口', '黄帝陵', '洛川']}]},
   {name: '重庆市', shortName: '重庆', value: 1, trips: [{year: 2023, places: ['重庆']}]},
   {name: '宁夏回族自治区', shortName: '宁夏', value: 1, trips: [{year: 2020, places: ['中卫', '银川']}]},
   {name: '河南省', shortName: '河南', value: 2, trips: [{year: 2017, places: ['郑州']}, {year: 2018, places: ['郑州']}]},
@@ -258,6 +258,7 @@ const worldYearRows: YearFootprintRow[] = [
     year: 2026,
     footprints: [
       '日本(Japan)：登别、札幌、北海道、千叶',
+      '中国(China) · 陕西：延安、壶口、黄帝陵、洛川',
       '中国(China) · 山东：济南',
       '中国(China) · 浙江：西天目山、蝴蝶谷',
       '中国(China) · 上海：上海',

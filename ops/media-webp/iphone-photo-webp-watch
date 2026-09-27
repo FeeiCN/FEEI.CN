@@ -11,7 +11,7 @@ D=/usr/bin/dwebp
 F=/usr/bin/ffmpeg
 MAX_WORKERS=${PHOTO_WEBP_WORKERS:-3}
 
-log() { printf '%s %s\n' "$(date -Is)" "*" >> "$LOG"; }
+log() { printf '%s %s\n' "$(date -Is)" "$*" >> "$LOG"; }
 
 stable() {
     local a b

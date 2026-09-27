@@ -8,6 +8,7 @@ C=/usr/bin/cwebp
 H=/usr/local/bin/heif-convert
 E=/usr/bin/exiftool
 D=/usr/bin/dwebp
+LOCK_DIR=/run/iphone-photo-webp
 INDEX=/usr/local/sbin/iphone-photo-index
 F=/usr/bin/ffmpeg
 MAX_WORKERS=${PHOTO_WEBP_WORKERS:-5}
@@ -74,6 +75,13 @@ convert_one() {
                 return 1
             fi
             ;;
+        png|PNG)
+            if ! "$C" -quiet -metadata none -lossless "$f" -o "$t" 2>>"$LOG"; then
+                rm -f "$t" "$w"
+                log "ERROR_CONVERT $f"
+                return 1
+            fi
+            ;;
         heic|HEIC|heif|HEIF)
             p=$(mktemp "$d/.heic.XXXXXX.y4m") || { rm -f "$t" "$w"; return 1; }
             q=$(mktemp "$d/.heic.XXXXXX.ppm") || { rm -f "$t" "$w" "$p"; return 1; }
@@ -120,7 +128,7 @@ convert_one() {
 }
 
 run_one() {
-    local f="$1" lock="$1.lock"
+    local f="$1" lock="$LOCK_DIR/$(printf "%s" "$1" | sha256sum | cut -d" " -f1).lock"
     exec 9>"$lock"
     flock -n 9 || return 0
     convert_one "$f"
@@ -129,6 +137,7 @@ run_one() {
 }
 
 run_scan() (
+    mkdir -p "$LOCK_DIR"
     exec 8>/run/iphone-photo-webp-scan.lock
     flock -n 8 || exit 0
     local f count=0
@@ -139,13 +148,14 @@ run_scan() (
             wait -n || true
             count=$((count - 1))
         fi
-    done < <(find "$ROOT" ! -name ".*" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.heic' -o -iname '*.heif' \) -print0)
+    done < <(find "$ROOT" ! -name ".*" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.heic' -o -iname '*.heif' -o -iname '*.png' \) -print0)
     wait
 )
 
 
 
 watch_loop() {
+    mkdir -p "$LOCK_DIR"
     inotifywait -m -r -e close_write,moved_to --format '%w%f' "$ROOT" 2>>"$LOG" |
     while IFS= read -r f; do
         run_scan

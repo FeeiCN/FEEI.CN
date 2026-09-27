@@ -1,5 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {TouchEvent} from 'react';
+import type PhotoSwipeLightbox from 'photoswipe/lightbox';
+import 'photoswipe/style.css';
 import justifiedLayout from 'justified-layout';
 import {
   ChevronLeftIcon,
@@ -226,9 +228,48 @@ export default function ImageLightbox() {
   const [isZoomed, setIsZoomed] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const photoSwipeRef = useRef<PhotoSwipeLightbox | null>(null);
   const isOpen = activeIndex !== null;
   const currentIndex = activeIndex ?? 0;
   const activeImage = isOpen ? images[currentIndex] : null;
+
+  const openPhotoSwipe = useCallback(async (pageImages: HTMLImageElement[], targetIndex: number) => {
+    const lightboxModule = await import('photoswipe/lightbox');
+    let lightbox = photoSwipeRef.current;
+    if (!lightbox) {
+      lightbox = new lightboxModule.default({
+        bgOpacity: 0.9,
+        showHideAnimationType: 'fade',
+        loop: false,
+        preload: [1, 2],
+        wheelToZoom: true,
+        pinchToClose: true,
+        closeOnVerticalDrag: true,
+        initialZoomLevel: 'fit',
+        secondaryZoomLevel: 'fit',
+        maxZoomLevel: 2,
+        spacing: 0.08,
+        padding: {top: 24, bottom: 24, left: 24, right: 24},
+        indexIndicatorSep: ' / ',
+        closeTitle: '关闭',
+        zoomTitle: '缩放',
+        arrowPrevTitle: '上一张',
+        arrowNextTitle: '下一张',
+        pswpModule: () => import('photoswipe'),
+      });
+      lightbox.init();
+      photoSwipeRef.current = lightbox;
+    }
+
+    const slides = pageImages.map((image) => ({
+      src: image.currentSrc || image.src,
+      width: image.naturalWidth || image.width,
+      height: image.naturalHeight || image.height,
+      msrc: image.currentSrc || image.src,
+      alt: image.alt || '',
+    }));
+    lightbox.loadAndOpen(targetIndex, slides);
+  }, []);
 
   const close = useCallback(() => {
     setActiveIndex(null);
@@ -256,6 +297,9 @@ export default function ImageLightbox() {
 
   useEffect(() => {
     function enhanceImage(image: HTMLImageElement) {
+      if (image.closest('.dailyRecordPhotos')) {
+        return;
+      }
       if (image.dataset.lightboxEnhanced === 'true') {
         return;
       }
@@ -425,9 +469,7 @@ export default function ImageLightbox() {
       }
 
       event.preventDefault();
-      setImages(pageImages.map(imageFromElement));
-      setActiveIndex(targetIndex);
-      setIsZoomed(false);
+      void openPhotoSwipe(pageImages, targetIndex);
     }
 
     document.addEventListener('click', handleClick);
@@ -436,8 +478,10 @@ export default function ImageLightbox() {
       resizeObserver.disconnect();
       clearTimeout(resizeTimer);
       document.removeEventListener('click', handleClick);
+      photoSwipeRef.current?.destroy();
+      photoSwipeRef.current = null;
     };
-  }, []);
+  }, [openPhotoSwipe]);
 
   useEffect(() => {
     if (!isOpen) {

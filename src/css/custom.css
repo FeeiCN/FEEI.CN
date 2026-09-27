@@ -1751,3 +1751,18 @@
 [data-theme='dark'] .theme-doc-markdown table thead th {
   background: rgba(255, 255, 255, 0.07);
 }
+
+.dailyRecordPhotos {
+  margin-top: 2rem;
+}
+
+.dailyRecordPhotos .react-photo-album--image {
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dailyRecordPhotos .react-photo-album--photo:hover .react-photo-album--image {
+    transform: scale(1.015);
+    box-shadow: 0 0.35rem 1.1rem rgba(15, 23, 42, 0.18);
+  }
+}

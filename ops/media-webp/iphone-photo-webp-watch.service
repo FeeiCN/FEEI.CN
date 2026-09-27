@@ -1,0 +1,13 @@
+[Unit]
+Description=Generate WebP images when iPhone media changes
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/iphone-photo-webp-watch
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

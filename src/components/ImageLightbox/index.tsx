@@ -239,16 +239,16 @@ export default function ImageLightbox() {
     if (!lightbox) {
       lightbox = new lightboxModule.default({
         bgOpacity: 0.9,
-        showHideAnimationType: 'fade',
+        showHideAnimationType: 'zoom',
         loop: false,
         preload: [1, 2],
         wheelToZoom: true,
+        mouseMovePan: true,
         pinchToClose: true,
         closeOnVerticalDrag: true,
         initialZoomLevel: 'fit',
-        secondaryZoomLevel: 'fit',
-        maxZoomLevel: 2,
-        spacing: 0.08,
+        secondaryZoomLevel: 1.25,
+        maxZoomLevel: 2.5,
         padding: {top: 24, bottom: 24, left: 24, right: 24},
         indexIndicatorSep: ' / ',
         closeTitle: '关闭',
@@ -262,6 +262,7 @@ export default function ImageLightbox() {
     }
 
     const slides = pageImages.map((image) => ({
+      element: image,
       src: image.currentSrc || image.src,
       width: image.naturalWidth || image.width,
       height: image.naturalHeight || image.height,

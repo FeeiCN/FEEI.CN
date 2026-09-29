@@ -114,7 +114,7 @@ export default function DailyRecordPhotos() {
       <RowsPhotoAlbum
         photos={photos}
         targetRowHeight={220}
-        spacing={8}
+        spacing={4}
         rowConstraints={{singleRowMaxHeight: 360}}
         componentsProps={{image: {decoding: 'async'}}}
         render={{

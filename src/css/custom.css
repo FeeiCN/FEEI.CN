@@ -1760,6 +1760,13 @@
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
+.dailyRecordVideo {
+  display: block;
+  width: 100%;
+  max-height: 70vh;
+  background: var(--ifm-color-emphasis-200);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .dailyRecordPhotos .react-photo-album--photo:hover .react-photo-album--image {
     transform: scale(1.015);

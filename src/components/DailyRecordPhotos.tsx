@@ -11,15 +11,17 @@ type PhotoIndex = {
 type PhotoEntry = {
   name?: unknown;
   url?: unknown;
+  type?: unknown;
   width?: unknown;
   height?: unknown;
 };
 
-type AlbumPhoto = {
+type AlbumMedia = {
   src: string;
   width: number;
   height: number;
   alt: string;
+  mediaType: 'photo' | 'video';
 };
 
 const MEDIA_ORIGIN = 'https://feei.cn';
@@ -30,16 +32,20 @@ function dateFromFrontMatter(value: unknown): string | null {
   return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
 }
 
-function photoUrl(value: string, year: string, month: string): string | null {
+function mediaUrl(value: string, year: string, month: string): string | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
 
   if (/^https:\/\/feei\.cn\/media\//.test(trimmed)) return trimmed;
   if (/^\/media\//.test(trimmed)) return `${MEDIA_ORIGIN}${trimmed}`;
-  if (/^[^/\\?#]+\.(?:webp|jpe?g|png|gif)$/i.test(trimmed)) {
+  if (/^[^/\\?#]+\.(?:webp|jpe?g|png|gif|mp4|webm|mov)$/i.test(trimmed)) {
     return `${MEDIA_ORIGIN}/media/${year}/${month}/${encodeURIComponent(trimmed)}`;
   }
   return null;
+}
+
+function isVideoUrl(value: string): boolean {
+  return /\.(?:mp4|webm|mov)$/i.test(value.split(/[?#]/, 1)[0]);
 }
 
 function positiveNumber(value: unknown): number | null {
@@ -49,10 +55,10 @@ function positiveNumber(value: unknown): number | null {
 export default function DailyRecordPhotos() {
   const {frontMatter} = useDoc();
   const date = dateFromFrontMatter((frontMatter as Record<string, unknown>).slug);
-  const [photos, setPhotos] = useState<AlbumPhoto[]>([]);
+  const [media, setMedia] = useState<AlbumMedia[]>([]);
 
   useEffect(() => {
-    setPhotos([]);
+    setMedia([]);
     if (!date) return;
 
     const [year, month] = date.split('-');
@@ -74,60 +80,110 @@ export default function DailyRecordPhotos() {
             const photo = entry as PhotoEntry;
             const value = typeof photo.url === 'string' ? photo.url : photo.name;
             return typeof value === 'string'
-              ? {value, width: positiveNumber(photo.width), height: positiveNumber(photo.height)}
+              ? {
+                  value,
+                  width: positiveNumber(photo.width),
+                  height: positiveNumber(photo.height),
+                  mediaType: photo.type === 'video' || isVideoUrl(value) ? 'video' : 'photo',
+                }
               : null;
           })
-          .filter((value): value is {value: string; width: number | null; height: number | null} => Boolean(value))
+          .filter((value): value is {
+            value: string;
+            width: number | null;
+            height: number | null;
+            mediaType: 'photo' | 'video';
+          } => Boolean(value))
           .map((entry) => ({
             ...entry,
-            src: photoUrl(entry.value, year, month),
+            src: mediaUrl(entry.value, year, month),
           }))
-          .filter((entry): entry is {value: string; width: number | null; height: number | null; src: string} => Boolean(entry.src));
-        const uniquePhotos = [...new Map(candidates.map((entry) => [entry.src, entry])).values()];
-        Promise.all(uniquePhotos.map((photo) => {
-          if (photo.width && photo.height) {
-            return Promise.resolve({src: photo.src, width: photo.width, height: photo.height, alt: ''});
+          .filter((entry): entry is {
+            value: string;
+            width: number | null;
+            height: number | null;
+            mediaType: 'photo' | 'video';
+            src: string;
+          } => Boolean(entry.src));
+        const uniqueMedia = [...new Map(candidates.map((entry) => [entry.src, entry])).values()];
+        Promise.all(uniqueMedia.map((item) => {
+          if (item.mediaType === 'video' || (item.width && item.height)) {
+            return Promise.resolve({
+              src: item.src,
+              width: item.width || 4,
+              height: item.height || 3,
+              alt: '',
+              mediaType: item.mediaType,
+            } satisfies AlbumMedia);
           }
 
-          return new Promise<AlbumPhoto>((resolve) => {
+          return new Promise<AlbumMedia>((resolve) => {
             const image = new Image();
             image.onload = () => resolve({
-              src: photo.src,
+              src: item.src,
               width: image.naturalWidth || 4,
               height: image.naturalHeight || 3,
               alt: '',
+              mediaType: 'photo',
             });
-            image.onerror = () => resolve({src: photo.src, width: 4, height: 3, alt: ''});
-            image.src = photo.src;
+            image.onerror = () => resolve({
+              src: item.src,
+              width: 4,
+              height: 3,
+              alt: '',
+              mediaType: 'photo',
+            });
+            image.src = item.src;
           });
-        })).then(setPhotos);
+        })).then(setMedia);
       })
       .catch(() => {});
 
     return () => controller.abort();
   }, [date]);
 
-  if (photos.length === 0) return null;
+  if (media.length === 0) return null;
 
   return (
     <div className="dailyRecordPhotos">
       <RowsPhotoAlbum
-        photos={photos}
+        photos={media}
         targetRowHeight={220}
         spacing={4}
         rowConstraints={{singleRowMaxHeight: 360}}
         componentsProps={{image: {decoding: 'async'}}}
         render={{
-          image: (props, {index}) => (
-            <img
-              {...props}
-              loading={index < 2 ? 'eager' : 'lazy'}
-              fetchPriority={index === 0 ? 'high' : 'auto'}
-              style={{
-                ...props.style,
-                backgroundColor: 'var(--ifm-color-emphasis-200)',
-              }}
-            />
+          photo: ({onClick}, {photo, index, width}) => (
+            <div
+              className="react-photo-album--photo"
+              style={{width: `${width}px`, padding: 0, flexShrink: 0}}
+              onClick={onClick}
+            >
+              {photo.mediaType === 'video' ? (
+                <video
+                  className="dailyRecordVideo"
+                  src={photo.src}
+                  controls
+                  preload="metadata"
+                  playsInline
+                  style={{width: '100%', aspectRatio: `${photo.width} / ${photo.height}`}}
+                />
+              ) : (
+                <img
+                  src={photo.src}
+                  alt={photo.alt}
+                  loading={index < 2 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  fetchPriority={index === 0 ? 'high' : 'auto'}
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    display: 'block',
+                    backgroundColor: 'var(--ifm-color-emphasis-200)',
+                  }}
+                />
+              )}
+            </div>
           ),
         }}
       />

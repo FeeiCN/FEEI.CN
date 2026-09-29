@@ -1,0 +1,13 @@
+[Unit]
+Description=Convert iPhone videos to MP4
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/iphone-video-mp4-watch
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

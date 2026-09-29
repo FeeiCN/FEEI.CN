@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -u
+ROOT=/data/wufeifei-assets/media/2026
+LOG=/var/log/iphone-video-mp4-watch.log
+F=/usr/bin/ffmpeg
+FP=/usr/bin/ffprobe
+E=/usr/bin/exiftool
+INDEX=/usr/local/sbin/iphone-photo-index
+LOCK_DIR=/run/iphone-video-mp4
+MAX_WORKERS=${VIDEO_MP4_WORKERS:-2}
+log(){ printf '%s %s\n' "$(date -Is)" "$*" >> "$LOG"; }
+stable(){ local a b; [ -f "$1" ] || return 1; a=$(stat -c '%s:%Y' "$1") || return 1; sleep 1; b=$(stat -c '%s:%Y' "$1") || return 1; [ "$a" = "$b" ]; }
+stamp(){ local s; s=$("$E" -s3 -d '%y%m%d%H%M%S' -DateTimeOriginal -CreateDate -MediaCreateDate -TrackCreateDate "$1" 2>/dev/null | grep -E '^[0-9]{12}$' | head -1 | tr -d '\r\n'); [[ "$s" =~ ^[0-9]{12}$ ]] && printf '%s' "$s" || date -d "$(stat -c '%y' "$1")" +%y%m%d%H%M%S; }
+out(){ local d="$1" s="$2" p n=1; p="$d/$s.mp4"; while [ -e "$p" ]; do p=$(printf '%s/%s-%02d.mp4' "$d" "$s" "$n"); n=$((n+1)); done; printf '%s' "$p"; }
+one(){ local f="$1" d s o t before after; [ -f "$f" ] || return 0; case "$f" in .*|*.mp4) return 0;; esac; stable "$f" || return 0; d=${f%/*}; s=$(stamp "$f"); compgen -G "$d/$s*.mp4" >/dev/null && return 0; o=$(out "$d" "$s"); before=$(stat -c '%s:%Y' "$f") || return 1; t=$(mktemp "$d/.video.XXXXXX.mp4") || return 1; rm -f "$t"; if ! "$F" -nostdin -hide_banner -loglevel error -y -i "$f" -ignore_unknown -map 0:v:0 -map 0:a:0? -sn -dn -map_metadata -1 -c:v libx264 -preset fast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart "$t" 2>>"$LOG"; then rm -f "$t"; log "ERROR_CONVERT $f"; return 1; fi; "$FP" -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "$t" >/dev/null 2>>"$LOG" || { rm -f "$t"; log "ERROR_VERIFY $f"; return 1; }; after=$(stat -c '%s:%Y' "$f" 2>/dev/null) || { rm -f "$t"; return 1; }; [ "$before" = "$after" ] || { rm -f "$t"; log "SKIP_CHANGED $f"; return 1; }; mv "$t" "$o" || { rm -f "$t"; log "ERROR_SAVE $f"; return 1; }; log "GENERATED_VIDEO $o from $f; SOURCE_RETAINED"; "$INDEX" "$d" 2>>"$LOG" || log "ERROR_INDEX $d"; }
+scan(){ mkdir -p "$LOCK_DIR"; exec 8>/run/iphone-video-mp4-scan.lock; flock -n 8 || exit 0; local f n=0; while IFS= read -r -d '' f; do local l="$LOCK_DIR/$(printf '%s' "$f" | sha256sum | cut -d' ' -f1).lock"; ( exec 9>"$l"; flock -n 9 || exit 0; one "$f"; exec 9>&- ) & n=$((n+1)); if [ "$n" -ge "$MAX_WORKERS" ]; then wait -n || true; n=$((n-1)); fi; done < <(find "$ROOT" ! -name '.*' -type f \( -iname '*.mov' -o -iname '*.m4v' -o -iname '*.avi' -o -iname '*.mkv' -o -iname '*.3gp' \) -print0); wait; }
+watch(){ inotifywait -m -r -e close_write,moved_to --format '%w%f' "$ROOT" 2>>"$LOG" | while IFS= read -r f; do case "$f" in *.mov|*.m4v|*.avi|*.mkv|*.3gp) one "$f" & ;; esac; done; }
+watch & pid=$!; trap 'kill "$pid" 2>/dev/null || true' EXIT; while kill -0 "$pid" 2>/dev/null; do scan; sleep 30; done

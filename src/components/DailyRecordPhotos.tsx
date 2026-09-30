@@ -212,7 +212,7 @@ export default function DailyRecordPhotos() {
   return (
     <div className="dailyRecordPhotos">
       <div className="dailyRecordPhotos__heading" aria-label={`${mediaLabel}，共 ${media.length} 项`}>
-        ${mediaLabel}（${media.length}）
+        {mediaLabel}（{media.length}）
       </div>
       <RowsPhotoAlbum
         photos={media}

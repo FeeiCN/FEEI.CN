@@ -205,10 +205,14 @@ export default function DailyRecordPhotos() {
     );
   }
 
+  const photoCount = media.filter((item) => item.mediaType === 'photo').length;
+  const videoCount = media.length - photoCount;
+  const mediaLabel = photoCount > 0 && videoCount > 0 ? '照片和视频' : photoCount > 0 ? '照片' : '视频';
+
   return (
     <div className="dailyRecordPhotos">
-      <div className="dailyRecordPhotos__heading" aria-label={`照片和视频，共 ${media.length} 项`}>
-        照片和视频（{media.length}）
+      <div className="dailyRecordPhotos__heading" aria-label={`${mediaLabel}，共 ${media.length} 项`}>
+        ${mediaLabel}（${media.length}）
       </div>
       <RowsPhotoAlbum
         photos={media}

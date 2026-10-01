@@ -79,7 +79,7 @@ export default function VersionsPage(): React.ReactElement {
           )}
           {!articlePath && !loading && !error && deploymentLimit < deployments.length && (
             <button type="button" className="button button--secondary margin-top--md" onClick={() => setDeploymentLimit((limit) => Math.min(limit + 10, deployments.length))}>
-              加载更早版本
+              加载更早版本（剩余 {deployments.length - deploymentLimit} 条）
             </button>
           )}
         </section>}

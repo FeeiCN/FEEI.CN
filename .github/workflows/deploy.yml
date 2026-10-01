@@ -15,6 +15,7 @@ on:
       - 'plugins/**'
       - 'scripts/check_docs_quality.mjs'
       - 'scripts/build_search_index.mjs'
+      - 'scripts/build_version_history.mjs'
       - 'docusaurus.config.ts'
       - 'config/search.ts'
       - 'sidebars.ts'
@@ -73,6 +74,10 @@ jobs:
           staging_dir=""
           active_build_pid=""
           hidden_data_dir="$repo_dir/static/.data.deploy-hidden"
+          version_history_file="$repo_dir/static/version-history.json"
+          version_history_backup="$site_root/.version-history.json.before-deploy"
+          version_history_existed=false
+          version_history_managed=false
 
           mkdir -p "$site_root"
           exec 9>"$deploy_lock_file"
@@ -84,6 +89,15 @@ jobs:
               if [ ! -e "$repo_dir/static/data" ]; then mv "$hidden_data_dir" "$repo_dir/static/data"; else rm -rf "$hidden_data_dir"; fi
             fi
           }
+          restore_version_history() {
+            if [ "$version_history_managed" != true ]; then return 0; fi
+            if [ "$version_history_existed" = true ]; then
+              mv -f "$version_history_backup" "$version_history_file"
+            else
+              rm -f "$version_history_file"
+            fi
+            version_history_managed=false
+          }
           cleanup_deploy() {
             exit_status=$?
             trap - EXIT HUP INT TERM
@@ -94,6 +108,8 @@ jobs:
               wait "$active_build_pid" 2>/dev/null || true
             fi
             restore_data_source
+            restore_version_history
+            rm -f "$version_history_backup"
             if [ -n "$staging_dir" ] && [ -e "$staging_dir" ]; then rm -rf "$staging_dir"; fi
             exit "$exit_status"
           }
@@ -130,9 +146,19 @@ jobs:
           echo "deployed_head=\${deployed_head:-none}"
           deployments_file="$site_root/deployments.json"
           mkdir -p "$site_root"
-          export DEPLOY_SHA DEPLOY_ACTION_URL DEPLOY_SUMMARY="$(git log -1 --pretty=%s "$new_head")" DEPLOYMENTS_FILE="$deployments_file"
+          # Use the commit actually checked out after pulling main.  For
+          # workflow_run events, github.sha can point at the workflow's
+          # default-branch context rather than this deployment's new_head.
+          export DEPLOY_SHA="$new_head" DEPLOY_ACTION_URL DEPLOY_SUMMARY="$(git log -1 --pretty=%s "$new_head")" DEPLOYMENTS_FILE="$deployments_file"
           node -e "const fs=require('fs'); const file=process.env.DEPLOYMENTS_FILE; let history=[]; try { history=JSON.parse(fs.readFileSync(file,'utf8')); } catch {} const record={sha:process.env.DEPLOY_SHA||process.env.DEPLOY_SUMMARY,deployedAt:new Date().toISOString(),summary:process.env.DEPLOY_SUMMARY||'',actionUrl:process.env.DEPLOY_ACTION_URL||''}; history=[record,...history.filter((item)=>item.sha!==record.sha)].slice(0,30); fs.writeFileSync(file,JSON.stringify(history,null,2)+'\\n');"
           cp "$deployments_file" "$repo_dir/static/deployments.json"
+          rm -f "$version_history_backup"
+          if [ -f "$version_history_file" ]; then
+            cp "$version_history_file" "$version_history_backup"
+            version_history_existed=true
+          fi
+          version_history_managed=true
+          node "$repo_dir/scripts/build_version_history.mjs" --head "$new_head" --output "$version_history_file"
           group_end "Prepare repository"
 
           group_start "Check docs quality"
@@ -154,6 +180,10 @@ jobs:
             current_release="$(readlink -f "$current_link")"
             rm -rf "$current_release/data"
             ln -s "$data_root" "$current_release/data"
+            cp "$repo_dir/static/deployments.json" "$current_release/deployments.json"
+            cp "$version_history_file" "$current_release/version-history.json"
+            restore_version_history
+            rm -f "$version_history_backup"
             echo "Only static/data changed; skipped Docusaurus build."
             exit 0
           fi
@@ -203,6 +233,8 @@ jobs:
             sleep 5
           done
           [ "$build_ok" = true ] || { echo "Build failed after 3 attempts"; exit 1; }
+          restore_version_history
+          rm -f "$version_history_backup"
           group_end "Build Docusaurus"
           restore_data_source
 

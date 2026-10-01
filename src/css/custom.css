@@ -1868,6 +1868,161 @@
   background: var(--ifm-color-emphasis-200);
 }
 
+.version-records-section {
+  margin-top: 2.5rem;
+}
+
+.version-records-list {
+  padding-left: 1.25rem;
+}
+
+.version-records-list li {
+  margin: 0.55rem 0;
+  line-height: 1.65;
+}
+
+.version-deployment-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.version-deployment-card {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 0.5rem;
+  background: var(--ifm-background-surface-color);
+}
+
+.version-deployment-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.9rem;
+}
+
+.version-deployment-meta time {
+  color: var(--ifm-font-color-base);
+  font-weight: 600;
+}
+
+.version-deployment-summary {
+  margin: 0.45rem 0 0.25rem;
+  line-height: 1.6;
+}
+
+.version-deployment-action {
+  font-size: 0.9rem;
+}
+
+.version-records-filter-note {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.9rem;
+}
+
+.version-records-result-count {
+  margin: -0.35rem 0 0.75rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.9rem;
+}
+
+.version-records-search {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.version-records-search span {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+.version-records-search input {
+  flex: 1 1 20rem;
+  max-width: 32rem;
+  margin: 0;
+}
+
+.version-records-article {
+  margin: 0.65rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 0.5rem;
+}
+
+.version-records-article code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.version-records-article summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+}
+
+.version-records-article summary span {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.version-records-article .version-records-list {
+  margin-bottom: 0;
+}
+
+.version-records-article code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.version-records-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+@media (max-width: 640px) {
+  .version-records-search input {
+    font-size: 16px;
+  }
+
+  .version-records-search {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .version-records-search input {
+    max-width: none;
+  }
+
+  .version-records-article summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .version-records-article summary span {
+    white-space: normal;
+  }
+
+  .version-deployment-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
+
 @media (max-width: 640px) {
   .dailyRecordPhotos {
     margin-top: 1.5rem;

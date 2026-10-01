@@ -133,3 +133,8 @@ html[data-theme='dark'] .suggestionHint {
     right: -8px;
   }
 }
+
+/* 输入时不显示实时下拉建议，回车后进入完整搜索页 */
+.wrapper :global([role='listbox']) {
+  display: none !important;
+}

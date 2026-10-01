@@ -6,6 +6,15 @@
 
 @import 'katex/dist/katex.min.css';
 
+/* Keep every mobile search control at least 16px so focusing it does not
+   trigger the browser's automatic page zoom. */
+@media (max-width: 576px) {
+  input[type='search'][name='q'],
+  select[name='search-context'] {
+    font-size: 16px;
+  }
+}
+
 .katex-display {
   margin: 1rem 0;
   overflow-x: auto;

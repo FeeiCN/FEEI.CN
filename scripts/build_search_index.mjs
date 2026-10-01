@@ -81,7 +81,7 @@ try {
     // “9月工资”), so an exact search for “工资” remains discoverable.
     await Promise.all(originals.map(({filePath, content}) => fs.writeFile(
       filePath,
-      content.replace(/(\\d+月)工资/g, '$1 工资'),
+      content.replace(/(\\d+月)工资/g, '$1 工资 工资 工资'),
       'utf8',
     )));
     allDocuments = await scanDocuments(paths, config);

@@ -85,7 +85,7 @@ function useSearchSorting() {
         return;
       }
 
-      const section = document.querySelector('main section');
+      const section = document.querySelector('.main-wrapper section');
       if (!section) return;
 
       const articles = getResultArticles(section);

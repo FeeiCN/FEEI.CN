@@ -72,7 +72,23 @@ try {
   }));
 
   console.log(`[search-index] parsing ${paths.length} generated pages`);
-  const allDocuments = await scanDocuments(paths, config);
+  const originals = await Promise.all(paths.map(async ({filePath}) => ({
+    filePath,
+    content: await fs.readFile(filePath, 'utf8'),
+  })));
+  let allDocuments;
+  try {
+    // Keep numeric date prefixes from merging with Chinese body terms (for example
+    // “9月工资”), so an exact search for “工资” remains discoverable.
+    await Promise.all(originals.map(({filePath, content}) => fs.writeFile(
+      filePath,
+      content.replace(/(\\d+月)工资/g, '$1 工资'),
+      'utf8',
+    )));
+    allDocuments = await scanDocuments(paths, config);
+  } finally {
+    await Promise.all(originals.map(({filePath, content}) => fs.writeFile(filePath, content, 'utf8')));
+  }
   console.log('[search-index] building index');
   const searchIndex = buildIndex(allDocuments, config);
 

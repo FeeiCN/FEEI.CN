@@ -50,7 +50,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' bash -se" <<'EOF'
+            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' DEPLOY_SHA='${{ github.sha }}' DEPLOY_ACTION_URL='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}' bash -se" <<'EOF'
           set -euo pipefail
 
           timer_start=0
@@ -127,7 +127,20 @@ jobs:
           if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then quality_base="$deployed_head"; fi
           echo "old_head=$old_head"
           echo "new_head=$new_head"
-          echo "deployed_head=${deployed_head:-none}"
+          echo "deployed_head=\${deployed_head:-none}"
+          deployments_file="$site_root/deployments.json"
+          mkdir -p "$site_root"
+          export DEPLOY_SHA DEPLOY_ACTION_URL DEPLOY_SUMMARY="$(git log -1 --pretty=%s "$new_head")" DEPLOYMENTS_FILE="$deployments_file"
+          node <<'NODE'
+          const fs = require('fs');
+          const file = process.env.DEPLOYMENTS_FILE;
+          let history = [];
+          try { history = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
+          const record = {sha: process.env.DEPLOY_SHA || process.env.DEPLOY_SUMMARY, deployedAt: new Date().toISOString(), summary: process.env.DEPLOY_SUMMARY || '', actionUrl: process.env.DEPLOY_ACTION_URL || ''};
+          history = [record, ...history.filter((item) => item.sha !== record.sha)].slice(0, 30);
+          fs.writeFileSync(file, JSON.stringify(history, null, 2) + '\\n');
+          NODE
+          cp "$deployments_file" "$repo_dir/static/deployments.json"
           group_end "Prepare repository"
 
           group_start "Check docs quality"

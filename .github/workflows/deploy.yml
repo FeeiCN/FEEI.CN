@@ -131,15 +131,7 @@ jobs:
           deployments_file="$site_root/deployments.json"
           mkdir -p "$site_root"
           export DEPLOY_SHA DEPLOY_ACTION_URL DEPLOY_SUMMARY="$(git log -1 --pretty=%s "$new_head")" DEPLOYMENTS_FILE="$deployments_file"
-          node <<'NODE'
-          const fs = require('fs');
-          const file = process.env.DEPLOYMENTS_FILE;
-          let history = [];
-          try { history = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
-          const record = {sha: process.env.DEPLOY_SHA || process.env.DEPLOY_SUMMARY, deployedAt: new Date().toISOString(), summary: process.env.DEPLOY_SUMMARY || '', actionUrl: process.env.DEPLOY_ACTION_URL || ''};
-          history = [record, ...history.filter((item) => item.sha !== record.sha)].slice(0, 30);
-          fs.writeFileSync(file, JSON.stringify(history, null, 2) + '\\n');
-          NODE
+          node -e "const fs=require('fs'); const file=process.env.DEPLOYMENTS_FILE; let history=[]; try { history=JSON.parse(fs.readFileSync(file,'utf8')); } catch {} const record={sha:process.env.DEPLOY_SHA||process.env.DEPLOY_SUMMARY,deployedAt:new Date().toISOString(),summary:process.env.DEPLOY_SUMMARY||'',actionUrl:process.env.DEPLOY_ACTION_URL||''}; history=[record,...history.filter((item)=>item.sha!==record.sha)].slice(0,30); fs.writeFileSync(file,JSON.stringify(history,null,2)+'\\n');"
           cp "$deployments_file" "$repo_dir/static/deployments.json"
           group_end "Prepare repository"
 

@@ -3,7 +3,7 @@ import Layout from '@theme/Layout';
 
 type Deployment = {sha: string; deployedAt: string; summary: string; actionUrl?: string};
 
-export default function VersionsPage(): JSX.Element {
+export default function VersionsPage(): React.ReactElement {
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   useEffect(() => {
     fetch('/deployments.json')

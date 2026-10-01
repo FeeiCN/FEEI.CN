@@ -13,8 +13,7 @@ import styles from './styles.module.css';
 
 function useSyntheticTitle(): string | null {
   const {metadata, frontMatter, contentTitle} = useDoc();
-  const isDailyRecord = typeof frontMatter.slug === 'string' && /^\/\d{4}-\d{2}-\d{2}\/?$/.test(frontMatter.slug);
-  const shouldRender = !isDailyRecord && !frontMatter.hide_title && typeof contentTitle === 'undefined';
+  const shouldRender = !frontMatter.hide_title && typeof contentTitle === 'undefined';
   if (!shouldRender) return null;
   return metadata.title;
 }

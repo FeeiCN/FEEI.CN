@@ -1,5 +1,6 @@
 import React, {useEffect} from 'react';
 import OriginalSearchBar from '@easyops-cn/docusaurus-search-local/dist/client/client/theme/SearchBar';
+import {usePluginData} from '@docusaurus/useGlobalData';
 import styles from './styles.module.css';
 
 const INPUT_SELECTOR = '.navbar__search-input';
@@ -10,25 +11,26 @@ function getResultArticles(section) {
   return Array.from(section.children).filter((element) => element.tagName === 'ARTICLE');
 }
 
-function getArticleDate(article) {
+function getArticleDate(article, updatedAtByPermalink) {
   const href = article.querySelector('a[href]')?.getAttribute('href') ?? '';
-  const match = decodeURIComponent(href).match(
-    /(?:^|\/)(\d{4})-(\d{2})(?:-(\d{2}))?(?:\/|$)/,
-  );
-  if (!match) return null;
-
-  const timestamp = Date.parse(
-    `${match[1]}-${match[2]}-${match[3] ?? '01'}T00:00:00Z`,
-  );
+  try {
+    const pathname = new URL(href, window.location.origin).pathname.replace(/\/$/, '') || '/';
+    const timestamp = updatedAtByPermalink?.[pathname] ?? updatedAtByPermalink?.[`${pathname}/`];
+    if (Number.isFinite(timestamp) && timestamp > 0) return timestamp;
+  } catch {
+    // Keep undated results at the end when a result link is malformed.
+  }
+  const timeValue = article.querySelector('time[datetime]')?.getAttribute('datetime');
+  const timestamp = timeValue ? Date.parse(timeValue) : Number.NaN;
   return Number.isNaN(timestamp) ? null : timestamp;
 }
 
-function sortArticles(section, originalOrder, mode) {
+function sortArticles(section, originalOrder, mode, updatedAtByPermalink) {
   const ordered =
     mode === 'relevance'
       ? originalOrder
       : originalOrder
-          .map((article, index) => ({article, index, timestamp: getArticleDate(article)}))
+          .map((article, index) => ({article, index, timestamp: getArticleDate(article, updatedAtByPermalink)}))
           .sort((left, right) => {
             if (left.timestamp === null && right.timestamp === null) {
               return left.index - right.index;
@@ -71,6 +73,8 @@ function createSortControl(onChange) {
 }
 
 function useSearchSorting() {
+  const {updatedAtByPermalink = {}} = usePluginData('home-records-plugin') || {};
+
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
@@ -104,12 +108,12 @@ function useSearchSorting() {
       if (!control) {
         control = createSortControl((nextMode) => {
           mode = nextMode;
-          sortArticles(section, originalOrder, mode);
+          sortArticles(section, originalOrder, mode, updatedAtByPermalink);
         });
         section.parentElement?.insertBefore(control, section);
       }
 
-      sortArticles(section, originalOrder, mode);
+      sortArticles(section, originalOrder, mode, updatedAtByPermalink);
     };
 
     const observer = new MutationObserver(install);

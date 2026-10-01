@@ -45,7 +45,8 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
         .sort((first, second) => second.updatedAt - first.updatedAt || first.to.localeCompare(second.to))
         .slice(0, 3)
         .map((doc) => ({date: new Date(doc.updatedAt + 8 * 60 * 60 * 1000).toISOString().slice(0, 10), title: doc.title, to: doc.to}));
-      actions.setGlobalData({records, dailyRecords, updates});
+      const updatedAtByPermalink = Object.fromEntries(docs.map((doc) => [doc.permalink, docMetadata?.[doc.source]?.updatedAt ?? 0]));
+      actions.setGlobalData({records, dailyRecords, updates, updatedAtByPermalink});
 
       const siteUrl = context.siteConfig.url;
       const feedUrl = new URL(`${context.siteConfig.baseUrl}rss.xml`, siteUrl).href;

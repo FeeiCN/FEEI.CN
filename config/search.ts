@@ -4,6 +4,6 @@ export const searchOptions = {
   indexPages: false,
   hashed: true,
   language: ['zh'],
-  zhUserDict: '工资 100000 n',
+  zhUserDictPath: './config/search-zh-dict.txt',
   searchResultLimits: 500,
 };

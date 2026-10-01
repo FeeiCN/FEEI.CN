@@ -38,8 +38,7 @@ const config = {
   forceIgnoreNoIndex: false,
   removeDefaultStopWordFilter: [],
   removeDefaultStemmer: false,
-  zhUserDict: '工资 100000 n',
-  zhUserDictPath: undefined,
+  zhUserDictPath: path.resolve('config/search-zh-dict.txt'),
 };
 
 async function collectHtmlFiles(dir) {

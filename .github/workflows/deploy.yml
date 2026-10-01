@@ -148,6 +148,12 @@ jobs:
           echo "old_head=$old_head"
           echo "new_head=$new_head"
           echo "deployed_head=\${deployed_head:-none}"
+          data_only=false
+          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
+            changed_files="$(git diff --name-only "$deployed_head" "$new_head")"
+            if [ -n "$changed_files" ] && ! printf '%s\n' "$changed_files" | grep -qv '^static/data/'; then data_only=true; fi
+          fi
+          export DEPLOY_IS_DATA_ONLY="$data_only"
           deployments_file="$site_root/deployments.json"
           mkdir -p "$site_root"
           # Use the commit actually checked out after pulling main.  For
@@ -155,7 +161,7 @@ jobs:
           # default-branch context rather than this deployment's new_head.
           export DEPLOY_SHA="$new_head" DEPLOY_ACTION_URL DEPLOY_SUMMARY="$(git log -1 --pretty=%s "$new_head")" DEPLOYMENTS_FILE="$deployments_file"
           # Keep deployment history independent from the repository commit log.
-          # Backfill successful deploy.yml runs so older deployments remain visible.
+          # Backfill only successful deploy.yml runs that changed site content.
           node <<'NODE'
           const fs = require('fs');
           const file = process.env.DEPLOYMENTS_FILE;
@@ -164,24 +170,45 @@ jobs:
           let history = [];
           try { history = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
           if (!Array.isArray(history)) history = [];
+          const headers = {accept: 'application/vnd.github+json', authorization: `Bearer ${token}`, 'x-github-api-version': '2022-11-28'};
           const current = {sha: process.env.DEPLOY_SHA || process.env.DEPLOY_SUMMARY, deployedAt: new Date().toISOString(), summary: process.env.DEPLOY_SUMMARY || '', actionUrl: process.env.DEPLOY_ACTION_URL || ''};
-          const bySha = new Map();
-          for (const item of history) if (item && item.sha) bySha.set(item.sha, item);
-          bySha.set(current.sha, current);
+          async function changedOutsideData(sha) {
+            const response = await fetch(`https://api.github.com/repos/${repository}/commits/${sha}`, {headers});
+            if (!response.ok) throw new Error(`GitHub commit API returned ${response.status}`);
+            const commit = await response.json();
+            return (commit.files || []).some((file) => !file.filename.startsWith('static/data/'));
+          }
           async function backfill() {
-            if (!token || !repository) return;
-            const response = await fetch(`https://api.github.com/repos/${repository}/actions/workflows/deploy.yml/runs?status=success&per_page=30`, {headers: {accept: 'application/vnd.github+json', authorization: `Bearer ${token}`, 'x-github-api-version': '2022-11-28'}});
-            if (!response.ok) throw new Error(`GitHub Actions API returned ${response.status}`);
-            const data = await response.json();
-            for (const run of (data.workflow_runs || [])) {
-              if (!run.head_sha || bySha.has(run.head_sha)) continue;
-              bySha.set(run.head_sha, {sha: run.head_sha, deployedAt: run.updated_at || run.completed_at || run.created_at, summary: run.display_title || run.name || '', actionUrl: run.html_url || ''});
+            const existing = new Map(history.filter((item) => item && item.sha).map((item) => [item.sha, item]));
+            if (token && repository) {
+              const response = await fetch(`https://api.github.com/repos/${repository}/actions/workflows/deploy.yml/runs?status=success&per_page=30`, {headers});
+              if (!response.ok) throw new Error(`GitHub Actions API returned ${response.status}`);
+              const data = await response.json();
+              const runs = (data.workflow_runs || []).filter((run) => run.head_sha);
+              const eligible = await Promise.all(runs.map(async (run) => ({run, eligible: await changedOutsideData(run.head_sha)})));
+              for (const {run, eligible: isEligible} of eligible) {
+                if (!isEligible) existing.delete(run.head_sha);
+                else if (!existing.has(run.head_sha)) existing.set(run.head_sha, {sha: run.head_sha, deployedAt: run.updated_at || run.completed_at || run.created_at, summary: run.display_title || run.name || '', actionUrl: run.html_url || ''});
+              }
+              // Validate retained records too, removing historical data-only runs.
+              for (const item of [...existing.values()]) {
+                if (!runs.some((run) => run.head_sha === item.sha) && !(await changedOutsideData(item.sha))) existing.delete(item.sha);
+              }
+            }
+            if (process.env.DEPLOY_IS_DATA_ONLY !== 'true') existing.set(current.sha, current);
+            return [...existing.values()].filter((item) => item && item.sha).sort((a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime()).slice(0, 30);
+          }
+          async function main() {
+            try {
+              const merged = await backfill();
+              fs.writeFileSync(file, JSON.stringify(merged, null, 2) + '\n');
+            } catch (error) {
+              console.warn(`Deployment history backfill skipped: ${error.message}`);
+              const fallback = process.env.DEPLOY_IS_DATA_ONLY === 'true' ? history : [current, ...history.filter((item) => item.sha !== current.sha)];
+              fs.writeFileSync(file, JSON.stringify(fallback.slice(0, 30), null, 2) + '\n');
             }
           }
-          backfill().catch((error) => console.warn(`Deployment history backfill skipped: ${error.message}`)).finally(() => {
-            const merged = [...bySha.values()].filter((item) => item && item.sha).sort((a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime()).slice(0, 30);
-            fs.writeFileSync(file, JSON.stringify(merged, null, 2) + '\n');
-          });
+          main();
           NODE
           cp "$deployments_file" "$repo_dir/static/deployments.json"
           rm -f "$version_history_backup"

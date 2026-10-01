@@ -138,3 +138,31 @@ html[data-theme='dark'] .suggestionHint {
 .wrapper :global([role='listbox']) {
   display: none !important;
 }
+
+.searchSortControl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  color: var(--ifm-color-content-secondary);
+  font-size: 0.9rem;
+}
+
+.searchSortSelect {
+  min-width: 7rem;
+  padding: 0.35rem 0.5rem;
+  border: var(--ifm-global-border-width) solid var(--ifm-color-content-secondary);
+  border-radius: var(--ifm-global-radius);
+  background: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+}
+
+@media (max-width: 576px) {
+  .searchSortControl {
+    margin-bottom: 0.75rem;
+  }
+
+  .searchSortSelect {
+    flex: 1;
+  }
+}

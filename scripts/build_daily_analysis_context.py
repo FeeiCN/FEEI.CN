@@ -665,82 +665,6 @@ def extract_hk_ipo_context(paths: list[Path], report_date: date) -> dict[str, An
     }
 
 
-def _first_value(items: Any, key: str = "value") -> Any:
-    if isinstance(items, list) and items and isinstance(items[0], dict):
-        return items[0].get(key)
-    return None
-
-
-def extract_weather_context(paths: list[Path], report_date: date) -> dict[str, Any]:
-    path = paths[0] if paths else None
-    payload = load_json(path) if path else None
-    if not isinstance(payload, dict):
-        return {
-            "source_files": [path.as_posix() for path in paths] if path else [],
-            "missing": True,
-        }
-
-    current_raw = (payload.get("current_condition") or [{}])[0]
-    area_raw = (payload.get("nearest_area") or [{}])[0]
-    forecast_raw = None
-    for item in payload.get("weather") or []:
-        if item.get("date") == report_date.isoformat():
-            forecast_raw = item
-            break
-
-    hourly_summary = []
-    if isinstance(forecast_raw, dict):
-        for item in forecast_raw.get("hourly") or []:
-            desc = _first_value(item.get("lang_zh-cn")) or _first_value(item.get("weatherDesc"))
-            hourly_summary.append(
-                {
-                    "time": item.get("time"),
-                    "description": desc,
-                    "temp_c": item.get("tempC"),
-                    "feels_like_c": item.get("FeelsLikeC"),
-                    "chance_of_rain": item.get("chanceofrain"),
-                    "precip_mm": item.get("precipMM"),
-                    "humidity": item.get("humidity"),
-                    "wind_kmph": item.get("windspeedKmph"),
-                    "uv_index": item.get("uvIndex"),
-                }
-            )
-
-    current_desc = _first_value(current_raw.get("lang_zh-cn")) or _first_value(current_raw.get("weatherDesc"))
-    area = {
-        "name": _first_value(area_raw.get("areaName")),
-        "region": _first_value(area_raw.get("region")),
-        "country": _first_value(area_raw.get("country")),
-        "latitude": area_raw.get("latitude"),
-        "longitude": area_raw.get("longitude"),
-    }
-
-    return {
-        "source_files": [path.as_posix() for path in paths],
-        "missing": False,
-        "current": {
-            "description": current_desc,
-            "temp_c": current_raw.get("temp_C"),
-            "feels_like_c": current_raw.get("FeelsLikeC"),
-            "humidity": current_raw.get("humidity"),
-            "precip_mm": current_raw.get("precipMM"),
-            "wind_kmph": current_raw.get("windspeedKmph"),
-            "observation_time": current_raw.get("observation_time"),
-        },
-        "area": area,
-        "forecast": {
-            "date": forecast_raw.get("date") if isinstance(forecast_raw, dict) else None,
-            "min_temp_c": forecast_raw.get("mintempC") if isinstance(forecast_raw, dict) else None,
-            "max_temp_c": forecast_raw.get("maxtempC") if isinstance(forecast_raw, dict) else None,
-            "avg_temp_c": forecast_raw.get("avgtempC") if isinstance(forecast_raw, dict) else None,
-            "sun_hour": forecast_raw.get("sunHour") if isinstance(forecast_raw, dict) else None,
-            "uv_index": forecast_raw.get("uvIndex") if isinstance(forecast_raw, dict) else None,
-            "astronomy": (forecast_raw.get("astronomy") or [None])[0] if isinstance(forecast_raw, dict) else None,
-            "hourly": hourly_summary,
-        },
-    }
-
-
 def extract_drive_context(paths: list[Path], report_date: date) -> dict[str, Any]:
     path = paths[0] if paths else None
     payload = load_json(path) if path else None
@@ -922,7 +846,6 @@ def main() -> None:
     ]
     ai_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/llm-usage/")]
     hk_ipo_paths = [path for path in allowed_paths if path.as_posix() == "static/data/hk-ipo/data.json"]
-    weather_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/weather/")]
     drive_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/drive/")]
     daily_diary_paths = [path for path in allowed_paths if path.as_posix().startswith("static/data/daily/")]
     recent_reflection_paths = [
@@ -938,7 +861,6 @@ def main() -> None:
         "finance": extract_finance_context(finance_paths, report_date),
         "ai_usage": extract_ai_context(ai_paths, report_date),
         "hk_ipo": extract_hk_ipo_context(hk_ipo_paths, report_date),
-        "weather": extract_weather_context(weather_paths, report_date),
         "drive": extract_drive_context(drive_paths, report_date),
         "daily_diary": extract_daily_diary_context(daily_diary_paths, report_date),
         "recent_reflections": extract_recent_reflections_context(recent_reflection_paths, report_date),

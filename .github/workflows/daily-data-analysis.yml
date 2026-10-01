@@ -94,7 +94,6 @@ jobs:
               *sorted((Path("static/data/invest") / f"{report_date.year:04d}" / f"{report_date.month:02d}" / f"{report_date.day:02d}").glob("*.json")),
               *sorted(Path("static/data/llm-usage").glob("*/usage_summary.json")),
               Path("static/data/hk-ipo/data.json"),
-              Path("static/data/weather") / f"{report_date.year:04d}" / f"{report_date.month:02d}" / f"{report_date.day:02d}.json",
               Path("static/data/drive") / f"{report_date.year:04d}" / f"{report_date.month:02d}" / f"{report_date.day:02d}.json",
               Path("static/data/daily") / f"{report_date.year:04d}" / f"{report_date.month:02d}" / f"{report_date.day:02d}.md",
               *[

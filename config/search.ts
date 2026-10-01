@@ -4,5 +4,6 @@ export const searchOptions = {
   indexPages: false,
   hashed: true,
   language: ['zh'],
+  zhUserDict: '工资 100000 n',
   searchResultLimits: 500,
 };

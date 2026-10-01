@@ -38,7 +38,7 @@ const config = {
   forceIgnoreNoIndex: false,
   removeDefaultStopWordFilter: [],
   removeDefaultStemmer: false,
-  zhUserDict: undefined,
+  zhUserDict: '工资 100000 n',
   zhUserDictPath: undefined,
 };
 

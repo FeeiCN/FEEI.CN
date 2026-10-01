@@ -4,5 +4,5 @@ export const searchOptions = {
   indexPages: false,
   hashed: true,
   language: ['zh'],
-  searchResultLimits: 50,
+  searchResultLimits: 200,
 };

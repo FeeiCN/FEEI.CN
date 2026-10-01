@@ -207,26 +207,25 @@ jobs:
           ln -s "$music_root" "$staging_dir/music"
           ln -s "$data_root" "$staging_dir/data"
 
-          # Keep the previous index available immediately. The freshly published
-          # site therefore never has a search outage while the new index builds.
-          if [ -n "$previous_release" ] && [ -f "$previous_release/search-index.json" ]; then
-            cp "$previous_release/search-index.json" "$staging_dir/search-index.json"
-            echo "Carried forward previous search index."
+          # Build the search index before publishing so the new release always
+          # contains current document bodies, including Chinese terms.
+          group_start "Build search index"
+          search_log="$site_root/search-index-${release_name}.log"
+          if ! node "$repo_dir/scripts/build_search_index.mjs" "$staging_dir" >"$search_log" 2>&1; then
+            cat "$search_log"
+            exit 1
           fi
-
+          if [ ! -s "$staging_dir/search-index.json" ]; then
+            echo "ERROR: search index was not generated"
+            exit 1
+          fi
+          group_end "Build search index"
           rm -rf "$release_dir"
           mv "$staging_dir" "$release_dir"
           staging_dir=""
           ln -sfn "$release_dir" "$next_current_link"
           mv -Tf "$next_current_link" "$current_link"
           group_end "Publish release"
-
-          group_start "Start search index refresh"
-          search_log="$site_root/search-index-${release_name}.log"
-          nohup node "$repo_dir/scripts/build_search_index.mjs" "$release_dir" >"$search_log" 2>&1 </dev/null &
-          search_pid=$!
-          echo "Search index refresh started in background: pid=$search_pid log=$search_log"
-          group_end "Start search index refresh"
 
           group_start "Clean old releases"
           ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf

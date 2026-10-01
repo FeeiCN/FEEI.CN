@@ -2,6 +2,13 @@
   position: relative;
 }
 
+/* Keep the navbar search text at the mobile browser zoom threshold. */
+@media (max-width: 576px) {
+  .wrapper :global(.navbar__search-input) {
+    font-size: 16px;
+  }
+}
+
 /* 主容器：宽度贴合搜索输入框，避免大块空白 */
 .suggestionsPanel {
   position: absolute;

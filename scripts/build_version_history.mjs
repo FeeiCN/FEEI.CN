@@ -222,5 +222,7 @@ function buildHistory(options) {
 const options = parseArguments(process.argv.slice(2));
 const history = buildHistory(options);
 fs.mkdirSync(path.dirname(options.output), {recursive: true});
-fs.writeFileSync(options.output, `${JSON.stringify(history, null, 2)}\n`);
+// This is fetched by the browser on every version-page visit. Keep the
+// generated payload compact; the page already formats the data for display.
+fs.writeFileSync(options.output, `${JSON.stringify(history)}\n`);
 console.log(JSON.stringify(history.summary));

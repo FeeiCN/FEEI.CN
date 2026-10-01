@@ -230,6 +230,21 @@ export default function DocActionsMenu(): ReactNode {
 
           <div className={styles.divider} />
 
+          <a
+            className={styles.item}
+            href={`${siteConfig.baseUrl}versions/?path=${encodeURIComponent(metadata.source.replace(/^@site\//, ""))}`}
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            <span className={styles.itemIconWrap} aria-hidden="true">↕</span>
+            <span className={styles.itemBody}>
+              <span className={styles.itemTitle}>查看文章变更记录</span>
+              <span className={styles.itemDesc}>只查看这篇文章的历史修改</span>
+            </span>
+          </a>
+
+          <div className={styles.divider} />
+
           {/* Open in Claude */}
           <a
             className={styles.item}

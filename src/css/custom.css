@@ -1920,8 +1920,19 @@
 }
 
 .version-records-filter-note {
+  margin: 0.55rem 0 0;
   color: var(--ifm-color-emphasis-700);
   font-size: 0.9rem;
+}
+
+.version-records-provenance {
+  margin: 0.5rem 0 1rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.9rem;
+}
+
+.version-records-provenance summary {
+  cursor: pointer;
 }
 
 .version-records-result-count {
@@ -2017,9 +2028,9 @@
   }
 
   .version-deployment-meta {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.25rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
   }
 }
 

@@ -55,7 +55,7 @@ orient() {
 }
 
 convert_one() {
-    local f="$1" d t w p q s before after out tmpdir y4m
+    local f="$1" d t w p q s before after out tmpdir y4m marker heif_log
     [ -f "$f" ] || return 0
     case "${f##*/}" in
         .*) log "SKIP_HIDDEN $f"; return 0 ;;
@@ -63,9 +63,14 @@ convert_one() {
     stable "$f" || { log "SKIP_UNSTABLE $f"; return 0; }
 
     d=${f%/*}
+    before=$(stat -c '%s:%Y' "$f") || return 1
+    marker="$d/.convert-failed.$(basename "$f").marker"
+    if [ -f "$marker" ] && [ "$(head -n 1 "$marker" 2>/dev/null)" = "$before" ]; then
+        return 0
+    fi
+
     s=$(stamp "$f")
     out=$(dest "$d" "$s")
-    before=$(stat -c '%s:%Y' "$f") || return 1
     t=$(mktemp "$d/.webp.XXXXXX.webp") || return 1
     w=$(mktemp "$d/.work.XXXXXX.jpg") || { rm -f "$t"; return 1; }
 
@@ -89,7 +94,13 @@ convert_one() {
             tmpdir=$(mktemp -d "$d/.heic.XXXXXX") || { rm -f "$t" "$w"; return 1; }
             p="$tmpdir/frame.y4m"
             q="$tmpdir/frame.ppm"
-            if ! "$H" "$f" "$p" 2>>"$LOG"; then
+            heif_log="$tmpdir/heif-convert.log"
+            if ! "$H" "$f" "$p" 2>"$heif_log"; then
+                cat "$heif_log" >>"$LOG"
+                if grep -qi 'Could not decode image' "$heif_log"; then
+                    printf '%s\n' "$before" >"$marker"
+                    log "MARK_FAILED_DECODE $f"
+                fi
                 rm -rf "$tmpdir"
                 rm -f "$t" "$w"
                 log "ERROR_CONVERT $f"
@@ -138,6 +149,7 @@ convert_one() {
         log "ERROR_SAVE $f"
         return 1
     fi
+    rm -f -- "$marker"
     rm -f -- "$w" "$f"
     log "GENERATED $out from $f; DELETED_SOURCE"
     "$INDEX" "$d" 2>>"$LOG" || log "ERROR_INDEX $d"

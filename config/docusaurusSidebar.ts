@@ -85,13 +85,11 @@ export function attachDocFrontMatterToSidebar<
 
   function sortMonthCategories(items: SidebarItemWithProps[]): SidebarItemWithProps[] {
     const monthPositions = items
-      .map((item, index) => ({item, index}))
-      .filter(({item}) => item.type === 'category' && typeof item.label === 'string' && MONTH_ORDER[item.label.trim()]);
+      .filter((item) => item.type === 'category' && typeof item.label === 'string' && MONTH_ORDER[item.label.trim()]);
 
     if (monthPositions.length < 2) return items;
 
     const sortedMonths = monthPositions
-      .map(({item}) => item)
       .sort((left, right) => MONTH_ORDER[String(left.label).trim()] - MONTH_ORDER[String(right.label).trim()]);
 
     let monthIndex = 0;

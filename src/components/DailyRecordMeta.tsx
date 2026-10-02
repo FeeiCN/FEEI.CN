@@ -35,15 +35,6 @@ type WeatherResponse = {
   };
 };
 
-type HolidayData = {
-  days?: Array<{name: string; date: string; isOffDay: boolean}>;
-};
-
-type DayStatus = {
-  label: string;
-  holiday?: string;
-};
-
 type CachedGeo = {
   latitude: number;
   longitude: number;
@@ -84,8 +75,6 @@ function writeCache(key: string, value: unknown): void {
   }
 }
 
-const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-
 const locationAliases: Record<string, LocationAlias> = {
   '千岛湖': {names: ['Qiandaohu'], countryCode: 'CN'},
   '札幌': {names: ['札幌市', 'Sapporo'], countryCode: 'JP'},
@@ -102,7 +91,7 @@ function geocodingNames(location: string): string[] {
   // “千岛湖” also returns a different place in Lishui before the intended
   // Qiandaohu in Hangzhou; the transliterated alias resolves the latter.
   const names = [...(alias?.names ?? []), location];
-  if (/^[㐀-鿿]{2,}$/.test(location) && !/[市区县縣]$/.test(location)) {
+  if (/^[\u3400-\u9fff]{2,}$/.test(location) && !/[市区县縣]$/.test(location)) {
     names.push(`${location}市`);
   }
   return [...new Set(names)];
@@ -207,27 +196,6 @@ async function resolveLocation(location: string, signal: AbortSignal): Promise<C
   return null;
 }
 
-async function loadDayStatus(date: string, weekday: number, signal: AbortSignal): Promise<DayStatus | null> {
-  const year = date.slice(0, 4);
-  const response = await fetch(
-    `https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/${year}.json`,
-    {signal},
-  );
-  if (!response.ok) return null;
-
-  const data = await response.json() as HolidayData;
-  if (!Array.isArray(data.days)) return null;
-  const specialDay = data.days.find((item) => item.date === date);
-
-  if (specialDay) {
-    return specialDay.isOffDay
-      ? {label: '休息', holiday: specialDay.name}
-      : {label: '调休上班', holiday: specialDay.name};
-  }
-
-  return {label: weekday === 0 || weekday === 6 ? '休息' : '工作'};
-}
-
 function parseWeatherResponse(
   location: string,
   source: RawWeatherDay['source'],
@@ -328,30 +296,12 @@ export default function DailyRecordMeta() {
   const isMultiLocation = locations.length > 1;
   const [rawWeather, setRawWeather] = useState<RawWeatherDay[]>([]);
   const [weatherLoading, setWeatherLoading] = useState(false);
-  const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
 
   const weather = useMemo<WeatherSummary[]>(
     () => rawWeather.map(summarizeWeather),
     [rawWeather],
   );
   const date = match ? `${match[1]}-${match[2]}-${match[3]}` : '';
-  const dateLabel = match ? `${match[1]}年${Number(match[2])}月${Number(match[3])}日` : '';
-  const weekdayIndex = useMemo(() => {
-    if (!match) return -1;
-    return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))).getUTCDay();
-  }, [date]);
-  const weekday = weekdayIndex >= 0 ? weekdays[weekdayIndex] : '';
-
-  useEffect(() => {
-    setDayStatus(null);
-    if (!date || weekdayIndex < 0) return;
-    const controller = new AbortController();
-    loadDayStatus(date, weekdayIndex, controller.signal)
-      .then(setDayStatus)
-      .catch(() => {});
-    return () => controller.abort();
-  }, [date, weekdayIndex]);
-
 
   useEffect(() => {
     setRawWeather([]);
@@ -416,15 +366,9 @@ export default function DailyRecordMeta() {
 
 
   return (
-    <div className={styles.dailyMeta} aria-label="当天基本信息">
-      <div className={styles.metaLine}>
-        {dateLabel}（{weekday}
-        {dayStatus?.holiday && <>,<span className={styles.specialDay}>{dayStatus.holiday}</span></>}
-        {dayStatus && <>,{dayStatus.label}</>}
-      </div>
-
+    <div className={styles.dailyMeta} aria-label="当天地点">
       {location && (
-        <div className={styles.routeLine} aria-label={isMultiLocation ? '当天行程天气' : '当天地点天气'}>
+        <span className={styles.routeLine} aria-label={isMultiLocation ? '当天行程天气' : '当天地点天气'}>
           {locations.map((place, index) => {
             const item = weather.find((entry) => entry.location === place);
             return (
@@ -443,9 +387,8 @@ export default function DailyRecordMeta() {
               </span>
             );
           })}
-        </div>
+        </span>
       )}
-
     </div>
   );
 }

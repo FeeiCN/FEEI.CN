@@ -68,6 +68,41 @@ export function attachDocFrontMatterToSidebar<
     return fields;
   }
 
+  const MONTH_ORDER: Record<string, number> = {
+    一月: 1,
+    二月: 2,
+    三月: 3,
+    四月: 4,
+    五月: 5,
+    六月: 6,
+    七月: 7,
+    八月: 8,
+    九月: 9,
+    十月: 10,
+    十一月: 11,
+    十二月: 12,
+  };
+
+  function sortMonthCategories(items: SidebarItemWithProps[]): SidebarItemWithProps[] {
+    const monthPositions = items
+      .map((item, index) => ({item, index}))
+      .filter(({item}) => item.type === 'category' && typeof item.label === 'string' && MONTH_ORDER[item.label.trim()]);
+
+    if (monthPositions.length < 2) return items;
+
+    const sortedMonths = monthPositions
+      .map(({item}) => item)
+      .sort((left, right) => MONTH_ORDER[String(left.label).trim()] - MONTH_ORDER[String(right.label).trim()]);
+
+    let monthIndex = 0;
+    return items.map((item) => {
+      const isMonth = item.type === 'category'
+        && typeof item.label === 'string'
+        && MONTH_ORDER[item.label.trim()];
+      return isMonth ? sortedMonths[monthIndex++] : item;
+    });
+  }
+
   function visit(item: SidebarItemWithProps, depth: number): SidebarItemWithProps {
     const nextItem = {...item};
 
@@ -114,7 +149,7 @@ export function attachDocFrontMatterToSidebar<
       // Keep explicitly configured category index documents as navigation targets.
       if (item.link?.type !== 'doc') delete nextItem.link;
 
-      const visitedChildren = children.map((child) => visit(child, depth + 1));
+      const visitedChildren = sortMonthCategories(children.map((child) => visit(child, depth + 1)));
       nextItem.items = visitedChildren.map((child) => {
         if (
           child.type === 'doc'

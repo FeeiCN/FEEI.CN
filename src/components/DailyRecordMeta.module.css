@@ -12,17 +12,55 @@
   align-items: center;
 }
 
+.routeSegment {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.routeStop {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
 .routePlace {
   color: var(--ifm-color-emphasis-650);
+}
+
+.routeWeather {
+  color: var(--ifm-color-emphasis-550);
+  font-weight: 400;
 }
 
 .routeArrow {
   color: var(--ifm-color-emphasis-350);
 }
 
+.weatherPlaceholder,
+.weatherUnavailable {
+  display: inline-block;
+  color: var(--ifm-color-emphasis-400);
+  opacity: 0.72;
+}
+
+.weatherPlaceholder {
+  min-width: 4.2em;
+}
+
 @media (max-width: 640px) {
   .dailyMeta {
     margin: -0.55rem 0 0.9rem;
     font-size: 0.78rem;
+  }
+
+  .routeLine {
+    gap: 0.25rem;
+  }
+
+  .routeSegment {
+    gap: 0.4rem;
   }
 }

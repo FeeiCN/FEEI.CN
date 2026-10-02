@@ -55,7 +55,7 @@ orient() {
 }
 
 convert_one() {
-    local f="$1" d t w p q s before after out
+    local f="$1" d t w p q s before after out tmpdir y4m
     [ -f "$f" ] || return 0
     case "${f##*/}" in
         .*) log "SKIP_HIDDEN $f"; return 0 ;;
@@ -86,17 +86,30 @@ convert_one() {
             fi
             ;;
         heic|HEIC|heif|HEIF)
-            p=$(mktemp "$d/.heic.XXXXXX.y4m") || { rm -f "$t" "$w"; return 1; }
-            q=$(mktemp "$d/.heic.XXXXXX.ppm") || { rm -f "$t" "$w" "$p"; return 1; }
-            rm -f "$p" "$q"
-            if ! "$H" "$f" "$p" 2>>"$LOG" ||
-               ! "$F" -nostdin -loglevel error -y -i "$p" -frames:v 1 "$q" 2>>"$LOG" ||
-               ! "$C" -quiet -metadata none -q 82 "$q" -o "$t" 2>>"$LOG"; then
-                rm -f "$t" "$w" "$p" "$q"
+            tmpdir=$(mktemp -d "$d/.heic.XXXXXX") || { rm -f "$t" "$w"; return 1; }
+            p="$tmpdir/frame.y4m"
+            q="$tmpdir/frame.ppm"
+            if ! "$H" "$f" "$p" 2>>"$LOG"; then
+                rm -rf "$tmpdir"
+                rm -f "$t" "$w"
                 log "ERROR_CONVERT $f"
                 return 1
             fi
-            rm -f "$p" "$q"
+            y4m=$(find "$tmpdir" -maxdepth 1 -type f -name 'frame*.y4m' | sort | head -1)
+            if [ -z "$y4m" ]; then
+                rm -rf "$tmpdir"
+                rm -f "$t" "$w"
+                log "ERROR_CONVERT $f; NO_Y4M_OUTPUT"
+                return 1
+            fi
+            if ! "$F" -nostdin -loglevel error -y -i "$y4m" -frames:v 1 "$q" 2>>"$LOG" ||
+               ! "$C" -quiet -metadata none -q 82 "$q" -o "$t" 2>>"$LOG"; then
+                rm -rf "$tmpdir"
+                rm -f "$t" "$w"
+                log "ERROR_CONVERT $f"
+                return 1
+            fi
+            rm -rf "$tmpdir"
             ;;
         *)
             rm -f "$t" "$w"

@@ -1,12 +1,12 @@
 {
   "vendor": "openai",
-  "fetchedAt": "2026-10-02 10:10:33",
+  "fetchedAt": "2026-10-03 09:53:43",
   "source": "ai.feei.cn",
   "source_endpoint": "https://ai.feei.cn/api/v1/admin/usage/stats",
   "timezone": "Asia/Shanghai",
   "sync_window": {
-    "start_date": "2026-09-03",
-    "end_date": "2026-10-02",
+    "start_date": "2026-09-04",
+    "end_date": "2026-10-03",
     "days": 30
   },
   "daily_token_usage": {
@@ -112,7 +112,7 @@
     "2026-09-28": 3878942,
     "2026-09-29": 23883292,
     "2026-09-30": 18339081,
-    "2026-10-02": 4217333
+    "2026-10-02": 4698598
   },
   "date_usage_stats": {
     "2026-05-22": {
@@ -1676,16 +1676,16 @@
       "average_duration_ms": 0
     },
     "2026-09-29": {
-      "total_requests": 287,
-      "total_input_tokens": 4817550,
-      "total_output_tokens": 142350,
-      "total_cache_tokens": 18923392,
+      "total_requests": 0,
+      "total_input_tokens": 0,
+      "total_output_tokens": 0,
+      "total_cache_tokens": 0,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 18923392,
-      "total_tokens": 23883292,
-      "total_cost": 29.143487,
-      "total_actual_cost": 38.854586,
-      "average_duration_ms": 15128.320557491288
+      "total_cache_read_tokens": 0,
+      "total_tokens": 0,
+      "total_cost": 0.0,
+      "total_actual_cost": 0.0,
+      "average_duration_ms": 0
     },
     "2026-09-30": {
       "total_requests": 142,
@@ -1712,25 +1712,37 @@
       "average_duration_ms": 0
     },
     "2026-10-02": {
-      "total_requests": 74,
-      "total_input_tokens": 215557,
-      "total_output_tokens": 26864,
-      "total_cache_tokens": 3974912,
+      "total_requests": 90,
+      "total_input_tokens": 263126,
+      "total_output_tokens": 31120,
+      "total_cache_tokens": 4404352,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 3974912,
-      "total_tokens": 4217333,
-      "total_cost": 3.871161,
-      "total_actual_cost": 5.419625,
-      "average_duration_ms": 9982.716216216217
+      "total_cache_read_tokens": 4404352,
+      "total_tokens": 4698598,
+      "total_cost": 4.635276,
+      "total_actual_cost": 6.205655,
+      "average_duration_ms": 9721.822222222223
+    },
+    "2026-10-03": {
+      "total_requests": 0,
+      "total_input_tokens": 0,
+      "total_output_tokens": 0,
+      "total_cache_tokens": 0,
+      "total_cache_creation_tokens": 0,
+      "total_cache_read_tokens": 0,
+      "total_tokens": 0,
+      "total_cost": 0.0,
+      "total_actual_cost": 0.0,
+      "average_duration_ms": 0
     }
   },
-  "window_total_requests": 503,
-  "window_total_cost": 41.085489,
-  "window_total_actual_cost": 55.573388,
+  "window_total_requests": 232,
+  "window_total_cost": 12.706116,
+  "window_total_actual_cost": 17.504831,
   "total_token_consumed": "4.69B",
   "total_days": 103,
   "active_days": 103,
-  "current_consecutive_days": 0,
+  "current_consecutive_days": 1,
   "most_active_day": {
     "date": "2026-07-11",
     "token_count": "872.35M"

@@ -15,7 +15,6 @@ on:
       - 'plugins/**'
       - 'scripts/check_docs_quality.mjs'
       - 'scripts/build_search_index.mjs'
-      - 'scripts/build_version_history.mjs'
       - 'docusaurus.config.ts'
       - 'config/search.ts'
       - 'sidebars.ts'
@@ -55,7 +54,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' DEPLOY_SHA='${{ github.sha }}' DEPLOY_ACTION_URL='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}' GITHUB_TOKEN='${{ github.token }}' GITHUB_REPOSITORY='${{ github.repository }}' bash -se" <<'EOF'
+            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' bash -se" <<'EOF'
           set -euo pipefail
 
           timer_start=0
@@ -78,10 +77,6 @@ jobs:
           staging_dir=""
           active_build_pid=""
           hidden_data_dir="$repo_dir/static/.data.deploy-hidden"
-          version_history_file="$repo_dir/static/version-history.json"
-          version_history_backup="$site_root/.version-history.json.before-deploy"
-          version_history_existed=false
-          version_history_managed=false
 
           mkdir -p "$site_root"
           exec 9>"$deploy_lock_file"
@@ -93,15 +88,6 @@ jobs:
               if [ ! -e "$repo_dir/static/data" ]; then mv "$hidden_data_dir" "$repo_dir/static/data"; else rm -rf "$hidden_data_dir"; fi
             fi
           }
-          restore_version_history() {
-            if [ "$version_history_managed" != true ]; then return 0; fi
-            if [ "$version_history_existed" = true ]; then
-              mv -f "$version_history_backup" "$version_history_file"
-            else
-              rm -f "$version_history_file"
-            fi
-            version_history_managed=false
-          }
           cleanup_deploy() {
             exit_status=$?
             trap - EXIT HUP INT TERM
@@ -112,8 +98,6 @@ jobs:
               wait "$active_build_pid" 2>/dev/null || true
             fi
             restore_data_source
-            restore_version_history
-            rm -f "$version_history_backup"
             if [ -n "$staging_dir" ] && [ -e "$staging_dir" ]; then rm -rf "$staging_dir"; fi
             exit "$exit_status"
           }
@@ -148,76 +132,6 @@ jobs:
           echo "old_head=$old_head"
           echo "new_head=$new_head"
           echo "deployed_head=\${deployed_head:-none}"
-          data_only=false
-          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
-            changed_files="$(git diff --name-only "$deployed_head" "$new_head")"
-            if [ -n "$changed_files" ] && ! printf '%s\n' "$changed_files" | grep -qv '^static/data/'; then data_only=true; fi
-          fi
-          export DEPLOY_IS_DATA_ONLY="$data_only"
-          deployments_file="$site_root/deployments.json"
-          mkdir -p "$site_root"
-          # Use the commit actually checked out after pulling main.  For
-          # workflow_run events, github.sha can point at the workflow's
-          # default-branch context rather than this deployment's new_head.
-          export DEPLOY_SHA="$new_head" DEPLOY_ACTION_URL DEPLOY_SUMMARY="$(git log -1 --pretty=%s "$new_head")" DEPLOYMENTS_FILE="$deployments_file"
-          # Keep deployment history independent from the repository commit log.
-          # Backfill only successful deploy.yml runs that changed site content.
-          node <<'NODE'
-          const fs = require('fs');
-          const file = process.env.DEPLOYMENTS_FILE;
-          const repository = process.env.GITHUB_REPOSITORY;
-          const token = process.env.GITHUB_TOKEN;
-          let history = [];
-          try { history = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
-          if (!Array.isArray(history)) history = [];
-          const headers = {accept: 'application/vnd.github+json', authorization: `Bearer ${token}`, 'x-github-api-version': '2022-11-28'};
-          const current = {sha: process.env.DEPLOY_SHA || process.env.DEPLOY_SUMMARY, deployedAt: new Date().toISOString(), summary: process.env.DEPLOY_SUMMARY || '', actionUrl: process.env.DEPLOY_ACTION_URL || ''};
-          async function changedOutsideData(sha) {
-            const response = await fetch(`https://api.github.com/repos/${repository}/commits/${sha}`, {headers});
-            if (!response.ok) throw new Error(`GitHub commit API returned ${response.status}`);
-            const commit = await response.json();
-            return (commit.files || []).some((file) => !file.filename.startsWith('static/data/'));
-          }
-          async function backfill() {
-            const existing = new Map(history.filter((item) => item && item.sha).map((item) => [item.sha, item]));
-            if (token && repository) {
-              const response = await fetch(`https://api.github.com/repos/${repository}/actions/workflows/deploy.yml/runs?status=success&per_page=30`, {headers});
-              if (!response.ok) throw new Error(`GitHub Actions API returned ${response.status}`);
-              const data = await response.json();
-              const runs = (data.workflow_runs || []).filter((run) => run.head_sha);
-              const eligible = await Promise.all(runs.map(async (run) => ({run, eligible: await changedOutsideData(run.head_sha)})));
-              for (const {run, eligible: isEligible} of eligible) {
-                if (!isEligible) existing.delete(run.head_sha);
-                else if (!existing.has(run.head_sha)) existing.set(run.head_sha, {sha: run.head_sha, deployedAt: run.updated_at || run.completed_at || run.created_at, summary: run.display_title || run.name || '', actionUrl: run.html_url || ''});
-              }
-              // Validate retained records too, removing historical data-only runs.
-              for (const item of [...existing.values()]) {
-                if (!runs.some((run) => run.head_sha === item.sha) && !(await changedOutsideData(item.sha))) existing.delete(item.sha);
-              }
-            }
-            if (process.env.DEPLOY_IS_DATA_ONLY !== 'true') existing.set(current.sha, current);
-            return [...existing.values()].filter((item) => item && item.sha).sort((a, b) => new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime()).slice(0, 30);
-          }
-          async function main() {
-            try {
-              const merged = await backfill();
-              fs.writeFileSync(file, JSON.stringify(merged, null, 2) + '\n');
-            } catch (error) {
-              console.warn(`Deployment history backfill skipped: ${error.message}`);
-              const fallback = process.env.DEPLOY_IS_DATA_ONLY === 'true' ? history : [current, ...history.filter((item) => item.sha !== current.sha)];
-              fs.writeFileSync(file, JSON.stringify(fallback.slice(0, 30), null, 2) + '\n');
-            }
-          }
-          main();
-          NODE
-          cp "$deployments_file" "$repo_dir/static/deployments.json"
-          rm -f "$version_history_backup"
-          if [ -f "$version_history_file" ]; then
-            cp "$version_history_file" "$version_history_backup"
-            version_history_existed=true
-          fi
-          version_history_managed=true
-          node "$repo_dir/scripts/build_version_history.mjs" --head "$new_head" --output "$version_history_file"
           group_end "Prepare repository"
 
           group_start "Check docs quality"
@@ -239,10 +153,6 @@ jobs:
             current_release="$(readlink -f "$current_link")"
             rm -rf "$current_release/data"
             ln -s "$data_root" "$current_release/data"
-            cp "$repo_dir/static/deployments.json" "$current_release/deployments.json"
-            cp "$version_history_file" "$current_release/version-history.json"
-            restore_version_history
-            rm -f "$version_history_backup"
             echo "Only static/data changed; skipped Docusaurus build."
             exit 0
           fi
@@ -292,8 +202,6 @@ jobs:
             sleep 5
           done
           [ "$build_ok" = true ] || { echo "Build failed after 3 attempts"; exit 1; }
-          restore_version_history
-          rm -f "$version_history_backup"
           group_end "Build Docusaurus"
           restore_data_source
 

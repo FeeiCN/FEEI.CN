@@ -5,57 +5,8 @@ import {
   type RawWeatherDay,
   type WeatherSummary,
 } from '@site/src/utils/weather';
+import {resolvePlace, type ResolvedPlace} from '@site/src/utils/locationResolver';
 import styles from './DailyRecordMeta.module.css';
-
-type GeocodingResult = {
-  latitude: number;
-  longitude: number;
-  name?: string;
-  country_code?: string;
-  admin1?: string;
-  population?: number;
-  feature_code?: string;
-};
-
-type GeocodingResponse = {
-  results?: GeocodingResult[];
-};
-
-type GeoNamesResult = {
-  geonameId?: number;
-  name?: string;
-  lat?: string;
-  lng?: string;
-  countryCode?: string;
-  adminName1?: string;
-  adminName2?: string;
-  featureClass?: string;
-  featureCode?: string;
-  population?: number;
-  alternateNames?: Array<{name?: string; lang?: string}>;
-};
-
-type GeoNamesResponse = {
-  geonames?: GeoNamesResult[];
-};
-
-type NominatimResult = {
-  lat?: string;
-  lon?: string;
-  display_name?: string;
-  name?: string;
-  type?: string;
-  addresstype?: string;
-  importance?: number;
-  address?: {
-    country_code?: string;
-    state?: string;
-    province?: string;
-    county?: string;
-    city?: string;
-    town?: string;
-  };
-};
 
 type WeatherResponse = {
   daily?: {
@@ -80,26 +31,14 @@ type DayStatus = {
   holiday?: string;
 };
 
-type CachedGeo = {
-  latitude: number;
-  longitude: number;
-  canonicalName?: string;
-  countryCode?: string;
-  admin1?: string;
-};
+type CachedGeo = ResolvedPlace;
 
 type CachedWeather = {
   value: RawWeatherDay;
   cachedAt: number;
 };
 
-type LocationAlias = {
-  names: string[];
-  countryCode?: string;
-};
-
-const GEO_CACHE_PREFIX = 'feei:daily-geo:v7:';
-const GEONAMES_USERNAME = 'feei';
+const GEO_CACHE_PREFIX = 'feei:daily-geo:v8:';
 const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v7:';
 
 function readCache<T>(key: string): T | null {
@@ -178,182 +117,14 @@ function dayDistance(date: string): number {
   return Math.floor((today - target) / 86400000);
 }
 
-function normalizePlaceName(value: string): string {
-  return value
-    .normalize('NFKC')
-    .toLocaleLowerCase()
-    .replace(/[\s·・.,，。'’"“”()（）\-_]/g, '')
-    .replace(/(?:市|县|縣|区|區|町|村|州|省|府)$/u, '');
-}
-
-function nameScore(query: string, names: Array<string | undefined>): number {
-  const normalizedQuery = normalizePlaceName(query);
-  let best = 0;
-  for (const name of names) {
-    if (!name) continue;
-    const normalizedName = normalizePlaceName(name);
-    if (normalizedName === normalizedQuery) best = Math.max(best, 100);
-    else if (normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName)) best = Math.max(best, 65);
-  }
-  return best;
-}
-
-function featureScore(featureCode?: string, type?: string): number {
-  if (featureCode?.startsWith('PPL')) return 20;
-  if (featureCode?.startsWith('ADM')) return 18;
-  if (['city', 'town', 'village', 'county', 'administrative'].includes(type ?? '')) return 15;
-  return 0;
-}
-
-function populationScore(population?: number): number {
-  if (!population || population <= 0) return 0;
-  return Math.min(12, Math.log10(population + 1) * 2);
-}
-
-function aliasCountryBonus(location: string, countryCode?: string): number {
-  const expected = locationAliases[location]?.countryCode;
-  return expected && countryCode?.toUpperCase() === expected ? 25 : 0;
-}
-
-function chooseGeocodingResult(location: string, query: string, results: GeocodingResult[]): GeocodingResult | undefined {
-  return [...results].sort((a, b) => {
-    const score = (item: GeocodingResult) =>
-      nameScore(query, [item.name])
-      + featureScore(item.feature_code)
-      + populationScore(item.population)
-      + aliasCountryBonus(location, item.country_code);
-    return score(b) - score(a);
-  })[0];
-}
-
-function geoNamesAlternateNames(item: GeoNamesResult): string[] {
-  return (item.alternateNames ?? []).map((entry) => entry.name).filter((name): name is string => Boolean(name));
-}
-
-function chooseGeoNamesResult(location: string, query: string, results: GeoNamesResult[]): GeoNamesResult | undefined {
-  return [...results].sort((a, b) => {
-    const score = (item: GeoNamesResult) =>
-      nameScore(query, [item.name, ...geoNamesAlternateNames(item)])
-      + featureScore(item.featureCode)
-      + populationScore(item.population)
-      + aliasCountryBonus(location, item.countryCode);
-    return score(b) - score(a);
-  })[0];
-}
-
-function chooseNominatimResult(location: string, query: string, results: NominatimResult[]): NominatimResult | undefined {
-  return [...results].sort((a, b) => {
-    const score = (item: NominatimResult) =>
-      nameScore(query, [item.name, item.display_name])
-      + featureScore(undefined, item.addresstype ?? item.type)
-      + (item.importance ?? 0) * 10
-      + aliasCountryBonus(location, item.address?.country_code);
-    return score(b) - score(a);
-  })[0];
-}
-
-async function resolveWithGeoNames(location: string, signal: AbortSignal): Promise<CachedGeo | null> {
-  for (const query of geocodingNames(location)) {
-    const url = new URL('https://secure.geonames.org/searchJSON');
-    url.searchParams.set('q', query);
-    url.searchParams.set('maxRows', '10');
-    url.searchParams.set('username', GEONAMES_USERNAME);
-
-    const response = await fetch(url, {signal});
-    if (!response.ok) continue;
-    const data = await response.json() as GeoNamesResponse;
-    const result = chooseGeoNamesResult(location, query, data.geonames ?? []);
-    if (!result) continue;
-
-    const latitude = Number(result.lat);
-    const longitude = Number(result.lng);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue;
-    return {
-      latitude,
-      longitude,
-      canonicalName: result.name,
-      countryCode: result.countryCode,
-      admin1: result.adminName1,
-    };
-  }
-  return null;
-}
-
-async function resolveWithNominatim(location: string, signal: AbortSignal): Promise<CachedGeo | null> {
-  for (const query of geocodingNames(location)) {
-    const url = new URL('https://nominatim.openstreetmap.org/search');
-    url.searchParams.set('q', query);
-    url.searchParams.set('format', 'jsonv2');
-    url.searchParams.set('limit', '8');
-    url.searchParams.set('addressdetails', '1');
-    url.searchParams.set('accept-language', 'zh,en');
-
-    const response = await fetch(url, {
-      signal,
-      headers: {'Accept': 'application/json'},
-    });
-    if (!response.ok) continue;
-    const results = await response.json() as NominatimResult[];
-    const result = chooseNominatimResult(location, query, results);
-    if (!result) continue;
-
-    const latitude = Number(result.lat);
-    const longitude = Number(result.lon);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue;
-    return {
-      latitude,
-      longitude,
-      canonicalName: result.name ?? result.display_name,
-      countryCode: result.address?.country_code?.toUpperCase(),
-      admin1: result.address?.state ?? result.address?.province,
-    };
-  }
-  return null;
-}
-
-async function resolveWithOpenMeteo(location: string, signal: AbortSignal): Promise<CachedGeo | null> {
-  for (const query of geocodingNames(location)) {
-    for (const language of ['zh', 'ja', 'en']) {
-      const url = new URL('https://geocoding-api.open-meteo.com/v1/search');
-      url.searchParams.set('name', query);
-      url.searchParams.set('count', '8');
-      url.searchParams.set('language', language);
-      url.searchParams.set('format', 'json');
-
-      const response = await fetch(url, {signal});
-      if (!response.ok) continue;
-      const data = await response.json() as GeocodingResponse;
-      const result = chooseGeocodingResult(location, query, data.results ?? []);
-      if (!result) continue;
-      return {
-        latitude: result.latitude,
-        longitude: result.longitude,
-        canonicalName: result.name,
-        countryCode: result.country_code,
-        admin1: result.admin1,
-      };
-    }
-  }
-  return null;
-}
-
 async function resolveAtomicLocation(location: string, signal: AbortSignal): Promise<CachedGeo | null> {
   const geoKey = `${GEO_CACHE_PREFIX}${location}`;
   const cached = readCache<CachedGeo>(geoKey);
   if (cached) return cached;
 
-  const providers = [resolveWithGeoNames, resolveWithNominatim, resolveWithOpenMeteo];
-  for (const provider of providers) {
-    try {
-      const resolved = await provider(location, signal);
-      if (!resolved) continue;
-      writeCache(geoKey, resolved);
-      return resolved;
-    } catch (error) {
-      if (signal.aborted) throw error;
-    }
-  }
-  return null;
+  const resolved = await resolvePlace(location, signal);
+  if (resolved) writeCache(geoKey, resolved);
+  return resolved;
 }
 
 async function resolveLocation(location: string, signal: AbortSignal): Promise<CachedGeo | null> {

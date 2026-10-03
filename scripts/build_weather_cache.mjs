@@ -80,7 +80,7 @@ for (const record of records) {
     if (!locations[location]) {
       stats.locationResolveAttempts += 1;
       const started=Date.now();
-      const resolved=await resolvePlace(location,controller.signal);
+      const resolved=await resolvePlace(location,controller.signal,(message)=>console.log(`[weather-resolver] location="${location}" ${message}`));
       if (resolved) locations[location]={...resolved,resolvedAt:new Date().toISOString()};
       else { stats.locationResolveFailures += 1; unresolved.add(location); }
       console.log(`[weather] resolve location="${location}" result=${resolved ? 'ok' : 'failed'} durationMs=${Date.now()-started}`);

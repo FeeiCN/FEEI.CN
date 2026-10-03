@@ -94,6 +94,7 @@ const locationAliases: Record<string, LocationAlias> = {
   '横滨': {names: ['横浜市', 'Yokohama'], countryCode: 'JP'},
   '冲绳': {names: ['沖縄', 'Okinawa'], countryCode: 'JP'},
   '函馆': {names: ['函館市', 'Hakodate'], countryCode: 'JP'},
+  '蕲春': {names: ['Qichun']},
 };
 
 function geocodingNames(location: string): string[] {
@@ -102,9 +103,6 @@ function geocodingNames(location: string): string[] {
   // “千岛湖” also returns a different place in Lishui before the intended
   // Qiandaohu in Hangzhou; the transliterated alias resolves the latter.
   const names = [...(alias?.names ?? []), location];
-  if (/^[\u3400-\u9fff]{2,}$/.test(location) && !/[市区县縣]$/.test(location)) {
-    names.push(`${location}市`);
-  }
   return [...new Set(names)];
 }
 

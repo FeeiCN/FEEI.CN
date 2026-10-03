@@ -21,6 +21,24 @@ type GeocodingResponse = {
   results?: GeocodingResult[];
 };
 
+type GeoNamesResult = {
+  geonameId?: number;
+  name?: string;
+  lat?: string;
+  lng?: string;
+  countryCode?: string;
+  adminName1?: string;
+  adminName2?: string;
+  featureClass?: string;
+  featureCode?: string;
+  population?: number;
+  alternateNames?: Array<{name?: string; lang?: string}>;
+};
+
+type GeoNamesResponse = {
+  geonames?: GeoNamesResult[];
+};
+
 type WeatherResponse = {
   daily?: {
     weather_code?: number[];
@@ -62,7 +80,8 @@ type LocationAlias = {
   countryCode?: string;
 };
 
-const GEO_CACHE_PREFIX = 'feei:daily-geo:v5:';
+const GEO_CACHE_PREFIX = 'feei:daily-geo:v6:';
+const GEONAMES_USERNAME = 'feei';
 const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v7:';
 
 function readCache<T>(key: string): T | null {
@@ -156,10 +175,59 @@ function chooseGeocodingResult(location: string, results: GeocodingResult[]): Ge
   })[0];
 }
 
+function chooseGeoNamesResult(results: GeoNamesResult[]): GeoNamesResult | undefined {
+  const hubei = results.filter((item) =>
+    item.countryCode === 'CN'
+    && /Hubei|湖北/i.test(item.adminName1 ?? '')
+    && /Huanggang|黄冈/i.test(item.adminName2 ?? ''),
+  );
+  const pool = hubei.length > 0 ? hubei : results.filter((item) => item.countryCode === 'CN');
+  return [...(pool.length > 0 ? pool : results)].sort((a, b) =>
+    (b.population ?? 0) - (a.population ?? 0),
+  )[0];
+}
+
+async function resolveQichunWithGeoNames(signal: AbortSignal): Promise<CachedGeo | null> {
+  const url = new URL('https://secure.geonames.org/searchJSON');
+  url.searchParams.set('q', 'Qichun');
+  url.searchParams.set('maxRows', '10');
+  url.searchParams.set('username', GEONAMES_USERNAME);
+
+  const response = await fetch(url, {signal});
+  if (!response.ok) return null;
+  const data = await response.json() as GeoNamesResponse;
+  const result = chooseGeoNamesResult(data.geonames ?? []);
+  if (!result) return null;
+
+  const latitude = Number(result.lat);
+  const longitude = Number(result.lng);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+  return {
+    latitude,
+    longitude,
+    canonicalName: result.name,
+    countryCode: result.countryCode,
+    admin1: result.adminName1,
+  };
+}
+
 async function resolveAtomicLocation(location: string, signal: AbortSignal): Promise<CachedGeo | null> {
   const geoKey = `${GEO_CACHE_PREFIX}${location}`;
   const cached = readCache<CachedGeo>(geoKey);
   if (cached) return cached;
+
+  if (location === '蕲春') {
+    try {
+      const resolved = await resolveQichunWithGeoNames(signal);
+      if (resolved) {
+        writeCache(geoKey, resolved);
+        return resolved;
+      }
+    } catch {
+      // Fall back to the existing Open-Meteo geocoder.
+    }
+  }
 
   for (const name of geocodingNames(location)) {
     for (const language of ['zh', 'ja', 'en']) {

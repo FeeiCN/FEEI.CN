@@ -62,26 +62,6 @@ function writeCache(key: string, value: unknown): void {
 
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
-const locationAliases: Record<string, LocationAlias> = {
-  '千岛湖': {names: ['Qiandaohu'], countryCode: 'CN'},
-  '札幌': {names: ['札幌市', 'Sapporo'], countryCode: 'JP'},
-  '千叶': {names: ['千葉市', 'Chiba'], countryCode: 'JP'},
-  '千葉': {names: ['千葉市', 'Chiba'], countryCode: 'JP'},
-  '横滨': {names: ['横浜市', 'Yokohama'], countryCode: 'JP'},
-  '冲绳': {names: ['沖縄', 'Okinawa'], countryCode: 'JP'},
-  '函馆': {names: ['函館市', 'Hakodate'], countryCode: 'JP'},
-  '蕲春': {names: ['Qichun']},
-};
-
-function geocodingNames(location: string): string[] {
-  const alias = locationAliases[location];
-  // Prefer a disambiguating alias first. For example, the Chinese query
-  // “千岛湖” also returns a different place in Lishui before the intended
-  // Qiandaohu in Hangzhou; the transliterated alias resolves the latter.
-  const names = [...(alias?.names ?? []), location];
-  return [...new Set(names)];
-}
-
 function splitLocations(value: string): string[] {
   return [...new Set(
     value

@@ -195,7 +195,28 @@ async function fetchWeatherEndpoint(
   return parseWeatherResponse(location, source, data);
 }
 
+let staticWeatherPromise: Promise<Record<string, RawWeatherDay>> | null = null;
+
+async function loadStaticWeather(signal: AbortSignal): Promise<Record<string, RawWeatherDay>> {
+  if (!staticWeatherPromise) {
+    staticWeatherPromise = fetch('/data/weather/days.json', {cache: 'no-cache'})
+      .then((response) => response.ok ? response.json() : {})
+      .catch(() => ({}));
+  }
+  if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+  return staticWeatherPromise;
+}
+
+async function loadStaticWeatherDay(location: string, date: string, signal: AbortSignal): Promise<RawWeatherDay | null> {
+  const data = await loadStaticWeather(signal);
+  const value = data[`${date}:${location}`];
+  return value ? {...value, location} : null;
+}
+
 async function loadWeather(location: string, date: string, signal: AbortSignal): Promise<RawWeatherDay | null> {
+  const staticWeather = await loadStaticWeatherDay(location, date, signal);
+  if (staticWeather) return staticWeather;
+
   const place = await resolveLocation(location, signal);
   if (!place) return null;
 

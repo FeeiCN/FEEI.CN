@@ -73,25 +73,35 @@ for (const file of await walk(docsRoot)) {
   records.push({date:match[1],locations:splitLocations(location)});
 }
 const controller=new AbortController();
+const stats={locationHits:0,locationResolveAttempts:0,locationResolveFailures:0,weatherHits:0,weatherFetches:0,weatherFailures:0};
+const unresolved=new Set();
 for (const record of records) {
   for (const location of record.locations) {
     if (!locations[location]) {
+      stats.locationResolveAttempts += 1;
+      const started=Date.now();
       const resolved=await resolvePlace(location,controller.signal);
       if (resolved) locations[location]={...resolved,resolvedAt:new Date().toISOString()};
-    }
+      else { stats.locationResolveFailures += 1; unresolved.add(location); }
+      console.log(`[weather] resolve location="${location}" result=${resolved ? 'ok' : 'failed'} durationMs=${Date.now()-started}`);
+    } else stats.locationHits += 1;
     const key=`${record.date}:${location}`;
     const distance=dateDistance(record.date);
     const cached=days[key];
     // Any past date is immutable once captured. Today's weather may still
     // change, but frequent deploys should not refresh it more than every 3h.
-    if (cached && distance > 0) continue;
-    if (cached && distance === 0 && Date.now() - (cached.cachedAt ?? 0) < 3 * 60 * 60 * 1000) continue;
+    if (cached && distance > 0) { stats.weatherHits += 1; continue; }
+    if (cached && distance === 0 && Date.now() - (cached.cachedAt ?? 0) < 3 * 60 * 60 * 1000) { stats.weatherHits += 1; continue; }
     const place=locations[location];
     if (!place) continue;
+    stats.weatherFetches += 1;
+    const started=Date.now();
     const weather=await fetchWeather(place,record.date);
     if (weather) days[key]={location,...weather,cachedAt:Date.now()};
+    else stats.weatherFailures += 1;
+    console.log(`[weather] fetch key="${key}" result=${weather ? 'ok' : 'failed'} durationMs=${Date.now()-started}`);
   }
 }
 await fs.writeFile(locationsFile,JSON.stringify(locations,null,2)+'\n');
 await fs.writeFile(daysFile,JSON.stringify(days,null,2)+'\n');
-console.log(`[weather] locations=${Object.keys(locations).length} days=${Object.keys(days).length}`);
+console.log(`[weather] locations=${Object.keys(locations).length} days=${Object.keys(days).length} stats=${JSON.stringify(stats)} unresolved=${JSON.stringify([...unresolved])}`);

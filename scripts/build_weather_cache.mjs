@@ -80,8 +80,12 @@ for (const record of records) {
       if (resolved) locations[location]={...resolved,resolvedAt:new Date().toISOString()};
     }
     const key=`${record.date}:${location}`;
-    const immutable=dateDistance(record.date)>1;
-    if (immutable && days[key]) continue;
+    const distance=dateDistance(record.date);
+    const cached=days[key];
+    // Any past date is immutable once captured. Today's weather may still
+    // change, but frequent deploys should not refresh it more than every 3h.
+    if (cached && distance > 0) continue;
+    if (cached && distance === 0 && Date.now() - (cached.cachedAt ?? 0) < 3 * 60 * 60 * 1000) continue;
     const place=locations[location];
     if (!place) continue;
     const weather=await fetchWeather(place,record.date);

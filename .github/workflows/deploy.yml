@@ -228,14 +228,18 @@ jobs:
           # Build into the already-published immutable release and replace the
           # inherited index atomically when ready. Failure must not roll back deploy.
           search_log="$site_root/search-index-${release_name}.log"
-          (
+          nohup bash -c '
+            release_dir="$1"
+            repo_dir="$2"
+            search_log="$3"
+            release_name="$4"
             if node "$repo_dir/scripts/build_search_index.mjs" "$release_dir" >"$search_log" 2>&1; then
               echo "[search-index] background rebuild completed for $release_name" >>"$search_log"
             else
               echo "[search-index] background rebuild failed for $release_name" >>"$search_log"
             fi
-          ) </dev/null >/dev/null 2>&1 &
-          disown || true
+          ' _ "$release_dir" "$repo_dir" "$search_log" "$release_name" </dev/null >/dev/null 2>&1 &
+          echo "[search-index] background rebuild started pid=$! release=$release_name"
 
           group_start "Clean old releases"
           ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf

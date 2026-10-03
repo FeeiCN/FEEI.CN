@@ -59,6 +59,7 @@ async function fetchWeather(place, date) {
 }
 
 await fs.mkdir(outDir,{recursive:true});
+// Existing cache should make subsequent deploys incremental: historical days are immutable.
 const locations=await readJson(locationsFile,{});
 const days=await readJson(daysFile,{});
 const records=[];

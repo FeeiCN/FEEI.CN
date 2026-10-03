@@ -142,10 +142,10 @@ jobs:
           group_start "Prepare shared assets"
           rm -rf static/media static/music
           mkdir -p "$data_root"
-          # Resolve new diary locations and freeze historical weather before
-          # static/data is moved to the shared data root.
-          node scripts/build_weather_cache.mjs
-          rsync -a --delete static/data/ "$data_root/"
+          # Weather is generated data: keep its authoritative cache in the
+          # persistent shared data root instead of the Git working tree.
+          node scripts/build_weather_cache.mjs "$data_root/weather"
+          rsync -a --delete --exclude 'weather/' static/data/ "$data_root/"
           group_end "Prepare shared assets"
 
           data_only=false

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import matter from 'gray-matter';
 import createJiti from 'jiti';
 
 const root = process.cwd();
@@ -64,11 +63,13 @@ const locations=await readJson(locationsFile,{});
 const days=await readJson(daysFile,{});
 const records=[];
 for (const file of await walk(docsRoot)) {
-  const parsed=matter(await fs.readFile(file,'utf8'));
-  const slug=String(parsed.data.slug??'');
+  const text=await fs.readFile(file,'utf8');
+  const front=text.startsWith('---') ? text.slice(3,text.indexOf('\n---',3)) : '';
+  const slug=front.match(/^slug:\s*['"]?([^'"\n]+)['"]?\s*$/m)?.[1]?.trim() ?? '';
+  const location=front.match(/^location:\s*['"]?([^'"\n]+)['"]?\s*$/m)?.[1]?.trim() ?? '';
   const match=slug.match(/^\/(\d{4}-\d{2}-\d{2})\/?$/);
-  if (!match || typeof parsed.data.location !== 'string') continue;
-  records.push({date:match[1],locations:splitLocations(parsed.data.location)});
+  if (!match || !location) continue;
+  records.push({date:match[1],locations:splitLocations(location)});
 }
 const controller=new AbortController();
 for (const record of records) {

@@ -58,6 +58,8 @@ type GeoNamesResponse = {geonames?: GeoNamesResult[]};
 
 const GEONAMES_USERNAME = 'feei';
 
+export type ResolverDiagnostic = (message: string) => void;
+
 export const locationAliases: Record<string, LocationAlias> = {
   '千岛湖': {names: ['Qiandaohu'], countryCode: 'CN'},
   '札幌': {names: ['札幌市', 'Sapporo'], countryCode: 'JP'},
@@ -71,6 +73,16 @@ export const locationAliases: Record<string, LocationAlias> = {
 
 export function geocodingNames(location: string): string[] {
   return [...new Set([...(locationAliases[location]?.names ?? []), location])];
+}
+
+export function locationCandidates(value: string): string[] {
+  const hierarchy = value.split(/\s*·\s*/).map(x => x.trim()).filter(Boolean);
+  const candidates: string[] = [];
+  for (let index = hierarchy.length - 1; index >= 0; index -= 1) {
+    candidates.push(...hierarchy[index].split(/\s*(?:\/|、)\s*/).map(x => x.trim()).filter(Boolean));
+  }
+  candidates.push(value);
+  return [...new Set(candidates)];
 }
 
 export function normalizePlaceName(value: string): string {
@@ -129,11 +141,12 @@ export function chooseOpenMeteoResult(location: string, query: string, results: 
   return [...results].sort((a, b) => score(b) - score(a))[0];
 }
 
-async function resolveWithGeoNames(location: string, signal: AbortSignal): Promise<ResolvedPlace | null> {
+async function resolveWithGeoNames(location: string, signal: AbortSignal, diagnostic?: ResolverDiagnostic): Promise<ResolvedPlace | null> {
   for (const query of geocodingNames(location)) {
     const url = new URL('https://secure.geonames.org/searchJSON');
     url.searchParams.set('q', query); url.searchParams.set('maxRows', '10'); url.searchParams.set('username', GEONAMES_USERNAME);
-    const response = await fetch(url, {signal}); if (!response.ok) continue;
+    const response = await fetch(url, {signal});
+    if (!response.ok) { diagnostic?.(`GeoNames query="${query}" status=${response.status}`); continue; }
     const result = chooseGeoNamesResult(location, query, ((await response.json()) as GeoNamesResponse).geonames ?? []);
     if (!result) continue;
     const latitude = Number(result.lat), longitude = Number(result.lng);
@@ -143,12 +156,13 @@ async function resolveWithGeoNames(location: string, signal: AbortSignal): Promi
   return null;
 }
 
-async function resolveWithNominatim(location: string, signal: AbortSignal): Promise<ResolvedPlace | null> {
+async function resolveWithNominatim(location: string, signal: AbortSignal, diagnostic?: ResolverDiagnostic): Promise<ResolvedPlace | null> {
   for (const query of geocodingNames(location)) {
     const url = new URL('https://nominatim.openstreetmap.org/search');
     url.searchParams.set('q', query); url.searchParams.set('format', 'jsonv2'); url.searchParams.set('limit', '8');
     url.searchParams.set('addressdetails', '1'); url.searchParams.set('accept-language', 'zh,en');
-    const response = await fetch(url, {signal, headers: {'Accept': 'application/json'}}); if (!response.ok) continue;
+    const response = await fetch(url, {signal, headers: {'Accept': 'application/json'}});
+    if (!response.ok) { diagnostic?.(`Nominatim query="${query}" status=${response.status}`); continue; }
     const result = chooseNominatimResult(location, query, (await response.json()) as NominatimResult[]);
     if (!result) continue;
     const latitude = Number(result.lat), longitude = Number(result.lon);
@@ -158,24 +172,28 @@ async function resolveWithNominatim(location: string, signal: AbortSignal): Prom
   return null;
 }
 
-async function resolveWithOpenMeteo(location: string, signal: AbortSignal): Promise<ResolvedPlace | null> {
+async function resolveWithOpenMeteo(location: string, signal: AbortSignal, diagnostic?: ResolverDiagnostic): Promise<ResolvedPlace | null> {
   for (const query of geocodingNames(location)) for (const language of ['zh', 'ja', 'en']) {
     const url = new URL('https://geocoding-api.open-meteo.com/v1/search');
     url.searchParams.set('name', query); url.searchParams.set('count', '8'); url.searchParams.set('language', language); url.searchParams.set('format', 'json');
-    const response = await fetch(url, {signal}); if (!response.ok) continue;
+    const response = await fetch(url, {signal});
+    if (!response.ok) { diagnostic?.(`GeoNames query="${query}" status=${response.status}`); continue; }
     const result = chooseOpenMeteoResult(location, query, ((await response.json()) as OpenMeteoGeocodingResponse).results ?? []);
     if (result) return {latitude: result.latitude, longitude: result.longitude, canonicalName: result.name, countryCode: result.country_code, admin1: result.admin1};
   }
   return null;
 }
 
-export async function resolvePlace(location: string, signal: AbortSignal): Promise<ResolvedPlace | null> {
-  for (const provider of [resolveWithGeoNames, resolveWithNominatim, resolveWithOpenMeteo]) {
-    try {
-      const resolved = await provider(location, signal);
-      if (resolved) return resolved;
-    } catch (error) {
-      if (signal.aborted) throw error;
+export async function resolvePlace(location: string, signal: AbortSignal, diagnostic?: ResolverDiagnostic): Promise<ResolvedPlace | null> {
+  for (const candidate of locationCandidates(location)) {
+    for (const provider of [resolveWithGeoNames, resolveWithNominatim, resolveWithOpenMeteo]) {
+      try {
+        const resolved = await provider(candidate, signal, diagnostic);
+        if (resolved) return resolved;
+      } catch (error) {
+        if (signal.aborted) throw error;
+        diagnostic?.(`${provider.name} candidate="${candidate}" error=${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   }
   return null;

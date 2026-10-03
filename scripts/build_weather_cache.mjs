@@ -5,7 +5,7 @@ import createJiti from 'jiti';
 
 const root = process.cwd();
 const docsRoot = path.join(root, 'docs/05-吴飞飞/02-年度总结');
-const outDir = path.join(root, 'static/data/weather');
+const outDir = path.resolve(process.argv[2] ?? path.join(root, 'static/data/weather'));
 const locationsFile = path.join(outDir, 'locations.json');
 const daysFile = path.join(outDir, 'days.json');
 const jiti = createJiti(import.meta.url);

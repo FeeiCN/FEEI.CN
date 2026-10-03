@@ -37,6 +37,9 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
         }))
         .sort((first, second) => second.date.localeCompare(first.date));
       const records = dailyRecords.slice(0, 3);
+      const recordsMonth = records[0]?.date.slice(0, 7);
+      const recordsHref = docs.find((doc) => doc.slug.replace(/\/$/, '') === `/${recordsMonth}`)?.permalink
+        ?? records[0]?.to;
       const updates: HomeRecord[] = docs
         .filter((doc) => doc.source.startsWith('@site/docs/01-网络安全/') && !doc.frontMatter.sidebar_badge
           && doc.slug.replace(/\/$/, '') !== '/ai-agent-tool-security')
@@ -46,7 +49,7 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
         .slice(0, 3)
         .map((doc) => ({date: new Date(doc.updatedAt + 8 * 60 * 60 * 1000).toISOString().slice(0, 10), title: doc.title, to: doc.to}));
       const updatedAtByPermalink = Object.fromEntries(docs.map((doc) => [doc.permalink, docMetadata?.[doc.source]?.updatedAt ?? 0]));
-      actions.setGlobalData({records, dailyRecords, updates, updatedAtByPermalink});
+      actions.setGlobalData({records, recordsHref, dailyRecords, updates, updatedAtByPermalink});
 
       const siteUrl = context.siteConfig.url;
       const feedUrl = new URL(`${context.siteConfig.baseUrl}rss.xml`, siteUrl).href;

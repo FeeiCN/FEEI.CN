@@ -7,6 +7,36 @@
 .year-record-list .year-record time small, .year-record-list .year-record span small { display:block; color:var(--ifm-color-emphasis-600); font:400 .78rem/1.45 var(--ifm-font-family-base); }
 .year-record-list .year-record strong { display:block; font-weight:700; line-height:1.5; }
 .year-record-list .year-record:hover strong { color:var(--ifm-color-primary); }
+
+/* 年度入口顶部的全年日历 */
+.annual-calendar { margin:1.25rem 0 2rem; padding:1.1rem 1.15rem 1rem; border:1px solid var(--ifm-color-emphasis-200); border-radius:14px; background:linear-gradient(145deg, var(--ifm-background-surface-color), rgba(127,127,127,.035)); }
+.annual-calendar__head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; }
+.annual-calendar__eyebrow { margin:0 0 .2rem; color:var(--ifm-color-emphasis-600); font-size:.68rem; font-weight:700; letter-spacing:.12em; }
+.annual-calendar h2 { margin:0; font-size:1.25rem; letter-spacing:-.02em; }
+.annual-calendar__stats { display:flex; align-items:baseline; gap:.7rem; color:var(--ifm-color-emphasis-600); font-size:.78rem; white-space:nowrap; }
+.annual-calendar__stats strong { color:var(--ifm-color-primary); font-size:1.45rem; font-variant-numeric:tabular-nums; line-height:1; }
+.annual-calendar__stats small { display:inline; margin-left:.25rem; color:var(--ifm-color-emphasis-600); font-size:.7rem; font-weight:500; }
+.annual-calendar__bar { height:4px; margin:.9rem 0 1.05rem; overflow:hidden; border-radius:999px; background:var(--ifm-color-emphasis-200); }
+.annual-calendar__bar span { display:block; height:100%; border-radius:inherit; background:var(--ifm-color-primary); }
+.annual-calendar__months { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:.85rem .7rem; }
+.annual-calendar__month { min-width:0; }
+.annual-calendar__month-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:.3rem; }
+.annual-calendar__month-head strong { font-size:.78rem; }
+.annual-calendar__month-head span { color:var(--ifm-color-emphasis-600); font-size:.68rem; font-variant-numeric:tabular-nums; }
+.annual-calendar__weekdays, .annual-calendar__days { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:2px; text-align:center; }
+.annual-calendar__weekdays { margin-bottom:2px; color:var(--ifm-color-emphasis-600); font-size:.58rem; }
+.annual-calendar__days { font-size:.64rem; font-variant-numeric:tabular-nums; }
+.annual-calendar__days i { aspect-ratio:1; }
+.annual-calendar__day { display:flex; align-items:center; justify-content:center; aspect-ratio:1; min-width:0; border-radius:50%; color:var(--ifm-color-emphasis-600); text-decoration:none; }
+.annual-calendar__day::before, .annual-calendar__day::after { content:none !important; }
+.annual-calendar__day > span { display:block; line-height:1; }
+.annual-calendar__day--recorded { color:var(--ifm-color-white); background:var(--ifm-color-primary); font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.12); }
+.annual-calendar__day--recorded:hover, .annual-calendar__day--recorded:focus-visible { color:var(--ifm-color-white); background:var(--ifm-color-primary-dark); text-decoration:none; transform:scale(1.12); }
+.theme-doc-markdown .annual-calendar__day--recorded, .theme-doc-markdown .annual-calendar__day--recorded:hover, .theme-doc-markdown .annual-calendar__day--recorded:focus-visible { color:var(--ifm-color-white) !important; text-decoration:none !important; }
+.annual-calendar__hint { display:flex; align-items:center; gap:.4rem; margin:.9rem 0 0; color:var(--ifm-color-emphasis-600); font-size:.68rem; }
+.annual-calendar__hint span { width:.55rem; height:.55rem; border-radius:50%; background:var(--ifm-color-primary); }
+@media (max-width:900px) { .annual-calendar__months { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+@media (max-width:640px) { .annual-calendar { margin-top:1rem; padding:.9rem .75rem .8rem; } .annual-calendar__head { align-items:flex-start; flex-direction:column; gap:.55rem; } .annual-calendar__stats { gap:.5rem; } .annual-calendar__months { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.9rem .65rem; } }
 @media (max-width:640px) { .theme-doc-markdown > h1:first-child { margin-bottom:.55rem; } .theme-doc-markdown h2 { margin-top:1.5rem; } .year-record-list .year-record { grid-template-columns:3.8rem minmax(0,1fr); gap:.65rem; padding:.6rem 0; } .theme-doc-markdown { font-size:1rem; } .year-record-list .year-record strong { line-height:1.4; } }
 
 

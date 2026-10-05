@@ -51,6 +51,10 @@ function isVideoUrl(value: string): boolean {
   return /\.(?:mp4|webm|mov)$/i.test(value.split(/[?#]/, 1)[0]);
 }
 
+function videoPosterUrl(value: string): string | undefined {
+  return value.replace(/\.mp4(?=([?#]|$))/i, '-poster.webp');
+}
+
 function positiveNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
 }
@@ -236,6 +240,7 @@ export default function DailyRecordPhotos() {
                     key={`${photo.src}:${itemRetries[photo.src] ?? 0}`}
                     className="dailyRecordVideo"
                     src={photo.src}
+                    poster={videoPosterUrl(photo.src)}
                     controls
                     preload="metadata"
                     playsInline

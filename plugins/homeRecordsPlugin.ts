@@ -1,9 +1,12 @@
+import {readFileSync} from 'node:fs';
+import path from 'node:path';
+import {measureRecord, type RecordMetrics} from '../src/components/annualCalendarMetrics';
 import type {LoadContext, Plugin} from '@docusaurus/types';
 import type {LoadedContent} from '@docusaurus/plugin-content-docs';
 import type {Compiler} from 'webpack';
 import type {DocMetadataMap} from './docMtimePlugin';
 
-export type HomeRecord = {date: string; title: string; to: string; location?: string};
+export type HomeRecord = {date: string; title: string; to: string; location?: string; metrics?: RecordMetrics};
 
 function validPublicationDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -31,6 +34,7 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
           && doc.source.startsWith('@site/docs/05-吴飞飞/02-年度总结/'))
         .map((doc) => ({
           date: doc.slug.replace(/^\//, '').replace(/\/$/, ''),
+          metrics: measureRecord(readFileSync(path.resolve(context.siteDir, doc.source.replace(/^@site\//, '')), 'utf8')),
           title: doc.title,
           to: doc.permalink,
           location: typeof doc.frontMatter.location === 'string' ? doc.frontMatter.location : undefined,

@@ -30,13 +30,25 @@
 .annual-calendar__day { display:flex; align-items:center; justify-content:center; aspect-ratio:1; min-width:0; border-radius:50%; color:var(--ifm-color-emphasis-600); text-decoration:none; }
 .annual-calendar__day::before, .annual-calendar__day::after { content:none !important; }
 .annual-calendar__day > span { display:block; line-height:1; }
+.annual-calendar__day > b { position:absolute; top:.18rem; right:.18rem; display:none; width:.3rem; height:.3rem; border:1.5px solid var(--ifm-background-color); border-radius:50%; background:#c66d1d; font-size:0; line-height:0; }
+.annual-calendar__day--recorded.annual-calendar__day--away { position:relative; box-shadow:inset 0 0 0 2px #d9822b, 0 1px 3px rgba(0,0,0,.12); }
+.annual-calendar__day--moving > b { display:block; }
 .annual-calendar__day--recorded { color:var(--ifm-color-white); background:var(--ifm-color-primary); font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.12); }
 .annual-calendar__day--recorded:hover, .annual-calendar__day--recorded:focus-visible { color:var(--ifm-color-white); background:var(--ifm-color-primary-dark); text-decoration:none; transform:scale(1.12); }
-.theme-doc-markdown .annual-calendar__day--recorded, .theme-doc-markdown .annual-calendar__day--recorded:hover, .theme-doc-markdown .annual-calendar__day--recorded:focus-visible { color:var(--ifm-color-white) !important; text-decoration:none !important; }
+.annual-calendar__day--selected { outline:2px solid var(--ifm-color-primary); outline-offset:2px; }
+.theme-doc-markdown .annual-calendar__day--recorded, .theme-doc-markdown .annual-calendar__day--recorded:hover, .theme-doc-markdown .annual-calendar__day--recorded:focus-visible { color:var(--heat-text, #fff) !important; background:var(--heat-color, var(--ifm-color-primary)); text-decoration:none !important; }
+.annual-calendar__selected { display:flex; align-items:center; gap:.8rem; margin-top:1rem; padding:.7rem .8rem; border:1px solid var(--ifm-color-primary); border-radius:10px; background:var(--ifm-background-surface-color); font-size:.75rem; }
+.annual-calendar__selected > div { display:flex; align-items:baseline; gap:.45rem; min-width:0; flex:1; }
+.annual-calendar__selected strong { font-variant-numeric:tabular-nums; white-space:nowrap; }
+.annual-calendar__selected div span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.annual-calendar__selected small { color:var(--ifm-color-emphasis-600); white-space:nowrap; }
+.annual-calendar__selected > span { color:var(--ifm-color-emphasis-600); white-space:nowrap; }
+.annual-calendar__selected a { white-space:nowrap; font-weight:600; }
 .annual-calendar__hint { display:flex; align-items:center; gap:.4rem; margin:.9rem 0 0; color:var(--ifm-color-emphasis-600); font-size:.68rem; }
 .annual-calendar__hint span { width:.55rem; height:.55rem; border-radius:50%; background:var(--ifm-color-primary); }
 @media (max-width:900px) { .annual-calendar__months { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
 @media (max-width:640px) { .annual-calendar { margin-top:1rem; padding:.9rem .75rem .8rem; } .annual-calendar__head { align-items:flex-start; flex-direction:column; gap:.55rem; } .annual-calendar__stats { gap:.5rem; } .annual-calendar__months { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.9rem .65rem; } }
+@media (max-width:640px) { .annual-calendar__selected { display:block; } .annual-calendar__selected > div { margin-bottom:.25rem; } .annual-calendar__selected > span { display:block; margin-bottom:.45rem; } }
 @media (max-width:640px) { .theme-doc-markdown > h1:first-child { margin-bottom:.55rem; } .theme-doc-markdown h2 { margin-top:1.5rem; } .year-record-list .year-record { grid-template-columns:3.8rem minmax(0,1fr); gap:.65rem; padding:.6rem 0; } .theme-doc-markdown { font-size:1rem; } .year-record-list .year-record strong { line-height:1.4; } }
 
 
@@ -64,6 +76,16 @@
 .year-record-list > ul { margin-left:0; padding-left:0; }
 .year-record-list > ul > li { margin-left:0; padding-left:0; list-style:none; }
 
+/* 年度页的月度记录默认折叠，避免与顶部全年日历重复占用首屏空间 */
+.year-month-details { margin:1rem 0; border:1px solid var(--ifm-color-emphasis-200); border-radius:10px; background:var(--ifm-background-surface-color); }
+.year-month-details summary { display:flex; align-items:center; justify-content:space-between; padding:.75rem 1rem; color:var(--ifm-heading-color); font-size:1.2rem; font-weight:700; cursor:pointer; list-style:none; }
+.year-month-details summary::-webkit-details-marker { display:none; }
+.year-month-details summary::after { content:'›'; color:var(--ifm-color-emphasis-600); font-size:1.4rem; font-weight:400; line-height:1; transform:rotate(0); transition:transform .16s ease; }
+.year-month-details[open] summary { border-bottom:1px solid var(--ifm-color-emphasis-200); }
+.year-month-details[open] summary::after { transform:rotate(90deg); }
+.year-month-details > .year-record-list, .year-month-details > p { margin-right:1rem; margin-left:1rem; }
+.year-month-details > p { margin-top:.8rem; }
+
 
 /* 日期记录统一使用竖向结构线，周末以颜色区分 */
 .year-record-list .year-record { border-left:3px solid rgba(128,128,128,.18); padding-left:.65rem; }
@@ -72,3 +94,16 @@
 [data-theme='dark'] .year-record-list .year-record { border-left-color:rgba(255,255,255,.18); }
 [data-theme='dark'] .year-record-list .year-record.saturday { border-left-color:#79b6ef; }
 [data-theme='dark'] .year-record-list .year-record.sunday { border-left-color:#f08b8b; }
+
+.annual-calendar__heat-1 { --heat-color:#d9eddf; --heat-text:#1c4428; }
+.annual-calendar__heat-2 { --heat-color:#8bcca1; --heat-text:#163d23; }
+.annual-calendar__heat-3 { --heat-color:#347f4c; --heat-text:#fff; }
+.annual-calendar__heat-4 { --heat-color:#164d2b; --heat-text:#fff; }
+.annual-calendar__legend { display:flex; align-items:center; gap:.35rem; margin-top:1rem; font-size:.75rem; color:var(--ifm-color-emphasis-700); }
+.annual-calendar__legend i { width:.8rem; height:.8rem; border-radius:50%; background:var(--heat-color); }
+.annual-calendar__legend-away { width:.8rem; height:.8rem; border:2px solid #d9822b; border-radius:50%; }
+.annual-calendar__legend-moving { width:.55rem; height:.55rem; margin-left:.15rem; border-radius:50%; background:#c66d1d; }
+[data-theme='dark'] .annual-calendar__heat-1 { --heat-color:#253d2e; --heat-text:#d5eadb; }
+[data-theme='dark'] .annual-calendar__heat-2 { --heat-color:#38694a; --heat-text:#fff; }
+[data-theme='dark'] .annual-calendar__heat-3 { --heat-color:#74b88b; --heat-text:#102f1b; }
+[data-theme='dark'] .annual-calendar__heat-4 { --heat-color:#b1e5c2; --heat-text:#102f1b; }

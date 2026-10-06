@@ -1,3 +1,5 @@
+import {useEffect, useState} from 'react';
+import {intensityLevel, measureMedia, type RecordMetrics} from './annualCalendarMetrics';
 import Link from '@docusaurus/Link';
 import {usePluginData} from '@docusaurus/useGlobalData';
 import type {HomeRecord} from '../../plugins/homeRecordsPlugin';
@@ -24,9 +26,44 @@ export default function AnnualCalendar({year}: Props) {
   const {dailyRecords} = usePluginData('home-records-plugin') as {dailyRecords: HomeRecord[]};
   const yearRecords = dailyRecords.filter((record) => record.date.startsWith(`${year}-`));
   const recordMap = new Map(yearRecords.map((record) => [record.date, record]));
+  const [mediaMonths, setMediaMonths] = useState<Record<string, Record<string, unknown> | null>>({});
+  const [touchMode, setTouchMode] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const monthsKey = [...new Set(yearRecords.map((record) => record.date.slice(0, 7)))].sort().join(',');
+  useEffect(() => {
+    const controller = new AbortController();
+    setMediaMonths({});
+    for (const month of monthsKey.split(',').filter(Boolean)) {
+      fetch(`https://feei.cn/media/${month.replace('-', '/')}/index.json`, {signal: controller.signal})
+        .then(async (response) => {
+          if (!response.ok) throw new Error('Media unavailable');
+          const index = await response.json();
+          if (!index.days || typeof index.days !== 'object' || Array.isArray(index.days)) throw new Error('Invalid media index');
+          return index.days as Record<string, unknown>;
+        })
+        .then((days) => {
+          if (!controller.signal.aborted) setMediaMonths((current) => ({...current, [month]: days}));
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setMediaMonths((current) => ({...current, [month]: null}));
+        });
+    }
+    return () => controller.abort();
+  }, [monthsKey]);
+  useEffect(() => {
+    const query = window.matchMedia('(hover: none), (pointer: coarse)');
+    const update = () => setTouchMode(query.matches);
+    update();
+    query.addEventListener?.('change', update);
+    return () => query.removeEventListener?.('change', update);
+  }, []);
   const recordedDays = recordMap.size;
   const yearDays = (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 366 : 365;
   const coverage = Math.round((recordedDays / yearDays) * 100);
+  const selectedRecord = selectedDate ? recordMap.get(selectedDate) : undefined;
+  const selectedMediaMonth = selectedDate ? mediaMonths[selectedDate.slice(0, 7)] : undefined;
+  const selectedMedia = selectedDate ? measureMedia(selectedMediaMonth?.[selectedDate]) : {images: 0, videos: 0};
+  const selectedMetrics = selectedRecord ? {...(selectedRecord.metrics ?? {characters: 0, images: 0, videos: 0}), images: (selectedRecord.metrics?.images ?? 0) + selectedMedia.images, videos: (selectedRecord.metrics?.videos ?? 0) + selectedMedia.videos} : null;
 
   return (
     <section className="annual-calendar" aria-labelledby={`annual-calendar-${year}`}>
@@ -60,8 +97,21 @@ export default function AnnualCalendar({year}: Props) {
                   const day = index + 1;
                   const date = dateKey(year, month, day);
                   const record = recordMap.get(date);
+                  const mediaMonth = mediaMonths[date.slice(0, 7)];
+                  const media = measureMedia(mediaMonth?.[date]);
+                  const base = record?.metrics ?? {characters: 0, images: 0, videos: 0};
+                  const metrics: RecordMetrics = {...base, images: base.images + media.images, videos: base.videos + media.videos};
+                  const level = intensityLevel(metrics);
+                  const away = Boolean(record?.location && record.location !== '杭州');
+                  const moving = Boolean(record?.location?.includes('→'));
+                  const detail = `${date}：${record?.title}${record?.location ? ` · ${record.location}` : ''} · 约 ${metrics.characters} 字 · ${metrics.images} 张图 · ${metrics.videos} 段视频${mediaMonth === undefined ? '（媒体加载中）' : mediaMonth === null ? '（媒体暂不可用，仅计正文）' : ''}`;
                   return record ? (
-                    <Link key={date} to={record.to} className="annual-calendar__day annual-calendar__day--recorded" aria-label={`${date}：${record.title}`} title={record.title}><span aria-hidden="true">{day}</span></Link>
+                    <Link key={date} to={record.to} onClick={(event) => {
+                      if (touchMode && selectedDate !== date) {
+                        event.preventDefault();
+                        setSelectedDate(date);
+                      }
+                    }} className={`annual-calendar__day annual-calendar__day--recorded annual-calendar__heat-${level}${away ? ' annual-calendar__day--away' : ''}${moving ? ' annual-calendar__day--moving' : ''}${selectedDate === date ? ' annual-calendar__day--selected' : ''}`} aria-label={detail} title={detail}><span aria-hidden="true">{day}</span>{moving ? <b aria-hidden="true" /> : null}</Link>
                   ) : (
                     <span key={date} className="annual-calendar__day" aria-label={`${date}：暂无记录`}><span aria-hidden="true">{day}</span></span>
                   );
@@ -71,7 +121,18 @@ export default function AnnualCalendar({year}: Props) {
           );
         })}
       </div>
-      <p className="annual-calendar__hint"><span aria-hidden="true" /> 有日记 · 点击日期查看当天记录</p>
+      {selectedRecord && selectedMetrics && selectedDate && <div className="annual-calendar__selected" role="status">
+        <div><strong>{selectedDate}</strong><span>{selectedRecord.title}</span>{selectedRecord.location && <small>{selectedRecord.location}</small>}</div>
+        <span>约 {selectedMetrics.characters} 字 · {selectedMetrics.images} 张图 · {selectedMetrics.videos} 段视频</span>
+        <Link to={selectedRecord.to}>查看当天记录</Link>
+      </div>}
+      <div className="annual-calendar__legend" aria-label="记录丰富度由浅到深，共四档">
+        <span>记录丰富度 · 少</span>
+        {[1, 2, 3, 4].map((level) => <i key={level} className={`annual-calendar__heat-${level}`} aria-hidden="true" />)}
+        <span>多</span><span className="annual-calendar__legend-away" aria-hidden="true" /> <span>异地</span><span className="annual-calendar__legend-moving" aria-hidden="true" /> <span>移动</span>
+      </div>
+      <p className="annual-calendar__hint">文字、图片和视频越多，颜色越深；橙色描边表示异地，右上角小点表示移动。</p>
+      {Object.values(mediaMonths).some((month) => month === null) && <p className="annual-calendar__hint" role="status">部分媒体暂不可用，对应日期暂按正文计算。</p>}
     </section>
   );
 }

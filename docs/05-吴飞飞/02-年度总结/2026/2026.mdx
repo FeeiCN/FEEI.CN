@@ -12,26 +12,30 @@ import AnnualCalendar from '@site/src/components/AnnualCalendar';
 
 <AnnualCalendar year={2026} />
 
-按月份回看 2026 年的日记。每条记录链接到对应日期，保留当天的完整内容。
+按月份回看 2026 年的日记。每条记录链接到对应日期，保留当天的完整内容。点击月份展开记录。
 
-## 一月
+<details className="year-month-details">
+  <summary role="heading" aria-level="2"><span>一月</span></summary>
+  <MonthlyRecords year={2026} month={1} />
+</details>
 
-<MonthlyRecords year={2026} month={1} />
+<details className="year-month-details">
+  <summary role="heading" aria-level="2"><span>二月</span></summary>
+  <MonthlyRecords year={2026} month={2} />
+</details>
 
-## 二月
+<details className="year-month-details">
+  <summary role="heading" aria-level="2"><span>三月</span></summary>
+  <MonthlyRecords year={2026} month={3} />
+</details>
 
-<MonthlyRecords year={2026} month={2} />
+<details className="year-month-details">
+  <summary role="heading" aria-level="2"><span>四月</span></summary>
+  <MonthlyRecords year={2026} month={4} />
+</details>
 
-## 三月
-
-<MonthlyRecords year={2026} month={3} />
-
-## 四月
-
-<MonthlyRecords year={2026} month={4} />
-
-## 九月
-
-[查看 2026 年 9 月月度回看](./九月/index.md)
-
-<MonthlyRecords year={2026} month={9} />
+<details className="year-month-details">
+  <summary role="heading" aria-level="2"><span>九月</span></summary>
+  <p><a href="./九月/index.md">查看 2026 年 9 月月度回看</a></p>
+  <MonthlyRecords year={2026} month={9} />
+</details>

@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {Drawer, Portal, Tabs} from '@chakra-ui/react';
 import type {
   BookInfo,
-  BookBestBookmarks,
+  BookBookmarks,
   BookReviews,
   BookChapters,
   BookProgress,
@@ -14,21 +14,22 @@ import styles from './styles.module.css';
 type Props = {
   bookId: string;
   book: LibraryBook | undefined;
+  dataVersion?: string;
   onClose: () => void;
 };
 
 type TabKey = 'highlights' | 'reviews' | 'chapters';
 
 const TAB_LABELS: Record<TabKey, string> = {
-  highlights: '划线',
+  highlights: '我的划线',
   reviews: '书评',
   chapters: '章节',
 };
 
-export default function BookDetailDrawer({bookId, book, onClose}: Props) {
+export default function BookDetailDrawer({bookId, book, dataVersion, onClose}: Props) {
   const [tab, setTab] = useState<TabKey>('highlights');
   const [info, setInfo] = useState<BookInfo | null>(null);
-  const [best, setBest] = useState<BookBestBookmarks | null>(null);
+  const [bookmarks, setBookmarks] = useState<BookBookmarks | null>(null);
   const [reviews, setReviews] = useState<BookReviews | null>(null);
   const [chapters, setChapters] = useState<BookChapters | null>(null);
   const [progress, setProgress] = useState<BookProgress | null>(null);
@@ -39,11 +40,12 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
   const [open, setOpen] = useState(true);
   const [trigger] = useState(() => typeof document !== 'undefined' ? document.activeElement as HTMLElement | null : null);
   const baseUrl = `/data/reading/books/${bookId}`;
+  const version = `?v=${encodeURIComponent(dataVersion || '')}`;
 
   useEffect(() => {
     let cancelled = false;
     setInfo(null);
-    setBest(null);
+    setBookmarks(null);
     setReviews(null);
     setChapters(null);
     setProgress(null);
@@ -52,7 +54,7 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
     setTab('highlights');
     setIntroExpanded(false);
 
-    fetch(`${baseUrl}/info.json`, {cache: 'force-cache'})
+    fetch(`${baseUrl}/info.json${version}`, {cache: 'no-cache'})
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((data) => {
         if (!cancelled) setInfo(data as BookInfo);
@@ -61,7 +63,7 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
         if (!cancelled) setInfoError('书籍信息暂时无法加载');
       });
 
-    fetch(`${baseUrl}/progress.json`, {cache: 'force-cache'})
+    fetch(`${baseUrl}/progress.json${version}`, {cache: 'no-cache'})
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!cancelled && data) setProgress(data as BookProgress);
@@ -71,21 +73,21 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
     return () => {
       cancelled = true;
     };
-  }, [bookId, baseUrl]);
+  }, [bookId, baseUrl, version]);
 
   useEffect(() => {
-    if (tab === 'highlights' && !best) {
+    if (tab === 'highlights' && !bookmarks) {
       setLoadingTab('highlights');
       setTabError(null);
-      fetch(`${baseUrl}/bestbookmarks.json`, {cache: 'force-cache'})
+      fetch(`${baseUrl}/bookmarks.json${version}`, {cache: 'no-cache'})
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-        .then((data) => setBest(data as BookBestBookmarks))
+        .then((data) => setBookmarks(data as BookBookmarks))
         .catch(() => setTabError('划线加载失败'))
         .finally(() => setLoadingTab(null));
     } else if (tab === 'reviews' && !reviews) {
       setLoadingTab('reviews');
       setTabError(null);
-      fetch(`${baseUrl}/reviews.json`, {cache: 'force-cache'})
+      fetch(`${baseUrl}/reviews.json${version}`, {cache: 'no-cache'})
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
         .then((data) => setReviews(data as BookReviews))
         .catch(() => setTabError('书评加载失败'))
@@ -93,13 +95,18 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
     } else if (tab === 'chapters' && !chapters) {
       setLoadingTab('chapters');
       setTabError(null);
-      fetch(`${baseUrl}/chapters.json`, {cache: 'force-cache'})
+      fetch(`${baseUrl}/chapters.json${version}`, {cache: 'no-cache'})
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
         .then((data) => setChapters(data as BookChapters))
         .catch(() => setTabError('章节加载失败'))
         .finally(() => setLoadingTab(null));
     }
-  }, [tab, best, reviews, chapters, baseUrl]);
+  }, [tab, bookmarks, reviews, chapters, baseUrl, version]);
+
+  const removed = new Set(bookmarks?.removed || []);
+  const highlights = Array.from(new Map((bookmarks?.updated || [])
+    .filter((item) => item.bookmarkId && !removed.has(item.bookmarkId))
+    .map((item) => [item.bookmarkId, item])).values());
 
   const cover = info?.cover || book?.cover || '';
   const localCover = book?.bookId ? `/data/reading/books/${book.bookId}/cover.jpg` : '';
@@ -116,7 +123,7 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
   const lastRead = book?.lastReadTime ?? progress?.book?.updateTime ?? null;
 
   const chapterTitleById = new Map<number, string>();
-  for (const ch of chapters?.chapters || []) {
+  for (const ch of chapters?.chapters || bookmarks?.chapters || []) {
     if (typeof ch.chapterUid === 'number' && ch.title) {
       chapterTitleById.set(ch.chapterUid, ch.title);
     }
@@ -226,7 +233,7 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
               >
                 {TAB_LABELS[k]}
                 <span className={styles.tabCount}>
-                  {k === 'highlights' && best?.totalCount != null ? best.totalCount : ''}
+                  {k === 'highlights' && bookmarks ? highlights.length : ''}
                   {k === 'reviews' && reviews?.totalCount != null ? reviews.totalCount : ''}
                   {k === 'chapters' && chapters?.chapters ? chapters.chapters.length : ''}
                 </span>
@@ -237,9 +244,9 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
           {(Object.keys(TAB_LABELS) as TabKey[]).map((key) => <Tabs.Content key={key} value={key} className={styles.tabPanel}>
             {loadingTab === key && <div className={styles.loading}>加载中…</div>}
             {tabError && <div className={styles.error}>加载失败：{tabError}</div>}
-            {key === 'highlights' && best && !loadingTab && (
+            {key === 'highlights' && bookmarks && !loadingTab && (
               <HighlightsPanel
-                items={best.items || []}
+                items={highlights}
                 chapterTitleById={chapterTitleById}
               />
             )}
@@ -247,7 +254,7 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
             {key === 'chapters' && chapters && !loadingTab && (
               <ChaptersPanel chapters={chapters.chapters || []} />
             )}
-            {key === 'highlights' && best && (best.items?.length ?? 0) === 0 && !loadingTab && (
+            {key === 'highlights' && bookmarks && highlights.length === 0 && !loadingTab && (
               <div className={styles.empty}>暂无划线</div>
             )}
             {key === 'reviews' && reviews && (reviews.reviews?.length ?? 0) === 0 && !loadingTab && (
@@ -273,11 +280,11 @@ function HighlightsPanel({
   items,
   chapterTitleById,
 }: {
-  items: NonNullable<BookBestBookmarks['items']>;
+  items: NonNullable<BookBookmarks['updated']>;
   chapterTitleById: Map<number, string>;
 }) {
   if (!items.length) return null;
-  const sorted = [...items].sort((a, b) => (b.totalCount ?? 0) - (a.totalCount ?? 0));
+  const sorted = [...items].sort((a, b) => (a.chapterUid ?? 0) - (b.chapterUid ?? 0) || Number(a.range?.split('-')[0] || 0) - Number(b.range?.split('-')[0] || 0));
   return (
     <>
       {sorted.map((it, idx) => {
@@ -290,9 +297,6 @@ function HighlightsPanel({
                 {chapterTitle || `章节 ${it.chapterUid ?? '?'}`}
                 {it.range ? ` · ${it.range}` : ''}
               </span>
-              {typeof it.totalCount === 'number' && (
-                <span className={styles.highlightLikes}>❤ {it.totalCount}</span>
-              )}
             </div>
             <div>{it.markText}</div>
           </div>

@@ -7,7 +7,7 @@ import BookList from './BookList';
 import BookDetailDrawer from './BookDetailDrawer';
 import ReadingHeatmap from '../ReadingHeatmap';
 import ReadingTimeBar from './ReadingTimeBar';
-import {formatDuration, humanizeDays, isStale} from './utils';
+import {formatDuration, formatSyncTime, isStale} from './utils';
 import {
   ReadingCtx,
   defaultScope,
@@ -302,7 +302,7 @@ function DashboardInner({onDateSelect}: {onDateSelect?: (date: string) => void})
   return (
     <div className={styles.dashboard}>
       <ReadingTimeBar />
-      <ScopeMeta scope={scope} loading={loading} stats={filteredStats} exportedAt={stats?.exportedAt} />
+      <ScopeMeta scope={scope} loading={loading} stats={filteredStats} syncedAt={stats?.readingSyncedAt} />
       <StatsSummary totals={filteredStats.totals} />
       <ReadingHeatmap
         daily={heatmapDaily}
@@ -343,6 +343,7 @@ function DashboardInner({onDateSelect}: {onDateSelect?: (date: string) => void})
         <BookDetailDrawer
           bookId={selectedBookId}
           book={selectedBook}
+          dataVersion={stats?.exportedAt}
           onClose={handleCloseDrawer}
         />
       )}
@@ -354,12 +355,12 @@ function ScopeMeta({
   scope,
   loading,
   stats,
-  exportedAt,
+  syncedAt,
 }: {
   scope: TimeScope;
   loading: boolean;
   stats: Stats;
-  exportedAt?: string;
+  syncedAt?: string | null;
 }) {
   let label = '';
   if (scope.mode === 'year') {
@@ -368,20 +369,20 @@ function ScopeMeta({
     label = '全部历史';
   }
   const lastDate = stats.dateRange?.end;
-  const ageLabel = humanizeDays(exportedAt);
-  const stale = isStale(exportedAt);
+  const syncLabel = formatSyncTime(syncedAt);
+  const stale = isStale(syncedAt ?? undefined);
   return (
     <div className={styles.scopeMeta}>
       <span>
         当前范围：<span className={styles.scopeRange}>{label}</span>
         {stats.totals.activeDays > 0 && lastDate && (
-          <> · 数据截至 {lastDate}</>
+          <> · 最近阅读日期 {lastDate}</>
         )}
-        {ageLabel && (
+        {syncLabel && (
           <>
             {' · '}
             <span className={stale ? styles.stale : ''}>
-              更新于 {ageLabel}
+              阅读时长同步于 {syncLabel}（北京时间）
             </span>
           </>
         )}

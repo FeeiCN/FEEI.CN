@@ -74,14 +74,16 @@ def _canonical_json(data: Any) -> str:
     return json.dumps(_strip_volatile(data), ensure_ascii=False, sort_keys=True)
 
 
-def write_json(path: Path, data: Any) -> bool:
+def write_json(path: Path, data: Any, *, track_fetch: bool = False) -> bool:
     """写盘。已有同内容（剥除 fetchedAt/exportedAt）则跳过，返回 False。"""
     if path.exists():
         try:
             existing = json.loads(path.read_text(encoding="utf-8"))
         except Exception:
             existing = None
-        if existing is not None and _canonical_json(existing) == _canonical_json(data):
+        if existing is not None and _canonical_json(existing) == _canonical_json(data) and (
+            not track_fetch or existing.get("fetchedAt") == data.get("fetchedAt")
+        ):
             return False
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -329,7 +331,7 @@ def fetch_book_progress(book_id: str) -> dict[str, Any]:
 
 
 def fetch_book_bookmarks(book_id: str) -> dict[str, Any]:
-    return {"fetchedAt": now_str(), **api_call("/book/bookmarklist", bookId=book_id)}
+    return {"fetchedAt": now_str(), **api_call("/book/bookmarklist", bookId=book_id, synckey=0)}
 
 
 def fetch_book_reviews_all(book_id: str) -> dict[str, Any]:
@@ -456,7 +458,7 @@ def parse_iso_utc(s: str) -> datetime | None:
 
 
 def _ts_to_date_str(ts: int) -> str:
-    return datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%Y-%m-%d")
+    return datetime.fromtimestamp(int(ts), tz=BEIJING_TZ).strftime("%Y-%m-%d")
 
 
 def _iter_month_files(out_dir: Path, start_year: int, end_year: int):
@@ -502,8 +504,12 @@ def build_aggregates(out_dir: Path, start_year: int, end_year: int) -> dict[str,
     year_month_seconds: dict[str, list[int]] = {}
     year_book_times: dict[str, dict[str, dict[str, Any]]] = {}
     all_active_dates: set[str] = set()
+    reading_synced_at: str | None = None
 
     for y, m, payload in _iter_month_files(out_dir, start_year, end_year):
+        fetched_at = payload.get("fetchedAt")
+        if fetched_at and (reading_synced_at is None or fetched_at > reading_synced_at):
+            reading_synced_at = fetched_at
         ybt = year_book_times.setdefault(str(y), {})
 
         month_sec = 0
@@ -586,6 +592,10 @@ def build_aggregates(out_dir: Path, start_year: int, end_year: int) -> dict[str,
         totals_active_days=totals_active_days,
         totals_seconds=totals_seconds,
         date_range=date_range,
+    )
+    stats["readingSyncedAt"] = (
+        datetime.strptime(reading_synced_at, "%Y-%m-%d %H:%M:%S")
+        .replace(tzinfo=BEIJING_TZ).isoformat() if reading_synced_at else None
     )
     write_json(out_dir / "stats.json", stats)
     return {
@@ -677,12 +687,13 @@ def build_stats_payload(
         finish_reading = bool(sh.get("finishReading"))
 
         bookmark_count = entry.get("bookmarkCount") or 0
-        bb_payload = _load_json(out_dir / "books" / bid / "bestbookmarks.json")
-        if bb_payload and bb_payload.get("totalCount") is not None:
-            try:
-                bookmark_count = int(bb_payload["totalCount"])
-            except (TypeError, ValueError):
-                pass
+        bookmarks_payload = _load_json(out_dir / "books" / bid / "bookmarks.json")
+        if bookmarks_payload is not None and isinstance(bookmarks_payload.get("updated"), list):
+            removed = set(bookmarks_payload.get("removed") or [])
+            bookmark_count = len({
+                item["bookmarkId"] for item in bookmarks_payload["updated"]
+                if item.get("bookmarkId") and item["bookmarkId"] not in removed
+            })
 
         ts_for_year = read_update_time or last_update_time
         year: int | None = None
@@ -891,7 +902,7 @@ def run_daily(args: argparse.Namespace, state: dict[str, Any]) -> int:
 
     try:
         monthly_payload = fetch_monthly(year, month)
-        write_json(OUT_DIR / f"{year}" / f"{month:02d}.json", monthly_payload)
+        write_json(OUT_DIR / f"{year}" / f"{month:02d}.json", monthly_payload, track_fetch=True)
         ym_tag = f"{year}-{month:02d}"
         ym_list = state.setdefault("monthly_ym", [])
         if ym_tag not in ym_list:
@@ -1067,7 +1078,7 @@ def run_full(args: argparse.Namespace, state: dict[str, Any]) -> int:
         for y, m in months:
             try:
                 payload = fetch_monthly(y, m)
-                write_json(OUT_DIR / f"{y}" / f"{m:02d}.json", payload)
+                write_json(OUT_DIR / f"{y}" / f"{m:02d}.json", payload, track_fetch=True)
                 ym_tag = f"{y}-{m:02d}"
                 ym_list = state.setdefault("monthly_ym", [])
                 if ym_tag not in ym_list:

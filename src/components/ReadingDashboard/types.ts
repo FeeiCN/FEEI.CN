@@ -55,6 +55,7 @@ export type Collection = {
 
 export type Stats = {
   exportedAt: string;
+  readingSyncedAt?: string | null;
   totals: Totals;
   yearly: YearlySummary[];
   library: LibraryBook[];
@@ -84,9 +85,10 @@ export type BookHighlight = {
   totalCount?: number;
 };
 
-export type BookBestBookmarks = {
-  totalCount?: number;
-  items?: BookHighlight[];
+export type BookBookmarks = {
+  updated?: BookHighlight[];
+  removed?: string[];
+  chapters?: BookChapter[];
 };
 
 export type BookReview = {

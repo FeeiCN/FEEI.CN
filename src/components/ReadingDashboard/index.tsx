@@ -410,10 +410,10 @@ function StatsSummary({totals}: {totals: Stats['totals']}) {
           <span className={styles.statLabel}>阅读天数</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statValue}>
-            {formatDuration(totals.totalReadSeconds)}
+          <span className={styles.statValue} title={formatDuration(totals.totalReadSeconds)} aria-label={formatDuration(totals.totalReadSeconds)}>
+            {totalHours.toLocaleString('zh-CN', {maximumFractionDigits: 1})}
           </span>
-          <span className={styles.statLabel}>累计时长</span>
+          <span className={styles.statLabel}>累计时长（小时）</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statValue}>{totals.notesTotal}</span>

@@ -1,4 +1,5 @@
-import React, {useState, useEffect, useRef, type ReactNode} from 'react';
+import React, {useState, type ReactNode} from 'react';
+import {Menu, Portal} from '@chakra-ui/react';
 import {useDoc} from '@docusaurus/plugin-content-docs/client';
 import {usePluginData} from '@docusaurus/useGlobalData';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
@@ -93,7 +94,6 @@ export default function DocActionsMenu(): ReactNode {
   const {siteConfig} = useDocusaurusContext();
   const [open, setOpen] = useState(false);
   const [copyState, setCopyState] = useState<CopyState>('idle');
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const metadataMap = usePluginData('doc-mtime-plugin') as DocMetadataMap | undefined;
   const canCopyMarkdown = metadata.source.endsWith('.md');
   const docMetadata = normalizeDocMetadata(metadata.source ? metadataMap?.[metadata.source] : undefined);
@@ -104,16 +104,6 @@ export default function DocActionsMenu(): ReactNode {
   const claudeUrl = `https://claude.ai/new?q=${aiQuery}`;
   const chatgptUrl = `https://chat.openai.com/?q=${aiQuery}`;
   const reportIssueUrl = issueUrl(metadata.title, pageUrl);
-
-  useEffect(() => {
-    function onOutside(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    if (open) document.addEventListener('mousedown', onOutside);
-    return () => document.removeEventListener('mousedown', onOutside);
-  }, [open]);
 
   async function handleCopy() {
     if (!canCopyMarkdown) {
@@ -145,7 +135,9 @@ export default function DocActionsMenu(): ReactNode {
   const triggerLabel = copyState === 'copying' ? '正在复制' : copyState === 'copied' ? '已复制' : copyState === 'error' ? '复制失败' : '复制 Markdown';
 
   return (
-    <div className={styles.wrapper} ref={wrapperRef} data-open={open ? 'true' : undefined}>
+    <Menu.Root open={open} onOpenChange={(details) => setOpen(details.open)}
+      positioning={{placement: 'bottom-end', gutter: 6}}>
+      <div className={styles.wrapper} data-open={open ? 'true' : undefined}>
       {/* Split-pill: left clicks copy directly, right clicks open dropdown */}
       <div className={styles.trigger} data-state={copyState}>
         {canCopyMarkdown && (
@@ -167,26 +159,21 @@ export default function DocActionsMenu(): ReactNode {
             <span className={styles.triggerSep} aria-hidden="true" />
           </>
         )}
-        <button
+        <Menu.Trigger asChild><button
           className={styles.triggerChevron}
-          onClick={() => setOpen(o => !o)}
-          aria-haspopup="true"
-          aria-expanded={open}
           aria-label="更多操作"
         >
           <ChevronIcon open={open} />
-        </button>
+        </button></Menu.Trigger>
       </div>
 
-      {open && (
-        <div className={styles.menu} role="menu">
+      <Portal><Menu.Positioner><Menu.Content className={styles.menu}>
           {metadata.editUrl && (
-            <a
+            <Menu.Item value="edit" asChild><a
               className={styles.item}
               href={metadata.editUrl}
               target="_blank"
               rel="noopener noreferrer"
-              role="menuitem"
               onClick={() => setOpen(false)}
             >
               {IconGitHub && (
@@ -200,15 +187,14 @@ export default function DocActionsMenu(): ReactNode {
                 </span>
                 <span className={styles.itemDesc}>查看并编辑此页面的源文件</span>
               </span>
-            </a>
+            </a></Menu.Item>
           )}
 
-          <a
+          <Menu.Item value="report" asChild><a
             className={styles.item}
             href={reportIssueUrl}
             target="_blank"
             rel="noopener noreferrer"
-            role="menuitem"
             onClick={(event) => {
               const selectedText = window.getSelection()?.toString().trim().slice(0, 500) ?? '';
               event.currentTarget.href = issueUrl(metadata.title, pageUrl, selectedText);
@@ -226,17 +212,16 @@ export default function DocActionsMenu(): ReactNode {
               </span>
               <span className={styles.itemDesc}>在 GitHub 提交问题或修改建议</span>
             </span>
-          </a>
+          </a></Menu.Item>
 
-          <div className={styles.divider} />
+          <Menu.Separator className={styles.divider} />
 
           {/* Open in Claude */}
-          <a
+          <Menu.Item value="claude" asChild><a
             className={styles.item}
             href={claudeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            role="menuitem"
             onClick={() => setOpen(false)}
           >
             {IconClaude && (
@@ -250,15 +235,14 @@ export default function DocActionsMenu(): ReactNode {
               </span>
               <span className={styles.itemDesc}>向 Claude 询问此页面的内容</span>
             </span>
-          </a>
+          </a></Menu.Item>
 
           {/* Open in ChatGPT */}
-          <a
+          <Menu.Item value="chatgpt" asChild><a
             className={styles.item}
             href={chatgptUrl}
             target="_blank"
             rel="noopener noreferrer"
-            role="menuitem"
             onClick={() => setOpen(false)}
           >
             {IconOpenAI && (
@@ -272,16 +256,16 @@ export default function DocActionsMenu(): ReactNode {
               </span>
               <span className={styles.itemDesc}>向 ChatGPT 询问此页面的内容</span>
             </span>
-          </a>
+          </a></Menu.Item>
 
-          <div className={styles.divider} />
+          <Menu.Separator className={styles.divider} />
           <div className={styles.menuMeta}>
             {docMetadata
               ? `${docMetadata.revisionCount ? `本文件迭代 ${docMetadata.revisionCount} 版，` : '本文件'}最后更新于 ${dateFormatter.format(new Date(docMetadata.updatedAt))}`
               : fileName}
           </div>
-        </div>
-      )}
-    </div>
+      </Menu.Content></Menu.Positioner></Portal>
+      </div>
+    </Menu.Root>
   );
 }

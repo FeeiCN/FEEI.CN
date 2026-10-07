@@ -339,7 +339,7 @@ function BookCard({
     <button
       type="button"
       className={styles.bookCard}
-      onClick={() => onSelect(book.bookId)}
+      onClick={(event) => { event.stopPropagation(); onSelect(book.bookId); }}
     >
       <div className={styles.bookCardCoverWrap}>
         {book.cover ? (

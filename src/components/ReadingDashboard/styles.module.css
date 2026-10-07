@@ -1,4 +1,5 @@
-.dashboard {
+.dashboard,
+.drawerTheme {
   --rd-fg: var(--ifm-font-color-base, #1f2937);
   --rd-fg-muted: var(--ifm-color-emphasis-600, #64748b);
   --rd-fg-soft: var(--ifm-color-emphasis-500, #94a3b8);
@@ -8,22 +9,28 @@
   --rd-border: var(--ifm-color-emphasis-200, #e2e8f0);
   --rd-border-soft: var(--ifm-color-emphasis-100, #f1f5f9);
   --rd-accent: var(--ifm-color-primary, #2563eb);
-  --rd-accent-soft: var(--ifm-color-primary-light, #dbeafe);
+  --rd-accent-soft: color-mix(in srgb, var(--rd-accent) 8%, var(--rd-bg));
+  --rd-hover-bg: color-mix(in srgb, var(--rd-fg) 4%, var(--rd-bg));
+  --rd-hover-border: var(--ifm-color-emphasis-400);
   --rd-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
   --rd-shadow-lg: 0 4px 8px rgba(15, 23, 42, 0.08), 0 12px 28px rgba(15, 23, 42, 0.10);
   --rd-radius: 12px;
   --rd-radius-sm: 8px;
   --rd-floating-bg: rgba(255, 255, 255, 0.72);
+}
+
+.dashboard {
   display: flex;
   flex-direction: column;
   gap: 2rem;
   margin: 1rem 0 2rem;
-  padding-bottom: 6rem;
+
   color: var(--rd-fg);
   font-variant-numeric: tabular-nums;
 }
 
-[data-theme='dark'] .dashboard {
+[data-theme='dark'] .dashboard,
+[data-theme='dark'] .drawerTheme {
   --rd-fg-muted: var(--ifm-color-emphasis-500, #94a3b8);
   --rd-fg-soft: var(--ifm-color-emphasis-400, #64748b);
   --rd-bg-soft: var(--ifm-color-emphasis-200, #1e293b);
@@ -143,11 +150,12 @@
 /* Currently reading carousel */
 .currentList {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: 0.75rem;
 }
 
 .currentCard {
+  min-width: 0;
   display: flex;
   gap: 0.75rem;
   align-items: stretch;
@@ -164,9 +172,9 @@
 
 .currentCard:hover,
 .currentCard:focus-visible {
-  border-color: var(--rd-accent);
-  background: var(--rd-accent-soft);
-  outline: none;
+  border-color: var(--rd-hover-border);
+  background: var(--rd-hover-bg);
+  box-shadow: var(--rd-shadow);
 }
 
 .currentCover {
@@ -233,20 +241,6 @@
   background: linear-gradient(90deg, var(--rd-accent) 0%, #16a34a 100%);
 }
 
-.progressFillText {
-  position: absolute;
-  top: 50%;
-  left: 8px;
-  transform: translateY(-50%);
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--rd-bg-soft);
-  line-height: 1;
-  pointer-events: none;
-  text-shadow: 0 0 2px rgba(0, 0, 0, 0.35);
-  font-variant-numeric: tabular-nums;
-}
-
 .currentFooter {
   display: flex;
   justify-content: space-between;
@@ -288,7 +282,11 @@
 }
 
 .collectionChip:hover,
-.collectionChip:focus-visible,
+.collectionChip:focus-visible {
+  border-color: var(--rd-hover-border);
+  background: var(--rd-hover-bg);
+}
+
 .collectionChipActive {
   border-color: var(--rd-accent);
   background: var(--rd-accent-soft);
@@ -331,8 +329,8 @@
 
 .bookCard:hover,
 .bookCard:focus-visible {
-  border-color: var(--rd-accent);
-  box-shadow: var(--rd-shadow-lg);
+  border-color: var(--rd-hover-border);
+  box-shadow: var(--rd-shadow);
   transform: translateY(-2px);
   outline: none;
 }
@@ -525,8 +523,9 @@
   transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
-.categoryFilterButton:hover {
-  border-color: var(--rd-accent);
+.categoryFilterButton:not(.categoryFilterButtonActive):hover {
+  border-color: var(--rd-hover-border);
+  background: var(--rd-hover-bg);
   color: var(--rd-fg);
 }
 
@@ -584,7 +583,8 @@
 }
 
 .filterButton:hover {
-  border-color: var(--rd-accent);
+  border-color: var(--rd-hover-border);
+  background: var(--rd-hover-bg);
   color: var(--rd-fg);
 }
 
@@ -779,36 +779,26 @@
   inset: 0;
   background: rgba(15, 23, 42, 0.4);
   z-index: 1000;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
+
 }
 
-.drawerBackdropOpen {
-  opacity: 1;
-  pointer-events: auto;
-}
 
 .drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
+  height: 100%;
   width: min(480px, 100vw);
   background: var(--rd-bg);
   border-left: 1px solid var(--rd-border);
   box-shadow: -4px 0 24px rgba(15, 23, 42, 0.12);
   z-index: 1001;
-  transform: translateX(100%);
-  transition: transform 0.25s ease-out;
+  max-width: 100vw;
+  color: var(--rd-fg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.drawerOpen {
-  transform: translateX(0);
-}
+.drawerTheme { z-index: 1001; }
 
 .drawerHeader {
   display: flex;
@@ -821,6 +811,9 @@
 
 .drawerClose {
   position: relative;
+  top: auto;
+  inset-inline-end: auto;
+  flex-shrink: 0;
   background: none;
   border: none;
   font-size: 1.5rem;
@@ -1092,30 +1085,25 @@
   font-weight: 500;
 }
 
-/* Floating time bar (portal to body) */
 .floatingStack {
-  position: fixed;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem;
-  z-index: 999;
+  gap: .75rem;
+  min-width: 0;
 }
 
 .floatingBar {
   display: flex;
   gap: 0.2rem;
-  max-width: calc(100vw - 1rem);
+  max-width: 100%;
   overflow-x: auto;
   scrollbar-width: none;
   background: var(--rd-floating-bg, rgba(255, 255, 255, 0.72));
   border: 1px solid var(--ifm-color-emphasis-300, #cbd5e1);
   border-radius: 999px;
   padding: 0.25rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   backdrop-filter: blur(12px);
   align-items: center;
 }
@@ -1129,7 +1117,7 @@
 }
 
 .floatingOptionBar {
-  max-width: min(42rem, calc(100vw - 1rem));
+  max-width: min(42rem, 100%);
 }
 
 .floatingBtn {
@@ -1190,21 +1178,9 @@
     grid-template-columns: 1fr;
   }
   .statsSummary {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    gap: 0.5rem;
-    margin: 0 -1rem;
-    padding: 0 1rem 0.5rem;
-    scrollbar-width: none;
-  }
-  .statsSummary::-webkit-scrollbar {
-    display: none;
-  }
-  .statCard {
-    flex: 0 0 38%;
-    min-width: 140px;
-    scroll-snap-align: start;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .5rem;
   }
   .statValue {
     font-size: 1.2rem;
@@ -1221,4 +1197,21 @@
   .drawer {
     width: 100vw;
   }
+}
+
+.tabPanel[hidden] { display:none; }
+.drawerHeaderLabel { margin:0; }
+
+.currentFooter > span:first-child { display:flex; align-items:center; flex-wrap:wrap; gap:.35rem; }
+.currentCard .currentCover { cursor:pointer; }
+
+:global(.theme-doc-markdown) .dashboard .sectionTitle::before { content:none !important; }
+
+.currentCard:focus-visible,
+.bookCard:focus-visible,
+.collectionChip:focus-visible,
+.filterButton:focus-visible,
+.categoryFilterButton:focus-visible {
+  outline:2px solid var(--rd-accent);
+  outline-offset:2px;
 }

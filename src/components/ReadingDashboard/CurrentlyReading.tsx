@@ -1,6 +1,6 @@
 import React from 'react';
 import type {LibraryBook} from './types';
-import {formatDuration, formatRelativeTime} from './utils';
+import {formatRelativeTime} from './utils';
 import styles from './styles.module.css';
 
 type Props = {
@@ -43,7 +43,7 @@ export default function CurrentlyReading({library, onSelect, maxItems = 6}: Prop
               key={b.bookId}
               type="button"
               className={styles.currentCard}
-              onClick={() => onSelect(b.bookId)}
+              onClick={(event) => { event.stopPropagation(); onSelect(b.bookId); }}
             >
               {b.cover ? (
                 <img
@@ -69,13 +69,10 @@ export default function CurrentlyReading({library, onSelect, maxItems = 6}: Prop
                   data-near-done={pct >= 90 ? 'true' : 'false'}
                   aria-label={`进度 ${pct}%`}>
                   <div className={styles.progressFill} style={{width: `${pct}%`}} />
-                  {pct >= 35 ? (
-                    <span className={styles.progressFillText}>{pct}%</span>
-                  ) : null}
                 </div>
                 <div className={styles.currentFooter}>
                   <span>
-                    {pct < 35 ? `${pct}%` : null}
+                    {pct}%
                     {pct >= 90 ? <span className={styles.nearDoneBadge}>快读完了</span> : null}
                   </span>
                   <span>{formatRelativeTime(b.lastReadTime)}</span>

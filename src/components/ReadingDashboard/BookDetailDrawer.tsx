@@ -1,4 +1,5 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useState} from 'react';
+import {Drawer, Portal, Tabs} from '@chakra-ui/react';
 import type {
   BookInfo,
   BookBestBookmarks,
@@ -35,18 +36,9 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
   const [tabError, setTabError] = useState<string | null>(null);
   const [infoError, setInfoError] = useState<string | null>(null);
   const [introExpanded, setIntroExpanded] = useState(false);
-  const triggerRef = useRef<HTMLElement | null>(null);
-
+  const [open, setOpen] = useState(true);
+  const [trigger] = useState(() => typeof document !== 'undefined' ? document.activeElement as HTMLElement | null : null);
   const baseUrl = `/data/reading/books/${bookId}`;
-
-  useEffect(() => {
-    if (typeof document !== 'undefined') {
-      const active = document.activeElement;
-      if (active instanceof HTMLElement) {
-        triggerRef.current = active;
-      }
-    }
-  }, [bookId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,26 +101,6 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
     }
   }, [tab, best, reviews, chapters, baseUrl]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-      const t = triggerRef.current;
-      if (t && typeof t.focus === 'function' && document.contains(t)) {
-        t.focus();
-      }
-    };
-  }, []);
-
   const cover = info?.cover || book?.cover || '';
   const localCover = book?.bookId ? `/data/reading/books/${book.bookId}/cover.jpg` : '';
   const title = info?.title || book?.title || '未命名';
@@ -151,28 +123,20 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
   }
 
   return (
-    <>
-      <div
-        className={`${styles.drawerBackdrop} ${styles.drawerBackdropOpen}`}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <aside
-        className={`${styles.drawer} ${styles.drawerOpen}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-      >
+    <Drawer.Root open={open} onOpenChange={({open}) => setOpen(open)} onExitComplete={onClose}
+      placement="end" finalFocusEl={() => trigger}>
+      <Portal>
+      <Drawer.Backdrop className={styles.drawerBackdrop} />
+      <Drawer.Positioner className={styles.drawerTheme}>
+      <Drawer.Content className={styles.drawer} aria-label={title}>
         <div className={styles.drawerHeader}>
-          <span className={styles.drawerHeaderLabel}>书籍详情</span>
-          <button
-            type="button"
+          <Drawer.Title className={styles.drawerHeaderLabel}>书籍详情</Drawer.Title>
+          <Drawer.CloseTrigger
             className={styles.drawerClose}
-            onClick={onClose}
             aria-label="关闭"
           >
             ×
-          </button>
+          </Drawer.CloseTrigger>
         </div>
         <div className={styles.drawerBody}>
           <div className={styles.bookHead}>
@@ -252,15 +216,13 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
             </div>
           )}
 
-          <div className={styles.tabs} role="tablist">
+          <Tabs.Root value={tab} onValueChange={({value}) => setTab(value as TabKey)} lazyMount unmountOnExit>
+          <Tabs.List className={styles.tabs} aria-label="书籍内容">
             {(Object.keys(TAB_LABELS) as TabKey[]).map((k) => (
-              <button
+              <Tabs.Trigger
                 key={k}
-                type="button"
-                role="tab"
-                aria-selected={tab === k}
+                value={k}
                 className={`${styles.tabButton} ${tab === k ? styles.tabButtonActive : ''}`}
-                onClick={() => setTab(k)}
               >
                 {TAB_LABELS[k]}
                 <span className={styles.tabCount}>
@@ -268,39 +230,42 @@ export default function BookDetailDrawer({bookId, book, onClose}: Props) {
                   {k === 'reviews' && reviews?.totalCount != null ? reviews.totalCount : ''}
                   {k === 'chapters' && chapters?.chapters ? chapters.chapters.length : ''}
                 </span>
-              </button>
+              </Tabs.Trigger>
             ))}
-          </div>
+          </Tabs.List>
 
-          <div className={styles.tabPanel} role="tabpanel">
-            {loadingTab === tab && <div className={styles.loading}>加载中…</div>}
+          {(Object.keys(TAB_LABELS) as TabKey[]).map((key) => <Tabs.Content key={key} value={key} className={styles.tabPanel}>
+            {loadingTab === key && <div className={styles.loading}>加载中…</div>}
             {tabError && <div className={styles.error}>加载失败：{tabError}</div>}
-            {tab === 'highlights' && best && !loadingTab && (
+            {key === 'highlights' && best && !loadingTab && (
               <HighlightsPanel
                 items={best.items || []}
                 chapterTitleById={chapterTitleById}
               />
             )}
-            {tab === 'reviews' && reviews && !loadingTab && <ReviewsPanel reviews={reviews} />}
-            {tab === 'chapters' && chapters && !loadingTab && (
+            {key === 'reviews' && reviews && !loadingTab && <ReviewsPanel reviews={reviews} />}
+            {key === 'chapters' && chapters && !loadingTab && (
               <ChaptersPanel chapters={chapters.chapters || []} />
             )}
-            {tab === 'highlights' && best && (best.items?.length ?? 0) === 0 && !loadingTab && (
+            {key === 'highlights' && best && (best.items?.length ?? 0) === 0 && !loadingTab && (
               <div className={styles.empty}>暂无划线</div>
             )}
-            {tab === 'reviews' && reviews && (reviews.reviews?.length ?? 0) === 0 && !loadingTab && (
+            {key === 'reviews' && reviews && (reviews.reviews?.length ?? 0) === 0 && !loadingTab && (
               <div className={styles.empty}>暂无书评</div>
             )}
-            {tab === 'chapters' && chapters && (chapters.chapters?.length ?? 0) === 0 && !loadingTab && (
+            {key === 'chapters' && chapters && (chapters.chapters?.length ?? 0) === 0 && !loadingTab && (
               <div className={styles.empty}>暂无章节</div>
             )}
-          </div>
+          </Tabs.Content>)}
+          </Tabs.Root>
         </div>
         <div className={styles.drawerFooter}>
           数据来自微信读书 · 加载 {formatRelativeTime(book?.lastReadTime ?? null)} 最近一次进度
         </div>
-      </aside>
-    </>
+      </Drawer.Content>
+      </Drawer.Positioner>
+      </Portal>
+    </Drawer.Root>
   );
 }
 

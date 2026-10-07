@@ -5,7 +5,7 @@ description: 2026 年度记录的月份索引与入口。
 icon: history-circle-icon
 ---
 
-import MonthlyRecords from '@site/src/components/MonthlyRecords';
+import MonthlyRecordsAccordion from '@site/src/components/MonthlyRecordsAccordion';
 import AnnualCalendar from '@site/src/components/AnnualCalendar';
 
 # 2026 年度记录
@@ -14,28 +14,10 @@ import AnnualCalendar from '@site/src/components/AnnualCalendar';
 
 按月份回看 2026 年的日记。每条记录链接到对应日期，保留当天的完整内容。点击月份展开记录。
 
-<details className="year-month-details">
-  <summary role="heading" aria-level="2"><span>一月</span></summary>
-  <MonthlyRecords year={2026} month={1} />
-</details>
-
-<details className="year-month-details">
-  <summary role="heading" aria-level="2"><span>二月</span></summary>
-  <MonthlyRecords year={2026} month={2} />
-</details>
-
-<details className="year-month-details">
-  <summary role="heading" aria-level="2"><span>三月</span></summary>
-  <MonthlyRecords year={2026} month={3} />
-</details>
-
-<details className="year-month-details">
-  <summary role="heading" aria-level="2"><span>四月</span></summary>
-  <MonthlyRecords year={2026} month={4} />
-</details>
-
-<details className="year-month-details">
-  <summary role="heading" aria-level="2"><span>九月</span></summary>
-  <p><a href="./九月/index.md">查看 2026 年 9 月月度回看</a></p>
-  <MonthlyRecords year={2026} month={9} />
-</details>
+<MonthlyRecordsAccordion year={2026} months={[
+  {month: 1, label: '一月'},
+  {month: 2, label: '二月'},
+  {month: 3, label: '三月'},
+  {month: 4, label: '四月'},
+  {month: 9, label: '九月', review: '/annual-review/2026/09'},
+]} />

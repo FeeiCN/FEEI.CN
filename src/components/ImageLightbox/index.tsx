@@ -298,7 +298,7 @@ export default function ImageLightbox() {
 
   useEffect(() => {
     function enhanceImage(image: HTMLImageElement) {
-      if (image.closest('.dailyRecordPhotos')) {
+      if (image.closest('.dailyRecordPhotos, button, [role="button"]')) {
         return;
       }
       if (image.dataset.lightboxEnhanced === 'true') {
@@ -439,7 +439,7 @@ export default function ImageLightbox() {
 
       const frame = target.closest<HTMLElement>('.markdownImageFrame');
       const image = target instanceof HTMLImageElement ? target : frame?.querySelector<HTMLImageElement>('img');
-      if (!image) {
+      if (!image || image.closest('button, [role="button"]')) {
         return;
       }
 
@@ -462,7 +462,7 @@ export default function ImageLightbox() {
       }
 
       const pageImages = Array.from(markdownRoot.querySelectorAll('img')).filter(
-        (image) => image.width > 48 && image.height > 48,
+        (image) => !image.closest('button, [role="button"]') && image.width > 48 && image.height > 48,
       );
       const targetIndex = pageImages.indexOf(image);
       if (targetIndex < 0) {

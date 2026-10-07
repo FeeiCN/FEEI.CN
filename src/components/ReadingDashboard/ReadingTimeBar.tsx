@@ -1,5 +1,4 @@
 import React, {useContext} from 'react';
-import ReactDOM from 'react-dom';
 import {ReadingCtx, type TimeScope} from './index-shared';
 import styles from './styles.module.css';
 
@@ -10,8 +9,6 @@ const MODE_LABELS: Record<TimeScope['mode'], string> = {
 
 export default function ReadingTimeBar() {
   const {scope, setScope, availableYears, loading} = useContext(ReadingCtx);
-
-  if (typeof document === 'undefined') return null;
 
   const handleMode = (mode: TimeScope['mode']) => {
     if (mode === 'year') {
@@ -32,15 +29,14 @@ export default function ReadingTimeBar() {
     setScope({mode: 'year', year});
   };
 
-  return ReactDOM.createPortal(
+  return (
     <div className={styles.floatingStack}>
-      <div className={styles.floatingBar} role="tablist" aria-label="时间维度">
+      <div className={styles.floatingBar} role="group" aria-label="时间维度">
         {(['year', 'all'] as const).map((m) => (
           <button
             key={m}
             type="button"
-            role="tab"
-            aria-selected={scope.mode === m}
+            aria-pressed={scope.mode === m}
             className={`${styles.floatingBtn} ${
               scope.mode === m ? styles.floatingBtnActive : ''
             }`}
@@ -56,6 +52,7 @@ export default function ReadingTimeBar() {
             <button
               key={y}
               type="button"
+              aria-pressed={scope.mode === 'year' && scope.year === y}
               className={`${styles.floatingBtn} ${
                 scope.year === y ? styles.floatingBtnActive : ''
               }`}
@@ -74,7 +71,6 @@ export default function ReadingTimeBar() {
         )}
         {loading && <span className={styles.floatingLoading}>…</span>}
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 }

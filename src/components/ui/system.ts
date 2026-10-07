@@ -25,3 +25,9 @@ export const feeiSystem = createSystem({...defaultConfig, globalCss: {}}, {
     },
   },
 });
+
+// 空 reset 层在 SSR 中会序列化成无效的 @layer reset，吞掉后续动画定义。
+feeiSystem._global = feeiSystem._global.filter((styles) => {
+  const reset = styles['@layer reset'];
+  return !(reset && Object.keys(reset).length === 0 && Object.keys(styles).length === 1);
+});

@@ -35,20 +35,11 @@
 .annual-calendar__day--moving > b { display:block; }
 .annual-calendar__day--recorded { color:var(--ifm-color-white); background:var(--ifm-color-primary); font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.12); }
 .annual-calendar__day--recorded:hover, .annual-calendar__day--recorded:focus-visible { color:var(--ifm-color-white); background:var(--ifm-color-primary-dark); text-decoration:none; transform:scale(1.12); }
-.annual-calendar__day--selected { outline:2px solid var(--ifm-color-primary); outline-offset:2px; }
 .theme-doc-markdown .annual-calendar__day--recorded, .theme-doc-markdown .annual-calendar__day--recorded:hover, .theme-doc-markdown .annual-calendar__day--recorded:focus-visible { color:var(--heat-text, #fff) !important; background:var(--heat-color, var(--ifm-color-primary)); text-decoration:none !important; }
-.annual-calendar__selected { display:flex; align-items:center; gap:.8rem; margin-top:1rem; padding:.7rem .8rem; border:1px solid var(--ifm-color-primary); border-radius:10px; background:var(--ifm-background-surface-color); font-size:.75rem; }
-.annual-calendar__selected > div { display:flex; align-items:baseline; gap:.45rem; min-width:0; flex:1; }
-.annual-calendar__selected strong { font-variant-numeric:tabular-nums; white-space:nowrap; }
-.annual-calendar__selected div span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.annual-calendar__selected small { color:var(--ifm-color-emphasis-600); white-space:nowrap; }
-.annual-calendar__selected > span { color:var(--ifm-color-emphasis-600); white-space:nowrap; }
-.annual-calendar__selected a { white-space:nowrap; font-weight:600; }
 .annual-calendar__hint { display:flex; align-items:center; gap:.4rem; margin:.9rem 0 0; color:var(--ifm-color-emphasis-600); font-size:.68rem; }
 .annual-calendar__hint span { width:.55rem; height:.55rem; border-radius:50%; background:var(--ifm-color-primary); }
 @media (max-width:900px) { .annual-calendar__months { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
 @media (max-width:640px) { .annual-calendar { margin-top:1rem; padding:.9rem .75rem .8rem; } .annual-calendar__head { align-items:flex-start; flex-direction:column; gap:.55rem; } .annual-calendar__stats { gap:.5rem; } .annual-calendar__months { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.9rem .65rem; } }
-@media (max-width:640px) { .annual-calendar__selected { display:block; } .annual-calendar__selected > div { margin-bottom:.25rem; } .annual-calendar__selected > span { display:block; margin-bottom:.45rem; } }
 @media (max-width:640px) { .theme-doc-markdown > h1:first-child { margin-bottom:.55rem; } .theme-doc-markdown h2 { margin-top:1.5rem; } .year-record-list .year-record { grid-template-columns:3.8rem minmax(0,1fr); gap:.65rem; padding:.6rem 0; } .theme-doc-markdown { font-size:1rem; } .year-record-list .year-record strong { line-height:1.4; } }
 
 
@@ -107,3 +98,16 @@
 [data-theme='dark'] .annual-calendar__heat-2 { --heat-color:#38694a; --heat-text:#fff; }
 [data-theme='dark'] .annual-calendar__heat-3 { --heat-color:#74b88b; --heat-text:#102f1b; }
 [data-theme='dark'] .annual-calendar__heat-4 { --heat-color:#b1e5c2; --heat-text:#102f1b; }
+
+.annual-calendar button.annual-calendar__day { border:0; padding:0; font:inherit; font-weight:700; cursor:pointer; }
+.annual-calendar__day[data-state='open'], .annual-calendar__day:focus-visible { outline:2px solid var(--ifm-color-primary); outline-offset:-2px; transform:none; }
+.annual-preview { width:min(300px, calc(100vw - 24px)); color:var(--ifm-font-color-base); background:var(--ifm-background-surface-color); border:1px solid var(--ifm-color-emphasis-200); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.14); font-family:var(--ifm-font-family-base); font-size:14px; line-height:1.5; }
+.annual-preview__date { display:block; color:var(--ifm-color-emphasis-600); font-size:12px; font-variant-numeric:tabular-nums; }
+.annual-preview__title { display:block; margin:6px 20px 6px 0; font-size:16px; }
+.annual-preview__location { margin:0 0 12px; color:var(--ifm-color-emphasis-700); }
+.annual-preview__metrics { display:flex; flex-wrap:wrap; gap:14px; margin:12px 0; color:var(--ifm-color-emphasis-700); }
+.annual-preview__metrics b { color:var(--ifm-font-color-base); font-variant-numeric:tabular-nums; }
+.annual-preview__status { margin:0 0 10px; font-size:12px; color:var(--ifm-color-emphasis-600); }
+.annual-preview__link { display:inline-block; padding:6px 0; font-weight:600; color:var(--ifm-color-primary); }
+.annual-preview__close { position:absolute; top:8px; right:8px; width:32px; height:32px; border:0; border-radius:6px; background:transparent; color:var(--ifm-font-color-base); font-size:22px; cursor:pointer; }
+@media (hover:none) { .annual-calendar__day--recorded:hover { transform:none; } }

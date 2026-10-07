@@ -26,7 +26,7 @@
 | 任务类型 | 读取 |
 |---|---|
 | 仓库结构、构建命令、提交规范、静态资源 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/仓库结构.md` |
-| TypeScript、命名、front matter | `docs/05-吴飞飞/01-关于/关于FEEI.CN/网站开发规范.md` |
+| UI 组件与交互效果、Chakra UI、TypeScript、命名、front matter | `docs/05-吴飞飞/01-关于/关于FEEI.CN/网站开发规范.md` |
 | Docusaurus、sidebars、入口页 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/docusaurus配置.md` |
 | 通用文档写作、证据与审校 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/我的写作原则.md` |
 | 散文、游记 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/散文写作.md` |

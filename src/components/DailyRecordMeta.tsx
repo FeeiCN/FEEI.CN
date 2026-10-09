@@ -38,6 +38,10 @@ type CachedWeather = {
   cachedAt: number;
 };
 
+type ReadingYear = {
+  daily?: Record<string, {seconds?: number}>;
+};
+
 const GEO_CACHE_PREFIX = 'feei:daily-geo:v8:';
 const WEATHER_CACHE_PREFIX = 'feei:daily-weather:v7:';
 
@@ -95,6 +99,22 @@ function dayDistance(date: string): number {
   const now = new Date();
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   return Math.floor((today - target) / 86400000);
+}
+
+function formatReadingTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}分钟`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes > 0 ? `${hours}小时${remainingMinutes}分钟` : `${hours}小时`;
+}
+
+async function loadReadingTime(date: string, signal: AbortSignal): Promise<number | null> {
+  const response = await fetch(`/data/reading/${date.slice(0, 4)}.json`, {signal});
+  if (!response.ok) return null;
+  const data = await response.json() as ReadingYear;
+  const seconds = data.daily?.[date]?.seconds;
+  return typeof seconds === 'number' && seconds > 0 ? seconds : null;
 }
 
 async function resolveAtomicLocation(location: string, signal: AbortSignal): Promise<CachedGeo | null> {
@@ -266,6 +286,7 @@ export default function DailyRecordMeta() {
   const [rawWeather, setRawWeather] = useState<RawWeatherDay[]>([]);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
+  const [readingSeconds, setReadingSeconds] = useState<number | null>(null);
 
   const weather = useMemo<WeatherSummary[]>(
     () => rawWeather.map(summarizeWeather),
@@ -345,6 +366,16 @@ export default function DailyRecordMeta() {
     return () => controller.abort();
   }, [date, location, locations]);
 
+  useEffect(() => {
+    setReadingSeconds(null);
+    if (!date) return;
+    const controller = new AbortController();
+    loadReadingTime(date, controller.signal)
+      .then(setReadingSeconds)
+      .catch(() => {});
+    return () => controller.abort();
+  }, [date]);
+
   if (!match) return null;
 
   const renderWeather = (item: WeatherSummary) => (
@@ -382,6 +413,11 @@ export default function DailyRecordMeta() {
             );
           })}
         </span>
+      )}
+      {readingSeconds !== null && (
+        <div className={styles.readingLine} aria-label="当天阅读时间">
+          阅读 {formatReadingTime(readingSeconds)}
+        </div>
       )}
     </div>
   );

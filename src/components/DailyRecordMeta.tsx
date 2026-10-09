@@ -260,6 +260,7 @@ export default function DailyRecordMeta() {
   const slug = typeof values.slug === 'string' ? values.slug : '';
   const match = slug.match(/^\/(\d{4})-(\d{2})-(\d{2})\/?$/);
   const location = typeof values.location === 'string' ? values.location.trim() : '';
+  const dayStatusOverride = typeof values.day_status === 'string' ? values.day_status.trim() : '';
   const locations = useMemo(() => splitLocations(location), [location]);
   const isMultiLocation = locations.length > 1;
   const [rawWeather, setRawWeather] = useState<RawWeatherDay[]>([]);
@@ -277,6 +278,9 @@ export default function DailyRecordMeta() {
     return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))).getUTCDay();
   }, [date]);
   const weekday = weekdayIndex >= 0 ? weekdays[weekdayIndex] : '';
+  const displayedDayStatus: DayStatus | null = dayStatusOverride
+    ? {label: dayStatusOverride, holiday: dayStatus?.holiday}
+    : dayStatus;
 
   useEffect(() => {
     setDayStatus(null);
@@ -354,8 +358,8 @@ export default function DailyRecordMeta() {
     <div className={styles.dailyMeta} aria-label="当天基本信息">
       <div className={styles.metaLine}>
         {dateLabel}（{weekday}
-        {dayStatus?.holiday && <>，<span className={styles.specialDay}>{dayStatus.holiday}</span></>}）
-        {dayStatus && <>，{dayStatus.label}</>}
+        {displayedDayStatus?.holiday && <>，<span className={styles.specialDay}>{displayedDayStatus.holiday}</span></>}）
+        {displayedDayStatus && <>，{displayedDayStatus.label}</>}
       </div>
       {location && (
         <span className={styles.routeLine} aria-label={isMultiLocation ? '当天行程天气' : '当天地点天气'}>

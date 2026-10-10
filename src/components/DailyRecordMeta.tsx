@@ -157,7 +157,7 @@ async function loadDayStatus(date: string, weekday: number, signal: AbortSignal)
   if (specialDay) {
     return specialDay.isOffDay
       ? {label: '休息', holiday: specialDay.name}
-      : {label: '调休上班', holiday: specialDay.name};
+      : {label: '调休上班'};
   }
 
   return {label: weekday === 0 || weekday === 6 ? '休息' : '工作'};
@@ -300,7 +300,7 @@ export default function DailyRecordMeta() {
   }, [date]);
   const weekday = weekdayIndex >= 0 ? weekdays[weekdayIndex] : '';
   const displayedDayStatus: DayStatus | null = dayStatusOverride
-    ? {label: dayStatusOverride, holiday: dayStatus?.holiday}
+    ? {label: dayStatusOverride}
     : dayStatus;
 
   useEffect(() => {

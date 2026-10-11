@@ -25,7 +25,7 @@ jobs:
       APPIUM_PORT: ${{ vars.IOS_APPIUM_PORT || '4723' }}
       APPIUM_URL: http://${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}:${{ vars.IOS_APPIUM_PORT || '4723' }}
       IOS_DEVICE_UDID: ${{ vars.IOS_DEVICE_UDID || '00008101-0014494A1A83001E' }}
-      XCODE_ORG_ID: ${{ vars.IOS_XCODE_ORG_ID || '29CH3TC643' }}
+      XCODE_ORG_ID: ${{ vars.IOS_XCODE_ORG_ID || '792GZF4XQ4' }}
       UPDATED_WDA_BUNDLE_ID: ${{ vars.IOS_UPDATED_WDA_BUNDLE_ID || 'com.feei.WebDriverAgentRunner' }}
       CAITONG_TRADE_PASSWORD: ${{ secrets.CAITONG_TRADE_PASSWORD }}
       PYTHONUNBUFFERED: '1'
@@ -167,7 +167,7 @@ jobs:
                               platform_version=None,
                               show_xcode_log=False,
                               xcode_org_id='{xcode_org_id}',
-                              xcode_signing_id='iPhone Developer',
+                              xcode_signing_id='Apple Development',
                               updated_wda_bundle_id='{updated_wda_bundle_id}',
                               wda_local_port=None,
                               allow_provisioning_updates=False,

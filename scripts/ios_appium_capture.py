@@ -443,9 +443,9 @@ def create_driver(args: argparse.Namespace, udid: str):
         options.set_capability("updatedWDABundleId", args.updated_wda_bundle_id)
     if args.wda_local_port:
         options.set_capability("wdaLocalPort", args.wda_local_port)
-    if args.allow_provisioning_updates:
-        options.set_capability("allowProvisioningUpdates", True)
-    if args.allow_provisioning_device_registration:
+    if args.allow_provisioning_updates or args.allow_provisioning_device_registration:
+        # XCUITest Driver exposes one switch that passes both
+        # -allowProvisioningUpdates and -allowProvisioningDeviceRegistration.
         options.set_capability("allowProvisioningDeviceRegistration", True)
 
     return webdriver.Remote(args.appium_url, options=options)
@@ -2473,7 +2473,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--new-command-timeout", type=int, default=300, help="Appium newCommandTimeout,默认 300")
     parser.add_argument("--show-xcode-log", action="store_true", help="让 Appium 输出 Xcode/WDA 日志")
     parser.add_argument("--xcode-org-id", default=os.environ.get("XCODE_ORG_ID"), help="Apple Developer Team ID,用于签名 WebDriverAgent；默认读取 XCODE_ORG_ID")
-    parser.add_argument("--xcode-signing-id", default="iPhone Developer", help="WDA 签名证书名,默认 iPhone Developer")
+    parser.add_argument("--xcode-signing-id", default="Apple Development", help="WDA 签名证书名,默认 Apple Development")
     parser.add_argument("--updated-wda-bundle-id", default=os.environ.get("UPDATED_WDA_BUNDLE_ID"), help="自定义 WDA bundle id,例如 com.feei.WebDriverAgentRunner；默认读取 UPDATED_WDA_BUNDLE_ID")
     parser.add_argument("--wda-local-port", type=int, help="WDA 本地端口,多设备并发时使用")
     parser.add_argument("--allow-provisioning-updates", action="store_true", help="允许 xcodebuild 自动创建/更新 WDA provisioning profile")

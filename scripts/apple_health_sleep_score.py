@@ -90,7 +90,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--platform-version")
     parser.add_argument("--show-xcode-log", action="store_true")
     parser.add_argument("--xcode-org-id", default=os.environ.get("XCODE_ORG_ID"), help="默认读取 XCODE_ORG_ID")
-    parser.add_argument("--xcode-signing-id", default="iPhone Developer")
+    parser.add_argument("--xcode-signing-id", default="Apple Development")
     parser.add_argument("--updated-wda-bundle-id", default=os.environ.get("UPDATED_WDA_BUNDLE_ID"), help="默认读取 UPDATED_WDA_BUNDLE_ID")
     parser.add_argument("--wda-local-port", type=int)
     parser.add_argument("--allow-provisioning-updates", action="store_true")

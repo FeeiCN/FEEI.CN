@@ -21,7 +21,7 @@ export function buildMedicationCollection(records, options = {}) {
         name: medicationName(record),
         start: normalizeDateTime(start),
         end: normalizeDateTime(record.end ?? start),
-        scheduledDate: normalizeDateTime(record.scheduledDate),
+        scheduledDate: normalizeDateTime(record.scheduledDate ?? start),
         status: record.status,
         dosage: finiteNumber(record.dosage),
         scheduledDosage: finiteNumber(record.scheduledDosage),

@@ -52,3 +52,17 @@ test('buildMedicationCollection preserves medication details and summaries', () 
     '2026-10-10 23:09:41 +0800',
   ]);
 });
+
+test('buildMedicationCollection uses the actual time for unscheduled medication records', () => {
+  const result = buildMedicationCollection([{
+    displayText: '维生素D3',
+    start: '2026-09-23 22:20:47 +0800',
+    end: '2026-09-23 22:20:47 +0800',
+    status: '已服用',
+    dosage: 3,
+    units: 'count',
+    isArchived: false,
+  }]);
+
+  assert.equal(result.timeline[0].scheduledDate, '2026-09-23 22:20:47 +0800');
+});

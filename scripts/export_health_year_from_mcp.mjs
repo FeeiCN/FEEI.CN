@@ -597,19 +597,14 @@ async function exportDailyCompactFiles(client, options) {
 
     const compactData = buildDailyCompactData(data);
     const dailyData = {
+      version: 2,
       exportedAt: options.exportedAt,
       date: day,
-      dateRange: {
-        start: dailyStart,
-        end: dailyEnd,
-      },
       summary: {
         rawRecords: summary,
         ...compactData.summary,
       },
       timeline: compactData.timeline,
-      series: compactData.series,
-      data: compactData.data,
     };
 
     if (Object.keys(errors).length > 0) {
@@ -617,7 +612,7 @@ async function exportDailyCompactFiles(client, options) {
     }
 
     fs.mkdirSync(dailyDir, {recursive: true});
-    fs.writeFileSync(dailyFile, `${JSON.stringify(dailyData, null, 2)}\n`);
+    fs.writeFileSync(dailyFile, `${JSON.stringify(dailyData)}\n`);
     written.push(dailyFile);
   }
 

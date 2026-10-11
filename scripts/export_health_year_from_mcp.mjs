@@ -3,6 +3,7 @@ import path from 'node:path';
 import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {buildHealthChartHistory} from './build_health_chart_history.mjs';
+import {buildMedicationCollection} from './health_collection_transform.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defaultTargetRoot = path.join(repoRoot, 'static', 'data', 'health');
@@ -773,7 +774,9 @@ function buildCollectionEvents(data) {
   const timeline = [];
   const collectionBuilders = [
     ['stateOfMind', 'stateOfMind', buildStateOfMindCollection],
-    ['medications', 'medications', buildGenericCollection('medication')],
+    ['medications', 'medications', (records) => buildMedicationCollection(records, {
+      normalizeDateTime: normalizeTimelineDateTime,
+    })],
     ['heartNotifications', 'heartRateNotifications', buildGenericCollection('heart_notification')],
     ['cycleTracking', 'cycleTracking', buildGenericCollection('cycle_tracking')],
     ['ecg', 'ecg', buildGenericCollection('ecg')],

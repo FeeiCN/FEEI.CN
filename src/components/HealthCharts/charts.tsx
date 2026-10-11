@@ -1,4 +1,9 @@
 import React, {useContext, useEffect, useMemo, useRef, useState} from 'react';
+import {
+  STATE_OF_MIND_ASSOCIATION_LABELS,
+  STATE_OF_MIND_FEELING_LABELS,
+  STATE_OF_MIND_KIND_LABELS,
+} from '@site/src/utils/stateOfMind';
 import {transform, computeDashboard, getDateRange, type HealthData, type DashCard} from './transform';
 import {
   RANGE_DAYS,
@@ -1067,70 +1072,12 @@ export const VALENCE_COLOR: Record<string, string> = {
   slightly_pleasant: '#86efac', neutral: '#94a3b8',
   slightly_unpleasant: '#fca5a5', unpleasant: '#f87171', very_unpleasant: '#ef4444',
 };
-export const KIND_ZH: Record<string, string> = {daily: '日常情绪', emotion: '即时感受'};
-
-export const LABEL_ZH: Record<string, string> = {
-  amazed: '惊奇',
-  amused: '愉快',
-  angry: '生气',
-  annoyed: '烦恼',
-  anxious: '焦虑',
-  ashamed: '羞愧',
-  brave: '勇敢',
-  calm: '平静',
-  confident: '自信',
-  content: '满足',
-  disappointed: '失望',
-  discouraged: '气馁',
-  disgusted: '厌恶',
-  drained: '疲惫',
-  embarrassed: '尴尬',
-  excited: '兴奋',
-  frustrated: '沮丧',
-  grateful: '感激',
-  guilty: '内疚',
-  happy: '快乐',
-  hopeful: '充满希望',
-  hopeless: '绝望',
-  indifferent: '无所谓',
-  irritated: '易怒',
-  jealous: '嫉妒',
-  joyful: '喜悦',
-  lonely: '孤独',
-  overwhelmed: '不堪重负',
-  passionate: '热情',
-  peaceful: '安宁',
-  proud: '自豪',
-  relieved: '如释重负',
-  sad: '伤心',
-  satisfied: '满意',
-  scared: '害怕',
-  stressed: '有压力',
-  surprised: '惊讶',
-  worried: '忧虑',
+export const KIND_ZH: Record<string, string> = {
+  daily: STATE_OF_MIND_KIND_LABELS.daily,
+  emotion: STATE_OF_MIND_KIND_LABELS.emotion,
 };
-export const ASSOC_ZH: Record<string, string> = {
-  community: '社区',
-  current_events: '时事',
-  currentEvents: '时事',
-  dating: '约会',
-  education: '教育',
-  family: '家人',
-  fitness: '健身',
-  friends: '朋友',
-  health: '健康',
-  hobbies: '爱好',
-  identity: '身份认同',
-  money: '金钱',
-  partner: '伴侣',
-  self_care: '自我照护',
-  selfCare: '自我照护',
-  spirituality: '精神信仰',
-  tasks: '任务',
-  travel: '旅行',
-  weather: '天气',
-  work: '工作',
-};
+export const LABEL_ZH = STATE_OF_MIND_FEELING_LABELS;
+export const ASSOC_ZH = STATE_OF_MIND_ASSOCIATION_LABELS;
 
 export function translateList(str: string, map: Record<string, string>) {
   return str.split(',').map((s) => map[s.trim()] ?? s.trim()).join('、');

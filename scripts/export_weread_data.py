@@ -6,6 +6,7 @@ Output structure (everything is the API's raw response, untouched):
 
   static/data/reading/
     YYYY/MM.json              # /readdata/detail mode=monthly
+    weeks/YYYY.json           # weekly book rankings keyed by natural-week Monday
     books/<bookId>/*.json     # per-book endpoints
     notebooks.json            # /user/notebooks
     shelf.json                # /shelf/sync
@@ -95,9 +96,9 @@ def load_state() -> dict[str, Any]:
         try:
             state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
         except Exception:
-            state = {"monthly_ym": [], "books": {}}
+            state = {"monthly_ym": [], "weekly_dates": [], "books": {}}
     else:
-        state = {"monthly_ym": [], "books": {}}
+        state = {"monthly_ym": [], "weekly_dates": [], "books": {}}
     # 始终用磁盘上已有的文件补全 state，避免 state.json 缺失/损坏时把已经拉过的月度/单书全部重抓
     _backfill_state_from_disk(state)
     return state
@@ -134,6 +135,14 @@ def _backfill_state_from_disk(state: dict[str, Any]) -> None:
                 existing_yms.add(tag)
                 added_months += 1
     state["monthly_ym"] = sorted(existing_yms)
+
+    existing_weeks = set(state.get("weekly_dates") or [])
+    weeks_dir = OUT_DIR / "weeks"
+    if weeks_dir.is_dir():
+        for path in weeks_dir.glob("????.json"):
+            payload = _load_json(path) or {}
+            existing_weeks.update((payload.get("weeks") or {}).keys())
+    state["weekly_dates"] = sorted(existing_weeks)
 
     books = state.setdefault("books", {})
     added_books = 0
@@ -242,6 +251,16 @@ def month_base_ts(year: int, month: int) -> int:
     return int(datetime(year, month, 15, tzinfo=timezone.utc).timestamp())
 
 
+def week_start_date(value: str) -> str:
+    day = datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=BEIJING_TZ)
+    return (day - timedelta(days=day.weekday())).strftime("%Y-%m-%d")
+
+
+def week_base_ts(value: str) -> int:
+    monday = datetime.strptime(week_start_date(value), "%Y-%m-%d").replace(tzinfo=BEIJING_TZ)
+    return int(monday.timestamp())
+
+
 def merge_shelf_read_books(
     notebooks_payload: dict[str, Any],
     shelf_payload: dict[str, Any],
@@ -303,6 +322,46 @@ def fetch_monthly(year: int, month: int) -> dict[str, Any]:
             baseTime=month_base_ts(year, month),
         ),
     }
+
+
+def fetch_weekly(value: str) -> dict[str, Any]:
+    start_date = week_start_date(value)
+    response = api_call(
+        "/readdata/detail",
+        mode="weekly",
+        baseTime=week_base_ts(start_date),
+    )
+    books: list[dict[str, Any]] = []
+    for entry in response.get("readLongest") or []:
+        item = entry.get("book") or entry.get("albumInfo") or {}
+        item_id = str(item.get("bookId") or item.get("albumId") or "")
+        title = item.get("title") or item.get("name") or ""
+        read_time = int(entry.get("readTime") or 0)
+        if item_id and title and read_time > 0:
+            books.append({"id": item_id, "title": title, "readTime": read_time})
+    return {
+        "fetchedAt": now_str(),
+        "startDate": start_date,
+        "endDate": (
+            datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=6)
+        ).strftime("%Y-%m-%d"),
+        "totalReadTime": int(response.get("totalReadTime") or 0),
+        "books": books,
+    }
+
+
+def refresh_week(value: str, state: dict[str, Any]) -> dict[str, Any]:
+    payload = fetch_weekly(value)
+    start_date = payload["startDate"]
+    path = OUT_DIR / "weeks" / f"{start_date[:4]}.json"
+    year_payload = _load_json(path) or {"year": start_date[:4], "weeks": {}}
+    year_payload.setdefault("weeks", {})[start_date] = payload
+    year_payload["exportedAt"] = now_str()
+    write_json(path, year_payload)
+    weekly_dates = state.setdefault("weekly_dates", [])
+    if start_date not in weekly_dates:
+        weekly_dates.append(start_date)
+    return payload
 
 
 def iter_months_to_fetch(
@@ -481,6 +540,19 @@ def _iter_month_files(out_dir: Path, start_year: int, end_year: int):
             except Exception:
                 continue
             yield y, m, payload
+
+
+def _active_week_starts(out_dir: Path, start_year: int, end_year: int) -> list[str]:
+    starts: set[str] = set()
+    for _year, _month, payload in _iter_month_files(out_dir, start_year, end_year):
+        for ts_str, seconds in (payload.get("readTimes") or {}).items():
+            try:
+                if int(seconds or 0) <= 0:
+                    continue
+                starts.add(week_start_date(_ts_to_date_str(int(ts_str))))
+            except (ValueError, OSError, OverflowError):
+                continue
+    return sorted(starts)
 
 
 def _load_json(path: Path) -> dict[str, Any] | None:
@@ -889,10 +961,11 @@ def run_daily(args: argparse.Namespace, state: dict[str, Any]) -> int:
     """每日轻量模式（默认）：
 
     1. 拉当月 monthly raw json
-    2. 从 readLongest 提取这个月读过的所有 bookId
-    3. 拉一次 shelf 拿最新 readUpdateTime
-    4. 对这些书做 readUpdateTime delta 检测 → 推进了或没拉过就刷
-    5. build_aggregates
+    2. 拉当天所在周 weekly raw json，供日记弹层展示所在周书目
+    3. 从 readLongest 提取这个月读过的所有 bookId
+    4. 拉一次 shelf 拿最新 readUpdateTime
+    5. 对这些书做 readUpdateTime delta 检测 → 推进了或没拉过就刷
+    6. build_aggregates
 
     notebooks/recommend/search/历史月度都不动；适合每日定时跑。
     若需要全量回填（迁移到新机器、长期断更后恢复），用 --full。
@@ -911,6 +984,15 @@ def run_daily(args: argparse.Namespace, state: dict[str, Any]) -> int:
     except Exception as exc:
         print(f"[warn] 当月 monthly 抓取失败: {exc}", file=sys.stderr)
         monthly_payload = _load_json(OUT_DIR / f"{year}" / f"{month:02d}.json") or {}
+
+    try:
+        weekly_payload = refresh_week(today.strftime("%Y-%m-%d"), state)
+        print(
+            f"[info] 当周 {weekly_payload['startDate']} 已刷",
+            file=sys.stderr,
+        )
+    except Exception as exc:
+        print(f"[warn] 当周 weekly 抓取失败: {exc}", file=sys.stderr)
 
     read_book_ids: list[str] = []
     seen: set[str] = set()
@@ -1086,6 +1168,23 @@ def run_full(args: argparse.Namespace, state: dict[str, Any]) -> int:
                 print(f"[info] wrote {y}/{m:02d}.json", file=sys.stderr)
             except Exception as exc:
                 print(f"[warn] {y}-{m:02d} 失败: {exc}", file=sys.stderr)
+            time.sleep(API_SLEEP_SECONDS)
+
+        processed_weeks = set() if args.full else set(state.get("weekly_dates") or [])
+        current_week = week_start_date(today.strftime("%Y-%m-%d"))
+        processed_weeks.discard(current_week)
+        weeks = [
+            start_date
+            for start_date in _active_week_starts(OUT_DIR, args.start_year, end_year)
+            if start_date <= today.strftime("%Y-%m-%d") and start_date not in processed_weeks
+        ]
+        print(f"[info] 待拉周度 {len(weeks)} 个", file=sys.stderr)
+        for start_date in weeks:
+            try:
+                refresh_week(start_date, state)
+                print(f"[info] wrote weeks/{start_date}.json", file=sys.stderr)
+            except Exception as exc:
+                print(f"[warn] week {start_date} 失败: {exc}", file=sys.stderr)
             time.sleep(API_SLEEP_SECONDS)
 
     if not args.skip_books:

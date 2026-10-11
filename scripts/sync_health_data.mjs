@@ -46,6 +46,22 @@ for (const month of monthsToExport) {
   }
 }
 
+if (!args.date) {
+  const lookbackDate = previousLocalDate(new Date());
+  const [year, month, day] = lookbackDate.split('-');
+  const lookbackFile = path.join(healthDir, year, month, `${day}.json`);
+
+  run('npm', ['run', 'export-health-year', '--', '--date', lookbackDate]);
+
+  if (!fs.existsSync(path.join(repoRoot, lookbackFile))) {
+    throw new Error(`Lookback health data file does not exist: ${lookbackFile}`);
+  }
+
+  if (!isPathClean(lookbackFile)) {
+    changedFiles.push(lookbackFile);
+  }
+}
+
 const historyFile = path.join(healthDir, 'history.json');
 if (fs.existsSync(path.join(repoRoot, historyFile)) && !isPathClean(historyFile)) {
   changedFiles.push(historyFile);
@@ -132,6 +148,17 @@ function formatLocalDate(date) {
     month: '2-digit',
     day: '2-digit',
   }).format(date);
+}
+
+function previousLocalDate(date) {
+  const [year, month, day] = formatLocalDate(date).split('-').map(Number);
+  const previous = new Date(Date.UTC(year, month - 1, day - 1, 12));
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(previous);
 }
 
 function formatLocalDateTime(date) {

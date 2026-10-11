@@ -28,7 +28,7 @@ from typing import Any
 
 
 WE_READ_API_URL = "https://i.weread.qq.com/api/agent/gateway"
-SKILL_VERSION = "1.0.3"
+SKILL_VERSION = "1.0.5"
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1.15 Safari/605.1.15"
 NOTEBOOK_PAGE_SIZE = 100
 API_RETRIES = 3

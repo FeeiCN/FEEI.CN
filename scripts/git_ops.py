@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Sequence, Union
@@ -19,6 +20,18 @@ GIT_BOT_NAME = "FeeiCN[bot]"
 GIT_BOT_EMAIL = "feei@feei.cn"
 
 PathLike = Union[str, Path]
+
+TRANSIENT_GIT_ERRORS = (
+    "couldn't connect to server",
+    "connection reset",
+    "connection timed out",
+    "error in the http2 framing layer",
+    "failed to connect",
+    "operation timed out",
+    "recv failure",
+    "remote end hung up unexpectedly",
+    "tls connection was non-properly terminated",
+)
 
 
 def fail(message: str) -> None:
@@ -45,6 +58,39 @@ def run_git_command(args: Sequence[str], cwd: Path) -> subprocess.CompletedProce
     return completed
 
 
+def is_transient_git_error(result: subprocess.CompletedProcess[str]) -> bool:
+    details = f"{result.stdout or ''}\n{result.stderr or ''}".lower()
+    return any(marker in details for marker in TRANSIENT_GIT_ERRORS)
+
+
+def run_git_with_network_retry(
+    args: Sequence[str],
+    cwd: Path,
+    *,
+    max_attempts: int = 3,
+) -> subprocess.CompletedProcess[str]:
+    result: subprocess.CompletedProcess[str] | None = None
+    for attempt in range(1, max_attempts + 1):
+        result = subprocess.run(
+            ["git", *args],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        if result.returncode == 0 or not is_transient_git_error(result):
+            return result
+        if attempt < max_attempts:
+            print(
+                f"[warn] git {' '.join(args)} 网络失败，"
+                f"{attempt + 1}/{max_attempts} 次重试 ...",
+                file=sys.stderr,
+            )
+            time.sleep(attempt * 2)
+    assert result is not None
+    return result
+
+
 def git_pull_target_repo(repo_root: Path) -> None:
     """Best-effort fast-forward pull at script start.
 
@@ -55,13 +101,7 @@ def git_pull_target_repo(repo_root: Path) -> None:
     run will then fast-forward cleanly.
     """
     print(f"[info] git pull {repo_root.name} ...", file=sys.stderr)
-    result = subprocess.run(
-        ["git", "pull", "--ff-only"],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
+    result = run_git_with_network_retry(["pull", "--ff-only"], repo_root)
     if result.returncode == 0:
         print("[info] git pull 完成", file=sys.stderr)
         return
@@ -95,13 +135,7 @@ def git_push_with_retry(repo_root: Path, *, message: str, max_attempts: int = 3)
     commit_args = ["git", *bot_args, "commit", "-m", message]
 
     for attempt in range(1, max_attempts + 1):
-        result = subprocess.run(
-            push_args,
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-        )
+        result = run_git_with_network_retry(push_args[1:], repo_root)
         if result.returncode == 0:
             return
         stderr = (result.stderr or result.stdout or "").lower()
@@ -110,13 +144,7 @@ def git_push_with_retry(repo_root: Path, *, message: str, max_attempts: int = 3)
                 f"[info] push rejected, resetting onto origin/main (attempt {attempt}/{max_attempts})",
                 file=sys.stderr,
             )
-            fetch_result = subprocess.run(
-                fetch_args,
-                cwd=repo_root,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-            )
+            fetch_result = run_git_with_network_retry(fetch_args[1:], repo_root)
             if fetch_result.returncode != 0:
                 fail(f"git fetch failed: {(fetch_result.stderr or fetch_result.stdout).strip()}")
             reset_result = subprocess.run(

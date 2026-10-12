@@ -2434,6 +2434,22 @@ def extract_existing_summary(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_health_server_only(args: argparse.Namespace) -> int:
+    udid = detect_udid(args.udid)
+    if not udid:
+        print("无法自动确定 UDID。请确认只连接一台 iPhone,或传入 --udid。", file=sys.stderr)
+        return 2
+
+    args.bundle_id = HEALTH_AUTO_EXPORT_BUNDLE_ID
+    driver = create_driver(args, udid)
+    try:
+        print(start_health_auto_export_server(driver, args), flush=True)
+        print(keep_health_auto_export_foreground(driver, args), flush=True)
+    finally:
+        driver.quit()
+    return 0
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="用 Appium/XCUITest 操作 iPhone 并导出当前页面信息。",
@@ -2442,6 +2458,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--list-devices", action="store_true", help="列出 idevice_id 发现的设备 UDID")
     parser.add_argument("--alipay-assets", action="store_true", help="进入支付宝理财总资产,滚动截图全部持有明细")
     parser.add_argument("--caitong-assets", action="store_true", help="进入财通证券交易页,采集资产和持仓信息")
+    parser.add_argument("--health-server-only", action="store_true", help="仅启动 Health Auto Export TCP 服务器")
     parser.add_argument("--extract-existing-summary", type=Path, help="从已有 summary 引用的 XML 重新提取资产/持仓数据")
     parser.add_argument(
         "--invest-output",
@@ -2514,6 +2531,8 @@ def main() -> int:
         except Exception as error:
             print(error, file=sys.stderr)
             return 1
+    if args.health_server_only:
+        return run_health_server_only(args)
     if args.alipay_assets:
         return run_alipay_assets_flow(args)
     return capture(args)

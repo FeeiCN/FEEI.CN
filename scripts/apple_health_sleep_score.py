@@ -222,7 +222,10 @@ def tap_accessibility_id(driver: Any, identifier: str) -> bool:
 def wait_for_score_detail(driver: Any, timeout: float) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if parse_sleep_score_page(driver.page_source):
+        # The newest day can legitimately have no score yet. Reaching the
+        # dated detail page is enough; collection will record it as empty and
+        # continue to the previous day.
+        if extract_score_date_label(driver.page_source):
             return True
         time.sleep(0.4)
     return False
@@ -360,8 +363,7 @@ def main() -> int:
         raise collection_error
 
     if not saved and not skipped:
-        print(f"未找到 {args.start_date.isoformat()} 至 {args.end_date.isoformat()} 的睡眠评分", file=sys.stderr)
-        return 1
+        print(f"{args.start_date.isoformat()} 至 {args.end_date.isoformat()} 暂无睡眠评分")
     for score_date, output_path in saved:
         print(f"{score_date.isoformat()}: {output_path}")
     print(f"已保存 {len(saved)} 天睡眠评分")

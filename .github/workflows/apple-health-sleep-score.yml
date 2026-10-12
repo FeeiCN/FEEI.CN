@@ -58,6 +58,7 @@ jobs:
           echo "/usr/local/bin" >> "$GITHUB_PATH"
           git config user.name "FeeiCN[bot]"
           git config user.email "feei@feei.cn"
+          git config --global http.version HTTP/1.1
           if git rev-parse --verify "origin/${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             git checkout -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}"
           fi
@@ -86,6 +87,8 @@ jobs:
       - name: Capture sleep score and start Health Auto Export
         run: |
           python3 scripts/apple_health_sleep_score.py \
+            --start-date "$(date -v-1d +%F)" \
+            --end-date "$(date +%F)" \
             --appium-url "$APPIUM_URL" \
             --udid "$IOS_DEVICE_UDID" \
             --xcode-org-id "$XCODE_ORG_ID" \

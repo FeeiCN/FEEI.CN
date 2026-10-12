@@ -20,7 +20,7 @@ const branch = args.branch ?? currentBranch();
 const healthDir = path.join('static', 'data', 'health');
 
 ensureNoStagedChanges();
-run('git', ['pull', '--rebase', '--autostash']);
+runWithRetry('git', ['pull', '--rebase', '--autostash']);
 
 // Determine which month(s) to export
 const monthsToExport = args.date ? [args.date.slice(0, 7)] : [currentMonth()];
@@ -74,7 +74,7 @@ if (changedFiles.length === 0) {
 
 run('git', ['add', ...changedFiles]);
 run('git', ['commit', '-m', commitMessage]);
-run('git', ['push', remote, branch]);
+runWithRetry('git', ['push', remote, branch]);
 
 function run(command, commandArgs, options = {}) {
   const result = spawnSync(command, commandArgs, {
@@ -93,6 +93,61 @@ function run(command, commandArgs, options = {}) {
   }
 
   return result;
+}
+
+function runWithRetry(command, commandArgs, options = {}) {
+  const maxAttempts = options.maxAttempts ?? 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const result = spawnSync(command, commandArgs, {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: commandEnv,
+      stdio: 'pipe',
+    });
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    if (result.status === 0) {
+      if (result.stdout) process.stdout.write(result.stdout);
+      if (result.stderr) process.stderr.write(result.stderr);
+      return result;
+    }
+
+    const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+    if (!isTransientGitError(output) || attempt === maxAttempts) {
+      process.stdout.write(result.stdout ?? '');
+      process.stderr.write(result.stderr ?? '');
+      throw new Error(`${command} ${commandArgs.join(' ')} failed with exit code ${result.status}`);
+    }
+
+    process.stderr.write(
+      `${command} ${commandArgs.join(' ')} network failure; retrying (${attempt + 1}/${maxAttempts})...\n`,
+    );
+    sleep(attempt * 2000);
+  }
+}
+
+function isTransientGitError(output) {
+  const normalized = output.toLowerCase();
+  return [
+    "couldn't connect to server",
+    'connection reset',
+    'connection timed out',
+    'error in the http2 framing layer',
+    'failed to connect',
+    'operation timed out',
+    'recv failure',
+    'remote end hung up unexpectedly',
+    'tls connection was non-properly terminated',
+  ].some((marker) => normalized.includes(marker));
+}
+
+function sleep(milliseconds) {
+  const buffer = new SharedArrayBuffer(4);
+  Atomics.wait(new Int32Array(buffer), 0, 0, milliseconds);
 }
 
 function ensureNoStagedChanges() {

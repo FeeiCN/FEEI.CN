@@ -846,3 +846,14 @@
 }
 
 .sleepPopover .sleepTrendChart text { font-size: 8.5px; }
+
+.scrollablePopover {
+  max-height: min(var(--available-height, 90dvh), 90dvh, 900px);
+  overflow: hidden;
+}
+.scrollablePopover .metricPopoverBody {
+  max-height: inherit;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.scrollablePopover .metricPopoverClose { background: var(--ifm-background-surface-color); }

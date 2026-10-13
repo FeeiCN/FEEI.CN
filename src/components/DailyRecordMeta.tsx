@@ -1,6 +1,7 @@
 import React, {type ReactNode, useEffect, useMemo, useRef, useState} from 'react';
 import {Collapsible, Popover, Portal} from '@chakra-ui/react';
 import {useDoc} from '@docusaurus/plugin-content-docs/client';
+import ActivityDayDetails from './ActivityDayDetails';
 import XIcon from '@site/src/components/ItsHoverIcon/icons/x-icon';
 import {
   summarizeWeather,
@@ -169,6 +170,10 @@ type ActivitySummary = {
   exerciseMinutes: number;
   activeEnergyKJ: number | null;
   distanceKm: number | null;
+  steps: number | null;
+  standMinutes: number | null;
+  flightsClimbed: number | null;
+  daylightMinutes: number | null;
   trend: Array<{
     date: string;
     minutes: number | null;
@@ -179,6 +184,9 @@ type WeightSummary = {
   date: string;
   weightKg: number;
   previousWeightKg: number | null;
+  previousWeightDate: string | null;
+  previousBodyFatPercentage: number | null;
+  previousBodyFatDate: string | null;
   bodyFatPercentage: number | null;
   bmi: number | null;
   leanBodyMassKg: number | null;
@@ -372,7 +380,7 @@ async function loadSleepScore(date: string, signal: AbortSignal): Promise<SleepS
 async function loadHealthSummary(date: string, signal: AbortSignal): Promise<HealthSummary | null> {
   const trendStart = shiftDate(date, -6);
   const moodStart = shiftDate(date, -29);
-  const months = [...new Set([date.slice(0, 7), trendStart.slice(0, 7), moodStart.slice(0, 7)])];
+  const months = [...new Set(Array.from({length: 30}, (_, index) => shiftDate(date, -index).slice(0, 7)))];
   const payloads = await Promise.all(months.map(async (monthKey) => {
     const response = await fetch(`/data/health/${monthKey.replace('-', '/')}.json`, {signal});
     return response.ok ? await response.json() as HealthMonth : null;
@@ -410,11 +418,14 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
   const weightRecords = records.get('weight_body_mass') ?? [];
   const previousWeight = weightRecords
     ?.filter((record) => record.date && record.date.slice(0, 10) < date && typeof record.qty === 'number')
-    .sort((left, right) => (right.date || '').localeCompare(left.date || ''))[0]?.qty;
+    .sort((left, right) => (right.date || '').localeCompare(left.date || ''))[0];
+  const previousBodyFat = (records.get('body_fat_percentage') ?? [])
+    .filter((record) => record.date && record.date.slice(0, 10) < date && typeof record.qty === 'number' && Number.isFinite(record.qty))
+    .sort((left, right) => (right.date || '').localeCompare(left.date || ''))[0];
   const weightTrend = weightRecords
     .filter((record): record is HealthMetricRecord & {date: string; qty: number} => (
       typeof record.date === 'string'
-      && record.date.slice(0, 10) >= trendStart
+      && record.date.slice(0, 10) >= moodStart
       && record.date.slice(0, 10) <= date
       && typeof record.qty === 'number'
       && Number.isFinite(record.qty)
@@ -426,6 +437,10 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
     exerciseMinutes,
     activeEnergyKJ: valueForDate('active_energy'),
     distanceKm: valueForDate('walking_running_distance'),
+    steps: valueForDate('step_count'),
+    standMinutes: valueForDate('apple_stand_time'),
+    flightsClimbed: valueForDate('flights_climbed'),
+    daylightMinutes: valueForDate('time_in_daylight'),
     trend: Array.from({length: 7}, (_, index) => {
       const trendDate = shiftDate(trendStart, index);
       return {date: trendDate, minutes: exerciseByDate.get(trendDate) ?? null};
@@ -434,7 +449,10 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
   const weight = weightKg === null ? null : {
     date,
     weightKg,
-    previousWeightKg: typeof previousWeight === 'number' ? previousWeight : null,
+    previousWeightKg: typeof previousWeight?.qty === 'number' && Number.isFinite(previousWeight.qty) ? previousWeight.qty : null,
+    previousWeightDate: previousWeight?.date?.slice(0, 10) ?? null,
+    previousBodyFatPercentage: previousBodyFat?.qty ?? null,
+    previousBodyFatDate: previousBodyFat?.date?.slice(0, 10) ?? null,
     bodyFatPercentage: valueForDate('body_fat_percentage'),
     bmi: valueForDate('body_mass_index'),
     leanBodyMassKg: valueForDate('lean_body_mass'),
@@ -462,19 +480,19 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
   return activity || weight || mood || medication ? {activity, weight, mood, medication} : null;
 }
 
-function MetricPopover({label, ariaLabel, children, wide = false}: {label: string; ariaLabel: string; children: ReactNode; wide?: boolean}) {
+function MetricPopover({label, ariaLabel, children, wide = false, scrollable = false}: {label: string; ariaLabel: string; children: ReactNode; wide?: boolean; scrollable?: boolean}) {
   const contentRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   return (
-    <Popover.Root lazyMount unmountOnExit initialFocusEl={wide ? () => contentRef.current : undefined}
-      onOpenChange={({open}) => {if (open && wide) requestAnimationFrame(() => {if (bodyRef.current) bodyRef.current.scrollTop = 0;});}}
+    <Popover.Root lazyMount unmountOnExit initialFocusEl={wide || scrollable ? () => contentRef.current : undefined}
+      onOpenChange={({open}) => {if (open && (wide || scrollable)) requestAnimationFrame(() => {if (bodyRef.current) bodyRef.current.scrollTop = 0;});}}
       positioning={{placement: 'bottom-start', gutter: 8, strategy: 'fixed', hideWhenDetached: true}}>
       <Popover.Trigger asChild>
         <button type="button" className={styles.metricTrigger} aria-label={ariaLabel}>{label}</button>
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content ref={contentRef} className={`${styles.metricPopover} ${wide ? styles.sleepPopover : ''}`}>
+          <Popover.Content ref={contentRef} className={`${styles.metricPopover} ${wide ? styles.sleepPopover : ''} ${scrollable ? styles.scrollablePopover : ''}`}>
             <Popover.Body ref={bodyRef} className={styles.metricPopoverBody}>{children}</Popover.Body>
             <Popover.CloseTrigger className={styles.metricPopoverClose} aria-label="关闭详情">
               <XIcon size={15} />
@@ -800,6 +818,20 @@ function ActivityDetails({data}: {data: ActivitySummary}) {
         <span>运动 · {formatShortDate(data.date)}</span>
         <strong>{Math.round(data.exerciseMinutes)}<small>分钟</small></strong>
       </header>
+      <ActivityDayDetails date={data.date}>
+        <div className={styles.healthStats}>
+          {data.steps !== null && <div><span>步数</span><strong>{Math.round(data.steps).toLocaleString()}步</strong></div>}
+          {data.standMinutes !== null && <div><span>站立时长</span><strong>{Math.round(data.standMinutes)}分钟</strong></div>}
+          {data.activeEnergyKJ !== null && (
+            <div><span>活动能量</span><strong>{Math.round(data.activeEnergyKJ / 4.184)}千卡</strong></div>
+          )}
+          {data.distanceKm !== null && (
+            <div><span>步行与跑步</span><strong>{data.distanceKm.toFixed(1)}公里</strong></div>
+          )}
+          {data.flightsClimbed !== null && <div><span>爬楼层数</span><strong>{Math.round(data.flightsClimbed)}层</strong></div>}
+          {data.daylightMinutes !== null && <div><span>日光照射时长</span><strong>{Math.round(data.daylightMinutes)}分钟</strong></div>}
+        </div>
+      </ActivityDayDetails>
       <div className={styles.metricTrend}>
         <div className={styles.metricTrendHeader}>
           <span>近 7 天</span>
@@ -814,14 +846,6 @@ function ActivityDetails({data}: {data: ActivitySummary}) {
         />
         <small className={styles.metricTrendNote}>{activeDays}天有运动</small>
       </div>
-      <div className={styles.healthStats}>
-        {data.activeEnergyKJ !== null && (
-          <div><span>活动能量</span><strong>{Math.round(data.activeEnergyKJ / 4.184)}千卡</strong></div>
-        )}
-        {data.distanceKm !== null && (
-          <div><span>步行与跑步</span><strong>{data.distanceKm.toFixed(1)}公里</strong></div>
-        )}
-      </div>
       <footer>来源：Apple Health</footer>
     </div>
   );
@@ -830,7 +854,8 @@ function ActivityDetails({data}: {data: ActivitySummary}) {
 function WeightDetails({data}: {data: WeightSummary}) {
   const weightJin = data.weightKg * 2;
   const weightDeltaJin = data.previousWeightKg === null ? null : (data.weightKg - data.previousWeightKg) * 2;
-  const trendStart = shiftDate(data.date, -6);
+  const fatDelta = data.bodyFatPercentage !== null && data.previousBodyFatPercentage !== null ? data.bodyFatPercentage - data.previousBodyFatPercentage : null;
+  const trendStart = shiftDate(data.date, -29);
   const trendValues = data.trend.map((point) => point.weightKg * 2);
   const trendMinimum = Math.min(...trendValues);
   const trendMaximum = Math.max(...trendValues);
@@ -843,7 +868,7 @@ function WeightDetails({data}: {data: WeightSummary}) {
     return {
       ...point,
       weightJin: point.weightKg * 2,
-      x: chartPadding + dayIndex / 6 * (chartWidth - chartPadding * 2),
+      x: chartPadding + dayIndex / 29 * (chartWidth - chartPadding * 2),
       y: trendRange === 0
         ? chartHeight / 2
         : chartPadding + (trendMaximum - point.weightKg * 2) / trendRange * (chartHeight - chartPadding * 2),
@@ -859,17 +884,17 @@ function WeightDetails({data}: {data: WeightSummary}) {
       </header>
       <div className={styles.weightTrend}>
         <div className={styles.weightTrendHeader}>
-          <span>近 7 天</span>
+          <span>近 30 天</span>
           <strong>{trendDelta === null ? `${points.length}次测量` : `变化 ${formatDelta(trendDelta)}`}</strong>
         </div>
         {points.length === 1 ? (
           <div className={styles.weightTrendSparse}>
             <i aria-hidden="true" />
-            <span>近 7 天仅 1 次测量</span>
+            <span>近 30 天仅 1 次测量</span>
           </div>
         ) : (
           <>
-            <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`近 7 天体重趋势，共 ${points.length} 次测量`}>
+            <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`近 30 天体重趋势，共 ${points.length} 次测量`}>
               <line x1={chartPadding} y1={chartHeight - chartPadding} x2={chartWidth - chartPadding} y2={chartHeight - chartPadding} />
               <polyline points={points.map((point) => `${point.x},${point.y}`).join(' ')} />
               {points.map((point) => (
@@ -887,8 +912,9 @@ function WeightDetails({data}: {data: WeightSummary}) {
         )}
       </div>
       <div className={styles.healthStats}>
-        {weightDeltaJin !== null && <div><span>较上次</span><strong>{formatDelta(weightDeltaJin)}</strong></div>}
+        {weightDeltaJin !== null && <div><span>较上次{data.previousWeightDate ? `（${formatShortDate(data.previousWeightDate)}）` : ''}</span><strong>{formatDelta(weightDeltaJin)}</strong></div>}
         {data.bodyFatPercentage !== null && <div><span>体脂</span><strong>{data.bodyFatPercentage.toFixed(1)}%</strong></div>}
+        {fatDelta !== null && <div><span>体脂较{data.previousBodyFatDate ? formatShortDate(data.previousBodyFatDate) : '上次'}</span><strong>{fatDelta > 0 ? '+' : ''}{fatDelta.toFixed(1)}个百分点</strong></div>}
         {data.bmi !== null && <div><span>BMI</span><strong>{data.bmi.toFixed(1)}</strong></div>}
         {data.leanBodyMassKg !== null && <div><span>去脂体重</span><strong>{(data.leanBodyMassKg * 2).toFixed(1)}斤</strong></div>}
       </div>
@@ -946,7 +972,7 @@ function ReadingDetails({data}: {data: ReadingSummary}) {
           ))}</ul>
         </div>
       )}
-      <footer>{formatShortDate(weekStart)}–{formatShortDate(weekEnd)} · 自然周</footer>
+      <footer>{formatShortDate(weekStart)}–{formatShortDate(weekEnd)} · 自然周<br />来源：微信读书</footer>
     </div>
   );
 }
@@ -1316,7 +1342,7 @@ export default function DailyRecordMeta() {
           )}
           {healthSummary?.mood && (healthSummary.activity || healthSummary.weight || readingSummary || healthSummary.medication) && '，'}
           {healthSummary?.activity && (
-            <MetricPopover label={`运动${Math.round(healthSummary.activity.exerciseMinutes)}分钟`} ariaLabel={`运动${Math.round(healthSummary.activity.exerciseMinutes)}分钟，查看详情`}>
+            <MetricPopover scrollable label={`运动${Math.round(healthSummary.activity.exerciseMinutes)}分钟`} ariaLabel={`运动${Math.round(healthSummary.activity.exerciseMinutes)}分钟，查看详情`}>
               <ActivityDetails data={healthSummary.activity} />
             </MetricPopover>
           )}

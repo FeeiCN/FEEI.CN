@@ -1,198 +1,86 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {canonical, recordMonth, monthlyPayload, mergeMetrics, mergeMonthData, writeMonthlyHealth, compactMonthlyDetails} from './health_month_storage.mjs';
 
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.dirname(scriptDir);
-const healthDir = path.join(repoRoot, 'static', 'health');
-
-const args = parseArgs(process.argv.slice(2));
-const dryRun = args.dryRun ?? false;
-const targetYears = args.year ? [args.year] : null;
-
-if (dryRun) {
-  console.log('[DRY RUN] Would split:');
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const args = {};
+for (let i = 2; i < process.argv.length; i++) {
+  const arg = process.argv[i];
+  if (['--dry-run', '--cleanup', '--repair-monthly'].includes(arg)) args[arg.slice(2)] = true;
+  else if (['--target', '--year'].includes(arg) && process.argv[i + 1] && !process.argv[i + 1].startsWith('--')) args[arg.slice(2)] = process.argv[++i];
+  else throw new Error(`Unknown or incomplete argument: ${arg}`);
 }
+if (args.year && !/^\d{4}$/.test(args.year)) throw new Error('Invalid year');
+if (args.cleanup && args['repair-monthly']) throw new Error('--cleanup applies only to annual migration');
+const root = path.resolve(args.target ?? path.join(repoRoot, 'static/data/health'));
+const plans = new Map();
+const annualFiles = [];
 
-const files = fs.readdirSync(healthDir).filter((f) => /^health_data_\d{4}\.json$/.test(f));
-
-for (const file of files) {
-  const yearMatch = file.match(/^health_data_(\d{4})\.json$/);
-  if (!yearMatch) continue;
-  const year = yearMatch[1];
-  if (targetYears && !targetYears.includes(year)) continue;
-
-  const filePath = path.join(healthDir, file);
-  const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-
-  if (!raw.data) {
-    console.warn(`Skipping ${file}: no data property`);
-    continue;
+if (args['repair-monthly']) {
+  const originals = new Map();
+  for (const year of fs.readdirSync(root).filter((name) => /^\d{4}$/.test(name) && (!args.year || name === args.year))) {
+    for (const name of fs.readdirSync(path.join(root, year)).filter((name) => /^(0[1-9]|1[0-2])\.json$/.test(name))) {
+      const month = `${year}-${name.slice(0, 2)}`;
+      const raw = JSON.parse(fs.readFileSync(path.join(root, year, name), 'utf8'));
+      originals.set(month, raw);
+      const repaired = structuredClone(raw);
+      repaired.data.healthMetrics.metrics = raw.data.healthMetrics.metrics.map((metric) => ({
+        ...metric, data: metric.data.filter((point) => recordMonth(point) === month),
+      })).filter((metric) => metric.data.length);
+      plans.set(month, repaired);
+    }
   }
-
-  // Collect all unique YYYY-MM from all data points
-  const monthSet = new Set();
-  const {data} = raw;
-
-  for (const [sectionKey, sectionVal] of Object.entries(data)) {
-    if (!sectionVal || typeof sectionVal !== 'object') continue;
-
-    for (const [recordKey, records] of Object.entries(sectionVal)) {
-      if (!Array.isArray(records)) continue;
-
-      for (const record of records) {
-        // healthMetrics: record.data[].date like "2026-01-01 00:00:00 +0800"
-        if (recordKey === 'metrics' && Array.isArray(record.data)) {
-          for (const pt of record.data) {
-            if (pt.date) monthSet.add(pt.date.slice(0, 7));
-          }
-        }
-        // workouts: record.start like "2026-01-01 00:00:00 +0800"
-        else if (recordKey === 'workouts' && record.start) {
-          monthSet.add(record.start.slice(0, 7));
-        }
-        // heartRateNotifications: record.start
-        else if (recordKey === 'heartRateNotifications' && record.start) {
-          monthSet.add(record.start.slice(0, 7));
-        }
-        // stateOfMind: record.start
-        else if (recordKey === 'stateOfMind' && record.start) {
-          monthSet.add(record.start.slice(0, 7));
-        }
-        // General fallback: any date-like string field
-        else if (typeof record === 'object') {
-          for (const field of ['start', 'end', 'date']) {
-            if (typeof record[field] === 'string' && record[field].length >= 10) {
-              monthSet.add(record[field].slice(0, 7));
-              break;
-            }
-          }
-        }
+  for (const raw of originals.values()) {
+    for (const metric of raw.data.healthMetrics.metrics) {
+      const groups = new Map();
+      for (const point of metric.data) {
+        const month = recordMonth(point);
+        if (!groups.has(month)) groups.set(month, []);
+        groups.get(month).push(point);
+      }
+      for (const [month, points] of groups) {
+        if (!plans.has(month)) throw new Error(`Missing destination month ${month}; no files written`);
+        const target = plans.get(month).data.healthMetrics;
+        target.metrics = mergeMetrics(target.metrics, [{...metric, data: points}]);
       }
     }
   }
-
-  const months = [...monthSet].sort();
-
-  for (const month of months) {
-    const [y, m] = month.split('-');
-    const outputFile = `${m}.json`;
-    const yearDir = path.join(healthDir, y);
-    fs.mkdirSync(yearDir, {recursive: true});
-    const outputPath = path.join(yearDir, outputFile);
-
-    if (!dryRun && fs.existsSync(outputPath)) {
-      // Merge: read existing, update data sections, write back
-      const existing = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
-      for (const [sk, sv] of Object.entries(data)) {
-        if (!sv || typeof sv !== 'object') continue;
-        for (const [rk, records] of Object.entries(sv)) {
-          if (!Array.isArray(records)) continue;
-          if (!Array.isArray(existing.data[sk]?.[rk])) {
-            if (!existing.data[sk]) existing.data[sk] = {};
-            existing.data[sk][rk] = [];
-          }
-          for (const record of records) {
-            if (recordHasDateInMonth(record, rk, month)) {
-              existing.data[sk][rk].push(record);
-            }
-          }
+  const signatures = (values) => new Set([...values].flatMap((raw) => raw.data.healthMetrics.metrics.flatMap(({data, ...metadata}) => data.map((point) => canonical({metadata, point})))));
+  const before = signatures(originals.values());
+  const after = signatures(plans.values());
+  if (before.size !== after.size || [...before].some((key) => !after.has(key))) throw new Error('Record preservation check failed');
+  console.log(`Verified preservation of ${before.size} unique metric records`);
+} else {
+  for (const name of fs.readdirSync(root).filter((name) => /^health_data_\d{4}\.json$/.test(name) && (!args.year || name === `health_data_${args.year}.json`))) {
+    const file = path.join(root, name);
+    const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const months = new Set();
+    for (const [section, collection] of Object.entries(raw.data)) {
+      for (const [key, records] of Object.entries(collection)) {
+        if (!Array.isArray(records)) continue;
+        for (const record of records) {
+          if (section === 'healthMetrics' && key === 'metrics') record.data.forEach((point) => months.add(recordMonth(point)));
+          else months.add(recordMonth(record));
         }
       }
-      existing.data = sortObjectSections(existing.data);
-      fs.writeFileSync(outputPath, `${JSON.stringify(existing, null, 2)}\n`);
-    } else if (!dryRun) {
-      // Build month-specific data
-      const monthData = {};
-      for (const [sk, sv] of Object.entries(data)) {
-        if (!sv || typeof sv !== 'object') continue;
-        monthData[sk] = {};
-        for (const [rk, records] of Object.entries(sv)) {
-          if (!Array.isArray(records)) {
-            monthData[sk][rk] = records;
-            continue;
-          }
-          const filtered = records.filter((record) => recordHasDateInMonth(record, rk, month));
-          monthData[sk][rk] = filtered;
-        }
-      }
-
-      const monthExport = {
-        exportedAt: raw.exportedAt,
-        dateRange: {
-          start: `${month}-01 00:00:00 +0800`,
-          end: `${month}-${lastDayOfMonth(y, m)} 23:59:59 +0800`,
-        },
-        data: sortObjectSections(monthData),
-      };
-      fs.writeFileSync(outputPath, `${JSON.stringify(monthExport, null, 2)}\n`);
     }
-  }
-
-  if (dryRun) {
-    console.log(`  ${file} → ${months.length} month(s): ${months.join(', ')}`);
-  } else {
-    console.log(`${file} → ${months.length} monthly file(s): ${months.join(', ')}`);
-  }
-}
-
-if (!dryRun) {
-  // Clean up old annual files
-  if (args.cleanup) {
-    for (const file of files) {
-      const yearMatch = file.match(/^health_data_(\d{4})\.json$/);
-      if (!yearMatch) continue;
-      const year = yearMatch[1];
-      if (targetYears && !targetYears.includes(year)) continue;
-      const filePath = path.join(healthDir, file);
-      fs.unlinkSync(filePath);
-      console.log(`Removed ${file}`);
+    for (const month of months) {
+      const payload = monthlyPayload(raw, month);
+      const destination = path.join(root, month.replace('-', '/') + '.json');
+      const previous = plans.get(month) ?? (fs.existsSync(destination) ? JSON.parse(fs.readFileSync(destination, 'utf8')) : null);
+      if (previous) payload.data = mergeMonthData(monthlyPayload(previous, month).data, payload.data);
+      plans.set(month, payload);
     }
-  } else {
-    console.log('\nRun with --cleanup to delete the original annual files.');
+    annualFiles.push(file);
   }
 }
-
-function recordHasDateInMonth(record, sectionKey, targetMonth) {
-  if (!record || typeof record !== 'object') return false;
-
-  // healthMetrics: dates are inside record.data[].date
-  if (sectionKey === 'metrics' && Array.isArray(record.data)) {
-    return record.data.some((pt) => pt.date && pt.date.slice(0, 7) === targetMonth);
-  }
-
-  for (const field of ['start', 'end', 'date']) {
-    if (typeof record[field] === 'string' && record[field].length >= 10) {
-      return record[field].slice(0, 7) === targetMonth;
-    }
-  }
-  return false;
+let changed = 0;
+for (const [month, payload] of plans) {
+  const file = path.join(root, month.replace('-', '/') + '.json');
+  if (args['dry-run']) {
+    if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== `${JSON.stringify(compactMonthlyDetails(payload))}\n`) changed++;
+  } else if (writeMonthlyHealth(file, payload)) changed++;
 }
-
-function sortObjectSections(obj) {
-  const sorted = {};
-  for (const key of Object.keys(obj).sort()) {
-    sorted[key] = obj[key];
-  }
-  return sorted;
-}
-
-function lastDayOfMonth(year, month) {
-  return new Date(Number(year), Number(month), 0).getDate();
-}
-
-function parseArgs(argv) {
-  const parsed = {};
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === '--dry-run') {
-      parsed.dryRun = true;
-    } else if (arg === '--cleanup') {
-      parsed.cleanup = true;
-    } else if (arg === '--year') {
-      parsed.year = argv[i + 1];
-      i++;
-    }
-  }
-  return parsed;
-}
+if (args.cleanup && !args['dry-run']) annualFiles.forEach((file) => fs.unlinkSync(file));
+console.log(`${args['dry-run'] ? 'Would update' : 'Updated'} ${changed} monthly files`);

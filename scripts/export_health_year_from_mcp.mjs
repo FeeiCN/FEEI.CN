@@ -4,6 +4,7 @@ import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {buildHealthChartHistory} from './build_health_chart_history.mjs';
 import {buildMedicationCollection} from './health_collection_transform.mjs';
+import {monthlyPayload, writeMonthlyHealth} from './health_month_storage.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defaultTargetRoot = path.join(repoRoot, 'static', 'data', 'health');
@@ -156,13 +157,16 @@ async function main() {
     throw new Error('--date cannot be combined with --month or --end-date');
   }
 
-  const targetYear = args.date ? args.date.slice(0, 4) : (args.year ?? getCurrentYear());
+  const targetYear = args.date ? args.date.slice(0, 4) : (args.year ?? args.month?.slice(0, 4) ?? getCurrentYear());
+  if (args.year && args.month && !args.month.startsWith(`${args.year}-`)) {
+    throw new Error('--year and --month must refer to the same year');
+  }
   const targetMonth = args.month;
   assertYear(targetYear);
 
   const targetRoot = path.resolve(expandHome(args.target ?? defaultTargetRoot));
 
-  let startDate, endDate, targetFile;
+  let startDate, endDate;
 
   if (args.date) {
     assertDate(args.date);
@@ -176,19 +180,16 @@ async function main() {
     const [y, m] = targetMonth.split('-');
     startDate = `${y}-${m}-01`;
     endDate = args.endDate ?? defaultEndDateMonth(y, m);
-    targetFile = path.join(targetRoot, y, `${m}.json`);
   } else if (args.year) {
     // Explicit --year: export full year
     startDate = `${targetYear}-01-01`;
     endDate = args.endDate ?? defaultEndDate(targetYear);
-    targetFile = path.join(targetRoot, `health_data_${targetYear}.json`);
   } else {
     // Default: export current month
     const currentMonthStr = getCurrentMonth();
     const [y, m] = currentMonthStr.split('-');
     startDate = `${y}-${m}-01`;
     endDate = args.endDate ?? defaultEndDateMonth(y, m);
-    targetFile = path.join(targetRoot, y, `${m}.json`);
   }
 
   if (!endDate.startsWith(targetYear)) {
@@ -221,7 +222,7 @@ async function main() {
 
     const exportedAt = new Date().toISOString();
 
-    if (targetFile) {
+    if (!args.date) {
       const data = {};
       const summary = {};
 
@@ -253,7 +254,7 @@ async function main() {
         summary[mapping.targetSection] = Array.isArray(records) ? records.length : 0;
       }
 
-      const annualData = {
+      const exportData = {
         exportedAt,
         dateRange: {
           start,
@@ -262,9 +263,15 @@ async function main() {
         data,
       };
 
-      fs.writeFileSync(targetFile, `${JSON.stringify(annualData, null, 2)}\n`);
-
-      console.log(`Exported ${targetYear} health data to ${path.relative(repoRoot, targetFile)}`);
+      const months = [...new Set(enumerateDates(startDate, endDate).map((day) => day.slice(0, 7)))];
+      for (const month of months) {
+        const file = path.join(targetRoot, month.replace('-', '/') + '.json');
+        const payload = monthlyPayload(exportData, month);
+        if (payload.dateRange.start < start) payload.dateRange.start = start;
+        if (payload.dateRange.end > end) payload.dateRange.end = end;
+        writeMonthlyHealth(file, payload);
+        console.log(`Exported ${month} health data to ${path.relative(repoRoot, file)}`);
+      }
       for (const [section, count] of Object.entries(summary)) {
         console.log(`${section}: ${count}`);
       }
@@ -275,13 +282,9 @@ async function main() {
       endDate,
       targetRoot,
       exportedAt,
-      skipExisting: !args.date && !args.overwriteDaily,
     });
 
     console.log(`Exported ${dailyResult.written.length} daily compact health files`);
-    if (dailyResult.skipped.length > 0) {
-      console.log(`Skipped ${dailyResult.skipped.length} existing daily compact health files`);
-    }
   } finally {
     await client.close();
   }
@@ -543,23 +546,10 @@ async function collectMappingRecords(client, mapping, options) {
 
 async function exportDailyCompactFiles(client, options) {
   const written = [];
-  const skipped = [];
-  const today = formatLocalDate(new Date());
-
   for (const day of enumerateDates(options.startDate, options.endDate)) {
     const [year, month, date] = day.split('-');
     const dailyDir = path.join(options.targetRoot, year, month);
     const dailyFile = path.join(dailyDir, `${date}.json`);
-
-    if (
-      options.skipExisting
-      && day !== today
-      && fs.existsSync(dailyFile)
-      && !isEmptyDailyHealthFile(dailyFile)
-    ) {
-      skipped.push(dailyFile);
-      continue;
-    }
 
     const dailyStart = `${day} 00:00:00 ${timeZoneOffset}`;
     const dailyEnd = `${day} 23:59:59 ${timeZoneOffset}`;
@@ -609,6 +599,9 @@ async function exportDailyCompactFiles(client, options) {
     };
 
     if (Object.keys(errors).length > 0) {
+      if (fs.existsSync(dailyFile) && !isEmptyDailyHealthFile(dailyFile)) {
+        throw new Error(`Incomplete health refresh for ${day}; existing daily file preserved`);
+      }
       dailyData.errors = errors;
     }
 
@@ -617,7 +610,7 @@ async function exportDailyCompactFiles(client, options) {
     written.push(dailyFile);
   }
 
-  return {written, skipped};
+  return {written};
 }
 
 function isEmptyDailyHealthFile(file) {
@@ -1803,7 +1796,6 @@ function parseArgs(argv) {
     }
 
     if (arg === '--overwrite-daily') {
-      parsed.overwriteDaily = true;
       continue;
     }
 
@@ -1829,11 +1821,11 @@ function printHelp() {
   console.log(`Usage: npm run export-health-year -- [options]
 
 Options:
-  --year <year>              Export full year (defaults to current month if omitted).
+  --year <year>              Export full year into monthly files (defaults to current month).
   --month <YYYY-MM>          Export specific month.
   --date <YYYY-MM-DD>        Export only one daily compact file without writing month summary.
   --end-date <YYYY-MM-DD>    End date. Defaults to today for current year/month.
-  --overwrite-daily          Rewrite existing daily compact files in month/year mode.
+  --overwrite-daily          Compatibility flag; existing daily files are now refreshed by default.
   --target <dir>             Output directory. Defaults to static/data/health.
   --mcp-server <file>        health_auto_export MCP server path.
   --timeout <ms>             Per-tool timeout. Defaults to 86400000.

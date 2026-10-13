@@ -1,5 +1,5 @@
-import React, {type ReactNode, useEffect, useMemo, useState} from 'react';
-import {Popover, Portal} from '@chakra-ui/react';
+import React, {type ReactNode, useEffect, useMemo, useRef, useState} from 'react';
+import {Collapsible, Popover, Portal} from '@chakra-ui/react';
 import {useDoc} from '@docusaurus/plugin-content-docs/client';
 import XIcon from '@site/src/components/ItsHoverIcon/icons/x-icon';
 import {
@@ -16,6 +16,7 @@ import {
   stateOfMindTerm,
 } from '@site/src/utils/stateOfMind';
 import styles from './DailyRecordMeta.module.css';
+import SleepStageChart from './SleepStageChart';
 
 type WeatherResponse = {
   daily?: {
@@ -461,16 +462,20 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
   return activity || weight || mood || medication ? {activity, weight, mood, medication} : null;
 }
 
-function MetricPopover({label, ariaLabel, children}: {label: string; ariaLabel: string; children: ReactNode}) {
+function MetricPopover({label, ariaLabel, children, wide = false}: {label: string; ariaLabel: string; children: ReactNode; wide?: boolean}) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   return (
-    <Popover.Root lazyMount unmountOnExit positioning={{placement: 'bottom-start', gutter: 8, strategy: 'fixed', hideWhenDetached: true}}>
+    <Popover.Root lazyMount unmountOnExit initialFocusEl={wide ? () => contentRef.current : undefined}
+      onOpenChange={({open}) => {if (open && wide) requestAnimationFrame(() => {if (bodyRef.current) bodyRef.current.scrollTop = 0;});}}
+      positioning={{placement: 'bottom-start', gutter: 8, strategy: 'fixed', hideWhenDetached: true}}>
       <Popover.Trigger asChild>
         <button type="button" className={styles.metricTrigger} aria-label={ariaLabel}>{label}</button>
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content className={styles.metricPopover}>
-            <Popover.Body className={styles.metricPopoverBody}>{children}</Popover.Body>
+          <Popover.Content ref={contentRef} className={`${styles.metricPopover} ${wide ? styles.sleepPopover : ''}`}>
+            <Popover.Body ref={bodyRef} className={styles.metricPopoverBody}>{children}</Popover.Body>
             <Popover.CloseTrigger className={styles.metricPopoverClose} aria-label="关闭详情">
               <XIcon size={15} />
             </Popover.CloseTrigger>
@@ -543,8 +548,7 @@ function SleepTrend({data}: {data: SleepScoreSummary}) {
   const averageDuration = Math.round(durations.reduce((sum, duration) => sum + duration, 0) / durations.length);
   const currentScore = typeof data.score === 'number' ? data.score : averageScore;
   const width = 272;
-  const height = 76;
-  const paddingX = 10;
+  const height = 90;
   const top = 14;
   const bottom = 5;
   const durationMaximum = Math.max(600, ...durations);
@@ -552,7 +556,7 @@ function SleepTrend({data}: {data: SleepScoreSummary}) {
   const scoreRange = Math.max(10, 100 - scoreMinimum);
   const points = values.map((item, index) => ({
     ...item,
-    x: paddingX + index / 6 * (width - paddingX * 2),
+    x: (index + 0.5) * width / 7,
     y: typeof item.score === 'number'
       ? top + (100 - item.score) / scoreRange * (height - top - bottom)
       : null,
@@ -571,6 +575,7 @@ function SleepTrend({data}: {data: SleepScoreSummary}) {
       <svg className={styles.sleepTrendChart} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`近 7 天睡眠平均 ${averageScore} 分，平均时长 ${formatCompactDuration(averageDuration)}`}>
         {points.map((point) => point.durationMinutes !== null && (
           <rect
+            data-date={point.date}
             key={`bar-${point.date}`}
             className={point.date === data.date ? styles.sleepTrendCurrentBar : undefined}
             x={point.x - 7}
@@ -587,7 +592,7 @@ function SleepTrend({data}: {data: SleepScoreSummary}) {
             : null;
         })}
         {points.map((point) => point.y !== null && (
-          <g key={`point-${point.date}`} className={point.date === data.date ? styles.sleepTrendCurrentPoint : undefined}>
+          <g data-date={point.date} key={`point-${point.date}`} className={point.date === data.date ? styles.sleepTrendCurrentPoint : undefined}>
             <circle cx={point.x} cy={point.y} r="2.8" />
             <text x={point.x} y={Math.max(8, point.y - 6)} textAnchor="middle">{point.score}</text>
             <title>{formatShortDate(point.date)}：{point.score}分，{point.durationMinutes === null ? '时长暂无' : formatCompactDuration(point.durationMinutes)}</title>
@@ -598,13 +603,14 @@ function SleepTrend({data}: {data: SleepScoreSummary}) {
         {values.map((item) => (
           <div
             key={item.date}
+            data-sleep-date={item.date}
             className={[
               item.date === data.date ? styles.sevenDayCurrent : '',
               item.score === null ? styles.sevenDayMissing : '',
             ].filter(Boolean).join(' ') || undefined}
           >
             <span>{Number(item.date.slice(-2))}日</span>
-            <small>{item.durationMinutes === null ? '' : formatCompactDuration(item.durationMinutes)}</small>
+            <small>{item.durationMinutes === null ? '—' : formatCompactDuration(item.durationMinutes)}</small>
           </div>
         ))}
       </div>
@@ -640,42 +646,54 @@ function SleepScoreDetails({data}: {data: SleepScoreSummary}) {
   const lowestRate = availableRates.length > 0 ? Math.min(...availableRates) : null;
 
   return (
-    <div className={styles.metricDetails}>
-      <header>
-        <span>睡眠评分</span>
-        <strong>{data.score}<small>/ 100</small></strong>
-      </header>
-      <div className={styles.sleepScoreScale} aria-label={`睡眠评分 ${score} 分，评级为${currentLevel.label}`}>
-        <div
-          className={styles.sleepScoreTrack}
-          style={{'--sleep-score': `${visualScore}%`} as React.CSSProperties}
-          role="meter"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={score}
-          aria-valuetext={`${score} 分，${currentLevel.label}`}
-        >
-          {sleepScoreLevels.slice(1).map((level) => (
-            <i key={level.label} style={{left: `${level.visualStart}%`}} aria-hidden="true" />
-          ))}
-        </div>
-        <div className={styles.sleepScoreLegend} aria-hidden="true">
-          {sleepScoreLevels.map((level) => {
-            const isCurrent = level.label === currentLevel.label;
-            return (
+    <Collapsible.Root className={styles.metricDetails} lazyMount unmountOnExit>
+      <SleepStageChart
+        date={data.date}
+        durationMinutes={parseDurationMinutes(data.components?.duration?.detail)}
+        score={(
+          <Collapsible.Trigger className={styles.sleepScoreButton} aria-label={`睡眠评分${score}分，${currentLevel.label}，查看评分区间`}>
+            <span>评分</span>
+            <span className={styles.sleepScoreValue}>
+              <strong>{score}<small>分</small></strong>
+              <span className={styles.sleepScoreRating}>· {currentLevel.label}</span>
+            </span>
+          </Collapsible.Trigger>
+        )}
+        scoreDetails={(
+          <Collapsible.Content className={styles.sleepScoreDisclosure}>
+            <div className={styles.sleepScoreScale} aria-label={`睡眠评分 ${score} 分，评级为${currentLevel.label}`}>
               <div
-                key={level.label}
-                className={isCurrent ? styles.sleepScoreLevelCurrent : undefined}
-                aria-current={isCurrent ? 'true' : undefined}
+                className={styles.sleepScoreTrack}
+                style={{'--sleep-score': `${visualScore}%`} as React.CSSProperties}
+                role="meter"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={score}
+                aria-valuetext={`${score} 分，${currentLevel.label}`}
               >
-                <span>{level.label}</span>
-                <small>{level.range}</small>
+                {sleepScoreLevels.slice(1).map((level) => (
+                  <i key={level.label} style={{left: `${level.visualStart}%`}} aria-hidden="true" />
+                ))}
               </div>
-            );
-          })}
-        </div>
-      </div>
-      <SleepTrend data={data} />
+              <div className={styles.sleepScoreLegend} aria-hidden="true">
+                {sleepScoreLevels.map((level) => {
+                  const isCurrent = level.label === currentLevel.label;
+                  return (
+                    <div
+                      key={level.label}
+                      className={isCurrent ? styles.sleepScoreLevelCurrent : undefined}
+                      aria-current={isCurrent ? 'true' : undefined}
+                    >
+                      <span>{level.label}</span>
+                      <small>{level.range}</small>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Collapsible.Content>
+        )}
+      />
       <div className={styles.metricBreakdown}>
         {components.map(([key, label], index) => {
           const item = data.components?.[key];
@@ -703,8 +721,9 @@ function SleepScoreDetails({data}: {data: SleepScoreSummary}) {
           );
         })}
       </div>
+      <SleepTrend data={data} />
       {data.source && <footer>来源：{data.source}</footer>}
-    </div>
+    </Collapsible.Root>
   );
 }
 
@@ -1282,7 +1301,7 @@ export default function DailyRecordMeta() {
       {(readingSummary !== null || sleepScore !== null || healthSummary !== null) && (
         <div className={styles.dailyDataLine} role="group" aria-label="当天健康与阅读数据">
           {sleepScore !== null && (
-            <MetricPopover label={`睡眠${sleepScore.score}分`} ariaLabel={`睡眠${sleepScore.score}分，查看详情`}>
+            <MetricPopover wide label={`睡眠${sleepScore.score}分`} ariaLabel={`睡眠${sleepScore.score}分，查看详情`}>
               <SleepScoreDetails data={sleepScore} />
             </MetricPopover>
           )}

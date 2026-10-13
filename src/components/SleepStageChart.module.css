@@ -1,0 +1,29 @@
+.card {
+  margin-bottom: 0.85rem;
+  color: var(--ifm-font-color-base);
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+  padding-right: 2rem;
+}
+.heading {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.18rem;
+  margin-top: 0.15rem;
+  white-space: nowrap;
+}
+.total strong { font-size: 1.35rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.total span { margin-right: 0.25rem; color: var(--ifm-color-emphasis-600); font-size: 0.68rem; }
+.chart { width: 100%; border-radius: 4px; }
+.chart:focus-visible { outline: 2px solid var(--sleep-accent); outline-offset: 3px; }
+.placeholder { padding: 20px 8px; color: var(--ifm-color-emphasis-600); font-size: 13px; }

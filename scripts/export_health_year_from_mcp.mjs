@@ -1655,6 +1655,7 @@ function normalizeSleepStage(value) {
     '核心': 'core',
     '深度': 'deep',
     '快速动眼期': 'rem',
+    '睡眠时长': 'asleep',
   };
   return stageMap[value] ?? value;
 }

@@ -9,11 +9,12 @@ import styles from './SleepStageChart.module.css';
 
 type SleepRecord = {type?: string; stage?: string; start?: string; end?: string};
 type Segment = {stage: string; start: number; end: number};
-const stages = [
+const allStages = [
   {key: 'awake', label: '清醒时间', color: 'var(--sleep-stage-awake)'},
   {key: 'rem', label: '快速动眼睡眠', color: 'var(--sleep-stage-rem)'},
   {key: 'core', label: '核心睡眠', color: 'var(--sleep-accent)'},
   {key: 'deep', label: '深度睡眠', color: 'var(--sleep-stage-deep)'},
+  {key: 'asleep', label: '睡眠', color: 'var(--sleep-history)'},
 ];
 const hour = 3600000;
 const formatMinutes = (value: number) => value >= 60 ? `${Math.floor(value / 60)}小时${value % 60}分钟` : `${value}分钟`;
@@ -42,11 +43,12 @@ export default function SleepStageChart({date, durationMinutes, score, scoreDeta
         if (controller.signal.aborted) return;
         const unique = new Map<string, Segment>();
         for (const record of payload?.timeline ?? []) {
-          if (record.type !== 'sleep' || !stages.some((stage) => stage.key === record.stage)) continue;
+          const stage = record.stage === '睡眠时长' ? 'asleep' : record.stage;
+          if (record.type !== 'sleep' || !allStages.some((item) => item.key === stage)) continue;
           const start = timestamp(record.start);
           const end = timestamp(record.end);
           if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
-          unique.set(`${record.stage}-${start}-${end}`, {stage: record.stage!, start, end});
+          unique.set(`${stage}-${start}-${end}`, {stage: stage!, start, end});
         }
         setSegments([...unique.values()].sort((a, b) => a.start - b.start));
       })
@@ -79,6 +81,7 @@ export default function SleepStageChart({date, durationMinutes, score, scoreDeta
 }
 
 function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selected: number | null; onSelect: (index: number | null) => void}) {
+  const stages = useMemo(() => allStages.filter((stage) => stage.key !== 'asleep' || segments.some((segment) => segment.stage === stage.key)), [segments]);
   const {colorMode} = useColorMode();
   const container = useRef<HTMLDivElement>(null);
   const chart = useRef<ReactECharts>(null);
@@ -93,25 +96,56 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
   useEffect(() => {
     if (!container.current) return;
     const css = getComputedStyle(container.current);
-    setPalette(['--sleep-stage-awake', '--sleep-stage-rem', '--sleep-accent', '--sleep-stage-deep', '--ifm-color-emphasis-700', '--ifm-color-emphasis-300', '--ifm-background-surface-color', '--ifm-color-emphasis-600']
+    setPalette(['--sleep-stage-awake', '--sleep-stage-rem', '--sleep-accent', '--sleep-stage-deep', '--ifm-color-emphasis-700', '--ifm-color-emphasis-300', '--ifm-background-surface-color', '--ifm-color-emphasis-600', '--sleep-history']
       .map((name) => css.getPropertyValue(name).trim()));
   }, [colorMode]);
   const stageLabels = useMemo(() => stages.map((stage) => {
     const minutes = sleepMinutes(segments.filter((segment) => segment.stage === stage.key).map((segment) => ({...segment, stage: 'sleep'})));
     return `${stage.label} · ${minutes === 0 && segments.some((segment) => segment.stage === stage.key) ? '不足1分钟' : formatMinutes(minutes)}`;
-  }), [segments]);
-  const bounds = useMemo(() => {
-    const asleep = segments.filter((segment) => segment.stage !== 'awake');
-    if (!asleep.length) return null;
-    return {start: asleep[0].start, end: Math.max(...asleep.map((segment) => segment.end))};
+  }), [segments, stages]);
+  const sessions = useMemo(() => {
+    const groups: {start: number; end: number; recordedEnd: number}[] = [];
+    for (const segment of segments) {
+      const previous = groups.at(-1);
+      // A gap without any sleep record separates chart sessions, not sleep stages.
+      if (!previous || segment.start - previous.recordedEnd > hour) {
+        if (segment.stage !== 'awake') groups.push({start: segment.start, end: segment.end, recordedEnd: segment.end});
+      } else {
+        previous.recordedEnd = Math.max(previous.recordedEnd, segment.end);
+        if (segment.stage !== 'awake') previous.end = Math.max(previous.end, segment.end);
+      }
+    }
+    return groups;
   }, [segments]);
-  const axisSpan = Math.max(hour, Math.ceil(Math.max(...segments.map((segment) => segment.end)) / hour) * hour - Math.floor(segments[0].start / hour) * hour);
-  const crossesMidnight = bounds && Math.floor((bounds.start + 8 * hour) / (24 * hour)) !== Math.floor((bounds.end + 8 * hour) / (24 * hour));
-  const labelWidth = crossesMidnight ? 86 : 44;
-  const staggerLabels = bounds && (bounds.end - bounds.start) / axisSpan * (width - 10) < labelWidth * 2 + 6;
+  const bounds = sessions.length ? {start: sessions[0].start, end: sessions.at(-1)!.end} : null;
+  const axisStart = Math.floor(segments[0].start / hour) * hour;
+  const axisSpan = Math.max(hour, Math.ceil(Math.max(...segments.map((segment) => segment.end)) / hour) * hour - axisStart);
+  const endpointLabels = useMemo(() => {
+    const rows: number[] = [];
+    const nightSessions = sessions.filter((session) => {
+      const startHour = new Date(session.start + 8 * hour).getUTCHours();
+      return startHour >= 18 || startHour < 6;
+    });
+    return nightSessions.flatMap((session) => [session.start, session.end].map((time, index) => {
+      const first = index === 0;
+      const crossesMidnight = Math.floor((session.start + 8 * hour) / (24 * hour)) !== Math.floor((session.end + 8 * hour) / (24 * hour));
+      const days = Math.floor((session.end + 8 * hour) / (24 * hour)) - Math.floor((session.start + 8 * hour) / (24 * hour));
+      const localHour = new Date(time + 8 * hour).getUTCHours();
+      const prefix = !crossesMidnight ? '' : days === 1 && (first ? localHour >= 18 : localHour < 12)
+        ? first ? '昨晚 ' : '今早 '
+        : new Intl.DateTimeFormat('zh-CN', {timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric'}).format(time) + ' ';
+      const labelWidth = prefix ? 86 : 44;
+      const x = 5 + (time - axisStart) / axisSpan * (width - 10);
+      const left = Math.max(5, Math.min(width - 5 - labelWidth, first ? x : x - labelWidth));
+      let row = rows.findIndex((right) => left >= right + 8);
+      if (row < 0) row = rows.length;
+      rows[row] = left + labelWidth;
+      return {time, first, prefix, x, left, right: left + labelWidth, row};
+    }));
+  }, [sessions, axisStart, axisSpan, width]);
   const rowHeight = 65;
   const plotHeight = rowHeight * stages.length;
-  const chartHeight = plotHeight + (staggerLabels ? 66 : 40);
+  const chartHeight = plotHeight + 40 + Math.max(0, ...endpointLabels.map((label) => label.row)) * 31;
   const option = useMemo<echarts.EChartsOption>(() => {
     const start = Math.floor(segments[0].start / hour) * hour;
     const end = Math.ceil(Math.max(...segments.map((segment) => segment.end)) / hour) * hour;
@@ -119,16 +153,8 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
     const interval = (span <= 6 * hour ? 1 : span <= 12 * hour ? 2 : Math.ceil(span / hour / 6)) * hour;
     const timeLabel = (time: number) => new Intl.DateTimeFormat('en-GB', {timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit'}).format(Math.round(time / 60000) * 60000);
     const x = (time: number) => 5 + (time - start) / span * (width - 10);
-    const boxLeft = (time: number) => time === bounds?.start ? x(time) : x(time) - labelWidth;
-    const dayLabel = (time: number, first: boolean) => {
-      if (!crossesMidnight || !bounds) return '';
-      const days = Math.floor((bounds.end + 8 * hour) / (24 * hour)) - Math.floor((bounds.start + 8 * hour) / (24 * hour));
-      const localHour = new Date(time + 8 * hour).getUTCHours();
-      if (days === 1 && (first ? localHour >= 18 : localHour < 12)) return first ? '昨晚 ' : '今早 ';
-      return new Intl.DateTimeFormat('zh-CN', {timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric'}).format(time) + ' ';
-    };
     const candidates = Array.from({length: Math.ceil(span / hour)}, (_, index) => start + index * hour)
-      .filter((time) => !bounds || (time > bounds.start && time < bounds.end && [bounds.start, bounds.end].every((boundary) => x(time) + 18 < boxLeft(boundary) - 12 || x(time) - 18 > boxLeft(boundary) + labelWidth + 12)));
+      .filter((time) => !bounds || (time > bounds.start && time < bounds.end && endpointLabels.every((label) => x(time) + 18 < label.left - 12 || x(time) - 18 > label.right + 12)));
     const tickCount = Math.min(candidates.length, Math.max(1, Math.floor(width / 150)));
     const ticks: number[] = [];
     for (let index = 1; index <= tickCount; index++) {
@@ -137,17 +163,17 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
         .sort((a, b) => Math.abs(a - target) - Math.abs(b - target))[0];
       if (next !== undefined) ticks.push(next);
     }
-    const endpoints: echarts.GraphicComponentOption[] = bounds ? [bounds.start, bounds.end].flatMap((time, index) => {
-      const labelTop = plotHeight + (index === 1 && staggerLabels ? 39 : 8);
+    const endpoints: echarts.GraphicComponentOption[] = endpointLabels.flatMap((label) => {
+      const labelTop = plotHeight + 8 + label.row * 31;
       return [{
         type: 'line', silent: true,
-        shape: {x1: x(time), x2: x(time), y1: plotHeight, y2: labelTop - 3},
+        shape: {x1: label.x, x2: label.x, y1: plotHeight, y2: plotHeight + 5},
         style: {stroke: palette[4], opacity: 0.55},
       }, {
-        type: 'text', x: x(time), y: labelTop, silent: true,
-        style: {text: `${dayLabel(time, index === 0)}${timeLabel(time)}\n${index === 0 ? '入睡' : '醒来'}`, align: index === 0 ? 'left' : 'right', verticalAlign: 'top', fill: palette[4], fontSize: 11, lineHeight: 13},
+        type: 'text', x: label.left, y: labelTop, silent: true,
+        style: {text: `${label.prefix}${timeLabel(label.time)}\n${label.first ? '入睡' : '醒来'}`, align: 'left', verticalAlign: 'top', fill: palette[4], fontSize: 11, lineHeight: 13},
       }];
-    }) : [];
+    });
     return {
       animation: false,
       tooltip: {
@@ -172,7 +198,7 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
           const formatTime = short ? timeWithSeconds : timeLabel;
           const duration = short ? `${Math.floor(segment.end / 1000) - Math.floor(segment.start / 1000)}秒` : formatMinutes(Math.round(segment.end / 60000) - Math.round(segment.start / 60000));
           const stageIndex = stages.findIndex((stage) => stage.key === segment.stage);
-          return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><i style="width:6px;height:6px;border-radius:50%;background:${palette[stageIndex]}"></i>${stages[stageIndex].label}</div><div style="display:flex;align-items:baseline;gap:16px"><span style="font-variant-numeric:tabular-nums">${formatTime(segment.start)}–${formatTime(segment.end)}</span><strong>${duration}</strong></div>`;
+          return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><i style="width:6px;height:6px;border-radius:50%;background:${palette[stageIndex === 4 ? 8 : stageIndex]}"></i>${stages[stageIndex].label}</div><div style="display:flex;align-items:baseline;gap:16px"><span style="font-variant-numeric:tabular-nums">${formatTime(segment.start)}–${formatTime(segment.end)}</span><strong>${duration}</strong></div>`;
         },
       },
       grid: {left: 5, right: 5, top: 0, bottom: chartHeight - plotHeight},
@@ -209,12 +235,12 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
         },
         data: segments.map((segment) => ({
           value: [segment.start, segment.end, segment.stage],
-          itemStyle: {color: palette[stages.findIndex((stage) => stage.key === segment.stage)]},
+          itemStyle: {color: palette[segment.stage === 'asleep' ? 8 : stages.findIndex((stage) => stage.key === segment.stage)]},
         })),
         emphasis: {focus: 'none', itemStyle: {opacity: 1}},
       }],
     };
-  }, [segments, palette, stageLabels, bounds, width, crossesMidnight, labelWidth, staggerLabels, chartHeight, plotHeight]);
+  }, [segments, stages, palette, stageLabels, bounds, width, endpointLabels, chartHeight, plotHeight]);
   const events = useMemo(() => ({click: (event: {dataIndex?: number}) => {
     if (typeof event.dataIndex === 'number') onSelect(event.dataIndex);
   }}), [onSelect]);

@@ -81,6 +81,7 @@ for await (const line of readline.createInterface({input: process.stdin})) {
  if (message.method === 'tools/call') {
   const {name, arguments: args} = message.params;
   const metrics = name === 'get_health_metrics' ? [{name:'step_count',units:'count',data:[{date:'2025-01-01 00:00:00 +0800',qty:42}]}] : [];
+  if (name === 'get_health_metrics') metrics.push({name:'sleep_analysis',units:'hr',data:[{date:'2025-01-01 13:30:00 +0800',start:'2025-01-01 13:30:00 +0800',end:'2025-01-01 14:51:00 +0800',value:'睡眠时长',qty:1.35}]});
   const workouts = name === 'get_workouts' ? [{name:'Walk',start:'2025-01-01 01:00:00 +0800',duration:600,stepCount:[{qty:2,date:'a'},{qty:3,date:'b'}],heartRateData:[{qty:80}]}] : [];
   const ecg = name === 'get_ecg' ? [{start:'2025-01-01 01:00:00 +0800',averageHeartRate:80,voltageMeasurements:[1,2,3]}] : [];
   result = {data: {metrics,workouts,ecg}};
@@ -101,7 +102,12 @@ for await (const line of readline.createInterface({input: process.stdin})) {
   assert.equal(month.data.ecg.ecg[0].voltageMeasurements, undefined);
   assert.equal(month.data.ecg.ecg[0].averageHeartRate, 80);
   assert.ok(!fs.existsSync(path.join(root, '.archives')));
-  assert.equal(JSON.parse(fs.readFileSync(dailyFile)).summary.old, undefined);
+  const daily = JSON.parse(fs.readFileSync(dailyFile));
+  assert.equal(daily.summary.old, undefined);
+  const nap = daily.timeline.find((item) => item.type === 'sleep');
+  assert.equal(nap.stage, 'asleep');
+  assert.equal(nap.durationMinutes, 81);
+  assert.equal(nap.end, '2025-01-01 14:51:00 +0800');
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, '2025/02.json'))).data.healthMetrics.metrics, []);
 });
 

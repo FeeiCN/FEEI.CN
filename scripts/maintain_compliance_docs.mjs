@@ -6,12 +6,12 @@ import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
 export const ROOT = 'docs/01-网络安全/01-网络空间安全/03-安全体系/01-安全合法合规';
-const BASE = `${ROOT}/01-网络与基础设施安全`;
-const QUAL = `${ROOT}/09-认证测评与资质`;
+const BASE = `${ROOT}/02-网络系统与基础设施`;
+const QUAL = `${ROOT}/11-认证测评与资质`;
 const aliases = new Map([
   ['网络安全等级保护制度.md', `${BASE}/01-等级保护/index.md`],
   ['关键信息基础设施安全保护体系.md', `${BASE}/02-关键信息基础设施/index.md`],
-  ['密码应用与密评体系.md', `${BASE}/03-密码与密评/index.md`],
+  ['密码应用与密评体系.md', `${ROOT}/05-密码与身份认证/01-密码应用与密评/index.md`],
 ]);
 const markdown = (file) => /\.mdx?$/i.test(file);
 const partial = (file) => path.posix.basename(file).startsWith('_');
@@ -180,8 +180,13 @@ export function planChanges(input) {
     if (partial(file)) continue;
     const hub = isComplianceHub(file);
     let next = setField(source, 'content_type', null);
-    if (hub && !field(next, 'icon')) next = setField(next, 'icon', 'shield-check');
-    if (!hub) next = setField(next, 'icon', null);
+    if (!field(next, 'icon')) {
+      const icon = hub ? 'shield-check'
+        : file.startsWith(`${QUAL}/`) ? 'rosette-discount-check-icon'
+          : /\/(?:GB|GM|GA)-T-/.test(file) ? 'unordered-list-icon'
+            : 'file-description-icon';
+      next = setField(next, 'icon', icon);
+    }
     // Chat citation tokens are not portable references; retain official links.
     next = next.replace(/\uE200cite\uE202[^\uE201]*\uE201/g, '');
     files.set(file, next);
@@ -228,8 +233,7 @@ export function validate(files) {
         if (inScope(file)) {
           if (!slug.startsWith('/')) errors.push(`${file}: missing stable absolute slug`);
           if (!field(source, 'description')) errors.push(`${file}: missing description`);
-          if (isComplianceHub(file) && !field(source, 'icon')) errors.push(`${file}: hub icon missing`);
-          if (!isComplianceHub(file) && field(source, 'icon')) errors.push(`${file}: detail page has icon`);
+          if (!field(source, 'icon')) errors.push(`${file}: page icon missing`);
         }
       } catch (error) { if (inScope(file)) errors.push(`${file}: ${error.message}`); }
     }

@@ -17,6 +17,35 @@ function assertInsideDocs(includePath: string): void {
   }
 }
 
+function rebaseStandardLinks(markdown: string, includePath: string, sourcePath: string): string {
+  let fence: string | undefined;
+  const rebase = (url: string): string => {
+    if (/^(?:[a-z][\w+.-]*:|\/|#)/i.test(url)) return url;
+    const split = url.search(/[?#]/);
+    const pathname = split === -1 ? url : url.slice(0, split);
+    const suffix = split === -1 ? '' : url.slice(split);
+    const target = path.resolve(path.dirname(includePath), decodeURIComponent(pathname));
+    const relative = path.relative(path.dirname(sourcePath), target).split(path.sep).join('/');
+    return `${relative.startsWith('.') ? '' : './'}${relative}${suffix}`;
+  };
+  return markdown.split(/(?<=\n)/).map((line) => {
+    const mark = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (mark) {
+      if (!fence) fence = mark[1];
+      else if (mark[1][0] === fence[0] && mark[1].length >= fence.length) fence = undefined;
+      return line;
+    }
+    if (fence) return line;
+    return line.split(/(`+[^`]*`+)/g).map((part, index) => index % 2 ? part : part
+      .replace(/(\]\()([^\s)]+)(?=[\s)])/g, (_match, prefix: string, url: string) => prefix + rebase(url))
+      .replace(/(^ {0,3}\[[^\]]+\]:[ \t]*)(\S+)/g, (_match, prefix: string, url: string) => prefix + rebase(url))
+      .replace(/(?<![\w/])(?:https?:\/\/)?www\.[a-z\d.-]+(?=[\u3400-\u9fff])/gi,
+        (url) => `[${url}](${url.startsWith('http') ? url : `http://${url}`})`)
+      .replace(/(?<!\\)\$(?=PATH\b|\s+Root[lL])/g, '\\$')
+    ).join('');
+  }).join('');
+}
+
 export function expandMarkdownIncludes(markdown: string, sourcePath?: string): string {
   if (!sourcePath || !markdown.includes('@include')) return markdown;
 
@@ -30,6 +59,10 @@ export function expandMarkdownIncludes(markdown: string, sourcePath?: string): s
 
     const included = stripFrontMatter(fs.readFileSync(includePath, 'utf8')).trim();
     const filename = path.basename(reference);
+
+    if (/^_(?:GB|GM|GA)-T-[\d.]+-\d{4}(?:-|\.)/.test(filename)) {
+      return rebaseStandardLinks(included.replace(/^# [^\n]+\n*/, ''), includePath, sourcePath);
+    }
 
     // Reference material is useful for verification but should not dominate the
     // default reading path. Keep it in the page for anchors/search while making

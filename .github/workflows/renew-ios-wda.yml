@@ -1,0 +1,79 @@
+name: Renew iOS WebDriverAgent
+
+# Personal Team 的真机 provisioning profile 有效期为七天。
+# 每六小时检查一次；到期后立即重签并验证新有效期。
+on:
+  schedule:
+    - cron: '15 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 强制重新签名 WDA
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ios-device-assets
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  renew:
+    name: Check and renew WDA
+    runs-on: [self-hosted, macnimi]
+    timeout-minutes: 20
+    env:
+      TZ: Asia/Shanghai
+      APPIUM_HOST: ${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}
+      APPIUM_PORT: ${{ vars.IOS_APPIUM_PORT || '4723' }}
+      APPIUM_URL: http://${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}:${{ vars.IOS_APPIUM_PORT || '4723' }}
+      IOS_DEVICE_UDID: ${{ vars.IOS_DEVICE_UDID || '00008101-0014494A1A83001E' }}
+      XCODE_ORG_ID: ${{ vars.IOS_XCODE_ORG_ID || '792GZF4XQ4' }}
+      UPDATED_WDA_BUNDLE_ID: ${{ vars.IOS_UPDATED_WDA_BUNDLE_ID || 'com.feei.WebDriverAgentRunner' }}
+      NO_PROXY: 127.0.0.1,localhost,${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}
+      HTTP_PROXY: ''
+      HTTPS_PROXY: ''
+      ALL_PROXY: ''
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Ensure Appium server
+        run: |
+          command -v python3 >/dev/null
+          command -v curl >/dev/null
+          command -v appium >/dev/null
+          python3 -c 'import appium'
+          if curl -fsS "${APPIUM_URL%/}/status" >/dev/null 2>&1; then
+            exit 0
+          fi
+          mkdir -p "$HOME/Library/Logs"
+          nohup appium --address "$APPIUM_HOST" --port "$APPIUM_PORT" > "$HOME/Library/Logs/FEEI.CN-ios-appium.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -fsS "${APPIUM_URL%/}/status" >/dev/null 2>&1 && exit 0
+            sleep 2
+          done
+          echo "::error::Appium 启动失败"
+          exit 1
+
+      - name: Check and renew WebDriverAgent
+        env:
+          FORCE_RENEW: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
+        run: |
+          arguments=(
+            --appium-url "$APPIUM_URL"
+            --udid "$IOS_DEVICE_UDID"
+            --xcode-org-id "$XCODE_ORG_ID"
+            --updated-wda-bundle-id "$UPDATED_WDA_BUNDLE_ID"
+            --renew-before-hours 0
+            --minimum-renewed-hours 144
+          )
+          if [ "$FORCE_RENEW" = "true" ]; then
+            arguments+=(--force)
+          fi
+          python3 scripts/renew_ios_wda.py "${arguments[@]}"

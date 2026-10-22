@@ -28,7 +28,6 @@ jobs:
       IOS_DEVICE_UDID: ${{ vars.IOS_DEVICE_UDID || '00008101-0014494A1A83001E' }}
       XCODE_ORG_ID: ${{ vars.IOS_XCODE_ORG_ID || '792GZF4XQ4' }}
       UPDATED_WDA_BUNDLE_ID: ${{ vars.IOS_UPDATED_WDA_BUNDLE_ID || 'com.feei.WebDriverAgentRunner' }}
-      CAITONG_TRADE_PASSWORD: ${{ secrets.CAITONG_TRADE_PASSWORD }}
       PYTHONUNBUFFERED: '1'
       NO_PROXY: 127.0.0.1,localhost,${{ vars.IOS_APPIUM_HOST || '127.0.0.1' }}
       HTTP_PROXY: ''
@@ -36,16 +35,13 @@ jobs:
       ALL_PROXY: ''
 
     steps:
-      - name: Check secrets
+      - name: Check secret
         env:
           WORKFLOW_TRIGGER_PAT: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
         run: |
           if [ -z "${WORKFLOW_TRIGGER_PAT:-}" ]; then
             echo "::error::WORKFLOW_TRIGGER_PAT 未配置"
             exit 1
-          fi
-          if [ -z "${CAITONG_TRADE_PASSWORD:-}" ]; then
-            echo "::warning::CAITONG_TRADE_PASSWORD 未配置，本次财通任务会失败，但不影响支付宝和 Health Auto Export"
           fi
 
       - name: Checkout
@@ -108,7 +104,7 @@ jobs:
           echo "::error::Appium 启动失败，查看 $HOME/Library/Logs/FEEI.CN-ios-appium.log"
           exit 1
 
-      - name: Capture Alipay, Caitong and Health Auto Export
+      - name: Start Health Auto Export
         run: |
           python3 <<'PY'
           import fcntl
@@ -126,31 +122,8 @@ jobs:
               "--updated-wda-bundle-id", os.environ["UPDATED_WDA_BUNDLE_ID"],
               "--new-command-timeout", "600",
           ]
+          # 支付宝和财通证券采集暂时停用，避免应用界面变化导致此工作流失败。
           commands = [
-              (
-                  "alipay",
-                  [
-                      "python3",
-                      "scripts/ios_appium_capture.py",
-                      "--alipay-assets",
-                      "--no-sync-caitong",
-                      "--no-start-health-server",
-                      "--max-screens",
-                      "20",
-                      *common_args,
-                  ],
-              ),
-              (
-                  "caitong",
-                  [
-                      "python3",
-                      "scripts/ios_appium_capture.py",
-                      "--caitong-assets",
-                      "--caitong-max-screens",
-                      "12",
-                      *common_args,
-                  ],
-              ),
               (
                   "health-auto-export",
                   [
@@ -252,7 +225,7 @@ jobs:
           )
 
           if not any(item["status"] == "success" for item in results):
-              print("::error::iOS 资产自动化三项任务全部失败")
+              print("::error::Health Auto Export 启动失败")
               sys.exit(1)
           failed = [item["task"] for item in results if item["status"] != "success"]
           if failed:

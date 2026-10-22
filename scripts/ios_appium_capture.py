@@ -441,6 +441,8 @@ def create_driver(args: argparse.Namespace, udid: str):
         options.set_capability("xcodeSigningId", args.xcode_signing_id)
     if args.updated_wda_bundle_id:
         options.set_capability("updatedWDABundleId", args.updated_wda_bundle_id)
+    if getattr(args, "use_new_wda", False):
+        options.set_capability("useNewWDA", True)
     if args.wda_local_port:
         options.set_capability("wdaLocalPort", args.wda_local_port)
     if args.allow_provisioning_updates or args.allow_provisioning_device_registration:
@@ -2492,6 +2494,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--xcode-org-id", default=os.environ.get("XCODE_ORG_ID"), help="Apple Developer Team ID,用于签名 WebDriverAgent；默认读取 XCODE_ORG_ID")
     parser.add_argument("--xcode-signing-id", default="Apple Development", help="WDA 签名证书名,默认 Apple Development")
     parser.add_argument("--updated-wda-bundle-id", default=os.environ.get("UPDATED_WDA_BUNDLE_ID"), help="自定义 WDA bundle id,例如 com.feei.WebDriverAgentRunner；默认读取 UPDATED_WDA_BUNDLE_ID")
+    parser.add_argument("--use-new-wda", action="store_true", help="卸载并重新构建/安装 WebDriverAgent，用于更新签名")
     parser.add_argument("--wda-local-port", type=int, help="WDA 本地端口,多设备并发时使用")
     parser.add_argument("--allow-provisioning-updates", action="store_true", help="允许 xcodebuild 自动创建/更新 WDA provisioning profile")
     parser.add_argument("--allow-provisioning-device-registration", action="store_true", help="允许 xcodebuild 自动注册设备到开发团队")

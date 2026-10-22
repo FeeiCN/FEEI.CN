@@ -74,7 +74,7 @@ if (changedFiles.length === 0) {
 
 run('git', ['add', ...changedFiles]);
 run('git', ['commit', '-m', commitMessage]);
-runWithRetry('git', ['push', remote, branch]);
+pushHealthData();
 
 function run(command, commandArgs, options = {}) {
   const result = spawnSync(command, commandArgs, {
@@ -143,6 +143,68 @@ function isTransientGitError(output) {
     'remote end hung up unexpectedly',
     'tls connection was non-properly terminated',
   ].some((marker) => normalized.includes(marker));
+}
+
+function pushHealthData() {
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const result = spawnSync('git', ['push', remote, branch], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: commandEnv,
+      stdio: 'pipe',
+    });
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    if (result.status === 0) {
+      process.stdout.write(result.stdout ?? '');
+      process.stderr.write(result.stderr ?? '');
+      return;
+    }
+
+    const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+    if (!isPushRejected(output) || attempt === maxAttempts) {
+      process.stdout.write(result.stdout ?? '');
+      process.stderr.write(result.stderr ?? '');
+      throw new Error(`git push ${remote} ${branch} failed with exit code ${result.status}`);
+    }
+
+    process.stderr.write(
+      `git push was rejected by a newer remote commit; retrying (${attempt + 1}/${maxAttempts})...\n`,
+    );
+    runWithRetry('git', ['fetch', remote]);
+    run('git', ['reset', '--soft', `${remote}/${branch}`]);
+
+    const commitResult = spawnSync('git', ['commit', '-m', commitMessage], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: commandEnv,
+      stdio: 'pipe',
+    });
+
+    if (commitResult.error) {
+      throw commitResult.error;
+    }
+
+    if (commitResult.status !== 0) {
+      const commitOutput = `${commitResult.stdout ?? ''}\n${commitResult.stderr ?? ''}`;
+      if (commitOutput.toLowerCase().includes('nothing to commit')) {
+        return;
+      }
+      process.stdout.write(commitResult.stdout ?? '');
+      process.stderr.write(commitResult.stderr ?? '');
+      throw new Error(`git commit -m ${commitMessage} failed with exit code ${commitResult.status}`);
+    }
+  }
+}
+
+function isPushRejected(output) {
+  const normalized = output.toLowerCase();
+  return normalized.includes('fetch first') || normalized.includes('non-fast-forward');
 }
 
 function sleep(milliseconds) {

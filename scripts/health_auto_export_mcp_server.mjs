@@ -68,7 +68,20 @@ const tools = {
   get_symptoms: simpleRangeTool('symptoms', 'Get symptoms data for a specified date range from Apple Health'),
 };
 
-await main();
+if (process.argv.includes('--check')) {
+  await checkServer();
+} else {
+  await main();
+}
+
+async function checkServer() {
+  resolvedHaeHost = await resolveHealthAutoExportHost(haeHost);
+  const isHealthy = await healthCheck(resolvedHaeHost, haePort, Math.min(defaultTimeoutMs, 5000));
+  if (!isHealthy) {
+    throw new Error(`Health Auto Export did not respond at ${resolvedHaeHost}:${haePort}`);
+  }
+  process.stdout.write(`Health Auto Export is responding at ${resolvedHaeHost}:${haePort}\n`);
+}
 
 async function main() {
   resolvedHaeHost = await resolveHealthAutoExportHost(haeHost);
@@ -247,8 +260,29 @@ function isPrivateLanIPv4(address) {
   return parts.length === 4 && parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31;
 }
 
-function healthCheck(host, port, timeoutMs) {
-  return tcpHealthCheckWithPython(host, port, timeoutMs);
+async function healthCheck(host, port, timeoutMs) {
+  const request = {
+    jsonrpc: '2.0',
+    id: 0,
+    method: 'callTool',
+    params: {
+      name: 'health_metrics',
+      arguments: {
+        start: '2026-01-01 00:00:00 +0800',
+        end: '2026-01-01 00:00:00 +0800',
+        metrics: 'step_count',
+        interval: 'days',
+        aggregate: true,
+      },
+    },
+  };
+  const response = await sendTcpPayloadWithPython(host, port, JSON.stringify(request), timeoutMs);
+  try {
+    const payload = JSON.parse(response);
+    return payload.id === request.id && payload.result !== undefined;
+  } catch {
+    return false;
+  }
 }
 
 function sendTcpPayloadWithPython(host, port, payload, timeoutMs) {

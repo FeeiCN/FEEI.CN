@@ -2064,7 +2064,11 @@ def start_health_auto_export_server(driver: Any, args: argparse.Namespace) -> st
     time.sleep(args.step_wait)
 
     if source_contains_any(driver, ["停止服务器"]):
-        return "Health Auto Export 服务器已在运行"
+        if not getattr(args, "restart_health_server", False):
+            return "Health Auto Export 服务器已在运行"
+        if not tap_any_text(driver, ["停止服务器", "Stop Server"], timeout=args.nav_timeout, contains=True):
+            raise RuntimeError("未找到 Health Auto Export「停止服务器」按钮")
+        time.sleep(args.step_wait)
 
     if not source_contains_any(driver, ["服务器"]):
         menu = tap_any_text(driver, ["sidebar.left", "菜单", "Sidebar", "Menu"], timeout=3, contains=True)
@@ -2461,6 +2465,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--alipay-assets", action="store_true", help="进入支付宝理财总资产,滚动截图全部持有明细")
     parser.add_argument("--caitong-assets", action="store_true", help="进入财通证券交易页,采集资产和持仓信息")
     parser.add_argument("--health-server-only", action="store_true", help="仅启动 Health Auto Export TCP 服务器")
+    parser.add_argument("--restart-health-server", action="store_true", help="先停止再启动 Health Auto Export TCP 服务器")
     parser.add_argument("--extract-existing-summary", type=Path, help="从已有 summary 引用的 XML 重新提取资产/持仓数据")
     parser.add_argument(
         "--invest-output",

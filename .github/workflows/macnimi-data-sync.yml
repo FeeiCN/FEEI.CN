@@ -112,33 +112,10 @@ jobs:
         run: |
           python3 scripts/check_ios_automation_device.py --udid "$IOS_DEVICE_UDID"
 
-          set +e
-          python3 - <<'PY'
-          import os
-          import socket
-          import sys
-
-          host = os.environ.get("HAE_HOST")
-          port = int(os.environ.get("HAE_PORT") or "9000")
-          if not host:
-              print("::error::health 缺少 GitHub Variable: HAE_HOST")
-              sys.exit(1)
-          try:
-              with socket.create_connection((host, port), timeout=5):
-                  print(f"Health Auto Export already available at {host}:{port}")
-                  sys.exit(0)
-          except OSError as error:
-              print(f"Health Auto Export unavailable ({error}); starting it via Appium")
-              sys.exit(10)
-          PY
-          status=$?
-          set -e
-          if [ "$status" -eq 0 ]; then
+          if /opt/homebrew/bin/node scripts/health_auto_export_mcp_server.mjs --check; then
             exit 0
           fi
-          if [ "$status" -ne 10 ]; then
-            exit "$status"
-          fi
+          echo "Health Auto Export 无响应，正在通过 Appium 重启服务器"
 
           if ! curl -fsS "${APPIUM_URL%/}/status" >/dev/null 2>&1; then
             mkdir -p "$HOME/Library/Logs"
@@ -159,7 +136,10 @@ jobs:
             --xcode-org-id "$XCODE_ORG_ID" \
             --updated-wda-bundle-id "$UPDATED_WDA_BUNDLE_ID" \
             --allow-provisioning-updates \
+            --restart-health-server \
             --new-command-timeout 600
+
+          /opt/homebrew/bin/node scripts/health_auto_export_mcp_server.mjs --check
 
       - name: Run selected tasks
         env:

@@ -196,6 +196,10 @@ def source_contains_any(driver: Any, candidates: list[str]) -> bool:
     return any(text in source for text in candidates)
 
 
+def has_any_text(driver: Any, candidates: list[str], *, contains: bool = False) -> bool:
+    return any(find_by_text(driver, text, contains=contains) for text in candidates)
+
+
 def source_has_text_near_top(driver: Any, text: str, max_y: int = 140) -> bool:
     try:
         root = ElementTree.fromstring(driver.page_source.encode("utf-8"))
@@ -2063,14 +2067,14 @@ def start_health_auto_export_server(driver: Any, args: argparse.Namespace) -> st
     driver.activate_app(HEALTH_AUTO_EXPORT_BUNDLE_ID)
     time.sleep(args.step_wait)
 
-    if source_contains_any(driver, ["停止服务器"]):
+    if has_any_text(driver, ["停止服务器", "Stop Server"], contains=True):
         if not getattr(args, "restart_health_server", False):
             return "Health Auto Export 服务器已在运行"
         if not tap_any_text(driver, ["停止服务器", "Stop Server"], timeout=args.nav_timeout, contains=True):
             raise RuntimeError("未找到 Health Auto Export「停止服务器」按钮")
         time.sleep(args.step_wait)
 
-    if not source_contains_any(driver, ["服务器"]):
+    if not has_any_text(driver, ["服务器", "Server"], contains=True):
         menu = tap_any_text(driver, ["sidebar.left", "菜单", "Sidebar", "Menu"], timeout=3, contains=True)
         if not menu:
             tap_relative(driver, 0.1, 0.16)
@@ -2080,7 +2084,7 @@ def start_health_auto_export_server(driver: Any, args: argparse.Namespace) -> st
             raise RuntimeError("未找到 Health Auto Export「服务器」入口")
         time.sleep(args.step_wait)
 
-    if source_contains_any(driver, ["停止服务器"]):
+    if has_any_text(driver, ["停止服务器", "Stop Server"], contains=True):
         return "Health Auto Export 服务器已在运行"
 
     tapped = tap_any_text(driver, ["启动服务器", "Start Server", "启动", "Start"], timeout=args.nav_timeout, contains=True)
@@ -2088,7 +2092,7 @@ def start_health_auto_export_server(driver: Any, args: argparse.Namespace) -> st
         raise RuntimeError("未找到 Health Auto Export「启动服务器」按钮")
     time.sleep(args.step_wait)
 
-    if not source_contains_any(driver, ["停止服务器", "Stop Server", "9000"]):
+    if not has_any_text(driver, ["停止服务器", "Stop Server", "9000"], contains=True):
         raise RuntimeError("Health Auto Export 服务器启动后未检测到运行状态")
     return "Health Auto Export 服务器已启动"
 

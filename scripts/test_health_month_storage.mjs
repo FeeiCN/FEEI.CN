@@ -111,7 +111,7 @@ for await (const line of readline.createInterface({input: process.stdin})) {
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, '2025/02.json'))).data.healthMetrics.metrics, []);
 });
 
-test('failed daily refresh preserves the existing valid file', (t) => {
+test('incomplete daily refresh preserves the existing valid file and continues', (t) => {
   const root = fixture(t);
   const server = path.join(root, 'mock-error.mjs');
   fs.writeFileSync(server, `import readline from 'node:readline';
@@ -125,9 +125,11 @@ for await (const line of readline.createInterface({input: process.stdin})) {
   const file = path.join(root, '2025/01/01.json');
   const original = JSON.stringify({version: 2, summary: {rawRecords: {healthMetrics: 1}}, timeline: []});
   fs.writeFileSync(file, original);
+  fs.writeFileSync(path.join(root, '2025/01.json'), JSON.stringify(payload([])));
   const result = run('export_health_year_from_mcp.mjs', ['--date', '2025-01-01', '--target', root, '--mcp-server', server]);
-  assert.notEqual(result.status, 0);
+  assert.equal(result.status, 0, result.stderr);
   assert.match(result.stderr, /existing daily file preserved/);
+  assert.match(result.stderr, /Preserved 1 existing daily health file/);
   assert.equal(fs.readFileSync(file, 'utf8'), original);
 });
 

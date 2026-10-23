@@ -82,6 +82,9 @@ jobs:
               sys.exit(1)
           PY
 
+      - name: Check iPhone automation readiness
+        run: python3 scripts/check_ios_automation_device.py --udid "$IOS_DEVICE_UDID"
+
       - name: Ensure Appium server
         run: |
           if curl -fsS "${APPIUM_URL%/}/status" >/dev/null 2>&1; then

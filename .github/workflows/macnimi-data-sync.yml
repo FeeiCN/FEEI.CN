@@ -110,6 +110,8 @@ jobs:
           HAE_HOST: ${{ vars.HAE_HOST }}
           HAE_PORT: ${{ vars.HAE_PORT }}
         run: |
+          python3 scripts/check_ios_automation_device.py --udid "$IOS_DEVICE_UDID"
+
           set +e
           python3 - <<'PY'
           import os

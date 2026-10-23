@@ -63,6 +63,9 @@ jobs:
             git checkout -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}"
           fi
 
+      - name: Check iPhone automation readiness
+        run: python3 scripts/check_ios_automation_device.py --udid "$IOS_DEVICE_UDID"
+
       - name: Ensure Appium server
         run: |
           command -v python3 >/dev/null

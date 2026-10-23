@@ -285,6 +285,9 @@ async function main() {
     });
 
     console.log(`Exported ${dailyResult.written.length} daily compact health files`);
+    if (dailyResult.preserved.length > 0) {
+      console.warn(`Preserved ${dailyResult.preserved.length} existing daily health file(s) after incomplete refresh`);
+    }
   } finally {
     await client.close();
   }
@@ -546,6 +549,7 @@ async function collectMappingRecords(client, mapping, options) {
 
 async function exportDailyCompactFiles(client, options) {
   const written = [];
+  const preserved = [];
   for (const day of enumerateDates(options.startDate, options.endDate)) {
     const [year, month, date] = day.split('-');
     const dailyDir = path.join(options.targetRoot, year, month);
@@ -600,7 +604,9 @@ async function exportDailyCompactFiles(client, options) {
 
     if (Object.keys(errors).length > 0) {
       if (fs.existsSync(dailyFile) && !isEmptyDailyHealthFile(dailyFile)) {
-        throw new Error(`Incomplete health refresh for ${day}; existing daily file preserved`);
+        process.stderr.write(`Incomplete health refresh for ${day}; existing daily file preserved\n`);
+        preserved.push(dailyFile);
+        continue;
       }
       dailyData.errors = errors;
     }
@@ -610,7 +616,7 @@ async function exportDailyCompactFiles(client, options) {
     written.push(dailyFile);
   }
 
-  return {written};
+  return {written, preserved};
 }
 
 function isEmptyDailyHealthFile(file) {

@@ -25,7 +25,7 @@ APPLE_HEALTH_BUNDLE_ID = "com.apple.Health"
 SLEEP_SCORE_TILE_ID = "UIA.Health.Sleep.SleepScoreRoom.ScoreTile"
 SLEEP_SCORE_SNIPPET_ID = "UIA.Health.Snippet.HKDataTypeAppleSleepScore"
 SLEEP_CATEGORY_ID = "UIA.Health.Search.HKDisplayCategoryIdentifierSleep"
-SEARCH_TAB_ID = "UIA.Health.Tab.Search"
+HEALTH_DISCOVERY_TAB_IDS = ("UIA.Health.Tab.Search", "UIA.Health.Tab.Browse")
 DEFAULT_OUTPUT_ROOT = Path("static/data/sleep-score")
 DATE_LABEL_RE = re.compile(r"^(?P<month>\d{1,2})月(?P<day>\d{1,2})日(?:\s+.*)?$")
 SCORE_RE = re.compile(r"睡眠评分\s*(?P<score>\d+)")
@@ -219,6 +219,10 @@ def tap_accessibility_id(driver: Any, identifier: str) -> bool:
     return False
 
 
+def tap_first_accessibility_id(driver: Any, identifiers: tuple[str, ...]) -> bool:
+    return any(tap_accessibility_id(driver, identifier) for identifier in identifiers)
+
+
 def wait_for_score_detail(driver: Any, timeout: float) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -236,10 +240,10 @@ def open_sleep_score_detail(driver: Any, args: argparse.Namespace) -> None:
     time.sleep(args.wait)
     # Health restores the previously viewed date. Entering Search first resets
     # the path to the newest sleep-score card, which is required for no-arg runs.
-    if tap_accessibility_id(driver, SEARCH_TAB_ID):
+    if tap_first_accessibility_id(driver, HEALTH_DISCOVERY_TAB_IDS):
         time.sleep(args.step_wait)
     else:
-        ios.tap_relative(driver, 0.86, 0.93)
+        ios.tap_relative(driver, 0.70, 0.93)
         time.sleep(args.step_wait)
 
     if not tap_accessibility_id(driver, SLEEP_CATEGORY_ID):

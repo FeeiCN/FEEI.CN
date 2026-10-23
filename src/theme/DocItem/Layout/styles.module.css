@@ -1,9 +1,7 @@
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 940px);
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
-  gap: 1.5rem;
-  justify-content: center;
 }
 
 .content {
@@ -37,20 +35,36 @@
   }
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 641px) {
   .content {
-    padding-inline: 1.5rem;
+    width: 100%;
+    max-width: calc(800px + 2rem);
+    margin-inline: auto;
+  }
+}
+
+@media (min-width: 997px) {
+  .content {
+    max-width: 864px;
+    padding-inline: 32px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .layout {
+    --doc-toc-width: var(--docs-rail-width);
+
+    align-items: stretch;
   }
 
-  .layout {
-    grid-template-columns: minmax(0, 940px) minmax(240px, 1fr);
-    align-items: stretch;
-    justify-content: stretch;
+  .withTOC {
+    grid-template-columns: minmax(0, 1fr) var(--doc-toc-width);
   }
 
   .desktopTOC {
     display: flex;
     flex-direction: column;
+    width: 100%;
     position: sticky;
     top: 0;
     align-self: flex-start;
@@ -62,11 +76,18 @@
   }
 
   .tocContent {
-    position: sticky;
-    top: 0;
-    max-height: 100vh;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    max-width: 360px;
     overflow-y: auto;
     padding: calc(1rem + var(--ifm-navbar-height)) 1rem 1rem;
+  }
+
+  .tocContent :global(.theme-doc-toc-desktop) {
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
 
   .tocCollapseButton {
@@ -76,6 +97,7 @@
     justify-content: center;
     width: 100%;
     min-height: 2.25rem;
+    flex-shrink: 0;
     margin-top: auto;
     border: 0;
     border-top: 1px solid var(--ifm-toc-border-color);

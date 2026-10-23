@@ -32,7 +32,9 @@ function LinkLabel({
       className={styles.linkLabelTrigger}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}>
-      <SidebarIcon icon={icon} iconRef={iconRef} disableHover={disableHover} />
+      <span className="sidebarIconSlot" aria-hidden="true">
+        <SidebarIcon icon={icon} iconRef={iconRef} disableHover={disableHover} />
+      </span>
       <span title={label} className={styles.linkLabel}>
         {label}
       </span>

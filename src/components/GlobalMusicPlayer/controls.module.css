@@ -169,15 +169,14 @@
   .player.scrolling:not(.expanded) { opacity: 0; transform: translateY(8px); pointer-events: none; }
 }
 @media (max-width: 640px) {
-  :global(body.music-player-active .theme-back-to-top-button) { right: max(12px, env(safe-area-inset-right)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 56px); }
-  :global(body.music-player-active) { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
-  :global(body.music-player-active .footer) { margin-bottom: calc(56px + env(safe-area-inset-bottom)); }
+  :global(body.music-player-active .theme-back-to-top-button) { right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); }
   :global(body.music-player-expanded) { padding-bottom: env(safe-area-inset-bottom); }
   :global(body.music-player-expanded .footer) { margin-bottom: env(safe-area-inset-bottom); }
   .scrim { display: block; position: fixed; inset: 0; z-index: calc(var(--ifm-z-index-fixed) + 5); background: rgba(0,0,0,0.38); backdrop-filter: blur(3px); animation: fadeIn 180ms ease both; }
   .player { left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); bottom: max(8px, env(safe-area-inset-bottom)); width: auto; }
   .player.expanded { left: 0; right: 0; bottom: 0; }
-  .player:not(.expanded) { left: auto; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); }
+  .player:not(.expanded) { top: calc((var(--ifm-navbar-height) - 44px) / 2); left: auto; right: calc(max(12px, env(safe-area-inset-right)) + 52px); bottom: auto; }
+  :global(body:has(.navbar-sidebar--show)) .player:not(.expanded) { visibility: hidden; }
   .panel { height: var(--music-mobile-panel-height, auto); max-height: calc(100dvh - 24px - env(safe-area-inset-top)); border-radius: 18px 18px 0 0; transform-origin: bottom center; }
   .panel > .view { flex: 0 1 auto; }
   .header::before { content: ''; position: absolute; top: 6px; left: 50%; width: 34px; height: 4px; border-radius: 2px; background: var(--music-line); transform: translateX(-50%); }

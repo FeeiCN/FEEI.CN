@@ -61,6 +61,10 @@ function setup({container, links, id, axis}: IndicatorConfig) {
   function moveTo(el: HTMLElement) {
     const cRect = containerEl!.getBoundingClientRect();
     const lRect = el.getBoundingClientRect();
+    if (!lRect.width || !lRect.height) {
+      indicator.style.opacity = '0';
+      return;
+    }
     const borderLeft = parseFloat(getComputedStyle(containerEl!).borderLeftWidth) || 0;
     const borderTop = parseFloat(getComputedStyle(containerEl!).borderTopWidth) || 0;
 
@@ -123,6 +127,9 @@ function setup({container, links, id, axis}: IndicatorConfig) {
   containerEl.addEventListener('focusin', handlePointerOver, {signal});
   containerEl.addEventListener('click', () => setTimeout(moveToActiveLink, 0), {signal});
   containerEl.addEventListener('mouseleave', moveToActiveLink, {signal});
+  if (axis === 'x') {
+    window.addEventListener('resize', moveToActiveLink, {signal});
+  }
 
   moveToActiveLink();
 }

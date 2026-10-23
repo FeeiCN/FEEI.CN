@@ -390,13 +390,13 @@ export default function ImageLightbox() {
         image.classList.add('markdownImage--error');
       }
 
+      image.addEventListener('load', markLoaded);
+      image.addEventListener('error', markError);
+
       if (image.complete && image.naturalWidth > 0) {
         markLoaded();
       } else if (image.complete) {
         markError();
-      } else {
-        image.addEventListener('load', markLoaded, {once: true});
-        image.addEventListener('error', markError, {once: true});
       }
     }
 

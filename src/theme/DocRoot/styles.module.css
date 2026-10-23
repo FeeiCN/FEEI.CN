@@ -1,0 +1,34 @@
+.frame {
+  --docs-viewport-height: max(0px, calc(100dvh - var(--ifm-navbar-height) - var(--docs-visible-footer-height, 0px)));
+  display: flex;
+  flex: 1 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.frame > div {
+  width: 100%;
+  min-width: 0;
+}
+
+.withSidebar {
+  max-width: var(--docs-frame-width);
+  margin-inline: auto;
+}
+
+@media (min-width: 997px) {
+  .withSidebar :global(.theme-doc-sidebar-container > div) {
+    top: var(--ifm-navbar-height);
+    height: var(--docs-viewport-height);
+    max-height: var(--docs-viewport-height);
+  }
+
+  .withSidebar :global(.theme-doc-sidebar-container > div > div) {
+    padding-top: 0;
+  }
+
+  .withSidebar :global(.theme-doc-sidebar-container nav) {
+    min-height: 0;
+    overscroll-behavior-y: contain;
+  }
+}

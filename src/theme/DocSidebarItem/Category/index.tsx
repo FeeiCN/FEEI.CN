@@ -144,7 +144,9 @@ function CategoryLinkLabel({
       className={styles.categoryLinkLabelTrigger}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}>
-      <SidebarIcon icon={icon} iconRef={iconRef} disableHover={disableHover} />
+      <span className="sidebarIconSlot" aria-hidden="true">
+        <SidebarIcon icon={icon} iconRef={iconRef} disableHover={disableHover} />
+      </span>
       <span title={label} className={styles.categoryLinkLabel}>
         {label}
       </span>
@@ -206,7 +208,13 @@ function DocSidebarItemCategoryCollapsible({
   const hrefWithSSRFallback = useCategoryHrefWithSSRFallback(item);
 
   const isActive = isActiveSidebarItem(item, activePath);
-  const isCurrentPage = isSamePath(href, activePath);
+  const isCategoryPage = isSamePath(href, activePath);
+  const isCurrentPage = isCategoryPage && !items.some((child) => isActiveSidebarItem(child, activePath));
+  const labeledItems = useMemo(() => items.map((child) => (
+    child.type === 'link' && child.label === '总览'
+      ? {...child, label: `${label}概览`}
+      : child
+  )), [items, label]);
   const icon =
     level <= 2 && typeof customProps?.icon === 'string' ? customProps.icon : undefined;
   const iconAnimation = useControlledIconAnimation(Boolean(icon));
@@ -247,7 +255,7 @@ function DocSidebarItemCategoryCollapsible({
     onItemClick?.(item);
     if (collapsible) {
       if (href) {
-        if (isCurrentPage) {
+        if (isCategoryPage) {
           e.preventDefault();
           updateCollapsed();
         } else {
@@ -311,7 +319,7 @@ function DocSidebarItemCategoryCollapsible({
 
       <Collapsible lazy as="ul" className="menu__list" collapsed={collapsed}>
         <DocSidebarItems
-          items={items}
+          items={labeledItems}
           tabIndex={collapsed ? -1 : 0}
           onItemClick={onItemClick}
           activePath={activePath}

@@ -263,7 +263,7 @@ function isPrivateLanIPv4(address) {
 async function healthCheck(host, port, timeoutMs) {
   const request = {
     jsonrpc: '2.0',
-    id: 0,
+    id: 1,
     method: 'callTool',
     params: {
       name: 'health_metrics',

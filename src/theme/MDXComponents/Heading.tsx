@@ -5,6 +5,7 @@ import Heading from '@theme/Heading';
 import type {Props} from '@theme/MDXComponents/Heading';
 import DocTitleWithIcon from '@site/src/components/DocTitleWithIcon';
 import DocArticleHeader from '@site/src/components/DocArticleHeader';
+import {getDocIcon} from '@site/src/utils/docIcons';
 
 function textFromChildren(children: ReactNode): string {
   if (typeof children === 'string' || typeof children === 'number') {
@@ -28,16 +29,15 @@ function hasManualNumber(children: ReactNode): boolean {
 }
 
 export default function MDXHeading(props: Props): ReactNode {
-  let iconValue: unknown;
+  let icon: string | undefined;
   let hasExplicitTitle = false;
   try {
     const {frontMatter, contentTitle} = useDoc();
-    iconValue = (frontMatter as Record<string, unknown>).icon;
+    icon = getDocIcon(frontMatter as Record<string, unknown>);
     hasExplicitTitle = typeof contentTitle !== 'undefined';
   } catch {
-    iconValue = undefined;
+    icon = undefined;
   }
-  const icon = typeof iconValue === 'string' ? iconValue : undefined;
   const shouldDecorate = props.as === 'h1' && !!icon;
   const manualNumber = (props.as === 'h2' || props.as === 'h3') && hasManualNumber(props.children);
 

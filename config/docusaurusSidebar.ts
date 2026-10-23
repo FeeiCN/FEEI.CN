@@ -1,3 +1,5 @@
+import {getDocIcon} from '../src/utils/docIcons';
+
 type SidebarItemWithProps = {
   type: string;
   id?: string;
@@ -15,6 +17,14 @@ type LoadedDocWithFrontMatter = {
   frontMatter?: Record<string, unknown>;
 };
 
+const CATEGORY_ICONS: Record<string, string> = {
+  职业选择: 'target-icon',
+  行业专项: 'gear-icon',
+  通用人工智能: 'bulb-svg',
+  AI基础认知: 'bulb-svg',
+  年度总结: 'history-circle-icon',
+};
+
 function getDailyRecordSidebarLabel(doc?: LoadedDocWithFrontMatter): string | undefined {
   const slug = doc?.frontMatter?.slug;
   if (typeof slug !== 'string' || !/^\/\d{4}-\d{2}-\d{2}\/?$/.test(slug)) return undefined;
@@ -22,11 +32,6 @@ function getDailyRecordSidebarLabel(doc?: LoadedDocWithFrontMatter): string | un
   const date = slug.replace(/^\//, '').replace(/\/$/, '');
   const title = typeof doc?.title === 'string' ? doc.title.trim() : '';
   return title ? `${date.slice(5)} · ${title}` : undefined;
-}
-
-function getDocIcon(doc?: LoadedDocWithFrontMatter): string | undefined {
-  const icon = doc?.frontMatter?.icon;
-  return typeof icon === 'string' && icon.trim() ? icon.trim() : undefined;
 }
 
 function getDocSidebarBadge(
@@ -60,12 +65,31 @@ export function attachDocFrontMatterToSidebar<
     docId: string,
   ): Record<string, unknown> {
     const doc = docsById.get(docId);
-    const icon = getDocIcon(doc);
+    const icon = getDocIcon(doc?.frontMatter);
     const sidebarBadge = getDocSidebarBadge(doc);
     const fields: Record<string, unknown> = {...item.customProps};
     if (icon) fields.icon = icon;
     if (sidebarBadge) fields.sidebar_badge = sidebarBadge;
     return fields;
+  }
+
+  function getCategoryIcon(item: SidebarItemWithProps): string {
+    const configuredIcon = item.customProps?.icon;
+    if (typeof configuredIcon === 'string' && configuredIcon.trim()) return configuredIcon.trim();
+
+    const normalizeLabel = (label: string) => label.replace(/^\d+[-_]/, '').replace(/\s+/g, '').toLowerCase();
+    const label = normalizeLabel(item.label ?? '');
+    const indexItem = item.items?.find((child) => {
+      if (child.type !== 'doc' || !child.id) return false;
+      const doc = docsById.get(child.id);
+      return [doc?.title, doc?.frontMatter?.sidebar_label, child.label, child.id.split('/').at(-1)]
+        .some((title) => typeof title === 'string' && normalizeLabel(title) === label);
+    });
+    const docId = item.link?.type === 'doc' ? item.link.id : indexItem?.id;
+    const icon = docId ? getDocIcon(docsById.get(docId)?.frontMatter) : undefined;
+    if (icon) return icon;
+    if (/^(?:\d{4}|[一二三四五六七八九十]+月)$/.test(label)) return 'history-circle-icon';
+    return CATEGORY_ICONS[item.label ?? ''] ?? 'layers-icon';
   }
 
   const MONTH_ORDER: Record<string, number> = {
@@ -143,6 +167,8 @@ export function attachDocFrontMatterToSidebar<
           });
         }
       }
+
+      nextItem.customProps = {...nextItem.customProps, icon: getCategoryIcon(item)};
 
       // Keep explicitly configured category index documents as navigation targets.
       if (item.link?.type !== 'doc') delete nextItem.link;

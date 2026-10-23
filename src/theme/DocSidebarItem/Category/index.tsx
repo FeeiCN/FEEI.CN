@@ -28,6 +28,7 @@ import type {Props} from '@theme/DocSidebarItem/Category';
 import SidebarIcon from '@site/src/components/SidebarIcon';
 import type {AnimatedIconHandle} from '@site/src/components/ItsHoverIcon';
 import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useControlledIconAnimation';
+import {hideRepeatedSidebarIcons} from '@site/src/utils/docIcons';
 
 import type {
   PropSidebarItemCategory,
@@ -210,13 +211,13 @@ function DocSidebarItemCategoryCollapsible({
   const isActive = isActiveSidebarItem(item, activePath);
   const isCategoryPage = isSamePath(href, activePath);
   const isCurrentPage = isCategoryPage && !items.some((child) => isActiveSidebarItem(child, activePath));
-  const labeledItems = useMemo(() => items.map((child) => (
+  const visibleItems = useVisibleSidebarItems(items, activePath);
+  const labeledItems = useMemo(() => hideRepeatedSidebarIcons(visibleItems).map((child) => (
     child.type === 'link' && child.label === '总览'
       ? {...child, label: `${label}概览`}
       : child
-  )), [items, label]);
-  const icon =
-    level <= 2 && typeof customProps?.icon === 'string' ? customProps.icon : undefined;
+  )), [visibleItems, label]);
+  const icon = typeof customProps?.icon === 'string' ? customProps.icon : undefined;
   const iconAnimation = useControlledIconAnimation(Boolean(icon));
 
   const {collapsed, setCollapsed} = useCollapsible({

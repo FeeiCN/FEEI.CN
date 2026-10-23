@@ -9,6 +9,7 @@ import DocTitleWithIcon from '@site/src/components/DocTitleWithIcon';
 import DocArticleHeader from '@site/src/components/DocArticleHeader';
 import DailyRecordMeta from '@site/src/components/DailyRecordMeta';
 import DailyRecordPhotos from '@site/src/components/DailyRecordPhotos';
+import {getDocIcon} from '@site/src/utils/docIcons';
 import styles from './styles.module.css';
 
 function useSyntheticTitle(): string | null {
@@ -46,8 +47,7 @@ function ReadingMode(): ReactNode {
 export default function DocItemContent({children}: Props): ReactNode {
   const syntheticTitle = useSyntheticTitle();
   const {frontMatter} = useDoc();
-  const iconValue = (frontMatter as Record<string, unknown>).icon;
-  const icon = typeof iconValue === 'string' ? iconValue : undefined;
+  const icon = getDocIcon(frontMatter as Record<string, unknown>);
 
   return (
     <div className={clsx(ThemeClassNames.docs.docMarkdown, 'markdown', styles.themeDocMarkdown)}>

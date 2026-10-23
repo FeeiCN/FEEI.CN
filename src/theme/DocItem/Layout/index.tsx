@@ -20,7 +20,7 @@ export default function DocItemLayout({children}: Props): ReactNode {
   const [tocCollapsed, setTocCollapsed] = useState(false);
 
   return (
-    <div className={clsx(styles.layout, hasTOC && styles.withTOC, tocCollapsed && styles.tocCollapsed)}>
+    <div className={clsx(styles.layout, hasTOC && tocCollapsed && styles.tocCollapsed)}>
       <div className={styles.content}>
         <ContentVisibility metadata={metadata} />
         <DocVersionBanner />
@@ -46,6 +46,7 @@ export default function DocItemLayout({children}: Props): ReactNode {
           </button>
         </aside>
       )}
+      {!hasTOC && <div className={styles.desktopTOC} aria-hidden="true" />}
     </div>
   );
 }

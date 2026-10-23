@@ -1387,10 +1387,16 @@
   line-height: 1.45;
   color: var(--feei-text-secondary);
   font-weight: 500;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   transition:
     color var(--ifm-transition-fast) ease,
     background-color var(--ifm-transition-fast) ease;
+}
+
+.table-of-contents__link code {
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .table-of-contents__left-border {

@@ -30,7 +30,7 @@ for (const month of monthsToExport) {
   const [y, m] = month.split('-');
   const targetFile = path.join(y, `${m}.json`);
 
-  run('npm', ['run', 'export-health-year', '--', '--year', y, '--month', month]);
+  run('npm', ['run', 'export-health-year', '--', '--year', y, '--month', month, '--skip-daily']);
 
   if (!fs.existsSync(path.join(repoRoot, healthDir, targetFile))) {
     throw new Error(`Health data file does not exist: ${targetFile}`);

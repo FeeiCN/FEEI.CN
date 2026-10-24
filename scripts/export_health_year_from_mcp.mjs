@@ -284,16 +284,18 @@ async function main() {
       }
     }
 
-    const dailyResult = await exportDailyCompactFiles(client, {
-      startDate,
-      endDate,
-      targetRoot,
-      exportedAt,
-    });
+    if (!args.skipDaily) {
+      const dailyResult = await exportDailyCompactFiles(client, {
+        startDate,
+        endDate,
+        targetRoot,
+        exportedAt,
+      });
 
-    console.log(`Exported ${dailyResult.written.length} daily compact health files`);
-    if (dailyResult.preserved.length > 0) {
-      console.warn(`Preserved ${dailyResult.preserved.length} existing daily health file(s) after incomplete refresh`);
+      console.log(`Exported ${dailyResult.written.length} daily compact health files`);
+      if (dailyResult.preserved.length > 0) {
+        console.warn(`Preserved ${dailyResult.preserved.length} existing daily health file(s) after incomplete refresh`);
+      }
     }
   } finally {
     await client.close();
@@ -1831,6 +1833,11 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (arg === '--skip-daily') {
+      parsed.skipDaily = true;
+      continue;
+    }
+
     if (arg === '--year' || arg === '--month' || arg === '--date' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
       const value = argv[index + 1];
 
@@ -1857,6 +1864,7 @@ Options:
   --month <YYYY-MM>          Export specific month.
   --date <YYYY-MM-DD>        Export only one daily compact file without writing month summary.
   --end-date <YYYY-MM-DD>    End date. Defaults to today for current year/month.
+  --skip-daily               Skip detailed daily files when refreshing a month summary.
   --overwrite-daily          Compatibility flag; existing daily files are now refreshed by default.
   --target <dir>             Output directory. Defaults to static/data/health.
   --mcp-server <file>        health_auto_export MCP server path.

@@ -133,6 +133,33 @@ for await (const line of readline.createInterface({input: process.stdin})) {
   assert.equal(fs.readFileSync(file, 'utf8'), original);
 });
 
+test('incomplete monthly collection preserves the existing section', (t) => {
+  const root = fixture(t);
+  const server = path.join(root, 'mock-month-error.mjs');
+  fs.writeFileSync(server, `import readline from 'node:readline';
+for await (const line of readline.createInterface({input: process.stdin})) {
+ const message = JSON.parse(line);
+ if (!message.id) continue;
+ let result = {};
+ if (message.method === 'tools/call') {
+  if (message.params.name === 'get_workouts') result = {isError:true,content:[{type:'text',text:'Unavailable'}]};
+  else result = {content:[{type:'text',text:JSON.stringify({data:{metrics:[]}})}]};
+ }
+ process.stdout.write(JSON.stringify({jsonrpc:'2.0', id:message.id, result})+'\\n');
+}`);
+  fs.mkdirSync(path.join(root, '2025'), {recursive: true});
+  const file = path.join(root, '2025/01.json');
+  fs.writeFileSync(file, JSON.stringify({
+    exportedAt: '2025-01-01',
+    dateRange: {start: '2025-01-01 00:00:00 +0800', end: '2025-01-31 23:59:59 +0800'},
+    data: {workouts: {workouts: [{start: '2025-01-01 01:00:00 +0800', name: 'Walk'}]}},
+  }));
+  const result = run('export_health_year_from_mcp.mjs', ['--month', '2025-01', '--end-date', '2025-01-01', '--target', root, '--mcp-server', server]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /Preserved existing monthly workouts data/);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).data.workouts.workouts[0].name, 'Walk');
+});
+
 
 test('compaction preserves chart output and summaries without mutating input', () => {
   const raw = payload([point('2025-01-31')]);

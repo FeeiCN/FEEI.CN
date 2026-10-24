@@ -225,15 +225,21 @@ async function main() {
     if (!args.date) {
       const data = {};
       const summary = {};
+      const incompleteSections = new Set();
 
       for (const mapping of collectionMappings) {
         process.stderr.write(`Exporting ${mapping.targetSection}...\n`);
-        const {records} = await collectMappingRecords(client, mapping, {
+        const {records, error} = await collectMappingRecords(client, mapping, {
           start,
           end,
           args: mapping.args,
-          allowErrors: mapping.optional === true,
+          allowErrors: mapping.targetSection !== 'healthMetrics',
         });
+
+        if (error) {
+          incompleteSections.add(mapping.targetSection);
+          process.stderr.write(`Incomplete ${mapping.targetSection} refresh: ${error}\n`);
+        }
 
         if (mapping.targetSection === 'healthMetrics') {
           data[mapping.targetSection] = {
@@ -269,6 +275,7 @@ async function main() {
         const payload = monthlyPayload(exportData, month);
         if (payload.dateRange.start < start) payload.dateRange.start = start;
         if (payload.dateRange.end > end) payload.dateRange.end = end;
+        restoreExistingMonthlySections(file, payload, incompleteSections);
         writeMonthlyHealth(file, payload);
         console.log(`Exported ${month} health data to ${path.relative(repoRoot, file)}`);
       }
@@ -293,6 +300,24 @@ async function main() {
   }
 
   await buildHealthChartHistory({healthRoot: targetRoot});
+}
+
+function restoreExistingMonthlySections(file, payload, sections) {
+  if (sections.size === 0 || !fs.existsSync(file)) {
+    return;
+  }
+
+  try {
+    const existing = JSON.parse(fs.readFileSync(file, 'utf8'));
+    for (const section of sections) {
+      if (existing.data?.[section]) {
+        payload.data[section] = existing.data[section];
+        process.stderr.write(`Preserved existing monthly ${section} data after incomplete refresh\n`);
+      }
+    }
+  } catch {
+    process.stderr.write(`Unable to preserve existing monthly data from ${file}\n`);
+  }
 }
 
 class McpClient {

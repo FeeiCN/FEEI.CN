@@ -154,7 +154,9 @@ jobs:
           import os
           import subprocess
           import sys
+          import time
           from pathlib import Path
+          from urllib.request import urlopen
 
           commands = {
               "account-assets": (["/usr/bin/python3", "scripts/account_assets.py"], "FEEI.CN-account-assets.log"),
@@ -167,6 +169,23 @@ jobs:
           tasks = os.environ["TASKS"].split()
           log_dir = Path.home() / "Library" / "Logs"
           log_dir.mkdir(parents=True, exist_ok=True)
+
+          def run_logged(command, log_path):
+              print(f"Running: {' '.join(command)}")
+              with log_path.open("a", encoding="utf-8") as log_file:
+                  process = subprocess.Popen(
+                      command,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.STDOUT,
+                      text=True,
+                      encoding="utf-8",
+                      errors="replace",
+                  )
+                  assert process.stdout is not None
+                  for line in process.stdout:
+                      print(line, end="")
+                      log_file.write(line)
+                  return process.wait()
 
           for task in tasks:
               missing = [name for name in required_env.get(task, []) if not os.environ.get(name)]
@@ -182,21 +201,35 @@ jobs:
               for task in tasks:
                   command, log_name = commands[task]
                   log_path = log_dir / log_name
-                  print(f"Running {task}: {' '.join(command)}")
-                  with log_path.open("a", encoding="utf-8") as log_file:
-                      process = subprocess.Popen(
-                          command,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT,
-                          text=True,
-                          encoding="utf-8",
-                          errors="replace",
-                      )
-                      assert process.stdout is not None
-                      for line in process.stdout:
-                          print(line, end="")
-                          log_file.write(line)
-                      status = process.wait()
+                  status = run_logged(command, log_path)
+                  if status != 0 and task == "health":
+                      print("健康同步失败，重启 Health Auto Export 后重试一次")
+                      try:
+                          urlopen(f"{os.environ['APPIUM_URL'].rstrip('/')}/status", timeout=2).read()
+                      except Exception:
+                          appium_log = log_dir / "FEEI.CN-ios-appium.log"
+                          with appium_log.open("a", encoding="utf-8") as appium_output:
+                              subprocess.Popen(
+                                  ["appium", "--address", os.environ["APPIUM_HOST"], "--port", os.environ["APPIUM_PORT"]],
+                                  stdout=appium_output,
+                                  stderr=subprocess.STDOUT,
+                              )
+                          for _ in range(30):
+                              try:
+                                  urlopen(f"{os.environ['APPIUM_URL'].rstrip('/')}/status", timeout=2).read()
+                                  break
+                              except Exception:
+                                  time.sleep(2)
+                      recovery = [
+                          "python3", "scripts/ios_appium_capture.py", "--health-server-only",
+                          "--appium-url", os.environ["APPIUM_URL"],
+                          "--udid", os.environ["IOS_DEVICE_UDID"],
+                          "--xcode-org-id", os.environ["XCODE_ORG_ID"],
+                          "--updated-wda-bundle-id", os.environ["UPDATED_WDA_BUNDLE_ID"],
+                          "--restart-health-server", "--new-command-timeout", "600",
+                      ]
+                      if run_logged(recovery, log_path) == 0:
+                          status = run_logged(command, log_path)
                   if status != 0:
                       sys.exit(status)
           PY

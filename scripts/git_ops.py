@@ -91,15 +91,22 @@ def run_git_with_network_retry(
     return result
 
 
+def _ensure_no_git_operation(repo_root: Path) -> Path:
+    git_dir = Path(run_git_command(["rev-parse", "--absolute-git-dir"], repo_root).stdout.strip())
+    for name in ("rebase-merge", "rebase-apply", "MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "sequencer"):
+        if (git_dir / name).exists():
+            fail(f"git operation already in progress ({name}); automatic sync stopped")
+    return git_dir
+
+
 def git_pull_target_repo(repo_root: Path) -> None:
     """Best-effort fast-forward pull at script start.
 
-    Tolerates failure: if local and origin have diverged (a previous
-    run committed but didn't push), we don't fail the cron — the
-    ``git_push_with_retry`` step will reconcile via
-    ``reset --soft origin/main`` + new commit + push. The next cron
-    run will then fast-forward cleanly.
+    If branches have diverged, the push retry can rebase local commits
+    onto origin/main. Uncommitted work or content conflicts stop that
+    retry without replacing the remote tree.
     """
+    _ensure_no_git_operation(repo_root)
     print(f"[info] git pull {repo_root.name} ...", file=sys.stderr)
     result = run_git_with_network_retry(["pull", "--ff-only"], repo_root)
     if result.returncode == 0:
@@ -112,62 +119,44 @@ def git_pull_target_repo(repo_root: Path) -> None:
     )
 
 
-def git_push_with_retry(repo_root: Path, *, message: str, max_attempts: int = 3) -> None:
-    """`git push`, retrying on non-fast-forward rejection.
+def git_push_with_retry(repo_root: Path, *, max_attempts: int = 3) -> None:
+    """Retry a rejected push by rebasing, preserving remote changes.
 
-    Two cron runs (or cron + manual push) can race: both pull, both commit,
-    but only one wins the push. The other gets
-    `! [rejected] ... (fetch first)`. We can't just `rebase`, because
-    when both runs modify the same line ``git rebase`` thinks our patch
-    is already upstream and **drops our commit silently** (see
-    `dropping <sha> -- patch contents already upstream`). That would
-    lose the freshest ``fetchedAt`` timestamp.
-
-    Instead we fetch, ``git reset --soft origin/main`` (moves HEAD but
-    keeps our changes staged), then commit again with the original
-    message and re-push. Our freshest data always lands; the new
-    commit's hash differs from the dropped one but content is identical.
+    Identical changes already upstream may be skipped by Git. Real
+    conflicts abort the retry and retain both local and remote commits.
     """
     bot_args = ["-c", f"user.name={GIT_BOT_NAME}", "-c", f"user.email={GIT_BOT_EMAIL}"]
     push_args = ["git", *bot_args, "push"]
     fetch_args = ["git", "fetch", "origin"]
-    reset_args = ["git", "reset", "--soft", "origin/main"]
-    commit_args = ["git", *bot_args, "commit", "-m", message]
-
+    rebase_args = ["git", *bot_args, "-c", "rebase.updateRefs=false", "rebase", "--no-autostash", "origin/main"]
     for attempt in range(1, max_attempts + 1):
+        git_dir = _ensure_no_git_operation(repo_root)
         result = run_git_with_network_retry(push_args[1:], repo_root)
         if result.returncode == 0:
             return
         stderr = (result.stderr or result.stdout or "").lower()
         if "fetch first" in stderr or "non-fast-forward" in stderr:
             print(
-                f"[info] push rejected, resetting onto origin/main (attempt {attempt}/{max_attempts})",
+                f"[info] push rejected, rebasing onto origin/main (attempt {attempt}/{max_attempts})",
                 file=sys.stderr,
             )
             fetch_result = run_git_with_network_retry(fetch_args[1:], repo_root)
             if fetch_result.returncode != 0:
                 fail(f"git fetch failed: {(fetch_result.stderr or fetch_result.stdout).strip()}")
-            reset_result = subprocess.run(
-                reset_args,
+            _ensure_no_git_operation(repo_root)
+            if run_git_command(["status", "--porcelain"], repo_root).stdout.strip():
+                fail("git push rejected; uncommitted files are present, rebase skipped")
+            rebase_result = subprocess.run(
+                rebase_args,
                 cwd=repo_root,
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
             )
-            if reset_result.returncode != 0:
-                fail(f"git reset --soft origin/main failed: {(reset_result.stderr or reset_result.stdout).strip()}")
-            commit_result = subprocess.run(
-                commit_args,
-                cwd=repo_root,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-            )
-            if commit_result.returncode != 0:
-                combined = (commit_result.stdout or "") + (commit_result.stderr or "")
-                if "nothing to commit" in combined.lower():
-                    continue
-                fail(f"git commit failed: {(commit_result.stderr or commit_result.stdout).strip()}")
+            if rebase_result.returncode != 0:
+                if (git_dir / "rebase-merge").exists() or (git_dir / "rebase-apply").exists():
+                    run_git_command(["rebase", "--abort"], repo_root)
+                fail(f"git rebase origin/main failed; local commits retained: {(rebase_result.stderr or rebase_result.stdout).strip()}")
             continue
         fail(f"git push failed: {(result.stderr or result.stdout).strip()}")
     fail(f"git push failed after {max_attempts} retries")
@@ -202,6 +191,7 @@ def git_commit_and_push_target_repo(
     if not relative_paths:
         return
 
+    _ensure_no_git_operation(repo_root)
     run_git_command(["add", "--", *relative_paths], repo_root)
     diff_check = subprocess.run(
         ["git", "diff", "--cached", "--quiet", "--", *relative_paths],
@@ -224,5 +214,5 @@ def git_commit_and_push_target_repo(
         repo_root,
     )
     print("[info] git push ...", file=sys.stderr)
-    git_push_with_retry(repo_root, message=message)
+    git_push_with_retry(repo_root)
     print("[info] git push 完成", file=sys.stderr)

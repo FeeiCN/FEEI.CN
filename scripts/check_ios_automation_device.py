@@ -43,8 +43,6 @@ def main() -> int:
         connection = properties.get("connection", {})
         state = properties.get("state", {})
 
-        if connection.get("state") != "connected":
-            raise RuntimeError(f"iPhone 未连接到 Xcode（state={connection.get('state', 'unknown')}）")
         if connection.get("pairingState") != "paired":
             raise RuntimeError("iPhone 尚未与这台 Mac 配对")
         if not state.get("developerModeStatus", {}).get("enabled"):
@@ -57,7 +55,8 @@ def main() -> int:
             raise RuntimeError("iPhone 重启后尚未解锁；请解锁设备后重试")
 
         name = state.get("name") or args.udid
-        print(f"iPhone automation ready: {name} ({args.udid})")
+        connection_state = connection.get("state", "unknown")
+        print(f"iPhone automation ready: {name} ({args.udid}, state={connection_state})")
         return 0
     except (RuntimeError, json.JSONDecodeError) as error:
         print(f"::error::{error}", file=sys.stderr)

@@ -6,6 +6,37 @@
 
 .compactFilter { display: flex; align-items: center; gap: 1rem; font-size: 13px; color: var(--ifm-color-emphasis-700); }
 .compactFilter select { min-width: 0; flex: 1; min-height: 44px; border: 1px solid var(--ifm-color-emphasis-200); border-radius: 8px; padding: 0 0.7rem; color: var(--ifm-font-color-base); background: var(--ifm-background-surface-color); font: inherit; }
+.compactFilters { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); align-items: center; gap: 8px; }
+.artistTrigger, .locateButton { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 10px; border: 1px solid var(--ifm-color-emphasis-200); border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 12px; cursor: pointer; }
+.artistTrigger { min-width: 0; width: 100%; justify-content: space-between; }
+.artistTrigger span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.artistTrigger svg { flex-shrink: 0; pointer-events: none; }
+.locateButton { flex-shrink: 0; border-color: transparent; color: var(--ifm-color-emphasis-700); }
+.locateButton:disabled { opacity: 0.4; cursor: default; }
+.artistTrigger:hover, .locateButton:enabled:hover { background: var(--ifm-hover-overlay); }
+.artistPicker { width: min(280px, calc(100vw - 32px)); padding: 12px; border: 1px solid var(--ifm-color-emphasis-200); border-radius: 12px; background: var(--ifm-background-surface-color); color: var(--ifm-font-color-base); box-shadow: 0 8px 24px rgba(0,0,0,0.16); }
+.artistPickerTitle { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+.artistPicker input { width: 100%; min-height: 44px; padding: 0 10px; border: 1px solid var(--ifm-color-emphasis-300); border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 16px; }
+.artistOptions { max-height: min(280px, 36dvh); margin-top: 8px; overflow-y: auto; overscroll-behavior: contain; }
+.artistOptions button { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 44px; padding: 8px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.artistOptions button:hover, .artistOptions button[aria-pressed='true'] { background: var(--ifm-hover-overlay); }
+.artistOptions small { color: var(--ifm-color-emphasis-600); }
+.artistOptions p { padding: 8px; font-size: 13px; color: var(--ifm-color-emphasis-600); }
+.artistPicker input:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 2px; }
+.compact { gap: 0; }
+.compact .toolbar { top: 0; gap: 10px; padding: 0 0 8px; }
+.compact .compactFilter { display: block; min-width: 0; }
+.compact .compactFilter select { width: 100%; min-height: 36px; padding: 0 8px; border: 0; background: var(--ifm-hover-overlay); font-size: 13px; }
+.compact .artistTrigger { min-height: 36px; border: 0; background: var(--ifm-hover-overlay); font-size: 13px; }
+.listHeading { display: flex; align-items: center; justify-content: space-between; min-height: 36px; gap: 8px; margin-bottom: 4px; }
+.listHeading .stats { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.listHeading .locateButton { min-height: 32px; padding: 0 4px; gap: 5px; }
+.compact .trackRow { border: 0; }
+.compact .trackItem { grid-template-columns: 18px minmax(0,1fr) minmax(64px,28%); padding: 10px 8px; border-radius: 8px; }
+.compact .trackArtist { text-align: right; }
+@media (max-width: 640px) {
+  .compact .compactFilter select, .compact .artistTrigger, .listHeading .locateButton { min-height: 44px; }
+}
 .trackRow { display: flex; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--ifm-color-emphasis-200); }
 .plainTrackRow { border-bottom: 1px solid var(--ifm-color-emphasis-200); }
 .plainTrackRow:last-child { border-bottom: 0; }

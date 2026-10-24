@@ -1,28 +1,30 @@
 import {lazy, Suspense, useEffect, useRef, useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {createPortal} from 'react-dom';
+import {Collapsible, Dialog, Popover, Portal, useMediaQuery} from '@chakra-ui/react';
 import {staticAssetUrl} from '@site/src/utils/staticAssets';
 import {useHistory, useLocation} from '@docusaurus/router';
 import {MusicIcon, getItsHoverIcon, type AnimatedIconHandle} from '@site/src/components/ItsHoverIcon';
 import ListIcon from '@site/src/components/ItsHoverIcon/icons/unordered-list-icon';
-import LibraryIcon from '@site/src/components/ItsHoverIcon/icons/library-icon';
 import VolumeIcon from '@site/src/components/ItsHoverIcon/icons/volume-2-icon';
 import AlignCenterIcon from '@site/src/components/ItsHoverIcon/icons/align-center-icon';
 import RefreshIcon from '@site/src/components/ItsHoverIcon/icons/refresh-icon';
 import ShuffleIcon from '@site/src/components/ItsHoverIcon/icons/shuffle-icon';
 import XIcon from '@site/src/components/ItsHoverIcon/icons/x-icon';
 import {
-  dispatchMusicPlayerCommand, dispatchMusicPlayerOpen,
+  dispatchMusicPlayerCommand, dispatchMusicPlayerOpen, dispatchMusicPlayerClose,
   musicPlayerCloseEventName, musicPlayerErrorEventName, musicPlayerOpenEventName,
   musicPlayerPlayEventName, musicPlayerStateEventName, musicPlayerStateRequestEventName,
+  musicPlayerPanelStateEventName,
 } from './playerEvents';
-import type {MusicPlayerStateDetail} from './playerEvents';
+import type {MusicPlayerOpenDetail, MusicPlayerStateDetail} from './playerEvents';
 import styles from './controls.module.css';
+import {playbackStatus} from './playbackStatus';
 
 const MusicLibrary = lazy(() => import('@site/src/components/MusicLibrary'));
-type View = 'playing' | 'library';
 const defaultCover = staticAssetUrl('/music/feei-site-theme-cover.webp');
 const PlayerIcon = getItsHoverIcon('player-icon')!;
+let hasStartedPlayback = false;
 
 function timeLabel(seconds: number) {
   const value = Math.max(0, Math.floor(seconds || 0));
@@ -41,21 +43,34 @@ function Cover({src, className = ''}: {src?: string; className?: string}) {
     onError={(event) => { if (!event.currentTarget.src.endsWith(defaultCover)) event.currentTarget.src = defaultCover; }} />;
 }
 
+function SkipIcon({back = false}: {back?: boolean}) {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+    style={back ? {transform: 'rotate(180deg)'} : undefined}>
+    <path d="M5 5.5a1 1 0 0 1 1.55-.83l10 6.5a1 1 0 0 1 0 1.66l-10 6.5A1 1 0 0 1 5 18.5z" />
+    <rect x="18" y="5" width="2" height="14" rx="1" />
+  </svg>;
+}
+
 export default function Controls() {
+  const [isMobile] = useMediaQuery(['(max-width: 640px)'], {ssr: false});
   const [expanded, setExpanded] = useState(false);
-  const [view, setView] = useState<View>('playing');
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
+  const [volumeOpen, setVolumeOpen] = useState(false);
   const [playback, setPlayback] = useState<MusicPlayerStateDetail | null>(null);
+  const [hasPlayed, setHasPlayed] = useState(hasStartedPlayback);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [scrub, setScrub] = useState<number | null>(null);
   const [following, setFollowing] = useState(true);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isScrolling, setIsScrolling] = useState(false);
-  const [mobilePanelHeight, setMobilePanelHeight] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const expandRef = useRef<HTMLButtonElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+  const pointerDismissRef = useRef(false);
+  const expandedRef = useRef(false);
   const vinylRef = useRef<AnimatedIconHandle>(null);
   const collapseRef = useRef<HTMLButtonElement>(null);
   const lyricScrollRef = useRef<HTMLDivElement>(null);
@@ -65,14 +80,12 @@ export default function Controls() {
   const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const location = useLocation();
   const history = useHistory();
+  useEffect(() => {
+    if (!expanded || lyricsOpen || !detailsExpanded) setVolumeOpen(false);
+  }, [expanded, lyricsOpen, detailsExpanded]);
   const duration = playback?.duration ?? 0;
   const currentTime = scrub ?? playback?.currentTime ?? 0;
   const lyrics = playback?.lyrics ?? [];
-  const hasCustomCover = Boolean(playback?.cover && playback.cover !== defaultCover);
-  const artistSeed = playback?.artist?.split(/[&,，、/]/)[0]?.trim().slice(0, 2);
-  const coverLabel = artistSeed ? `${artistSeed}精选` : '我的音乐';
-  const tonearmProgress = duration > 0 ? Math.min(1, Math.max(0, (playback?.currentTime ?? 0) / duration)) : 0;
-  const tonearmStyle = {'--tonearm-angle': `${-34 + tonearmProgress * 16}deg`} as CSSProperties;
   let currentLine = -1;
   for (let index = 0; index < lyrics.length; index++) {
     if (lyrics[index][0] <= (playback?.currentTime ?? 0)) currentLine = index;
@@ -80,7 +93,21 @@ export default function Controls() {
 
   const collapse = () => {
     setExpanded(false);
-    window.requestAnimationFrame(() => expandRef.current?.focus({preventScroll: true}));
+    expandedRef.current = false;
+    if (pointerDismissRef.current) {
+      pointerDismissRef.current = false;
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      const opener = openerRef.current;
+      const target = opener?.isConnected && opener !== document.body
+        ? opener : expandRef.current ?? document.querySelector<HTMLButtonElement>('[data-music-trigger]');
+      target?.focus({preventScroll: true});
+    });
+  };
+  const dismiss = () => {
+    dispatchMusicPlayerClose();
+    window.requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[data-music-trigger]')?.focus({preventScroll: true}));
   };
   const wakeControls = () => {
     setControlsVisible(true);
@@ -93,13 +120,37 @@ export default function Controls() {
     dispatchMusicPlayerCommand({action: 'seek', value: scrub});
     setScrub(null);
   };
-
   useEffect(() => {
-    const onState = (event: Event) => setPlayback((event as CustomEvent<MusicPlayerStateDetail>).detail);
+    const onState = (event: Event) => {
+      const detail = (event as CustomEvent<MusicPlayerStateDetail>).detail;
+      setPlayback(detail);
+      if (detail.paused === false) {
+        hasStartedPlayback = true;
+        setHasPlayed(true);
+      }
+    };
     const onError = (event: Event) => setError(String((event as CustomEvent).detail ?? ''));
-    const onOpen = () => { setExpanded(true); setView('playing'); };
+    const onOpen = (event: Event) => {
+      const detail = (event as CustomEvent<MusicPlayerOpenDetail>).detail;
+      if (detail?.toggle && expandedRef.current) {
+        collapse();
+        return;
+      }
+      if (document.activeElement instanceof HTMLElement && !rootRef.current?.contains(document.activeElement)) {
+        openerRef.current = document.activeElement;
+      }
+      setExpanded(true);
+      expandedRef.current = true;
+      setDetailsExpanded(detail?.view !== 'library');
+    };
     const onPlay = () => { setError(''); setNotice(''); };
-    const onClose = () => { setExpanded(false); setLyricsOpen(false); };
+    const onClose = () => {
+      hasStartedPlayback = false;
+      setHasPlayed(false);
+      expandedRef.current = false;
+      setExpanded(false);
+      setLyricsOpen(false);
+    };
     window.addEventListener(musicPlayerStateEventName, onState);
     window.addEventListener(musicPlayerErrorEventName, onError);
     window.addEventListener(musicPlayerOpenEventName, onOpen);
@@ -116,11 +167,16 @@ export default function Controls() {
   }, []);
 
   useEffect(() => {
+    expandedRef.current = expanded;
+    window.dispatchEvent(new CustomEvent(musicPlayerPanelStateEventName, {detail: expanded}));
+  }, [expanded]);
+
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('music') !== 'open') return;
     params.delete('music');
     const frame = window.requestAnimationFrame(() => {
-      dispatchMusicPlayerOpen();
+      dispatchMusicPlayerOpen({view: 'library'});
       history.replace({...location, search: params.toString() ? `?${params}` : ''});
     });
     return () => window.cancelAnimationFrame(frame);
@@ -128,15 +184,10 @@ export default function Controls() {
 
   useEffect(() => {
     document.body.classList.remove('global-music-player-visible', 'global-music-player-collapsed');
-    document.body.classList.add('music-player-active');
-    return () => document.body.classList.remove('music-player-active', 'music-player-expanded');
-  }, []);
-
-  useEffect(() => {
+    document.body.classList.toggle('music-player-active', expanded || (hasPlayed && isMobile));
     document.body.classList.toggle('music-player-expanded', expanded);
-    if (!expanded) setMobilePanelHeight(null);
-    return () => document.body.classList.remove('music-player-expanded');
-  }, [expanded]);
+    return () => document.body.classList.remove('music-player-active', 'music-player-expanded');
+  }, [expanded, hasPlayed, isMobile]);
 
   useEffect(() => {
     if (expanded) {
@@ -158,15 +209,6 @@ export default function Controls() {
   }, [expanded]);
 
   useEffect(() => {
-    if (!expanded || view !== 'playing') return;
-    const frame = window.requestAnimationFrame(() => {
-      const height = panelRef.current?.getBoundingClientRect().height;
-      if (height) setMobilePanelHeight(height);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [expanded, view, playback?.title]);
-
-  useEffect(() => {
     if (expanded || !playback || playback.paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       vinylRef.current?.stopAnimation();
       return;
@@ -183,30 +225,15 @@ export default function Controls() {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!expanded || lyricsOpen) return;
-    const frame = window.requestAnimationFrame(() => {
-      if (view === 'library' && window.innerWidth > 640) {
-        rootRef.current?.querySelector<HTMLInputElement>('input[type="search"]')?.focus({preventScroll: true});
-      } else collapseRef.current?.focus({preventScroll: true});
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [expanded, lyricsOpen]);
-
-  useEffect(() => {
-    if (!expanded && !lyricsOpen) return;
-    const onPointer = (event: PointerEvent) => {
-      if (!lyricsOpen && event.target instanceof Node && !rootRef.current?.contains(event.target)) collapse();
-    };
+    if (!lyricsOpen) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented || rootRef.current?.querySelector('[aria-modal="true"]')) return;
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
       event.preventDefault();
-      if (lyricsOpen) { setLyricsOpen(false); return; }
-      collapse();
+      setLyricsOpen(false);
     };
-    document.addEventListener('pointerdown', onPointer);
     window.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('pointerdown', onPointer); window.removeEventListener('keydown', onKey); };
-  }, [expanded, lyricsOpen]);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lyricsOpen]);
 
   useEffect(() => {
     if (!lyricsOpen) return;
@@ -240,27 +267,49 @@ export default function Controls() {
   }, [notice]);
 
   const progressStyle = {'--progress': `${duration ? currentTime / duration * 100 : 0}%`} as CSSProperties;
-  const playButton = (large = false) => <IconButton label={!playback || playback.paused ? '播放' : '暂停'}
-    className={large ? styles.primaryPlay : ''} onClick={() => dispatchMusicPlayerCommand({action: 'toggle'})}>
-    {!playback || playback.paused ? <PlayerIcon size={large ? 28 : 20} disableHover /> : <span className={styles.pauseGlyph} aria-hidden="true" />}
+  const errorMessage = error || playback?.error || '';
+  const playButton = (large = false) => <IconButton label={errorMessage ? '重试播放' : !playback || playback.paused ? '播放' : '暂停'}
+    className={large ? styles.primaryPlay : ''} onClick={() => dispatchMusicPlayerCommand({action: errorMessage ? 'retry' : 'toggle'})}>
+    {errorMessage ? <RefreshIcon size={large ? 26 : 20} /> : !playback || playback.paused ? <PlayerIcon size={large ? 26 : 20} disableHover /> : <span className={styles.pauseGlyph} aria-hidden="true" />}
   </IconButton>;
   const loop = playback?.loop ?? 'all';
   const order = playback?.order ?? 'list';
   const nextLoop = loop === 'none' ? 'all' : loop === 'all' ? 'one' : 'none';
   const loopLabel = loop === 'none' ? '不循环，点击切换列表循环' : loop === 'all' ? '列表循环，点击切换单曲循环' : '单曲循环，点击关闭循环';
   const transport = <div className={styles.transport}>
+    <IconButton label="上一首" onClick={() => dispatchMusicPlayerCommand({action: 'previous'})}><SkipIcon back /></IconButton>
+    {playButton(true)}
+    <IconButton label="下一首" onClick={() => dispatchMusicPlayerCommand({action: 'next'})}><SkipIcon /></IconButton>
+  </div>;
+  const tools = <div className={styles.tools}>
+    <div className={styles.tool}>
     <IconButton label={order === 'list' ? '顺序播放，点击切换随机播放' : '随机播放，点击切换顺序播放'}
       className={styles.modeButton} pressed={order === 'random'}
       onClick={() => dispatchMusicPlayerCommand({action: 'order', value: order === 'list' ? 'random' : 'list'})}>
       {order === 'list' ? <ListIcon size={19} /> : <ShuffleIcon size={19} />}
-    </IconButton>
-    <IconButton label="上一首" onClick={() => dispatchMusicPlayerCommand({action: 'previous'})}><span className={`${styles.skipGlyph} ${styles.skipBackward}`} aria-hidden="true"><PlayerIcon size={16} disableHover /><PlayerIcon size={16} disableHover /></span></IconButton>
-    {playButton(true)}
-    <IconButton label="下一首" onClick={() => dispatchMusicPlayerCommand({action: 'next'})}><span className={styles.skipGlyph} aria-hidden="true"><PlayerIcon size={16} disableHover /><PlayerIcon size={16} disableHover /></span></IconButton>
+    </IconButton><span>{order === 'random' ? '随机' : '顺序'}</span></div>
+    <div className={styles.tool}>
     <IconButton label={loopLabel} className={styles.modeButton} pressed={loop !== 'none'}
       onClick={() => dispatchMusicPlayerCommand({action: 'loop', value: nextLoop})}>
       <span className={styles.loopIcon}><RefreshIcon size={19} />{loop === 'one' && <small>1</small>}</span>
-    </IconButton>
+    </IconButton><span>{loop === 'one' ? '单曲' : loop === 'all' ? '列表循环' : '不循环'}</span></div>
+    <div className={styles.tool}>
+      <Popover.Root open={volumeOpen} onOpenChange={({open}) => setVolumeOpen(open)}
+        onEscapeKeyDown={(event) => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          setVolumeOpen(false);
+        }}
+        positioning={{placement: 'top', strategy: 'fixed'}} lazyMount unmountOnExit>
+        <Popover.Trigger asChild><button type="button" className={styles.iconButton} aria-label="调整音量"><VolumeIcon size={19} /></button></Popover.Trigger>
+        <Portal><Popover.Positioner><Popover.Content className={styles.volumePopover}>
+          <Popover.Title>音量</Popover.Title>
+          <input type="range" aria-label="音量" min="0" max="1" step="0.05" value={playback?.volume ?? 0.45}
+            onChange={(event) => dispatchMusicPlayerCommand({action: 'volume', value: Number(event.target.value)})} />
+        </Popover.Content></Popover.Positioner></Portal>
+      </Popover.Root><span>音量</span>
+    </div>
+    <div className={styles.tool}><IconButton label="全屏歌词" onClick={openLyrics}><AlignCenterIcon size={19} /></IconButton><span>歌词</span></div>
   </div>;
   const progress = <div className={styles.progress}>
     {scrub !== null && <span className={styles.scrubTime} role="status">{timeLabel(currentTime)} / {timeLabel(duration)}</span>}
@@ -271,74 +320,78 @@ export default function Controls() {
       onPointerUp={commitScrub} onPointerCancel={() => setScrub(null)} onKeyUp={commitScrub} onBlur={commitScrub} />
     <div className={styles.times}><span>{timeLabel(currentTime)}</span><span>−{timeLabel(duration - currentTime)}</span></div>
   </div>;
-  const status = (error || notice) && <div className={styles.status} role="status">
-    <span>{error || notice}</span>{error && <button type="button" onClick={() => dispatchMusicPlayerCommand({action: 'retry'})}>重试</button>}
+  const status = (errorMessage || notice) && <div className={styles.status} role="status">
+    <span>{errorMessage || notice}</span>
   </div>;
-  const libraryActive = view === 'library';
+  const playbackState = playbackStatus(playback, error);
+  const playbackLabel = !hasPlayed && playbackState.kind !== 'error' ? '尚未播放' : playbackState.label;
+  const playbackDescription = error || playback?.error || `${playbackLabel}${playback?.artist ? ` · ${playback.artist}` : ''}`;
 
-  return createPortal(<>
-    {expanded && <div className={styles.scrim} aria-hidden="true" />}
-    <div ref={rootRef} className={`${styles.player} ${expanded ? styles.expanded : ''} ${isScrolling ? styles.scrolling : ''}`}>
-      {!expanded ? <div className={styles.mini}>
+  return createPortal(<Dialog.Root open={expanded && !lyricsOpen} aria-label="音乐播放器" modal={isMobile} trapFocus={isMobile}
+    preventScroll={isMobile} restoreFocus={false} closeOnInteractOutside unstyled
+    ids={{content: 'music-player-panel'}}
+    initialFocusEl={() => !isMobile
+      ? rootRef.current?.querySelector<HTMLInputElement>('input[type="search"]') ?? collapseRef.current
+      : collapseRef.current}
+    onFocusOutside={(event) => event.preventDefault()}
+    onEscapeKeyDown={(event) => {
+      if (!volumeOpen) return;
+      event.preventDefault();
+      setVolumeOpen(false);
+    }}
+    onInteractOutside={(event) => {
+      const target = event.detail.originalEvent.target;
+      if (target instanceof Element && target.closest('[data-music-trigger]')) {
+        event.preventDefault();
+        return;
+      }
+      pointerDismissRef.current = event.detail.originalEvent.type.startsWith('pointer');
+    }}
+    onOpenChange={({open}) => { if (!open) collapse(); }}>
+    {expanded && <Dialog.Backdrop asChild><div className={styles.scrim} /></Dialog.Backdrop>}
+    <div ref={rootRef} hidden={!expanded && (!hasPlayed || !isMobile)} className={`${styles.player} ${expanded ? styles.expanded : ''} ${isScrolling ? styles.scrolling : ''}`}>
+      {!expanded ? isMobile && <div className={styles.mini}>
         <button ref={expandRef} type="button" className={styles.miniTrack} aria-label="展开音乐播放器"
-          aria-haspopup="dialog" onClick={() => { dispatchMusicPlayerOpen(); setView('playing'); }}>
+          aria-haspopup="dialog" onClick={() => dispatchMusicPlayerOpen()}>
           <span className={styles.miniVinyl} aria-hidden="true"><MusicIcon ref={vinylRef} size={26} strokeWidth={1.8} disableHover /></span>
-          <span className={styles.miniText}><strong>{playback?.title || '音乐'}</strong><span>{playback?.artist || '我的音乐库'}</span></span>
+          <span className={styles.miniText}><strong title={playback?.title}>{playback?.title || '音乐'}</strong><span title={playbackDescription}>{playbackDescription}</span></span>
         </button>
         {playback && playButton()}
-        <IconButton label="打开音乐库" className={styles.miniLibraryButton} onClick={() => { dispatchMusicPlayerOpen(); setView('library'); }}><MusicIcon size={20} disableHover /></IconButton>
+        {playback && <IconButton label="下一首" onClick={() => dispatchMusicPlayerCommand({action: 'next'})}><SkipIcon /></IconButton>}
+        <IconButton label="停止播放并收起" onClick={dismiss}><XIcon size={16} disableHover /></IconButton>
         {playback && <div className={styles.miniProgress} style={progressStyle} />}
         {!expanded && error && <span className={styles.errorDot} title={error} aria-label={error} />}
-      </div> : <section ref={panelRef} role="dialog" aria-label="音乐播放器" className={styles.panel}
-        style={mobilePanelHeight ? {'--music-mobile-panel-height': `${mobilePanelHeight}px`} as CSSProperties : undefined}>
+      </div> : <Dialog.Content asChild><section ref={panelRef} aria-label="音乐播放器" data-details-expanded={detailsExpanded && hasPlayed} className={styles.panel}>
         <header className={styles.header}>
-          <button ref={collapseRef} type="button" className={styles.iconButton} aria-label="收起播放器并继续播放" title="收起" onClick={collapse}><XIcon size={18} /></button>
-          <span className={styles.headerTitle}>{view === 'playing' ? (playback?.title || '正在播放') : '音乐库'}</span>
-          <span className={styles.headerSpacer} aria-hidden="true" />
+          <Dialog.Title className={styles.headerTitle}>音乐</Dialog.Title>
+          <button ref={collapseRef} type="button" className={styles.iconButton} aria-label="收起播放器并继续播放" title="收起面板" onClick={collapse}><XIcon size={18} disableHover /></button>
         </header>
-        <div className={styles.views} role="tablist" aria-label="播放器视图">
-          {([['playing', '正在播放'], ['library', '音乐']] as const).map(([value, label]) =>
-            <button key={value} type="button" role="tab" id={`music-tab-${value}`} aria-controls={`music-view-${value}`}
-              aria-selected={view === value} tabIndex={view === value ? 0 : -1}
-              onKeyDown={(event) => {
-                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-                event.preventDefault(); event.stopPropagation();
-                const views: View[] = ['playing', 'library'];
-                const next = views[(views.indexOf(value) + (event.key === 'ArrowRight' ? 1 : views.length - 1)) % views.length];
-                setView(next);
-                window.requestAnimationFrame(() => rootRef.current?.querySelector<HTMLButtonElement>(`#music-tab-${next}`)?.focus());
-              }} onClick={() => setView(value)}>{label}</button>)}
-        </div>
-        <div className={styles.view} role="tabpanel" id={`music-view-${view}`} aria-labelledby={`music-tab-${view}`}>
-          {view === 'playing' && <div className={styles.nowPlaying}>
-            <div className={`${styles.turntable} ${error ? styles.turntableError : ''}`} aria-label="唱片机">
-              <div className={`${styles.vinyl} ${playback && !playback.paused ? styles.vinylPlaying : ''}`}>
-                {hasCustomCover ? <Cover src={playback?.cover} className={styles.vinylLabel} /> : <div className={`${styles.vinylLabel} ${styles.genericLabel}`} aria-label={`${coverLabel}通用封面`}><span className={styles.genericLabelText}>{coverLabel}</span></div>}
-                <span className={styles.vinylCenter} aria-hidden="true" />
-              </div>
-              <span className={styles.tonearmDock} aria-hidden="true" />
-              <span style={tonearmStyle} className={`${styles.tonearm} ${playback && !playback.paused ? styles.tonearmPlaying : styles.tonearmRest}`} aria-hidden="true" />
-              {playback?.loading && !playback.paused && <span className={styles.turntableStatus} role="status">正在加载</span>}
-            </div>
-            <div className={styles.trackInfo}><h2>{playback?.title || '音乐'}</h2><p>{playback?.artist || '我的音乐库'}</p></div>
-            {progress}{transport}
-            <div className={styles.volume}><VolumeIcon size={17} /><input type="range" aria-label="音量" min="0" max="1" step="0.05" value={playback?.volume ?? 0.45}
-              style={{'--progress': `${(playback?.volume ?? 0.45) * 100}%`} as CSSProperties}
-              onChange={(event) => dispatchMusicPlayerCommand({action: 'volume', value: Number(event.target.value)})} /></div>
-            <div className={styles.secondary}>
-              <div className={`${styles.secondaryItem} ${lyricsOpen ? styles.secondaryItemActive : ''}`}><IconButton label="全屏歌词" pressed={lyricsOpen} onClick={openLyrics}><AlignCenterIcon size={21} /></IconButton><span>歌词</span></div>
-              <div className={`${styles.secondaryItem} ${libraryActive ? styles.secondaryItemActive : ''}`}><IconButton label="打开音乐库" pressed={libraryActive} onClick={() => setView('library')}><LibraryIcon size={21} /></IconButton><span>音乐库</span></div>
-            </div>
-          </div>}
-          {view === 'library' && <div id="global-music-panel" className={styles.library}>
+        <div className={styles.view} data-music-scroll role="region" aria-label="选歌">
+          <div id="global-music-panel" className={styles.library}>
             <Suspense fallback={<p role="status">正在加载音乐…</p>}><MusicLibrary compact /></Suspense>
-          </div>}
+          </div>
         </div>
         {status}
-        {view !== 'playing' && playback && <footer className={styles.footer}>
-          <Cover src={playback.cover} /><div><strong>{playback.title}</strong><span>{playback.loading && !playback.paused ? '正在加载…' : playback.artist}</span></div>{playButton()}
-        </footer>}
-      </section>}
+        {playback && hasPlayed && <Collapsible.Root asChild open={detailsExpanded}
+          onOpenChange={({open}) => setDetailsExpanded(open)} lazyMount unmountOnExit>
+          <footer className={styles.footer}>
+            <div className={styles.footerSummary}>
+              <Collapsible.Trigger asChild>
+                <button type="button" className={styles.footerTrack} aria-label={`${detailsExpanded ? '收起' : '展开'}播放控制：${playback.title}`}>
+                  <Cover src={playback.cover} />
+                  <span className={styles.footerText}><strong title={playback.title}>{playback.title}</strong><span title={playbackDescription}>{playbackDescription}</span></span>
+                  <svg className={styles.expandChevron} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 15 6-6 6 6" /></svg>
+                </button>
+              </Collapsible.Trigger>
+              {!detailsExpanded && <>{playButton()}<IconButton label="下一首" onClick={() => dispatchMusicPlayerCommand({action: 'next'})}><SkipIcon /></IconButton></>}
+            </div>
+            <Collapsible.Content className={styles.playbackDetails} role="region" aria-label="播放控制">
+              <div className={styles.playbackDetailsInner}>{progress}{transport}{tools}</div>
+            </Collapsible.Content>
+            {!detailsExpanded && <div className={styles.miniProgress} style={progressStyle} />}
+          </footer>
+        </Collapsible.Root>}
+      </section></Dialog.Content>}
     </div>
     {lyricsOpen && <section ref={lyricSceneRef} className={styles.lyricScene} role="dialog" aria-modal="true" aria-label="全屏歌词" onPointerMove={wakeControls} onPointerDown={wakeControls}
       onKeyDown={(event) => {
@@ -352,7 +405,7 @@ export default function Controls() {
       <img src={staticAssetUrl(playback?.cover) || defaultCover} alt="" className={styles.lyricBackdrop} />
       <div className={`${styles.lyricHeader} ${!controlsVisible ? styles.quiet : ''}`}>
         <div><strong>{playback?.title}</strong><span>{playback?.artist}</span></div>
-        <IconButton label="关闭全屏歌词" onClick={() => setLyricsOpen(false)}><XIcon size={20} /></IconButton>
+        <IconButton label="关闭全屏歌词" onClick={() => setLyricsOpen(false)}><XIcon size={20} disableHover /></IconButton>
       </div>
       {lyrics.length ? <div ref={lyricScrollRef} className={styles.lyricLines}
         onWheel={() => setFollowing(false)} onTouchMove={() => setFollowing(false)}>
@@ -366,5 +419,5 @@ export default function Controls() {
         {progress}{transport}{status}
       </div>
     </section>}
-  </>, document.body);
+  </Dialog.Root>, document.body);
 }

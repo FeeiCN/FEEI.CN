@@ -1,5 +1,6 @@
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import clsx from 'clsx';
+import {Popover, Portal} from '@chakra-ui/react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {Audio} from 'aplayer';
 import ArrowDownIcon from '@site/src/components/ItsHoverIcon/icons/arrow-narrow-down-icon';
@@ -28,30 +29,39 @@ import type {
   MusicPlayerStateDetail,
 } from '@site/src/components/GlobalMusicPlayer/playerEvents';
 import styles from './styles.module.css';
+import {readLibrarySession, saveLibrarySession} from './session';
 
 type TrackLocation = {groupId: string; index: number};
 
 type MusicLibraryProps = {compact?: boolean};
 
 function MusicLibraryClient({compact = false}: MusicLibraryProps) {
+  const [initialSession] = useState(() => readLibrarySession(siteMusicGroups[0]?.id ?? ''));
   // Core groups are static (shipped in playlist.ts). The baby-music manifest
   // loads asynchronously and is appended to extensionGroups so we can keep
   // the two lifecycles separate and reason about cache invalidation per side.
   const [coreGroups] = useState<PlaylistGroup[]>(siteMusicGroups);
   const [extensionGroups, setExtensionGroups] = useState<PlaylistGroup[]>([]);
+  const [manifestLoaded, setManifestLoaded] = useState(false);
   const baseGroups = useMemo(
     () => [...coreGroups, ...extensionGroups],
     [coreGroups, extensionGroups],
   );
-  const [activeGroupId, setActiveGroupId] = useState(siteMusicGroups[0]?.id ?? '');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeGroupId, setActiveGroupId] = useState(initialSession.groupId);
+  const [activeArtist, setActiveArtist] = useState(initialSession.artist);
+  const [searchQuery, setSearchQuery] = useState(initialSession.query);
+  const [artistSearch, setArtistSearch] = useState('');
+  const [artistPickerOpen, setArtistPickerOpen] = useState(false);
+  const [locateUrl, setLocateUrl] = useState('');
   const [singerDrawerOpen, setSingerDrawerOpen] = useState(false);
   const [currentTrackKey, setCurrentTrackKey] = useState('');
   const [currentTrackUrl, setCurrentTrackUrl] = useState('');
   const [playbackPaused, setPlaybackPaused] = useState(true);
-  const receivedInitialState = useRef(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const libraryRef = useRef<HTMLElement>(null);
+  const sessionRef = useRef(initialSession);
+  const restoredScroll = useRef(false);
 
   useEffect(() => {
     if (compact && window.innerWidth > 640 && !window.matchMedia('(pointer: coarse)').matches) searchInputRef.current?.focus({preventScroll: true});
@@ -67,7 +77,7 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
         const manifest = (await response.json()) as PlaylistManifestGroup[];
         if (disposed || manifest.length === 0) return;
         setExtensionGroups(manifest.map(playlistGroupFromManifest));
-      } catch {}
+      } catch {} finally { if (!disposed) setManifestLoaded(true); }
     }
 
     void loadManifest();
@@ -112,10 +122,22 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
   }, [baseGroups, searchActive, searchQuery]);
 
   const tracksToShow = useMemo(() => {
-    return searchActive && searchedTracks ? searchedTracks : activeGroup?.tracks ?? [];
-  }, [searchActive, searchedTracks, activeGroup]);
+    const tracks = searchActive && searchedTracks ? searchedTracks : activeGroup?.tracks ?? [];
+    return activeArtist ? tracks.filter((track) => primaryArtistOf(track.artist) === activeArtist) : tracks;
+  }, [searchActive, searchedTracks, activeGroup, activeArtist]);
+
+  const artistOptions = useMemo(() => {
+    const tracks = searchActive && searchedTracks ? searchedTracks : activeGroup?.tracks ?? [];
+    const counts = new Map<string, number>();
+    tracks.forEach((track) => {
+      const artist = primaryArtistOf(track.artist);
+      counts.set(artist, (counts.get(artist) ?? 0) + 1);
+    });
+    return [...counts].sort(([left], [right]) => left.localeCompare(right, 'zh-Hans-CN'));
+  }, [activeGroup, searchActive, searchedTracks]);
 
   const groupedTracks = useMemo(() => {
+    if (compact) return [{artist: null as string | null, tracks: tracksToShow}];
     const buckets = new Map<string, PlaylistGroup['tracks']>();
     tracksToShow.forEach((track) => {
       const artist = primaryArtistOf(track.artist);
@@ -128,7 +150,7 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
     return Array.from(buckets.entries())
       .sort(([a], [b]) => a.localeCompare(b, 'zh-Hans-CN'))
       .map(([artist, tracks]) => ({artist, tracks}));
-  }, [tracksToShow]);
+  }, [compact, tracksToShow]);
 
   const flatTracks = useMemo(() => groupedTracks.flatMap((g) => g.tracks), [groupedTracks]);
 
@@ -166,10 +188,6 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
     const handlePlayerState = (event: Event) => {
       const detail = (event as CustomEvent<MusicPlayerStateDetail>).detail;
       if (!detail?.groupId) return;
-      if (!receivedInitialState.current) {
-        receivedInitialState.current = true;
-        setActiveGroupId(detail.groupId);
-      }
       setCurrentTrackKey(`${detail.groupId}:${detail.trackIndex ?? 0}`);
       setCurrentTrackUrl(detail.trackUrl ?? '');
       setPlaybackPaused(detail.paused !== false);
@@ -181,8 +199,63 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
 
   const selectGroup = useCallback((groupId: string) => {
     setActiveGroupId(groupId);
+    setActiveArtist('');
     setSearchQuery('');
   }, []);
+
+  useEffect(() => {
+    if (!compact) return;
+    const scroller = libraryRef.current?.closest<HTMLElement>('[data-music-scroll]');
+    if (!scroller) return;
+    const sameFilters = sessionRef.current.groupId === activeGroupId
+      && sessionRef.current.artist === activeArtist && sessionRef.current.query === searchQuery;
+    sessionRef.current = {
+      groupId: activeGroupId, artist: activeArtist, query: searchQuery,
+      scrollTop: sameFilters ? sessionRef.current.scrollTop : 0,
+    };
+    saveLibrarySession(sessionRef.current);
+    if (!manifestLoaded) return;
+    restoredScroll.current = false;
+    const frame = window.requestAnimationFrame(() => {
+      scroller.scrollTop = sessionRef.current.scrollTop;
+      restoredScroll.current = true;
+    });
+    const remember = () => {
+      if (!restoredScroll.current) return;
+      sessionRef.current = {...sessionRef.current, scrollTop: scroller.scrollTop};
+      saveLibrarySession(sessionRef.current);
+    };
+    scroller.addEventListener('scroll', remember, {passive: true});
+    return () => {
+      window.cancelAnimationFrame(frame);
+      scroller.removeEventListener('scroll', remember);
+    };
+  }, [compact, manifestLoaded, activeGroupId, activeArtist, searchQuery]);
+
+  const locateCurrentTrack = () => {
+    if (!currentTrackUrl) return;
+    const group = baseGroups.find((item) => item.tracks.some((track) => track.url === currentTrackUrl));
+    if (!group) return;
+    selectGroup(group.id);
+    setLocateUrl(currentTrackUrl);
+  };
+
+  useEffect(() => {
+    if (!locateUrl || !manifestLoaded) return;
+    const frame = window.requestAnimationFrame(() => {
+      const row = [...(libraryRef.current?.querySelectorAll<HTMLButtonElement>('[data-track-url]') ?? [])]
+        .find((element) => element.dataset.trackUrl === locateUrl);
+      const scroller = libraryRef.current?.closest<HTMLElement>('[data-music-scroll]');
+      if (!row || !scroller) return;
+      const bounds = scroller.getBoundingClientRect();
+      const scale = bounds.height / scroller.clientHeight || 1;
+      scroller.scrollTop += (row.getBoundingClientRect().top - bounds.top) / scale
+        - scroller.clientHeight / 2 + row.clientHeight / 2;
+      row.focus({preventScroll: true});
+      setLocateUrl('');
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [locateUrl, flatTracks, manifestLoaded]);
 
   const playGroup = useCallback(
     (groupId: string) => {
@@ -225,6 +298,10 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target;
+      if (compact && (artistPickerOpen || !libraryRef.current?.contains(target as Node))) return;
+      if (target instanceof HTMLSelectElement) return;
+      if (compact && event.key === 'Escape') return;
+      if (event.key === 'Enter' && target instanceof HTMLElement && target.closest('button, a')) return;
       const isTyping =
         target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
 
@@ -270,7 +347,7 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [flatTracks, highlightedIndex, playTrack, searchQuery, singerDrawerOpen]);
+  }, [compact, artistPickerOpen, flatTracks, highlightedIndex, playTrack, searchQuery, singerDrawerOpen]);
 
   if (!activeGroup && !searchActive) return null;
 
@@ -303,12 +380,12 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
   };
 
   return (
-    <section className={styles.library}>
-      <div className={styles.stats}>
+    <section ref={libraryRef} className={clsx(styles.library, compact && styles.compact)}>
+      {!compact && <div className={styles.stats}>
         {searchActive
-          ? `搜索"${searchQuery}"匹配 ${tracksToShow.length} 首`
-          : `共 ${totalTracks} 首 · ${derived.artist.length} 位歌手`}
-      </div>
+          ? `全库搜索「${searchQuery}」· ${tracksToShow.length} 首`
+          : activeArtist ? `${activeArtist} · ${tracksToShow.length} 首` : `共 ${totalTracks} 首 · ${derived.artist.length} 位歌手`}
+      </div>}
 
       <div className={styles.toolbar}>
         <div className={styles.searchRow}>
@@ -319,9 +396,9 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
             ref={searchInputRef}
             type="search"
             className={styles.searchInput}
-            placeholder="搜索曲名或歌手"
+            placeholder="搜索全部歌曲或歌手"
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
+            onChange={(event) => { setSearchQuery(event.target.value); setActiveArtist(''); }}
             aria-label="搜索音乐"
           />
           {searchQuery ? (
@@ -342,13 +419,32 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
           )}
         </div>
 
-        {compact ? <label className={styles.compactFilter}>歌单
+        {compact ? <div className={styles.compactFilters}><label className={styles.compactFilter}>
           <select aria-label="选择歌单" value={activeGroupId} onChange={(event) => selectGroup(event.target.value)}>
-            <optgroup label="我的歌单">{derived.fixed.map((group) => <option key={group.id} value={group.id}>{group.label} · {group.tracks.length}</option>)}</optgroup>
-            <optgroup label="分类">{derived.filter.map((group) => <option key={group.id} value={group.id}>{group.label} · {group.tracks.length}</option>)}</optgroup>
-            <optgroup label="歌手">{derived.artist.map((group) => <option key={group.id} value={group.id}>{group.label} · {group.tracks.length}</option>)}</optgroup>
+            <optgroup label="我的歌单">{derived.fixed.map((group) => <option key={group.id} value={group.id}>{group.label}</option>)}</optgroup>
+            <optgroup label="分类">{derived.filter.map((group) => <option key={group.id} value={group.id}>{group.label}</option>)}</optgroup>
           </select>
-        </label> : <div className={styles.filtersBar}>
+        </label>
+          <Popover.Root open={artistPickerOpen} onOpenChange={({open}) => { setArtistPickerOpen(open); if (!open) setArtistSearch(''); }}
+            positioning={{placement: 'bottom-start', strategy: 'fixed'}} lazyMount unmountOnExit>
+            <Popover.Trigger asChild><button type="button" className={styles.artistTrigger} aria-label="筛选歌手">
+              <span>{activeArtist || '全部歌手'}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            </button></Popover.Trigger>
+            <Portal><Popover.Positioner><Popover.Content className={styles.artistPicker}>
+              <Popover.Title className={styles.artistPickerTitle}>筛选歌手</Popover.Title>
+              <input type="search" aria-label="搜索歌手" placeholder="输入歌手名" value={artistSearch}
+                onChange={(event) => setArtistSearch(event.target.value)} />
+              <div className={styles.artistOptions}>
+                <button type="button" aria-pressed={!activeArtist} onClick={() => { setActiveArtist(''); setArtistPickerOpen(false); }}>全部歌手</button>
+                {artistOptions.filter(([artist]) => artist.toLowerCase().includes(artistSearch.trim().toLowerCase())).map(([artist, count]) =>
+                  <button key={artist} type="button" aria-pressed={activeArtist === artist} onClick={() => { setActiveArtist(artist); setArtistPickerOpen(false); setArtistSearch(''); }}>
+                    <span>{artist}</span><small>{count} 首</small>
+                  </button>)}
+                {artistSearch && !artistOptions.some(([artist]) => artist.toLowerCase().includes(artistSearch.trim().toLowerCase())) && <p>没有匹配的歌手</p>}
+              </div>
+            </Popover.Content></Popover.Positioner></Portal>
+          </Popover.Root>
+        </div> : <div className={styles.filtersBar}>
           <div className={styles.filtersGroup}>
             <span className={styles.filtersLabel}>歌单</span>
             {derived.fixed.map(renderTab)}
@@ -392,6 +488,12 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
         </div>}
       </div>
 
+      {compact && <div className={styles.listHeading}>
+        <span className={styles.stats}>{searchActive ? `搜索结果 · ${tracksToShow.length} 首` : activeArtist ? `${activeArtist} · ${tracksToShow.length} 首` : `${tracksToShow.length} 首歌曲`}</span>
+        <button type="button" className={styles.locateButton} aria-label="定位当前歌曲" title="定位当前歌曲" disabled={!currentTrackUrl} onClick={locateCurrentTrack}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" /><path d="M12 2v3m0 14v3M2 12h3m14 0h3" /></svg>当前歌曲
+        </button>
+      </div>}
       <div className={styles.trackList}>
         {tracksToShow.length === 0 ? (
           <div className={styles.emptyState}>
@@ -426,6 +528,8 @@ function MusicLibraryClient({compact = false}: MusicLibraryProps) {
                     )}
                     onClick={() => playTrack(track)}
                     aria-current={isCurrent ? 'true' : undefined}
+                    data-track-url={track.url}
+                    aria-label={`${track.name} · ${track.artist}${isCurrent ? playbackPaused ? ' · 已暂停' : ' · 播放中' : ''}`}
                     onMouseEnter={() => setHighlightedIndex(flatIndex)}
                     onMouseLeave={() => setHighlightedIndex(-1)}>
                     <span className={styles.trackPlayHint} aria-hidden="true">

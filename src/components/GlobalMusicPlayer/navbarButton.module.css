@@ -1,0 +1,61 @@
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ifm-navbar-link-color);
+  cursor: pointer;
+}
+
+.button:hover, .button[aria-expanded='true'] {
+  background: var(--ifm-hover-overlay);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--feei-focus-ring);
+}
+
+.playing {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ifm-color-primary);
+}
+
+.tooltip {
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 5px 9px;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 6px;
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-font-color-base);
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.playing[data-state='error'] { background: #d70015; }
+.playing[data-state='loading'] { background: transparent; border: 1px solid currentColor; }
+
+@media (max-width: 996px) {
+  .button {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .playing {
+    right: 10px;
+    bottom: 10px;
+  }
+}

@@ -4,12 +4,13 @@ import { motion, useAnimate } from "motion/react";
 
 const XIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
   (
-    { size = 24, color = "currentColor", strokeWidth = 2, className = "" },
+    { size = 24, color = "currentColor", strokeWidth = 2, className = "", disableHover = false },
     ref,
   ) => {
     const [scope, animate] = useAnimate();
 
     const start = useCallback(async () => {
+      if (!scope.current) return;
       // Rotate the X icon slightly and add a scale effect
       animate(
         ".x-line-1",
@@ -37,6 +38,7 @@ const XIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
     }, [animate]);
 
     const stop = useCallback(async () => {
+      if (!scope.current) return;
       animate(
         ".x-line-1",
         {
@@ -80,8 +82,8 @@ const XIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
         strokeLinecap="round"
         strokeLinejoin="round"
         className={`cursor-pointer ${className}`}
-        onHoverStart={start}
-        onHoverEnd={stop}
+        onHoverStart={disableHover ? undefined : start}
+        onHoverEnd={disableHover ? undefined : stop}
       >
         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
 

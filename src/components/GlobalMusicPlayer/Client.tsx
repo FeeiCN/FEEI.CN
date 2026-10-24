@@ -44,6 +44,7 @@ let engine: Engine | null = null;
 let mount: HTMLDivElement | null = null;
 let activeGroup: PlaylistGroup | null = null;
 let loading = false;
+let playbackError = '';
 let generation = 0;
 let preferences: Preferences = {loop: 'all', order: 'list', volume: 0.45};
 
@@ -68,7 +69,9 @@ function persist() {
 }
 
 function reportError(message: string) {
+  playbackError = message;
   window.dispatchEvent(new CustomEvent(musicPlayerErrorEventName, {detail: message}));
+  reportState();
 }
 
 function reportState() {
@@ -81,12 +84,13 @@ function reportState() {
     paused: engine.audio.paused, currentTime: engine.audio.currentTime || 0,
     duration: Number.isFinite(engine.audio.duration) ? engine.audio.duration : 0,
     volume: engine.audio.volume, loop: preferences.loop, order: preferences.order,
-    loading, lyrics: lyrics.filter(([time]) => typeof time === 'number'),
+    loading, error: playbackError, lyrics: lyrics.filter(([time]) => typeof time === 'number'),
     tracks: activeGroup.tracks,
   });
 }
 
 function play(player: Engine) {
+  loading = player.audio.readyState < 3;
   reportError('');
   void player.audio.play().catch((error: unknown) => {
     if (engine !== player || (error instanceof DOMException && error.name === 'AbortError')) return;
@@ -230,7 +234,7 @@ export default function GlobalMusicPlayerClient() {
       const group = savedGroup ?? groups[0];
       if (group) void prepare(group).catch(() => reportError('播放器加载失败，请重试。'));
     };
-    const onClose = () => { generation++; pendingPlay.current = null; pendingOpen.current = false; engine?.pause(); persist(); };
+    const onClose = () => { generation++; pendingPlay.current = null; pendingOpen.current = false; engine?.pause(); persist(); reportState(); };
     const onCommand = (event: Event) => {
       if (!engine) return;
       const command = (event as CustomEvent<MusicPlayerCommand>).detail;

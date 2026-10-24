@@ -1,6 +1,7 @@
 export const musicPlayerPlayEventName = 'feei:music-player-play';
 export const musicPlayerStateEventName = 'feei:music-player-state';
 export const musicPlayerOpenEventName = 'feei:music-player-open';
+export const musicPlayerPanelStateEventName = 'feei:music-player-panel-state';
 export const musicPlayerCloseEventName = 'feei:music-player-close';
 export const musicPlayerStateRequestEventName = 'feei:music-player-state-request';
 export const musicPlayerErrorEventName = 'feei:music-player-error';
@@ -36,6 +37,7 @@ export type MusicPlayerStateDetail = {
   currentTime?: number;
   duration?: number;
   loading?: boolean;
+  error?: string;
   lyrics?: Array<[number, string]>;
   tracks?: Audio[];
   volume?: number;
@@ -53,9 +55,11 @@ export const dispatchMusicPlayerState = (detail: MusicPlayerStateDetail) => {
   window.dispatchEvent(new CustomEvent<MusicPlayerStateDetail>(musicPlayerStateEventName, {detail}));
 };
 
-export const dispatchMusicPlayerOpen = () => {
+export type MusicPlayerOpenDetail = {view?: 'playing' | 'library'; toggle?: boolean};
+
+export const dispatchMusicPlayerOpen = (detail: MusicPlayerOpenDetail = {}) => {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent(musicPlayerOpenEventName));
+  window.dispatchEvent(new CustomEvent(musicPlayerOpenEventName, {detail}));
 };
 
 export const dispatchMusicPlayerClose = () => {

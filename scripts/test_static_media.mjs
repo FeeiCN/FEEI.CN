@@ -7,7 +7,7 @@ const siteDir = path.resolve(import.meta.dirname, '..');
 const jiti = createJiti(import.meta.url);
 const {staticAssetUrl, staticAssetSrcSet} = jiti(path.join(siteDir, 'src/utils/staticAssets.ts'));
 const remarkStaticMedia = jiti(path.join(siteDir, 'plugins/remarkStaticMedia.ts')).default;
-const {siteMusicGroups, playlistGroupFromManifest} = jiti(path.join(siteDir, 'src/components/GlobalMusicPlayer/playlist.ts'));
+const {siteMusicGroups, playlistGroupFromManifest, babyMusicManifestUrl} = jiti(path.join(siteDir, 'src/components/GlobalMusicPlayer/playlist.ts'));
 
 test('static media uses the production origin from nested pages without double encoding', () => {
   for (const value of ['/media/图片.webp', 'music/歌曲.mp3', 'static/img/logo.svg', '../static/media/video.mp4']) {
@@ -55,4 +55,12 @@ test('all registered music, covers, lyrics and manifest tracks use absolute URLs
   }
   const group = playlistGroupFromManifest({id: 'test', label: 'test', tracks: [{title: 'test', artist: 'test', source_url: '', local_path: 'static/music/宝宝/歌曲.mp3'}]});
   assert.equal(group.tracks[0].url, 'https://feei.cn/music/%E5%AE%9D%E5%AE%9D/%E6%AD%8C%E6%9B%B2.mp3');
+});
+
+test('music metadata bypasses cached responses from before CORS was enabled', () => {
+  const version = new URL(babyMusicManifestUrl).searchParams.get('v');
+  assert.ok(version);
+  const lyrics = siteMusicGroups.flatMap(group => group.tracks).filter(track => typeof track.lrc === 'string');
+  assert.ok(lyrics.length > 0);
+  assert.ok(lyrics.every(track => new URL(track.lrc).searchParams.get('v') === version));
 });

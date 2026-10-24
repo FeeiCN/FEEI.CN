@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from 'react';
 import type APlayerInstance from 'aplayer';
 import type {Audio, Options} from 'aplayer';
 import {staticAssetUrl} from '@site/src/utils/staticAssets';
-import {buildAllDerivedGroups, playlistGroupFromManifest, siteMusicGroups} from './playlist';
+import {babyMusicManifestUrl, buildAllDerivedGroups, playlistGroupFromManifest, siteMusicGroups} from './playlist';
 import type {PlaylistGroup, PlaylistManifestGroup} from './playlist';
 import Controls from './Controls';
 import styles from './styles.module.css';
@@ -193,7 +193,7 @@ export default function GlobalMusicPlayerClient() {
 
   const loadManifest = () => {
     if (manifestLoad.current) return manifestLoad.current;
-    manifestLoad.current = fetch(staticAssetUrl('/music/baby-music/manifest.json'))
+    manifestLoad.current = fetch(babyMusicManifestUrl)
       .then(async (response) => {
         if (!response.ok) return;
         const manifest = await response.json() as PlaylistManifestGroup[];

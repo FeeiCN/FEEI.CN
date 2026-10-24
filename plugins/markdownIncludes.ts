@@ -19,6 +19,7 @@ function assertInsideDocs(includePath: string): void {
 
 function rebaseStandardLinks(markdown: string, includePath: string, sourcePath: string): string {
   let fence: string | undefined;
+  let mathFence: string | undefined;
   const rebase = (url: string): string => {
     if (/^(?:[a-z][\w+.-]*:|\/|#)/i.test(url)) return url;
     const split = url.search(/[?#]/);
@@ -36,7 +37,14 @@ function rebaseStandardLinks(markdown: string, includePath: string, sourcePath: 
       return line;
     }
     if (fence) return line;
-    return line.split(/(`+[^`]*`+)/g).map((part, index) => index % 2 ? part : part
+    const mathMark = line.match(/^ {0,3}(\${2,})\s*$/);
+    if (mathMark) {
+      if (!mathFence) mathFence = mathMark[1];
+      else if (mathMark[1].length >= mathFence.length) mathFence = undefined;
+      return line;
+    }
+    if (mathFence) return line;
+    return line.split(/(`+[^`]*`+|(?<!\\)\$+[^$]*(?<!\\)\$+)/g).map((part, index) => index % 2 ? part : part
       .replace(/(\]\()([^\s)]+)(?=[\s)])/g, (_match, prefix: string, url: string) => prefix + rebase(url))
       .replace(/(^ {0,3}\[[^\]]+\]:[ \t]*)(\S+)/g, (_match, prefix: string, url: string) => prefix + rebase(url))
       .replace(/(?<![\w/])(?:https?:\/\/)?www\.[a-z\d.-]+(?=[\u3400-\u9fff])/gi,

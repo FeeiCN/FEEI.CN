@@ -23,6 +23,8 @@ export type PlaylistManifestGroup = {
 
 const defaultCover = staticAssetUrl('/music/feei-site-theme-cover.webp');
 const defaultTheme = '#205d3b';
+const metadataVersion = 'cors-1';
+export const babyMusicManifestUrl = staticAssetUrl(`/music/baby-music/manifest.json?v=${metadataVersion}`);
 
 const toEncodedUrl = (path: string): string => {
   const normalizedPath = path.replace(/^\/+/, '').replace(/^static\//, '');
@@ -42,7 +44,7 @@ const localTrack = (name: string, artist: string, fileName: string): Audio => {
     name,
     artist,
     url: toEncodedUrl(`music/${fileName}`),
-    ...(lyricFileName ? {lrc: toEncodedUrl(`music/${lyricFileName}`)} : {}),
+    ...(lyricFileName ? {lrc: `${toEncodedUrl(`music/${lyricFileName}`)}?v=${metadataVersion}`} : {}),
     cover: defaultCover,
     theme: defaultTheme,
   };

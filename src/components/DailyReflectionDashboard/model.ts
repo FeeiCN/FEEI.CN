@@ -256,7 +256,7 @@ export type AuthoredPeriodReview = {
 };
 export const AUTHORED_PERIOD_REVIEWS: Record<string, AuthoredPeriodReview> = {
   'year:2019': {
-    title: '2019 年度总结：一个安全工程师的七年之痒',
+    title: '2019 年度总结：再启新程',
     summary: '从蘑菇街到蚂蚁金服，复盘七年安全工程经历、平台选择与职业阶段转换。',
     href: '/a-security-engineer-2019',
     load: () => import('@site/docs/05-吴飞飞/02-年度总结/a-security-engineer-2019.md'),
@@ -268,13 +268,13 @@ export const AUTHORED_PERIOD_REVIEWS: Record<string, AuthoredPeriodReview> = {
     load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-2023.md'),
   },
   'year:2024': {
-    title: '2024 年度总结',
+    title: '2024 年度总结：主动求变',
     summary: '复盘工作晋升、知识沉淀、AI 实践、生活空间、旅行、财务与健康状态。',
     href: '/annual-review-for-2024',
     load: () => import('@site/docs/05-吴飞飞/02-年度总结/2024年度总结/index.md'),
   },
   'year:2025': {
-    title: '2025 年度总结：量变到质变',
+    title: '2025 年度总结：厚积薄发',
     summary: '围绕健康幸福、事业有成、财务自由与探索世界持续积累，个人成长系统开始显现复利。',
     href: '/annual-review-for-2025',
     load: () => import('@site/docs/05-吴飞飞/02-年度总结/annual-review-for-2025.md'),

@@ -154,18 +154,9 @@ export function attachDocFrontMatterToSidebar<
 
       let children = originalChildren;
 
-      // Real categories are navigation nodes only. If a legacy category linked directly
-      // to a document, keep that document as the first child before removing the link.
       if (item.link?.type === 'doc' && item.link.id) {
         nextItem.customProps = applyDocFields(item, item.link.id);
-        if (!children.some((child) => child.type === 'doc' && child.id === item.link?.id)) {
-          const linkedDoc = docsById.get(item.link.id);
-          children.unshift({
-            type: 'doc',
-            id: item.link.id,
-            label: linkedDoc?.title,
-          });
-        }
+        children = children.filter((child) => child.type !== 'doc' || child.id !== item.link?.id);
       }
 
       nextItem.customProps = {...nextItem.customProps, icon: getCategoryIcon(item)};

@@ -2,6 +2,15 @@
   overflow: hidden;
 }
 
+:global(.theme-doc-sidebar-menu .menu__list-item-collapsible) > a.categoryLink:global(.menu__link) {
+  line-height: 1.4;
+  letter-spacing: -0.012em;
+}
+
+:global(.theme-doc-sidebar-menu .menu__list-item-collapsible) > a.categoryLink:global(.menu__link):not(:global(.menu__link--active)):not(:global(.menu__link--active-parent)) {
+  font-weight: 500 !important;
+}
+
 .categoryToggle {
   width: 100%;
   border: 0;

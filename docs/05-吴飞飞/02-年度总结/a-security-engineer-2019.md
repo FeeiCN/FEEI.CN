@@ -1,6 +1,6 @@
 ---
 slug: /a-security-engineer-2019
-title: 一个安全工程师的2019
+title: 2019年度总结：再启新程
 icon: history-circle-icon
 description: 2019 年从蘑菇街转向蚂蚁金服的职业转折记录，也记录安全行业交流、长途旅行、装修和生活变化。
 sidebar_position: 8

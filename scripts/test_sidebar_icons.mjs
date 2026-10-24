@@ -40,7 +40,22 @@ test('explicit category icons override linked index icons', () => {
   items[0].items.push({type: 'doc', id: 'another'});
   const [category] = attachDocFrontMatterToSidebar(items, docs);
   assert.equal(category.customProps.icon, 'gear-icon');
-  assert.equal(category.items.find(item => item.id === 'tools').customProps.icon, 'terminal-icon');
+  assert.equal(category.link.id, 'tools');
+  assert.deepEqual(category.items.map(item => item.id), ['another']);
+});
+
+test('linked category indexes appear once and preserve the remaining article order', () => {
+  const index = {type: 'doc', id: 'annual', label: '年度总结'};
+  for (const children of [[{type: 'doc', id: 'december'}, {type: 'doc', id: 'november'}],
+    [index, {type: 'doc', id: 'december'}, {type: 'doc', id: 'november'}]]) {
+    const [category] = attachDocFrontMatterToSidebar([{
+      type: 'category', label: '年度总结', link: {type: 'doc', id: 'annual'}, items: children,
+    }], [{id: 'annual', title: '年度总结', frontMatter: {icon: 'history-circle-icon'}}]);
+    assert.equal(category.link.id, 'annual');
+    assert.equal(category.customProps.icon, 'history-circle-icon');
+    assert.deepEqual(category.items.map(item => item.id), ['december', 'november']);
+    assert.equal(children.length, children.includes(index) ? 3 : 2);
+  }
 });
 
 test('nested categories and documents retain their own icons at every depth', () => {

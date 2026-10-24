@@ -60,6 +60,10 @@ export function attachDocFrontMatterToSidebar<
 >(items: Item[], docs: Doc[]): Item[] {
   const docsById = new Map(docs.map((doc) => [doc.id, doc]));
 
+  function includeInSidebar(item: SidebarItemWithProps): boolean {
+    return item.type !== 'doc' || !item.id || docsById.get(item.id)?.frontMatter?.slug !== '/links';
+  }
+
   function applyDocFields(
     item: SidebarItemWithProps,
     docId: string,
@@ -137,7 +141,7 @@ export function attachDocFrontMatterToSidebar<
     if (item.type === 'category') {
       if (typeof item.collapsed === 'undefined') nextItem.collapsed = depth > 0;
 
-      const originalChildren = [...(item.items ?? [])];
+      const originalChildren = (item.items ?? []).filter(includeInSidebar);
 
       // A folder that only wraps a single index document is file organization,
       // not information architecture. Render it as a normal article instead of
@@ -181,5 +185,5 @@ export function attachDocFrontMatterToSidebar<
     return nextItem;
   }
 
-  return items.map((item) => visit(item, 0) as Item);
+  return items.filter(includeInSidebar).map((item) => visit(item, 0) as Item);
 }

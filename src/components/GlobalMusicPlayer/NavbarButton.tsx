@@ -45,7 +45,7 @@ export default function MusicButton() {
         data-playback-state={status.kind}
         onMouseEnter={iconAnimation.onMouseEnter} onMouseLeave={iconAnimation.onMouseLeave}
         onClick={() => dispatchMusicPlayerOpen({view: 'library', toggle: true})}>
-        <MusicIcon ref={iconAnimation.iconRef} size={18} strokeWidth={1.6} disableHover />
+        <MusicIcon ref={iconAnimation.iconRef} size={24} strokeWidth={1.6} disableHover />
         {(playing || status.kind === 'error') && <span className={styles.playing} data-state={status.kind} aria-label={status.label} />}
       </button>
     </Tooltip.Trigger>

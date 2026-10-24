@@ -63,18 +63,18 @@ const BrightnessDownIcon = forwardRef<AnimatedIconHandle, AnimatedIconProps>(
           <path stroke="none" d="M0 0h24v24H0z" fill="none" />
           <motion.path
             className="sun-center"
-            d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"
+            d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"
             style={{ transformOrigin: "center" }}
           />
           <motion.g className="sun-rays">
-            <path d="M12 5l0 .01" />
-            <path d="M17 7l0 .01" />
-            <path d="M19 12l0 .01" />
-            <path d="M17 17l0 .01" />
-            <path d="M12 19l0 .01" />
-            <path d="M7 17l0 .01" />
-            <path d="M5 12l0 .01" />
-            <path d="M7 7l0 .01" />
+            <path d="M12 3l0 .01" />
+            <path d="M18.36 5.64l0 .01" />
+            <path d="M21 12l0 .01" />
+            <path d="M18.36 18.36l0 .01" />
+            <path d="M12 21l0 .01" />
+            <path d="M5.64 18.36l0 .01" />
+            <path d="M3 12l0 .01" />
+            <path d="M5.64 5.64l0 .01" />
           </motion.g>
         </svg>
       </motion.div>

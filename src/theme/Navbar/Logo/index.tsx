@@ -13,8 +13,8 @@ export default function NavbarLogo() {
       <span
         className={styles.logoText}
         style={{
-          color: isLight ? '#111111' : '#9ca3af',
-          WebkitTextStroke: isLight ? '1px #111111' : '1px #9ca3af',
+          color: isLight ? '#111111' : '#ffffff',
+          WebkitTextStroke: isLight ? '1px #111111' : '1px #ffffff',
         }}
       >
         FEEI

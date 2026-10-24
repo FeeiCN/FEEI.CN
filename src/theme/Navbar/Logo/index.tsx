@@ -1,22 +1,13 @@
 import Link from '@docusaurus/Link';
 import useBaseUrl from '@docusaurus/useBaseUrl';
-import {useColorMode} from '@docusaurus/theme-common';
 import styles from './styles.module.css';
 
 export default function NavbarLogo() {
   const homeUrl = useBaseUrl('/');
-  const {colorMode} = useColorMode();
-  const isLight = colorMode === 'light';
 
   return (
     <Link to={homeUrl} className={styles.logoLink} aria-label="FEEI 首页">
-      <span
-        className={styles.logoText}
-        style={{
-          color: isLight ? '#111111' : '#ffffff',
-          WebkitTextStroke: isLight ? '1px #111111' : '1px #ffffff',
-        }}
-      >
+      <span className={styles.logoText}>
         FEEI
       </span>
     </Link>

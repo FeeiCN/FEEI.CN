@@ -10,7 +10,13 @@
 }
 
 .logoText {
+  color: #111111;
+  -webkit-text-stroke: 1px currentColor;
   font-size: 1.8rem;
   font-weight: 900;
   letter-spacing: -0.02em;
+}
+
+:global([data-theme='dark']) .logoText {
+  color: #ffffff;
 }

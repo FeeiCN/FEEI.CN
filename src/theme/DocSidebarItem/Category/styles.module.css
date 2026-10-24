@@ -1,5 +1,6 @@
 .categoryLink {
   overflow: hidden;
+  min-width: 0;
 }
 
 :global(.theme-doc-sidebar-menu .menu__list-item-collapsible) > a.categoryLink:global(.menu__link) {
@@ -12,7 +13,6 @@
 }
 
 .categoryToggle {
-  width: 100%;
   border: 0;
   background: transparent;
   text-align: start;

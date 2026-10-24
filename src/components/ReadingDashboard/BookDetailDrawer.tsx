@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import {staticAssetUrl} from '@site/src/utils/staticAssets';
 import {Drawer, Portal, Tabs} from '@chakra-ui/react';
 import type {
   BookInfo,
@@ -109,7 +110,7 @@ export default function BookDetailDrawer({bookId, book, dataVersion, onClose}: P
     .map((item) => [item.bookmarkId, item])).values());
 
   const cover = info?.cover || book?.cover || '';
-  const localCover = book?.bookId ? `/data/reading/books/${book.bookId}/cover.jpg` : '';
+  const localCover = book?.bookId ? staticAssetUrl(`/data/reading/books/${book.bookId}/cover.jpg`) : '';
   const title = info?.title || book?.title || '未命名';
   const author = info?.author || book?.author || '';
   const category = info?.category || book?.category || '';

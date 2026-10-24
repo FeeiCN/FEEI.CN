@@ -1,5 +1,6 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
+import {staticAssetUrl} from '@site/src/utils/staticAssets';
 import AccountAssetsDashboard from '@site/src/components/AccountAssetsDashboard';
 import AlipayInvestDashboard from '@site/src/components/AlipayInvestDashboard';
 import BrowserOnly from '@docusaurus/BrowserOnly';
@@ -105,8 +106,8 @@ function renderFollowUp(text: string): React.ReactNode {
 }
 
 function normalizeImageSrc(src: string): string {
-  if (/^https?:\/\//.test(src) || src.startsWith('/')) return src;
-  return `/data/daily/assets/${src.replace(/^\.?\//, '')}`;
+  if (/^(?:https?:)?\/\//.test(src) || src.startsWith('/')) return staticAssetUrl(src);
+  return staticAssetUrl(`/data/daily/assets/${src.replace(/^\.?\//, '')}`);
 }
 
 function DiaryImageView({image}: {image: DiaryImage}): React.ReactNode {

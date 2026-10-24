@@ -1,4 +1,5 @@
 import React from 'react';
+import {staticAssetUrl} from '@site/src/utils/staticAssets';
 import type {LibraryBook} from './types';
 import {formatRelativeTime} from './utils';
 import styles from './styles.module.css';
@@ -48,7 +49,7 @@ export default function CurrentlyReading({library, onSelect, maxItems = 6}: Prop
               {b.cover ? (
                 <img
                   className={styles.currentCover}
-                  src={`/data/reading/books/${b.bookId}/cover.jpg`}
+                  src={staticAssetUrl(`/data/reading/books/${b.bookId}/cover.jpg`)}
                   alt={b.title}
                   loading="lazy"
                   onError={(e) => {

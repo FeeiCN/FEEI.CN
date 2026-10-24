@@ -10,6 +10,8 @@ import homeRecordsPlugin from './plugins/homeRecordsPlugin';
 import {expandMarkdownIncludes} from './plugins/markdownIncludes';
 import {attachDocFrontMatterToSidebar} from './config/docusaurusSidebar';
 import {searchOptions} from './config/search';
+import remarkStaticMedia from './plugins/remarkStaticMedia';
+import {staticAssetUrl} from './src/utils/staticAssets';
 
 const isStrictBuild = process.env.CI_STRICT === 'true';
 
@@ -19,13 +21,13 @@ const config: Config = {
   markdown: {format: 'detect', hooks: {onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn', onBrokenMarkdownImages: 'ignore'}, preprocessor: ({filePath, fileContent}) => expandMarkdownIncludes(fileContent, filePath).replace(/https?:\/\/\S+/g, (url) => url.replace(/\*/g, '\\*'))},
   url: 'https://feei.cn', baseUrl: '/', organizationName: 'feeicn', projectName: 'FEEI.CN', onBrokenLinks: isStrictBuild ? 'throw' : 'warn', i18n: {defaultLocale: 'zh-Hans', locales: ['zh-Hans']},
   headTags: [
-    {tagName: 'link', attributes: {rel: 'icon', href: '/img/feei-icon.svg', type: 'image/svg+xml'}},
+    {tagName: 'link', attributes: {rel: 'icon', href: staticAssetUrl('/img/feei-icon.svg'), type: 'image/svg+xml'}},
   ],
-  presets: [['classic', {docs: {routeBasePath: '/', sidebarPath: './sidebars.ts', remarkPlugins: [remarkMath], rehypePlugins: [rehypeKatex], async sidebarItemsGenerator(args) { const items = await args.defaultSidebarItemsGenerator(args); return attachDocFrontMatterToSidebar(items, args.docs); }, editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/'}, blog: false, theme: {customCss: ['./src/css/custom.css', './src/css/neutral.css', './src/css/sliding-indicator.css', './src/css/friend-links.css', './src/css/year-records.css', './src/css/contact.css']}} satisfies Preset.Options]],
+  presets: [['classic', {docs: {routeBasePath: '/', sidebarPath: './sidebars.ts', beforeDefaultRemarkPlugins: [remarkStaticMedia], remarkPlugins: [remarkMath], rehypePlugins: [rehypeKatex], async sidebarItemsGenerator(args) { const items = await args.defaultSidebarItemsGenerator(args); return attachDocFrontMatterToSidebar(items, args.docs); }, editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/'}, blog: false, theme: {customCss: ['./src/css/custom.css', './src/css/neutral.css', './src/css/sliding-indicator.css', './src/css/friend-links.css', './src/css/year-records.css', './src/css/contact.css']}} satisfies Preset.Options]],
   plugins: [docMtimePlugin, copyMarkdownPlugin, homeRecordsPlugin, [fastSearchPlugin, searchOptions]], clientModules: ['./src/clientModules/slidingIndicator.ts'],
   themeConfig: {
-    docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: 'music/feei-site-theme-cover.webp', colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
-    navbar: {hideOnScroll: false, logo: {alt: 'FEEI', src: 'img/feei-icon.svg'}, items: [
+    docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: staticAssetUrl('/music/feei-site-theme-cover.webp'), colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
+    navbar: {hideOnScroll: false, logo: {alt: 'FEEI', src: staticAssetUrl('/img/feei-icon.svg')}, items: [
       {type: 'dropdown', position: 'left', label: '网络安全', icon: 'shield', items: [
         {type: 'docSidebar', sidebarId: 'securityEngineeringSidebar', label: '网络空间安全', icon: 'shield'},
         {type: 'docSidebar', sidebarId: 'aiSecuritySidebar', label: '人工智能安全', icon: 'brand-openai-icon'},

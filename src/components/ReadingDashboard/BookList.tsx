@@ -1,4 +1,5 @@
 import React, {useEffect, useMemo} from 'react';
+import {staticAssetUrl} from '@site/src/utils/staticAssets';
 import type {LibraryBook} from './types';
 import {formatDuration, formatRelativeTime, shortAuthor} from './utils';
 import styles from './styles.module.css';
@@ -334,7 +335,7 @@ function BookCard({
   const pct = Math.max(0, Math.min(100, book.progress ?? 0));
   const isFinished = pct >= 99;
   const totalTime = formatDuration(book.totalReadTime ?? 0);
-  const localCover = `/data/reading/books/${book.bookId}/cover.jpg`;
+  const localCover = staticAssetUrl(`/data/reading/books/${book.bookId}/cover.jpg`);
   return (
     <button
       type="button"

@@ -2,6 +2,7 @@ import React, {type ReactNode} from 'react';
 import clsx from 'clsx';
 import type {Props} from '@theme/MDXComponents/Img';
 import styles from '@docusaurus/theme-classic/lib/theme/MDXComponents/Img/styles.module.css';
+import {staticAssetSrcSet, staticAssetUrl} from '@site/src/utils/staticAssets';
 
 function transformImgClassName(className?: string): string {
   return clsx(className, styles.img);
@@ -20,6 +21,8 @@ export default function MDXImg(props: Props): ReactNode {
         loading={eager ? 'eager' : 'lazy'}
         fetchPriority={eager ? 'high' : undefined}
         {...rest}
+        src={staticAssetUrl(rest.src)}
+        srcSet={staticAssetSrcSet(rest.srcSet)}
         className={transformImgClassName(className)}
       />
     </span>

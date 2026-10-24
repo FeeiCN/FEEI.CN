@@ -1,5 +1,6 @@
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import clsx from 'clsx';
+import {staticAssetUrl} from '@site/src/utils/staticAssets';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {Audio} from 'aplayer';
 import ArrowDownIcon from '@site/src/components/ItsHoverIcon/icons/arrow-narrow-down-icon';
@@ -28,7 +29,7 @@ import type {
 } from '@site/src/components/GlobalMusicPlayer/playerEvents';
 import styles from './styles.module.css';
 
-const babyMusicManifestUrl = '/music/baby-music/manifest.json';
+const babyMusicManifestUrl = staticAssetUrl('/music/baby-music/manifest.json');
 
 type TrackLocation = {groupId: string; index: number};
 

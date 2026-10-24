@@ -1,5 +1,6 @@
 import type {Audio} from 'aplayer';
 import {localLyricsFileByAudioFile} from './localLyrics';
+import {staticAssetUrl} from '../../utils/staticAssets';
 
 export type PlaylistGroup = {
   id: string;
@@ -20,7 +21,7 @@ export type PlaylistManifestGroup = {
   tracks: PlaylistManifestTrack[];
 };
 
-const defaultCover = '/music/feei-site-theme-cover.webp';
+const defaultCover = staticAssetUrl('/music/feei-site-theme-cover.webp');
 const defaultTheme = '#205d3b';
 
 const toEncodedUrl = (path: string): string => {
@@ -31,7 +32,7 @@ const toEncodedUrl = (path: string): string => {
     .map((segment) => encodeURIComponent(segment))
     .join('/');
 
-  return `/${encodedPath}`;
+  return staticAssetUrl(`/${encodedPath}`);
 };
 
 const localTrack = (name: string, artist: string, fileName: string): Audio => {

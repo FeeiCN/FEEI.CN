@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import type APlayerInstance from 'aplayer';
 import type {Audio, Options} from 'aplayer';
+import {staticAssetUrl} from '@site/src/utils/staticAssets';
 import {buildAllDerivedGroups, playlistGroupFromManifest, siteMusicGroups} from './playlist';
 import type {PlaylistGroup, PlaylistManifestGroup} from './playlist';
 import Controls from './Controls';
@@ -159,7 +160,7 @@ async function prepare(group: PlaylistGroup, requestedIndex?: number, autoplay =
       if (second !== lastSavedSecond && second % 5 === 0) { lastSavedSecond = second; persist(); }
     });
     const saved = readStoredState().groups?.[group.id];
-    const savedIndex = saved ? group.tracks.findIndex((track) => track.url === saved.trackUrl) : -1;
+    const savedIndex = saved ? group.tracks.findIndex((track) => track.url === staticAssetUrl(saved.trackUrl)) : -1;
     if (requestedIndex === undefined && saved && savedIndex >= 0) {
       player.list.switch(savedIndex);
       const savedTime = Number.isFinite(saved.currentTime) ? Math.max(0, saved.currentTime) : 0;
@@ -192,7 +193,7 @@ export default function GlobalMusicPlayerClient() {
 
   const loadManifest = () => {
     if (manifestLoad.current) return manifestLoad.current;
-    manifestLoad.current = fetch('/music/baby-music/manifest.json')
+    manifestLoad.current = fetch(staticAssetUrl('/music/baby-music/manifest.json'))
       .then(async (response) => {
         if (!response.ok) return;
         const manifest = await response.json() as PlaylistManifestGroup[];

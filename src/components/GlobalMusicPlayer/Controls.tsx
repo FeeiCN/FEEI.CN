@@ -1,6 +1,7 @@
 import {lazy, Suspense, useEffect, useRef, useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {createPortal} from 'react-dom';
+import {staticAssetUrl} from '@site/src/utils/staticAssets';
 import {useHistory, useLocation} from '@docusaurus/router';
 import {MusicIcon, getItsHoverIcon, type AnimatedIconHandle} from '@site/src/components/ItsHoverIcon';
 import ListIcon from '@site/src/components/ItsHoverIcon/icons/unordered-list-icon';
@@ -20,7 +21,7 @@ import styles from './controls.module.css';
 
 const MusicLibrary = lazy(() => import('@site/src/components/MusicLibrary'));
 type View = 'playing' | 'library';
-const defaultCover = '/music/feei-site-theme-cover.webp';
+const defaultCover = staticAssetUrl('/music/feei-site-theme-cover.webp');
 const PlayerIcon = getItsHoverIcon('player-icon')!;
 
 function timeLabel(seconds: number) {
@@ -36,7 +37,7 @@ function IconButton({label, children, onClick, pressed, className = ''}: {
 }
 
 function Cover({src, className = ''}: {src?: string; className?: string}) {
-  return <img className={`${styles.cover} ${className}`} src={src || defaultCover} alt="歌曲封面"
+  return <img className={`${styles.cover} ${className}`} src={staticAssetUrl(src) || defaultCover} alt="歌曲封面"
     onError={(event) => { if (!event.currentTarget.src.endsWith(defaultCover)) event.currentTarget.src = defaultCover; }} />;
 }
 
@@ -348,7 +349,7 @@ export default function Controls() {
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }}>
-      <img src={playback?.cover || defaultCover} alt="" className={styles.lyricBackdrop} />
+      <img src={staticAssetUrl(playback?.cover) || defaultCover} alt="" className={styles.lyricBackdrop} />
       <div className={`${styles.lyricHeader} ${!controlsVisible ? styles.quiet : ''}`}>
         <div><strong>{playback?.title}</strong><span>{playback?.artist}</span></div>
         <IconButton label="关闭全屏歌词" onClick={() => setLyricsOpen(false)}><XIcon size={20} /></IconButton>

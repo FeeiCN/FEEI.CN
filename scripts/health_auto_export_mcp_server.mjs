@@ -330,6 +330,17 @@ except Exception as error:
     });
     let stdout = '';
     let stderr = '';
+    let settled = false;
+    const finish = (message) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(killTimer);
+      resolve(message);
+    };
+    const killTimer = setTimeout(() => {
+      child.kill('SIGTERM');
+      finish(`Health Auto Export request timed out after ${timeoutMs}ms`);
+    }, timeoutMs + 1000);
 
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
@@ -340,10 +351,10 @@ except Exception as error:
       stderr += chunk;
     });
     child.on('error', (error) => {
-      resolve(`Failed to run Python TCP client: ${error.message}`);
+      finish(`Failed to run Python TCP client: ${error.message}`);
     });
     child.on('close', () => {
-      resolve(stdout.trim() || stderr.trim() || 'No response data received');
+      finish(stdout.trim() || stderr.trim() || 'No response data received');
     });
     child.stdin.end(payload);
   });

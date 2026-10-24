@@ -25,6 +25,16 @@
   font-size: 0.85rem;
 }
 
+@media (max-width: 1279px) {
+  .diaryRail { display: block; width: 100%; max-width: 864px; margin-inline: auto; padding: 24px 16px; border-top: 1px solid var(--ifm-toc-border-color); }
+  .diaryRail .tocCollapseButton, .diaryRail :global(.theme-doc-toc-desktop) { display: none; }
+}
+
+@media (min-width: 1280px) {
+  .diaryRail .tocContent { padding: 16px 20px 24px; }
+  .diaryRail :global(.theme-doc-toc-desktop) { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--ifm-toc-border-color); }
+}
+
 @media (max-width: 640px) {
   .content {
     padding-inline: 0.5rem;
@@ -113,6 +123,19 @@
 
   .tocCollapsed .tocCollapseButton svg {
     transform: none;
+  }
+
+  .tocCollapsed:has(.diaryRail) {
+    grid-template-columns: minmax(0, 1fr) 24px;
+  }
+
+  .tocCollapsed .diaryRail {
+    width: 24px;
+    background: transparent;
+  }
+
+  .tocCollapsed .diaryRail .tocCollapseButton {
+    left: 0;
   }
 
   .mobileTOC {

@@ -11,9 +11,11 @@ type Props = {
   touchMode: boolean;
   className: string;
   children: ReactNode;
+  current?: boolean;
+  today?: boolean;
 };
 
-export default function AnnualDayPreview({record, metrics, mediaStatus, touchMode, className, children}: Props) {
+export default function AnnualDayPreview({record, metrics, mediaStatus, touchMode, className, children, current, today}: Props) {
   const content = (
     <>
       <time dateTime={record.date} className="annual-preview__date">{record.date}</time>
@@ -28,13 +30,13 @@ export default function AnnualDayPreview({record, metrics, mediaStatus, touchMod
       <Link className="annual-preview__link" to={record.to}>查看当天记录 →</Link>
     </>
   );
-  const label = `${record.date}：${record.title}`;
+  const label = `${record.date}：${record.title}${today ? '，今天' : ''}`;
 
   if (touchMode) {
     return (
       <Popover.Root lazyMount unmountOnExit positioning={{placement: 'top', gutter: 10, strategy: 'fixed', hideWhenDetached: true}}>
         <Popover.Trigger asChild>
-          <button type="button" className={className} aria-label={`${label}，查看摘要`}>{children}</button>
+          <button type="button" className={className} aria-current={current ? 'date' : undefined} aria-label={`${label}，查看摘要`}>{children}</button>
         </Popover.Trigger>
         <Portal>
           <Popover.Positioner>
@@ -51,7 +53,7 @@ export default function AnnualDayPreview({record, metrics, mediaStatus, touchMod
   return (
     <HoverCard.Root openDelay={200} closeDelay={150} lazyMount unmountOnExit positioning={{placement: 'top', gutter: 10, strategy: 'fixed', hideWhenDetached: true}}>
       <HoverCard.Trigger asChild>
-        <Link to={record.to} className={className} aria-label={label}>{children}</Link>
+        <Link to={record.to} className={className} aria-current={current ? 'date' : undefined} aria-label={label}>{children}</Link>
       </HoverCard.Trigger>
       <Portal>
         <HoverCard.Positioner>

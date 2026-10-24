@@ -49,6 +49,50 @@ export default function DocRoot(props: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const sidebar = frameRef.current?.querySelector<HTMLElement>('.theme-doc-sidebar-container nav');
+    const menu = sidebar?.querySelector<HTMLElement>('.theme-doc-sidebar-menu');
+    if (!sidebar || !menu) return;
+
+    let animationFrame: number | undefined;
+    const revealCurrentItem = () => {
+      animationFrame = undefined;
+      if (window.innerWidth < 997 || sidebar.clientHeight === 0) return;
+      const current = menu.querySelector<HTMLElement>('[aria-current="page"]');
+      if (!current || current.getClientRects().length === 0) return;
+      const bounds = sidebar.getBoundingClientRect();
+      const itemBounds = current.getBoundingClientRect();
+      if (itemBounds.top < bounds.top + 12 || itemBounds.bottom > bounds.bottom - 12) {
+        sidebar.scrollTop += itemBounds.top - bounds.top - (sidebar.clientHeight - itemBounds.height) / 2;
+      }
+    };
+    const scheduleReveal = () => {
+      if (animationFrame === undefined) animationFrame = window.requestAnimationFrame(revealCurrentItem);
+    };
+    const resizeObserver = new ResizeObserver(scheduleReveal);
+    const mutationObserver = new MutationObserver(scheduleReveal);
+    resizeObserver.observe(sidebar);
+    resizeObserver.observe(menu);
+    mutationObserver.observe(menu, {childList: true, subtree: true, attributes: true, attributeFilter: ['aria-current']});
+    const stopFollowing = () => {
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      if (animationFrame !== undefined) window.cancelAnimationFrame(animationFrame);
+      animationFrame = undefined;
+    };
+    sidebar.addEventListener('wheel', stopFollowing, {passive: true});
+    sidebar.addEventListener('pointerdown', stopFollowing);
+    sidebar.addEventListener('keydown', stopFollowing);
+    scheduleReveal();
+
+    return () => {
+      stopFollowing();
+      sidebar.removeEventListener('wheel', stopFollowing);
+      sidebar.removeEventListener('pointerdown', stopFollowing);
+      sidebar.removeEventListener('keydown', stopFollowing);
+    };
+  }, [location.pathname]);
+
+  useEffect(() => {
     const frame = frameRef.current;
     const footer = document.querySelector('footer');
     if (!frame || !footer) return;

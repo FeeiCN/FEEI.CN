@@ -2,7 +2,7 @@ import React, {type ReactNode} from 'react';
 import clsx from 'clsx';
 import {translate} from '@docusaurus/Translate';
 import type {Props} from '@theme/DocSidebar/Desktop/CollapseButton';
-import ArrowBigLeftDashIcon from '@site/src/components/ItsHoverIcon/icons/arrow-big-left-dash-icon';
+import SidebarIcon from '@site/src/components/SidebarIcon';
 import styles from './styles.module.css';
 
 export default function CollapseButton({onClick}: Props): ReactNode {
@@ -17,15 +17,16 @@ export default function CollapseButton({onClick}: Props): ReactNode {
       type="button"
       title={label}
       aria-label={label}
+      aria-expanded
       className={clsx(
-        'button button--secondary button--outline',
+        'docRailToggle',
         styles.collapseSidebarButton,
       )}
       onClick={onClick}>
-      <ArrowBigLeftDashIcon
+      <SidebarIcon
+        icon="arrow-big-left-dash-icon"
+        disableHover
         className={styles.collapseSidebarButtonIcon}
-        size={16}
-        strokeWidth={1.8}
       />
     </button>
   );

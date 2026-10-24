@@ -1,4 +1,5 @@
 .frame {
+  --doc-sidebar-hidden-width: 0px;
   --docs-viewport-height: max(0px, calc(100dvh - var(--ifm-navbar-height) - var(--docs-visible-footer-height, 0px)));
   display: flex;
   flex: 1 0 auto;
@@ -17,6 +18,14 @@
 }
 
 @media (min-width: 997px) {
+  .withSidebar :global(.theme-doc-sidebar-container) {
+    clip-path: inset(0 -28px 0 0);
+  }
+
+  .withSidebar :global(.theme-doc-sidebar-container:has(button.docRailToggle[aria-expanded='false'])) {
+    border-right: 0;
+  }
+
   .withSidebar :global(.theme-doc-sidebar-container > div) {
     top: var(--ifm-navbar-height);
     height: var(--docs-viewport-height);
@@ -29,6 +38,5 @@
 
   .withSidebar :global(.theme-doc-sidebar-container nav) {
     min-height: 0;
-    overscroll-behavior-y: contain;
   }
 }

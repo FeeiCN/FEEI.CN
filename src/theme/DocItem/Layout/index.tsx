@@ -10,7 +10,7 @@ import DocItemTOCDesktop from '@theme/DocItem/TOC/Desktop';
 import DocItemContent from '@theme/DocItem/Content';
 import DocBreadcrumbs from '@theme/DocBreadcrumbs';
 import ContentVisibility from '@theme/ContentVisibility';
-import ArrowBigLeftDashIcon from '@site/src/components/ItsHoverIcon/icons/arrow-big-left-dash-icon';
+import SidebarIcon from '@site/src/components/SidebarIcon';
 import type {Props} from '@theme/DocItem/Layout';
 import styles from './styles.module.css';
 
@@ -20,7 +20,7 @@ export default function DocItemLayout({children}: Props): ReactNode {
   const [tocCollapsed, setTocCollapsed] = useState(false);
 
   return (
-    <div className={clsx(styles.layout, hasTOC && tocCollapsed && styles.tocCollapsed)}>
+    <div className={clsx(styles.layout, tocCollapsed && styles.tocCollapsed)}>
       <div className={styles.content}>
         <ContentVisibility metadata={metadata} />
         <DocVersionBanner />
@@ -33,20 +33,18 @@ export default function DocItemLayout({children}: Props): ReactNode {
         </article>
         <DocItemPaginator />
       </div>
-      {hasTOC && (
-        <aside className={styles.desktopTOC} aria-label="文章目录">
-          <div className={styles.tocContent}><DocItemTOCDesktop /></div>
-          <button
-            type="button"
-            className={styles.tocCollapseButton}
-            aria-label={tocCollapsed ? '展开目录' : '收起目录'}
-            title={tocCollapsed ? '展开目录' : '收起目录'}
-            onClick={() => setTocCollapsed((collapsed) => !collapsed)}>
-            <ArrowBigLeftDashIcon size={16} strokeWidth={1.8} />
-          </button>
-        </aside>
-      )}
-      {!hasTOC && <div className={styles.desktopTOC} aria-hidden="true" />}
+      <aside className={styles.desktopTOC} aria-label={hasTOC ? '文章目录' : '阅读侧栏'}>
+        <div className={styles.tocContent} data-doc-toc-scroll>{hasTOC && <DocItemTOCDesktop />}</div>
+        <button
+          type="button"
+          className={`docRailToggle ${styles.tocCollapseButton}`}
+          aria-expanded={!tocCollapsed}
+          aria-label={tocCollapsed ? '展开目录' : '收起目录'}
+          title={tocCollapsed ? '展开目录' : '收起目录'}
+          onClick={() => setTocCollapsed((collapsed) => !collapsed)}>
+          <SidebarIcon icon="arrow-big-left-dash-icon" disableHover />
+        </button>
+      </aside>
     </div>
   );
 }

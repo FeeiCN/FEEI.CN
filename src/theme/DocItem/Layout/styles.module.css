@@ -19,10 +19,6 @@
   min-width: 0;
 }
 
-.tocCollapseButton {
-  display: none;
-}
-
 .mobileTOC :global(.theme-doc-toc-mobile) {
   display: block;
   margin-bottom: 1rem;
@@ -63,11 +59,10 @@
     flex-direction: column;
     width: 100%;
     position: sticky;
-    top: 0;
+    top: var(--ifm-navbar-height);
     align-self: flex-start;
-    height: 100vh;
+    height: var(--docs-viewport-height);
     min-height: 0;
-    margin-top: calc(-1 * var(--ifm-navbar-height));
     border-left: 1px solid var(--ifm-toc-border-color);
     background: var(--docs-rail-background);
   }
@@ -78,7 +73,7 @@
     width: 100%;
     max-width: 360px;
     overflow-y: auto;
-    padding: calc(1rem + var(--ifm-navbar-height)) 1rem 1rem;
+    padding: 1rem;
   }
 
   .tocContent :global(.theme-doc-toc-desktop) {
@@ -88,26 +83,7 @@
   }
 
   .tocCollapseButton {
-    position: static;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 2.25rem;
-    flex-shrink: 0;
-    margin-top: auto;
-    border: 0;
-    border-top: 1px solid var(--ifm-toc-border-color);
-    border-radius: 0;
-    background: transparent;
-    color: var(--feei-text-muted);
-    cursor: pointer;
-  }
-
-  .tocCollapseButton:hover,
-  .tocCollapseButton:focus-visible {
-    background: rgba(115, 115, 115, 0.07);
-    color: var(--ifm-font-color-base);
+    left: -12px;
   }
 
   .tocCollapseButton svg {
@@ -115,11 +91,11 @@
   }
 
   .tocCollapsed {
-    grid-template-columns: minmax(0, 1fr) 30px;
+    grid-template-columns: minmax(0, 1fr) 0;
   }
 
   .tocCollapsed .desktopTOC {
-    width: 30px;
+    width: 0;
     border-left: 0;
   }
 
@@ -128,15 +104,11 @@
   }
 
   .tocCollapsed .tocCollapseButton {
-    position: absolute;
-    top: 0;
-    right: 1px;
-    width: calc(100% - 1px);
-    height: 100vh;
-    min-height: 0;
-    margin-top: 0;
-    border: 0;
-    background: var(--docusaurus-collapse-button-bg);
+    left: -24px;
+  }
+
+  .tocCollapsed .tocCollapseButton::before {
+    left: calc(100% - 1px);
   }
 
   .tocCollapsed .tocCollapseButton svg {

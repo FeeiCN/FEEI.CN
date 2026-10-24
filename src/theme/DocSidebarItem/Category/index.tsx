@@ -269,6 +269,22 @@ function DocSidebarItemCategoryCollapsible({
     }
   };
 
+  const linkClassName = clsx(styles.categoryLink, styles.categoryLinkWithIcon, 'menu__link', {
+    'menu__link--sublist': collapsible,
+    'menu__link--active': isCurrentPage,
+    'menu__link--active-parent': isActive && !isCurrentPage,
+  });
+  const linkLabel = (
+    <CategoryLinkLabel
+      label={label}
+      icon={icon}
+      iconRef={iconAnimation.iconRef}
+      disableHover={iconAnimation.disableHover}
+      onMouseEnter={iconAnimation.onMouseEnter}
+      onMouseLeave={iconAnimation.onMouseLeave}
+    />
+  );
+
   return (
     <li
       className={clsx(
@@ -284,29 +300,20 @@ function DocSidebarItemCategoryCollapsible({
         className={clsx('menu__list-item-collapsible', {
           'menu__list-item-collapsible--active': isCurrentPage,
         })}>
-        <Link
-          className={clsx(styles.categoryLink, styles.categoryLinkWithIcon, 'menu__link', {
-            'menu__link--sublist': collapsible,
-            'menu__link--sublist-caret': !href && collapsible,
-            'menu__link--active': isCurrentPage,
-            'menu__link--active-parent': isActive && !isCurrentPage,
-          })}
+        {collapsible && !href ? (
+          <button type="button" className={clsx(linkClassName, styles.categoryToggle)}
+            onClick={() => updateCollapsed()} aria-expanded={!collapsed} {...props}>
+            {linkLabel}
+          </button>
+        ) : <Link
+          className={linkClassName}
           onClick={handleItemClick}
           aria-current={isCurrentPage ? 'page' : undefined}
-          role={collapsible && !href ? 'button' : undefined}
-          aria-expanded={collapsible && !href ? !collapsed : undefined}
           href={collapsible ? hrefWithSSRFallback ?? '#' : hrefWithSSRFallback}
           {...props}>
-          <CategoryLinkLabel
-            label={label}
-            icon={icon}
-            iconRef={iconAnimation.iconRef}
-            disableHover={iconAnimation.disableHover}
-            onMouseEnter={iconAnimation.onMouseEnter}
-            onMouseLeave={iconAnimation.onMouseLeave}
-          />
-        </Link>
-        {href && collapsible && (
+          {linkLabel}
+        </Link>}
+        {collapsible && (
           <CollapseButton
             collapsed={collapsed}
             categoryLabel={label}

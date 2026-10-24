@@ -17,6 +17,7 @@
   min-width: 0;
   flex: 1 1 auto;
   font-size: 0.8rem;
+  position: relative;
 }
 
 .mobileBreadcrumbs {
@@ -139,7 +140,7 @@
 
 
 .measureBreadcrumbs {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: max-content;

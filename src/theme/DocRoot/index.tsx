@@ -71,12 +71,37 @@ export default function DocRoot(props: Props) {
     };
     const resizeObserver = new ResizeObserver(scheduleUpdate);
     resizeObserver.observe(footer);
+    const handleRailWheel = (event: WheelEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.shiftKey || window.innerWidth < 997
+        || !event.deltaY || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      const target = event.target;
+      const pane = target instanceof Element
+        ? target.closest<HTMLElement>('.theme-doc-sidebar-container nav, [data-doc-toc-scroll]')
+        : null;
+      if (!pane) return;
+
+      const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? parseFloat(getComputedStyle(pane).lineHeight) || 16
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? pane.clientHeight : 1;
+      const delta = event.deltaY * unit;
+      const direction = Math.sign(delta);
+      const remaining = Math.max(0, direction > 0
+        ? pane.scrollHeight - pane.clientHeight - pane.scrollTop
+        : pane.scrollTop);
+      if (Math.abs(delta) <= remaining) return;
+
+      event.preventDefault();
+      pane.scrollTop += direction * remaining;
+      window.scrollBy({top: delta - direction * remaining, behavior: 'instant'});
+    };
+    frame.addEventListener('wheel', handleRailWheel, {passive: false});
     window.addEventListener('scroll', scheduleUpdate, {passive: true});
     window.addEventListener('resize', scheduleUpdate);
     updateHeight();
 
     return () => {
       resizeObserver.disconnect();
+      frame.removeEventListener('wheel', handleRailWheel);
       window.removeEventListener('scroll', scheduleUpdate);
       window.removeEventListener('resize', scheduleUpdate);
       if (animationFrame !== undefined) window.cancelAnimationFrame(animationFrame);

@@ -30,12 +30,13 @@ function sleepMinutes(segments: Segment[]) {
   return Math.round(duration / 60000);
 }
 
-export default function SleepStageChart({date, durationMinutes, score, scoreDetails}: {date: string; durationMinutes: number | null; score: ReactNode; scoreDetails: ReactNode}) {
-  const [segments, setSegments] = useState<Segment[] | null>(null);
+export default function SleepStageChart({date, durationMinutes, score, scoreDetails, children}: {date: string; durationMinutes: number | null; score: ReactNode; scoreDetails: ReactNode; children: ReactNode}) {
+  const [record, setRecord] = useState<{date: string; segments: Segment[]} | null>(null);
+  const segments = record?.date === date ? record.segments : null;
   const [selected, setSelected] = useState<number | null>(null);
   useEffect(() => {
     const controller = new AbortController();
-    setSegments(null);
+    setRecord(null);
     setSelected(null);
     fetch(`/data/health/${date.replaceAll('-', '/')}.json`, {signal: controller.signal})
       .then(async (response) => response.ok ? response.json() : null)
@@ -50,32 +51,28 @@ export default function SleepStageChart({date, durationMinutes, score, scoreDeta
           if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
           unique.set(`${stage}-${start}-${end}`, {stage: stage!, start, end});
         }
-        setSegments([...unique.values()].sort((a, b) => a.start - b.start));
+        setRecord({date, segments: [...unique.values()].sort((a, b) => a.start - b.start)});
       })
-      .catch(() => {if (!controller.signal.aborted) setSegments([]);});
+      .catch(() => {if (!controller.signal.aborted) setRecord({date, segments: []});});
     return () => controller.abort();
   }, [date]);
 
-  if (!segments?.length) return (
-    <section className={styles.card} aria-label="睡眠分期">
-      <div className={styles.header}><div className={styles.heading}>睡眠 · {date}</div>{score}</div>
-      {scoreDetails}
-      <div className={styles.placeholder} role="status">{segments === null ? '正在加载睡眠分期…' : '当天暂无睡眠分期数据'}</div>
-    </section>
-  );
-  const minutes = durationMinutes ?? sleepMinutes(segments);
+  const minutes = durationMinutes ?? (segments?.length ? sleepMinutes(segments) : null);
   const [, month, day] = date.split('-').map(Number);
   return (
     <section className={styles.card} aria-label="睡眠分期">
-      <div className={styles.header}>
+      <header className={styles.header}>
         <div>
           <div className={styles.heading}>睡眠 · {month}月{day}日</div>
-          <div className={styles.total} title="总时长与 Apple Health 睡眠评分记录一致；各分期时长按实际采样独立计算、取整。"><strong>{Math.floor(minutes / 60)}</strong><span>小时</span><strong>{minutes % 60}</strong><span>分钟</span></div>
+          {minutes !== null && <div className={styles.total} title="总时长与 Apple Health 睡眠评分记录一致；各分期时长按实际采样独立计算、取整。"><strong>{Math.floor(minutes / 60)}</strong><span>小时</span><strong>{minutes % 60}</strong><span>分钟</span></div>}
         </div>
         {score}
-      </div>
+      </header>
       {scoreDetails}
-      <StagePlot segments={segments} selected={selected} onSelect={setSelected} />
+      {segments?.length ? <StagePlot segments={segments} selected={selected} onSelect={setSelected} /> : (
+        <div className={styles.placeholder} role="status">{segments === null ? '正在加载睡眠分期…' : '当天暂无睡眠分期数据'}</div>
+      )}
+      {children}
     </section>
   );
 }
@@ -85,6 +82,7 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
   const {colorMode} = useColorMode();
   const container = useRef<HTMLDivElement>(null);
   const chart = useRef<ReactECharts>(null);
+  const [ready, setReady] = useState(false);
   const [width, setWidth] = useState(320);
   useEffect(() => {
     if (!container.current) return;
@@ -120,13 +118,12 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
   const bounds = sessions.length ? {start: sessions[0].start, end: sessions.at(-1)!.end} : null;
   const axisStart = Math.floor(segments[0].start / hour) * hour;
   const axisSpan = Math.max(hour, Math.ceil(Math.max(...segments.map((segment) => segment.end)) / hour) * hour - axisStart);
-  const endpointLabels = useMemo(() => {
-    const rows: number[] = [];
+  const {endpointLabels, axisInset} = useMemo(() => {
     const nightSessions = sessions.filter((session) => {
       const startHour = new Date(session.start + 8 * hour).getUTCHours();
       return startHour >= 18 || startHour < 6;
     });
-    return nightSessions.flatMap((session) => [session.start, session.end].map((time, index) => {
+    const labels = nightSessions.flatMap((session) => [session.start, session.end].map((time, index) => {
       const first = index === 0;
       const crossesMidnight = Math.floor((session.start + 8 * hour) / (24 * hour)) !== Math.floor((session.end + 8 * hour) / (24 * hour));
       const days = Math.floor((session.end + 8 * hour) / (24 * hour)) - Math.floor((session.start + 8 * hour) / (24 * hour));
@@ -134,16 +131,24 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
       const prefix = !crossesMidnight ? '' : days === 1 && (first ? localHour >= 18 : localHour < 12)
         ? first ? '昨晚 ' : '今早 '
         : new Intl.DateTimeFormat('zh-CN', {timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric'}).format(time) + ' ';
-      const labelWidth = prefix ? 86 : 44;
-      const x = 5 + (time - axisStart) / axisSpan * (width - 10);
-      const left = Math.max(5, Math.min(width - 5 - labelWidth, first ? x : x - labelWidth));
+      const formattedTime = new Intl.DateTimeFormat('en-GB', {timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit'}).format(Math.round(time / 60000) * 60000);
+      const text = `${prefix}${formattedTime}\n${first ? '入睡' : '醒来'}`;
+      const labelWidth = echarts.format.getTextRect(text, '11px sans-serif').width;
+      return {time, text, labelWidth};
+    }));
+    const axisInset = Math.max(5, ...labels.map((label) => label.labelWidth / 2 + 5));
+    const rows: number[] = [];
+    const endpointLabels = labels.map((label) => {
+      const x = axisInset + (label.time - axisStart) / axisSpan * (width - 2 * axisInset);
+      const left = x - label.labelWidth / 2;
       let row = rows.findIndex((right) => left >= right + 8);
       if (row < 0) row = rows.length;
-      rows[row] = left + labelWidth;
-      return {time, first, prefix, x, left, right: left + labelWidth, row};
-    }));
+      rows[row] = left + label.labelWidth;
+      return {...label, x, left, right: left + label.labelWidth, row};
+    });
+    return {endpointLabels, axisInset};
   }, [sessions, axisStart, axisSpan, width]);
-  const rowHeight = 65;
+  const rowHeight = 54;
   const plotHeight = rowHeight * stages.length;
   const chartHeight = plotHeight + 40 + Math.max(0, ...endpointLabels.map((label) => label.row)) * 31;
   const option = useMemo<echarts.EChartsOption>(() => {
@@ -152,7 +157,7 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
     const span = Math.max(hour, end - start);
     const interval = (span <= 6 * hour ? 1 : span <= 12 * hour ? 2 : Math.ceil(span / hour / 6)) * hour;
     const timeLabel = (time: number) => new Intl.DateTimeFormat('en-GB', {timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit'}).format(Math.round(time / 60000) * 60000);
-    const x = (time: number) => 5 + (time - start) / span * (width - 10);
+    const x = (time: number) => axisInset + (time - start) / span * (width - 2 * axisInset);
     const candidates = Array.from({length: Math.ceil(span / hour)}, (_, index) => start + index * hour)
       .filter((time) => !bounds || (time > bounds.start && time < bounds.end && endpointLabels.every((label) => x(time) + 18 < label.left - 12 || x(time) - 18 > label.right + 12)));
     const tickCount = Math.min(candidates.length, Math.max(1, Math.floor(width / 150)));
@@ -170,8 +175,8 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
         shape: {x1: label.x, x2: label.x, y1: plotHeight, y2: plotHeight + 5},
         style: {stroke: palette[4], opacity: 0.55},
       }, {
-        type: 'text', x: label.left, y: labelTop, silent: true,
-        style: {text: `${label.prefix}${timeLabel(label.time)}\n${label.first ? '入睡' : '醒来'}`, align: 'left', verticalAlign: 'top', fill: palette[4], fontSize: 11, lineHeight: 13},
+        type: 'text', x: label.x, y: labelTop, silent: true,
+        style: {text: label.text, align: 'center', verticalAlign: 'top', fill: palette[4], fontSize: 11, lineHeight: 13},
       }];
     });
     return {
@@ -201,7 +206,7 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
           return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><i style="width:6px;height:6px;border-radius:50%;background:${palette[stageIndex === 4 ? 8 : stageIndex]}"></i>${stages[stageIndex].label}</div><div style="display:flex;align-items:baseline;gap:16px"><span style="font-variant-numeric:tabular-nums">${formatTime(segment.start)}–${formatTime(segment.end)}</span><strong>${duration}</strong></div>`;
         },
       },
-      grid: {left: 5, right: 5, top: 0, bottom: chartHeight - plotHeight},
+      grid: {left: axisInset, right: axisInset, top: 0, bottom: chartHeight - plotHeight},
       xAxis: {
         type: 'value', min: start, max: start + span, interval,
         axisLabel: {show: false},
@@ -216,13 +221,16 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
       graphic: [...stages.map((stage, index) => ({
         type: 'text' as const, left: 9, top: index * rowHeight + 4, silent: true,
         style: {
-          text: `{name|${stage.label}}\n{duration|${stageLabels[index].split(' · ')[1]}}`,
+          text: `{name|${stage.label}} {duration|${stageLabels[index].split(' · ')[1]}}`,
           rich: {
-            name: {fill: palette[7], fontSize: 11, lineHeight: 12},
-            duration: {fill: palette[4], fontSize: 11, fontWeight: 500, lineHeight: 12},
+            name: {fill: palette[4], fontSize: 12, width: 84, lineHeight: 15},
+            duration: {fill: palette[4], fontSize: 12, fontWeight: 600, lineHeight: 15},
           },
         },
-      })), ...endpoints, ...ticks.map((time) => ({type: 'text' as const, x: x(time), y: plotHeight + 8, silent: true, style: {text: timeLabel(time), align: 'center' as const, verticalAlign: 'top' as const, fill: palette[7], fontSize: 11}}))],
+      })), ...endpoints, ...(endpointLabels.length ? [{
+        type: 'text' as const, x: width / 2, y: chartHeight - 19, silent: true,
+        style: {text: '中断', align: 'center' as const, verticalAlign: 'top' as const, fill: palette[4], fontSize: 11, lineHeight: 13},
+      }] : []), ...ticks.map((time) => ({type: 'text' as const, x: x(time), y: plotHeight + 8, silent: true, style: {text: timeLabel(time), align: 'center' as const, verticalAlign: 'top' as const, fill: palette[7], fontSize: 11}}))],
       series: [{
         type: 'custom',
         // ECharts supports registered names at runtime, but its type only declares callbacks.
@@ -240,20 +248,28 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
         emphasis: {focus: 'none', itemStyle: {opacity: 1}},
       }],
     };
-  }, [segments, stages, palette, stageLabels, bounds, width, endpointLabels, chartHeight, plotHeight]);
+  }, [segments, stages, palette, stageLabels, bounds, width, endpointLabels, axisInset, chartHeight, plotHeight]);
   const events = useMemo(() => ({click: (event: {dataIndex?: number}) => {
     if (typeof event.dataIndex === 'number') onSelect(event.dataIndex);
   }}), [onSelect]);
   useEffect(() => {
-    if (!chart.current) return;
+    const instance = chart.current?.getEchartsInstance();
+    if (!ready || !instance) return;
+    // 连接带缩放时路径数量会变化，重建系列以避免复用旧的复合路径。
+    instance.clear();
+    instance.resize({width, height: chartHeight});
+    instance.setOption(option, true);
+  }, [width, chartHeight, ready]);
+  useEffect(() => {
+    if (!chart.current || !ready) return;
     const instance = chart.current.getEchartsInstance();
     instance.dispatchAction({type: 'downplay', seriesIndex: 0});
     if (selected !== null) {
       instance.dispatchAction({type: 'highlight', seriesIndex: 0, dataIndex: selected});
       instance.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: selected});
     }
-  }, [selected, option]);
-  return <div ref={container} className={styles.chart} style={{height: chartHeight}} tabIndex={0} role="group"
+  }, [selected, option, ready]);
+  return <div ref={container} className={styles.chart} data-has-endpoints={endpointLabels.length > 0} style={{height: chartHeight}} tabIndex={0} role="group"
     aria-label={`睡眠分期图，${stageLabels.join('，')}。悬停或轻点时段查看详情；使用左右方向键切换时段，Home 和 End 跳到首尾`}
     onKeyDown={(event) => {
       let next: number;
@@ -265,6 +281,6 @@ function StagePlot({segments, selected, onSelect}: {segments: Segment[]; selecte
       event.preventDefault();
       onSelect(next);
     }}>
-    {palette.length > 0 && <ReactECharts ref={chart} option={option} notMerge opts={{renderer: 'svg'}} style={{height: chartHeight}} onEvents={events} />}
+    {palette.length > 0 && <ReactECharts ref={chart} option={option} notMerge autoResize={false} opts={{renderer: 'svg'}} style={{height: '100%'}} onEvents={events} onChartReady={() => setReady(true)} />}
   </div>;
 }

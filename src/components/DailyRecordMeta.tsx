@@ -1,5 +1,5 @@
 import React, {type ReactNode, useEffect, useMemo, useRef, useState} from 'react';
-import {Collapsible, Popover, Portal} from '@chakra-ui/react';
+import {Button, Collapsible, Popover, Portal} from '@chakra-ui/react';
 import {useDoc} from '@docusaurus/plugin-content-docs/client';
 import ActivityDayDetails from './ActivityDayDetails';
 import XIcon from '@site/src/components/ItsHoverIcon/icons/x-icon';
@@ -100,7 +100,7 @@ type SleepScoreDay = {
 
 type SleepScoreSummary = SleepScoreDay & {
   date: string;
-  trend: Array<{
+  trend: Array<SleepScoreDay & {
     date: string;
     score: number;
     durationMinutes: number | null;
@@ -370,6 +370,7 @@ async function loadSleepScore(date: string, signal: AbortSignal): Promise<SleepS
     trend: days
       .filter((item): item is {date: string; data: SleepScoreDay & {score: number}} => item !== null)
       .map((item) => ({
+        ...item.data,
         date: item.date,
         score: item.data.score,
         durationMinutes: parseDurationMinutes(item.data.components?.duration?.detail),
@@ -486,7 +487,7 @@ function MetricPopover({label, ariaLabel, children, wide = false, scrollable = f
   return (
     <Popover.Root lazyMount unmountOnExit initialFocusEl={wide || scrollable ? () => contentRef.current : undefined}
       onOpenChange={({open}) => {if (open && (wide || scrollable)) requestAnimationFrame(() => {if (bodyRef.current) bodyRef.current.scrollTop = 0;});}}
-      positioning={{placement: 'bottom-start', gutter: 8, strategy: 'fixed', hideWhenDetached: true}}>
+      positioning={{placement: 'bottom-start', gutter: 8, strategy: 'fixed', hideWhenDetached: true, overlap: wide, overflowPadding: wide ? 12 : undefined, sizeMiddleware: !wide}}>
       <Popover.Trigger asChild>
         <button type="button" className={styles.metricTrigger} aria-label={ariaLabel}>{label}</button>
       </Popover.Trigger>
@@ -508,6 +509,11 @@ function formatCompactDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
   return hours > 0 ? `${hours}h${String(remainingMinutes).padStart(2, '0')}` : `${minutes}m`;
+}
+
+function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  return hours > 0 ? `${hours}小时${minutes % 60}分钟` : `${minutes}分钟`;
 }
 
 function formatReadingTrendTime(minutes: number): string {
@@ -554,7 +560,7 @@ function SevenDayBars({
   );
 }
 
-function SleepTrend({data}: {data: SleepScoreSummary}) {
+function SleepTrend({data, selectedDate, onSelect}: {data: SleepScoreSummary; selectedDate: string; onSelect: (date: string) => void}) {
   const trendStart = shiftDate(data.date, -6);
   const values = Array.from({length: 7}, (_, index) => {
     const date = shiftDate(trendStart, index);
@@ -564,19 +570,17 @@ function SleepTrend({data}: {data: SleepScoreSummary}) {
   const durations = values.flatMap((item) => typeof item.durationMinutes === 'number' ? [item.durationMinutes] : []);
   const averageScore = Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
   const averageDuration = Math.round(durations.reduce((sum, duration) => sum + duration, 0) / durations.length);
-  const currentScore = typeof data.score === 'number' ? data.score : averageScore;
+  const currentScore = data.trend.find((item) => item.date === selectedDate)?.score ?? averageScore;
   const width = 272;
-  const height = 90;
+  const height = 72;
   const top = 14;
   const bottom = 5;
-  const durationMaximum = Math.max(600, ...durations);
-  const scoreMinimum = Math.max(0, Math.min(...scores) - 5);
-  const scoreRange = Math.max(10, 100 - scoreMinimum);
+  const durationMaximum = Math.max(600, Math.ceil(Math.max(...durations) / 120) * 120);
   const points = values.map((item, index) => ({
     ...item,
     x: (index + 0.5) * width / 7,
     y: typeof item.score === 'number'
-      ? top + (100 - item.score) / scoreRange * (height - top - bottom)
+      ? top + (100 - item.score) / 100 * (height - top - bottom)
       : null,
   }));
 
@@ -587,63 +591,77 @@ function SleepTrend({data}: {data: SleepScoreSummary}) {
         <strong>均分 {averageScore}</strong>
       </div>
       <div className={styles.sleepTrendLegend} aria-hidden="true">
-        <span><i />评分</span>
-        <span><b />时长</span>
+        <span><i />评分 0–100分</span>
+        <span><b />时长 0–{durationMaximum / 60}小时</span>
       </div>
-      <svg className={styles.sleepTrendChart} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`近 7 天睡眠平均 ${averageScore} 分，平均时长 ${formatCompactDuration(averageDuration)}`}>
-        {points.map((point) => point.durationMinutes !== null && (
-          <rect
-            data-date={point.date}
-            key={`bar-${point.date}`}
-            className={point.date === data.date ? styles.sleepTrendCurrentBar : undefined}
-            x={point.x - 7}
-            y={height - bottom - point.durationMinutes / durationMaximum * (height - top - bottom)}
-            width="14"
-            height={point.durationMinutes / durationMaximum * (height - top - bottom)}
-            rx="2"
-          />
-        ))}
-        {points.slice(0, -1).map((point, index) => {
-          const next = points[index + 1];
-          return point.y !== null && next.y !== null
-            ? <line key={`line-${point.date}`} x1={point.x} y1={point.y} x2={next.x} y2={next.y} />
-            : null;
-        })}
-        {points.map((point) => point.y !== null && (
-          <g data-date={point.date} key={`point-${point.date}`} className={point.date === data.date ? styles.sleepTrendCurrentPoint : undefined}>
-            <circle cx={point.x} cy={point.y} r="2.8" />
-            <text x={point.x} y={Math.max(8, point.y - 6)} textAnchor="middle">{point.score}</text>
-            <title>{formatShortDate(point.date)}：{point.score}分，{point.durationMinutes === null ? '时长暂无' : formatCompactDuration(point.durationMinutes)}</title>
-          </g>
-        ))}
-      </svg>
-      <div className={styles.sevenDayLabels} aria-hidden="true">
-        {values.map((item) => (
-          <div
-            key={item.date}
-            data-sleep-date={item.date}
-            className={[
-              item.date === data.date ? styles.sevenDayCurrent : '',
-              item.score === null ? styles.sevenDayMissing : '',
-            ].filter(Boolean).join(' ') || undefined}
-          >
-            <span>{Number(item.date.slice(-2))}日</span>
-            <small>{item.durationMinutes === null ? '—' : formatCompactDuration(item.durationMinutes)}</small>
-          </div>
-        ))}
+      <div className={styles.sleepTrendPlot}>
+        <svg className={styles.sleepTrendChart} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`近 7 天睡眠平均 ${averageScore} 分，平均时长 ${formatDuration(averageDuration)}；评分范围 0 至 100 分，时长范围 0 至 ${durationMaximum / 60} 小时`}>
+          {[top, height - bottom].map((y) => <line key={y} className={styles.sleepTrendGuide} x1="0" y1={y} x2={width} y2={y} />)}
+          {points.map((point) => point.durationMinutes !== null && (
+            <rect
+              data-date={point.date}
+              key={`bar-${point.date}`}
+              className={point.date === selectedDate ? styles.sleepTrendCurrentBar : undefined}
+              x={point.x - 7}
+              y={height - bottom - point.durationMinutes / durationMaximum * (height - top - bottom)}
+              width="14"
+              height={point.durationMinutes / durationMaximum * (height - top - bottom)}
+              rx="2"
+            />
+          ))}
+          {points.slice(0, -1).map((point, index) => {
+            const next = points[index + 1];
+            return point.y !== null && next.y !== null
+              ? <line key={`line-${point.date}`} x1={point.x} y1={point.y} x2={next.x} y2={next.y} />
+              : null;
+          })}
+          {points.map((point) => point.y !== null && (
+            <g data-date={point.date} key={`point-${point.date}`} className={point.date === selectedDate ? styles.sleepTrendCurrentPoint : undefined}>
+              <circle cx={point.x} cy={point.y} r="2.8" />
+              <text x={point.x} y={Math.max(8, point.y - 6)} textAnchor="middle">{point.score}</text>
+              <title>{formatShortDate(point.date)}：{point.score}分，{point.durationMinutes === null ? '时长暂无' : formatCompactDuration(point.durationMinutes)}</title>
+            </g>
+          ))}
+        </svg>
+        <div className={styles.sevenDayLabels} role="group" aria-label="选择睡眠记录日期">
+          {values.map((item, index) => (
+            <Button
+              unstyled
+              type="button"
+              key={item.date}
+              data-sleep-date={item.date}
+              style={{'--sleep-day-index': index} as React.CSSProperties}
+              className={[
+                styles.sleepTrendDay,
+                item.date === selectedDate ? styles.sevenDayCurrent : '',
+                item.score === null ? styles.sleepTrendMissing : '',
+              ].filter(Boolean).join(' ')}
+              disabled={item.score === null}
+              aria-pressed={item.date === selectedDate}
+              aria-label={`${item.date}，${item.score === null ? '未记录' : `评分${item.score}分，${item.durationMinutes === null ? '时长未记录' : `睡眠${formatDuration(item.durationMinutes)}`}，查看详情`}`}
+              onClick={() => onSelect(item.date)}
+            >
+              <span>{Number(item.date.slice(-2))}日</span>
+              <small>{item.durationMinutes === null ? '未记录' : formatCompactDuration(item.durationMinutes)}</small>
+            </Button>
+          ))}
+        </div>
       </div>
       <small className={styles.metricTrendNote}>
-        {scores.length}次记录 · 平均睡眠{formatCompactDuration(averageDuration)} · 当天较均值{currentScore - averageScore > 0 ? '+' : ''}{currentScore - averageScore}
+        {scores.length}次记录 · 平均睡眠 {formatDuration(averageDuration)} · {currentScore === averageScore ? '评分与均值持平' : `评分较均值${currentScore > averageScore ? '高' : '低'} ${Math.abs(currentScore - averageScore)} 分`}
       </small>
     </div>
   );
 }
 
-function SleepScoreDetails({data}: {data: SleepScoreSummary}) {
+function SleepScoreDetails({data: summary}: {data: SleepScoreSummary}) {
+  const [selectedDate, setSelectedDate] = useState(summary.date);
+  useEffect(() => setSelectedDate(summary.date), [summary.date]);
+  const data = summary.trend.find((item) => item.date === selectedDate) ?? summary;
   const components = [
-    ['duration', '睡眠时长'],
-    ['bedtime', '入睡时间'],
-    ['interruptions', '睡眠中断'],
+    ['bedtime', '入睡时间', '入睡'],
+    ['interruptions', '睡眠中断', '中断'],
+    ['duration', '睡眠时长', '醒来'],
   ] as const;
   const currentLevel = sleepScoreLevels.find((level) => level.label === data.classification)
     ?? [...sleepScoreLevels].reverse().find((level) => (data.score || 0) >= level.minimum)
@@ -711,36 +729,36 @@ function SleepScoreDetails({data}: {data: SleepScoreSummary}) {
             </div>
           </Collapsible.Content>
         )}
-      />
-      <div className={styles.metricBreakdown}>
-        {components.map(([key, label], index) => {
-          const item = data.components?.[key];
-          if (!item) return null;
-          const rate = componentRates[index];
-          const isLowest = rate !== null && rate === lowestRate;
-          return (
-            <div key={key} className={isLowest ? styles.metricBreakdownLowest : undefined}>
-              <span>{label}</span>
-              <strong>{item.score ?? '—'} / {item.maximum ?? '—'}</strong>
-              {rate !== null && (
-                <div
-                  className={styles.metricBreakdownTrack}
-                  role="progressbar"
-                  aria-label={`${label}得分率`}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(rate * 100)}
-                >
-                  <div style={{width: `${Math.max(0, Math.min(100, rate * 100))}%`}} />
-                </div>
-              )}
-              {item.detail && <small>{item.detail}</small>}
-            </div>
-          );
-        })}
-      </div>
-      <SleepTrend data={data} />
-      {data.source && <footer>来源：{data.source}</footer>}
+      >
+        <div className={styles.metricBreakdown}>
+          {components.map(([key, label, heading], index) => {
+            const item = data.components?.[key];
+            const rate = componentRates[index];
+            const isLowest = rate !== null && rate === lowestRate;
+            return (
+              <div key={key} className={isLowest ? styles.metricBreakdownLowest : undefined} role="group" aria-label={label}>
+                <span>{heading}</span>
+                <strong><span className={styles.metricBreakdownScoreLabel}>{key === 'duration' ? '时长' : heading}评分</span>{item?.score ?? '—'} <span className={styles.metricBreakdownMaximum}>/ {item?.maximum ?? '—'}</span></strong>
+                {rate !== null && (
+                  <div
+                    className={styles.metricBreakdownTrack}
+                    role="progressbar"
+                    aria-label={`${label}得分率`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(rate * 100)}
+                  >
+                    <div style={{width: `${Math.max(0, Math.min(100, rate * 100))}%`}} />
+                  </div>
+                )}
+                {item?.detail && <small>{item.detail}</small>}
+              </div>
+            );
+          })}
+        </div>
+        <SleepTrend data={summary} selectedDate={data.date} onSelect={setSelectedDate} />
+        {data.source && <footer>来源：{data.source}</footer>}
+      </SleepStageChart>
     </Collapsible.Root>
   );
 }

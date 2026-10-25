@@ -585,6 +585,42 @@
   overflow: visible;
 }
 
+.sleepTrendPlot { position: relative; }
+.sleepTrendDay {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.15rem 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.sleepTrendDay::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--sleep-day-index) * 100% / 7);
+  width: calc(100% / 7);
+  border-radius: 4px;
+  content: '';
+}
+.sleepTrendDay:enabled:hover::before { background: color-mix(in srgb, var(--sleep-accent) 6%, transparent); }
+.sleepTrendDay:focus-visible { outline: none; }
+.sleepTrendDay:focus-visible::before { outline: 2px solid var(--sleep-accent); outline-offset: -2px; }
+.sleepTrendDay:disabled { cursor: default; }
+.sleepPopover .sleepTrendMissing > span,
+.sleepPopover .sleepTrendMissing > small { color: var(--ifm-color-emphasis-600); }
+.sleepPopover .sleepTrendChart .sleepTrendGuide {
+  stroke: var(--ifm-color-emphasis-300);
+  stroke-width: 0.6;
+  stroke-dasharray: 2 3;
+  stroke-opacity: 0.6;
+}
+
 .sleepTrendChart rect {
   fill: var(--sleep-tint);
 }
@@ -769,7 +805,7 @@
   --sleep-stage-rem: #57adc1;
   --sleep-stage-deep: #7971b7;
   width: min(28rem, calc(100vw - 1.5rem));
-  max-height: min(var(--available-height, 90dvh), 90dvh, 900px);
+  max-height: min(calc(100dvh - 24px), 900px);
   overflow: hidden;
 }
 
@@ -780,6 +816,7 @@
 }
 
 .sleepPopover .metricPopoverClose {
+  z-index: 3;
   background: var(--ifm-background-surface-color);
 }
 
@@ -793,12 +830,22 @@
 }
 
 .sleepPopover .metricDetails > header > strong { color: var(--sleep-accent); }
-.sleepPopover .metricBreakdownTrack > div { background: var(--sleep-accent); }
+.sleepPopover .metricBreakdownTrack > div { background: var(--sleep-history); }
+.sleepPopover .metricBreakdownLowest .metricBreakdownTrack > div { background: var(--sleep-accent); }
+.sleepPopover .metricBreakdown > div { gap: 0.2rem; }
+.sleepPopover .metricBreakdown { gap: 0.5rem; margin-top: 0; border-top: 0; padding: 0 5px; }
+.sleepPopover .metricBreakdown > div:nth-child(n + 2) { text-align: center; }
+.sleepPopover [data-has-endpoints='true'] + .metricBreakdown > div > span { display: none; }
+.sleepPopover .metricBreakdown > div > span { color: var(--ifm-color-emphasis-700); font-size: 0.74rem; }
+.metricBreakdownMaximum { color: var(--ifm-color-emphasis-600); font-size: 0.7rem; font-weight: 400; }
+.metricBreakdownScoreLabel { margin-right: 0.2rem; color: var(--ifm-color-emphasis-700); font-size: 0.65rem; font-weight: 400; }
 .sleepPopover .sleepScoreLegend > div { color: var(--ifm-color-emphasis-600); }
 .sleepPopover .sleepScoreLegend > .sleepScoreLevelCurrent { color: var(--sleep-accent); }
 .sleepPopover .sleepTrendLegend { color: var(--ifm-color-emphasis-600); }
 
 .sleepPopover .sevenDayLabels > .sevenDayCurrent { color: var(--sleep-accent); }
+.sleepPopover .sevenDayLabels > .sevenDayCurrent > span,
+.sleepPopover .sevenDayLabels > .sevenDayCurrent > small { color: var(--sleep-accent); }
 
 .sleepScoreButton {
   display: grid;
@@ -828,10 +875,13 @@
 .sleepScoreRating { font-size: 0.72rem; color: var(--ifm-color-emphasis-600); }
 .sleepPopover .sleepScoreScale { margin: 0 0 1rem; padding-top: 0.7rem; }
 .sleepPopover .metricBreakdown + .metricTrend { margin-top: 0.85rem; }
-.sleepPopover .sleepTrendChart { height: auto; aspect-ratio: 272 / 90; }
+.sleepPopover .sleepTrendChart { height: auto; aspect-ratio: 272 / 72; }
 .sleepPopover .metricBreakdown small,
-.sleepPopover .metricTrendNote,
-.sleepPopover .sevenDayLabels small { color: var(--ifm-color-emphasis-650); font-size: 0.8rem; line-height: 1.5; }
+.sleepPopover .sevenDayLabels small { color: var(--ifm-color-emphasis-700); font-size: 0.8rem; line-height: 1.5; }
+.sleepPopover .metricTrendNote { color: var(--ifm-color-emphasis-700); font-size: 0.72rem; line-height: 1.5; }
+.sleepPopover .sleepTrendChart line { stroke-opacity: 0.7; }
+.sleepPopover .sleepTrendChart text { fill: var(--ifm-color-emphasis-700); font-weight: 400; }
+.sleepPopover .sleepTrendCurrentPoint text { fill: var(--sleep-accent); font-weight: 600; }
 .sleepPopover .sevenDayLabels span,
 .sleepPopover .sleepTrendLegend { color: var(--ifm-color-emphasis-650); font-size: 0.72rem; }
 .sleepPopover .sleepScoreLegend small { font-size: 0.65rem; }

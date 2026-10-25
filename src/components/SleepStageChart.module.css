@@ -1,18 +1,23 @@
 .card {
-  margin-bottom: 0.85rem;
+  margin: 0;
   color: var(--ifm-font-color-base);
 }
 .header {
+  position: sticky;
+  top: -0.9rem;
+  z-index: 2;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 0.85rem;
-  padding-right: 2rem;
+  margin: -0.9rem -0.9rem 0.85rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  padding: 0.9rem 2.9rem 0.65rem 0.9rem;
+  background: var(--ifm-background-surface-color);
 }
 .heading {
-  color: var(--ifm-color-emphasis-600);
-  font-size: 0.72rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.76rem;
   font-weight: 600;
 }
 .total {
@@ -25,5 +30,6 @@
 .total strong { font-size: 1.35rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .total span { margin-right: 0.25rem; color: var(--ifm-color-emphasis-600); font-size: 0.68rem; }
 .chart { width: 100%; border-radius: 4px; }
+.chart :global(svg text) { font-variant-numeric: tabular-nums; }
 .chart:focus-visible { outline: 2px solid var(--sleep-accent); outline-offset: 3px; }
 .placeholder { padding: 20px 8px; color: var(--ifm-color-emphasis-600); font-size: 13px; }

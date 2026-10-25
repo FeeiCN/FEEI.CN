@@ -1,41 +1,13 @@
 {
   "results": [
     {
-      "task": "alipay",
-      "status": "failed",
-      "exitCode": 1,
-      "tail": [
-        "/Users/feei/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020",
-        "  warnings.warn(",
-        "支付宝已关闭",
-        "已连接支付宝并保存起始截图",
-        "流程中断: 未找到底部「理财」入口",
-        "错误现场: /private/tmp/alipay-assets-capture/20261022T131750Z-error.json",
-        "支付宝已关闭",
-        "财通证券已关闭"
-      ]
-    },
-    {
-      "task": "caitong",
-      "status": "failed",
-      "exitCode": 1,
-      "tail": [
-        "/Users/feei/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020",
-        "  warnings.warn(",
-        "财通证券已关闭",
-        "已连接财通证券并保存起始截图",
-        "财通证券已关闭",
-        "财通证券流程中断: 财通证券未提取到资产记录; 错误现场: /private/tmp/caitong-assets-capture/20261022T131839Z-error.json"
-      ]
-    },
-    {
       "task": "health-auto-export",
       "status": "success",
       "exitCode": 0,
       "tail": [
         "/Users/feei/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020",
         "  warnings.warn(",
-        "Health Auto Export 服务器已启动"
+        "Health Auto Export 服务器已在运行"
       ]
     }
   ]

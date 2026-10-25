@@ -185,7 +185,3 @@ description: 交叉熵衡量下一 token 预测，梯度和优化器更新参数
 PyTorch 执行的是<strong>模型代码所规定的计算</strong>，权重是这些计算使用的数据。PyTorch 不能只拿到一份任意权重文件，就自动推断模型怎样运行。已有框架若实现了某个模型结构，就可以按配置创建它并加载兼容权重；不兼容的权重可能需要转换，甚至无法用于该结构。能在同一环境运行多个模型，也不等于它们的权重可以互换。
 
 还要注意，<strong>搭出 GPT 结构</strong>与<strong>拥有训练好的 GPT-2 能力</strong>是两回事。只有装入配套的预训练权重，模型才得到那批权重中学到的能力；这不是在自己机器上重新完成了 GPT-2 的预训练。
-
-## 对照源码
-
-本章对应教材第5章的[代码与材料](https://github.com/rasbt/LLMs-from-scratch/blob/f49cad747931fe6af0a7d2802cd480d1c1a0ec8e/ch05/01_main-chapter-code/gpt_train.py)，固定版本为 `f49cad747931`。教材、模型和示意数字的范围见[系列导读](/llms-from-scratch#代码范围与阅读方式)。

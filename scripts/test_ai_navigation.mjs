@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const aiRoot = 'docs/01-网络安全/02-人工智能安全';
-const engineeringRoot = `${aiRoot}/01-智能工程`;
+const generalIntelligenceRoot = `${aiRoot}/01-通用人工智能`;
 const groups = {
   '02-AI系统安全': ['AI数据与知识安全.md', '模型资产与AI供应链安全.md', '模型安全对齐与输出安全.md', '大模型应用安全.md', 'Agent与工具调用安全.md', 'AI隐私与机密保护.md', 'AI风险治理.md', 'AI安全评测与红队.md', 'AI运行监控与事件响应.md'],
   '03-AI赋能安全': ['AI漏洞挖掘.md', 'AI驱动的全链路自动化网络攻击.md', '基于AI驱动的实战网络攻击.md', '安全大模型评测体系.md'],
@@ -18,7 +18,7 @@ const read = (file) => readFileSync(path.join(repoRoot, file), 'utf8');
 const exists = (file) => existsSync(path.join(repoRoot, file));
 const git = (args) => execFileSync('git', args, {cwd: repoRoot, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024});
 const isMarkdown = (file) => /\.mdx?$/i.test(file);
-const inScope = (file) => file.startsWith(`${aiRoot}/`) || file.startsWith(`${engineeringRoot}/`);
+const inScope = (file) => file.startsWith(`${aiRoot}/`) || file.startsWith(`${generalIntelligenceRoot}/`);
 const frontMatter = (text) => text.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] ?? '';
 const scalar = (text, key) => {
   const value = frontMatter(text).match(new RegExp(`^${key}:\\s*(.*?)\\s*$`, 'm'))?.[1];
@@ -26,15 +26,16 @@ const scalar = (text, key) => {
 };
 const withoutLegacyClassification = (text) => text.replace(/^content_type:.*(?:\r?\n|$)/m, '');
 
-assert.ok(exists(engineeringRoot), '智能工程应作为人工智能安全的基础层');
-assert.ok(!exists('docs/03-智能工程'), '智能工程不应作为独立一级目录');
-assert.ok(!exists(`${engineeringRoot}/02-AI使用实践/05-使用AI`), '重复的使用 AI 层级未压平');
-assert.ok(exists(`${engineeringRoot}/02-Agent与工具工程/02-Agent与工具工程.md`), 'Agent 与工具工程应作为智能工程的独立主目录');
-assert.ok(exists(`${engineeringRoot}/02-Agent与工具工程/MCP与工具调用.md`), '缺少 MCP 与工具调用基础文章');
-assert.ok(exists(`${engineeringRoot}/03-AI应用实践/03-AI应用实践.md`), '缺少 AI 应用实践入口');
-assert.ok(exists(`${engineeringRoot}/04-AI应用与组织/04-AI应用与组织.md`), '缺少 AI 应用与组织入口');
+assert.ok(exists(generalIntelligenceRoot), '通用人工智能应作为人工智能安全的基础层');
+assert.ok(!exists('docs/03-智能工程'), '不应保留旧的独立智能工程目录');
+assert.ok(!exists(`${aiRoot}/01-智能工程`), '旧智能工程目录应合并到通用人工智能');
+assert.ok(!exists(`${generalIntelligenceRoot}/02-AI使用实践/05-使用AI`), '重复的使用 AI 层级未压平');
+assert.ok(exists(`${generalIntelligenceRoot}/02-Agent与工具工程/02-Agent与工具工程.md`), 'Agent 与工具工程应作为通用人工智能的独立主目录');
+assert.ok(exists(`${generalIntelligenceRoot}/02-Agent与工具工程/MCP与工具调用.md`), '缺少 MCP 与工具调用基础文章');
+assert.ok(exists(`${generalIntelligenceRoot}/03-AI应用实践/03-AI应用实践.md`), '缺少 AI 应用实践入口');
+assert.ok(exists(`${generalIntelligenceRoot}/04-AI应用与组织/04-AI应用与组织.md`), '缺少 AI 应用与组织入口');
 for (const obsolete of ['02-AI使用实践', '03-AI转型', '04-AI项目']) {
-  assert.ok(!exists(`${engineeringRoot}/${obsolete}`), `旧智能工程分组仍残留：${obsolete}`);
+  assert.ok(!exists(`${generalIntelligenceRoot}/${obsolete}`), `旧通用人工智能分组仍残留：${obsolete}`);
 }
 for (const obsolete of ['03-AI滥用与信任风险', '04-治理评测与响应']) {
   assert.ok(!exists(`${aiRoot}/${obsolete}`), `合并后仍残留旧分组：${obsolete}`);
@@ -50,13 +51,13 @@ for (const [group, names] of Object.entries(groups)) {
     assert.ok(!exists(`${aiRoot}/${name}`), `旧位置仍有重复文章：${name}`);
   }
 }
-for (const name of ['01-智能工程.md', '03-AI应用实践/模型接入与部署.md', '03-AI应用实践/使用商业AI.md', '03-AI应用实践/本地部署AI.md']) {
-  assert.ok(exists(`${engineeringRoot}/${name}`), `智能工程入口或接入文章缺失：${name}`);
+for (const name of ['01-通用人工智能.md', '03-AI应用实践/模型接入与部署.md', '03-AI应用实践/使用商业AI.md', '03-AI应用实践/本地部署AI.md']) {
+  assert.ok(exists(`${generalIntelligenceRoot}/${name}`), `通用人工智能入口或接入文章缺失：${name}`);
 }
 assert.equal(scalar(read(`${aiRoot}/人工智能安全.md`), 'slug'), '/ai-security');
-assert.equal(scalar(read(`${engineeringRoot}/01-智能工程.md`), 'slug'), '/ai');
-assert.ok(!read('sidebars.ts').includes('aiEngineeringSidebar'), '不应保留独立智能工程侧边栏');
-assert.ok(!read('docusaurus.config.ts').includes("sidebarId: 'aiEngineeringSidebar'"), '不应保留独立智能工程顶栏入口');
+assert.equal(scalar(read(`${generalIntelligenceRoot}/01-通用人工智能.md`), 'slug'), '/ai');
+assert.ok(!read('sidebars.ts').includes('aiEngineeringSidebar'), '不应保留独立通用人工智能侧边栏');
+assert.ok(!read('docusaurus.config.ts').includes("sidebarId: 'aiEngineeringSidebar'"), '不应保留独立通用人工智能顶栏入口');
 
 // Validate the current worktree, including files added during a reorganization.
 // Tracked files deleted from the worktree must not be read as if they still existed.
@@ -77,7 +78,7 @@ const base = process.env.AI_MIGRATION_BASE;
 let preserved = 0;
 if (base) {
   assert.match(base, /^[0-9a-f]{40}$/i, 'AI_MIGRATION_BASE 必须为完整提交 SHA');
-  const originals = git(['ls-tree', '-r', '--name-only', '-z', base, '--', aiRoot, engineeringRoot]).split('\0').filter(isMarkdown);
+  const originals = git(['ls-tree', '-r', '--name-only', '-z', base, '--', aiRoot, generalIntelligenceRoot]).split('\0').filter(isMarkdown);
   const originalSlugs = new Set();
   for (const before of originals) {
     const oldText = git(['show', `${base}:${before}`]);

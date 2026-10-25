@@ -211,7 +211,3 @@ token 向量与位置向量相加
 训练通常在给定配置下调整参数，不会因为一次预测出错，就自动增减层数或注意力头。
 
 新建 GPT 的许多参数是随机初始化的：它虽然能算分数、输出文字，却通常还不能写出有意义的内容。
-
-## 对照源码
-
-本章对应教材第4章的[代码与材料](https://github.com/rasbt/LLMs-from-scratch/blob/f49cad747931fe6af0a7d2802cd480d1c1a0ec8e/ch04/01_main-chapter-code/gpt.py)，固定版本为 `f49cad747931`。教材、模型和示意数字的范围见[系列导读](/llms-from-scratch#代码范围与阅读方式)。

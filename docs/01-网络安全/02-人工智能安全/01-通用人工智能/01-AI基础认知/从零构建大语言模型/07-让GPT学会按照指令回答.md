@@ -207,7 +207,3 @@ The car is as fast as a bullet.
 - [返回七章导读](/llms-from-scratch)，找到仍说不清的一步，对照图示重新走一遍。
 - [进入配套代码实验](https://github.com/rasbt/LLMs-from-scratch/blob/f49cad747931fe6af0a7d2802cd480d1c1a0ec8e/setup/README.md)，按仓库环境说明运行 notebook；第二章观察分词和样本形状，第四、五章观察输出与训练，第六、七章比较两种微调。
 - [继续学习 Agent 与工具工程](/ai-agent-practice)，看应用怎样把模型生成接到工具、状态与验证循环中。
-
-## 对照源码
-
-本章对应教材第7章的[代码与材料](https://github.com/rasbt/LLMs-from-scratch/blob/f49cad747931fe6af0a7d2802cd480d1c1a0ec8e/ch07/01_main-chapter-code/gpt_instruction_finetuning.py)，固定版本为 `f49cad747931`。教材、模型和示意数字的范围见[系列导读](/llms-from-scratch#代码范围与阅读方式)。

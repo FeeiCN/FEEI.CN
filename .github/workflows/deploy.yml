@@ -151,7 +151,7 @@ jobs:
           data_only=false
           if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
             changed_files="$(git diff --name-only "$deployed_head" "$new_head")"
-            if [ -n "$changed_files" ] && ! printf '%s\n' "$changed_files" | grep -qv '^static/data/'; then data_only=true; fi
+            if [ -n "$changed_files" ] && ! printf '%s\n' "$changed_files" | grep -v '^static/data/' > /dev/null; then data_only=true; fi
           fi
           if [ "$data_only" = true ]; then
             current_release="$(readlink -f "$current_link")"

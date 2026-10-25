@@ -33,6 +33,8 @@ published_at: '2026-09-21'
 | **状态** | 安全属性在什么时候建立、复制、降级或丢失？ | Pre-auth State、Context Reuse、Ownership/Lifetime |
 | **组合** | 为什么局部正常，组合后仍能形成危险能力？ | Capability Chain、High-leverage Control Point、Guarantee Violation |
 
+2026 年的 [PHP2Shell](/php2shell-ai-vulnerability-research) 说明了为什么这一框架值得关注：PHP 异常路径中长期存在的内存状态问题，经 AI 辅助研究组合为实际可验证的 RCE。它横跨边界、状态和组合三个维度，也提示研究者重新检查过去尚未被证明可利用的历史问题。
+
 下面的 CVE 不作为案例收藏，而用于说明如何把四类关系变成可验证的研究任务。
 
 ## 一、变化：什么旧前提已经不成立？

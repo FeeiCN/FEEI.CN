@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "workflow_id": "ai-security-frontier",
+  "updated_at": "2026-10-26",
+  "repository": "FeeiCN/FEEI.CN",
+  "editorial_status": "research-only; not a verified original vulnerability disclosure",
+  "duplicate_check": {
+    "checked_main_docs": [
+      "docs/01-网络安全/02-人工智能安全/02-AI系统安全/AI Agent安全研究方法.md",
+      "docs/01-网络安全/02-人工智能安全/02-AI系统安全/Agent与工具调用安全.md",
+      "docs/01-网络安全/02-人工智能安全/02-AI系统安全/AI安全评测与红队.md",
+      "docs/01-网络安全/02-人工智能安全/03-AI赋能安全/AI漏洞挖掘.md"
+    ],
+    "related_existing_branch": "docs/php2shell-ai-research-20261025",
+    "related_branch_scope": "PHP2Shell and AI vulnerability mining; different from this research on agent control-plane credentials",
+    "canonical_case_key": "litellm|2026-10-21|v1.107.0|supply-chain-compromise",
+    "previous_workflow_state": "not found on main at static/data/research-workflows as of 2026-10-26"
+  },
+  "sources": [
+    {
+      "id": "S1",
+      "kind": "maintainer_canonical_incident_investigation",
+      "published_on": "2026-10-23",
+      "url": "https://docs.litellm.ai/blog/security-incident-oct-21-2026-attack-chain",
+      "claim_scope": "Master key leak, Agent Platform credential exposure, misuse of GitHub identity and release process. Supersedes interim theories."
+    },
+    {
+      "id": "S2",
+      "kind": "independent_payload_and_telemetry_analysis",
+      "published_on": "2026-10-23",
+      "url": "https://www.microsoft.com/en-us/security/blog/2026/10/23/inside-the-litellm-1-107-0-supply-chain-compromise-credential-theft-through-python-startup-hooks/",
+      "claim_scope": "Malicious Python startup hooks, recovered payload capabilities and observed endpoint behavior. Does not independently verify initial credential-theft mechanism."
+    },
+    {
+      "id": "S3",
+      "kind": "maintainer_exposure_guidance",
+      "published_on": "2026-10-21",
+      "updated_on": "2026-10-23",
+      "url": "https://docs.litellm.ai/blog/security-incident-oct-21-2026",
+      "claim_scope": "Affected PyPI and container artifacts, deployment exposure window and response guidance. Earlier incident-cause speculation is superseded by S1."
+    },
+    {
+      "id": "S4",
+      "kind": "reviewed_advisory",
+      "updated_on": "2026-10-22",
+      "url": "https://github.com/advisories/GHSA-92x9-889m-jgmw",
+      "claim_scope": "Tracks malicious litellm distributions including 1.107.0; previous 1.82.7/1.82.8 incidents should not be conflated with this case."
+    }
+  ],
+  "cases": [
+    {
+      "id": "CASE-AIS-20261026-01",
+      "title": "LiteLLM v1.107.0: Agent Platform token exposure to software-release compromise",
+      "event_date": "2026-10-21",
+      "new_primary_evidence_date": "2026-10-23",
+      "product_version": "LiteLLM PyPI litellm==1.107.0 and listed public container artifacts in S3; previous malware incidents are separate",
+      "attacker_control": "Used leaked master key to call Agent Platform API, then obtained overprivileged GitHub CLI OAuth token; details are based on maintainer investigation, not independently recreated here",
+      "preconditions": "Agent Platform master key publicly exposed on 2026-05-27 and not revoked; agent listing response returned organization owner's unscoped GitHub CLI token; releaser source and approval could be influenced by compromised identities",
+      "chain": [
+        "May 27: exposed Agent Platform master key was not revoked after source-history rewrite.",
+        "Oct 10: Agent Platform API returned organization-owner GitHub CLI OAuth token to a caller using the key.",
+        "Oct 10-12: obtained privileged identity was used to obtain further tokens from repository automation; observed in vendor audit account.",
+        "Oct 21: attacker-controlled release source was substituted, followed by publication of compromised v1.107.0 artifacts.",
+        "Microsoft recovered Python startup-hook payloads able to collect credentials without importing litellm; second-stage retrieval/execution was supported by code but not confirmed."
+      ],
+      "trust_boundaries": [
+        "public source/history to live secret",
+        "agent-control-plane read API to reusable owner credential",
+        "GitHub owner authority to release artifact provenance",
+        "Python package installation to interpreter startup execution"
+      ],
+      "observed_impact": "Vendor confirms malicious public artifacts and token-driven release compromise; Microsoft reports recovered credential collector and endpoint observations consistent with execution/exfiltration. Installation alone does not prove data exfiltration occurred on each system.",
+      "remediation_status": "Malicious version removed from public registries, according to vendor; potentially affected environments require offline investigation, rebuilding and credential/session revocation.",
+      "evidence_labels": {
+        "maintainer_root_cause": "vendor_attested_not_independently_reproduced",
+        "payload_behavior": "independent_analysis_corrobated",
+        "local_poc": "not_performed",
+        "production_intrusion": "maintainer_reported_actual_incident"
+      },
+      "evidence": [
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ],
+      "caveats": [
+        "The vendor's Oct 21 interim suggestion that tokens came from LiteLLM logs was superseded by Oct 23 canonical postmortem.",
+        "Microsoft has not independently established how the first credentials were obtained.",
+        "A source tag or successful install by itself is insufficient proof of package integrity or successful exfiltration.",
+        "Do not start Python/pip inside suspected compromised environment for forensic inspection; use trusted external tools."
+      ],
+      "last_reviewed": "2026-10-26"
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "H-AIS-20261026-01",
+      "title": "An agent inventory endpoint that returns reusable cross-system credentials defeats nominally read-only control-plane access",
+      "domain": "agent identity, delegation, credential broker and software supply chain",
+      "status": "experiment_designed",
+      "priority": "P0",
+      "scope": "Synthetic agent inventory API, mock repository and release approval; not a claim of a new vulnerability in current LiteLLM releases",
+      "novelty_claim": "Research hypothesis to operationalize authority-amplification invariant as a negative-control test; no claim this principle is first discovered.",
+      "independent_variable": "(a) plaintext owner token in inventory; (b) no-readback credential handle; (c) task-scoped GitHub App delegation; (d) independent release approval and source-attestation checks",
+      "mechanism": "Read operation on agent control-plane can reveal credential whose authority spans unrelated repository/release operations; permissions leak through data rather than through a direct write API.",
+      "security_invariant": "No API response, log, memory write or agent metadata disclosure can convert an agent-task scoped read capability into a redeemable token with broader GitHub/release permissions.",
+      "prediction": "In a mock system, a compromised inventory key will allow release-source modification only where reusable broad-scope credentials are disclosed; protecting credential retrieval and binding delegated action should block the cross-domain side effect while preserving legitimate scoped PR creation.",
+      "minimal_experiment": {
+        "setup": "Use fake tokens and local stubbed inventory, Git repository API and release validator in a disposable sandbox; never contact third-party production systems or use real accounts.",
+        "baseline": "Inventory API includes redeemable simulated organization-owner token.",
+        "treatments": [
+          "Replace token with non-exportable broker-held opaque reference, verify no raw credential readback.",
+          "Authorize narrowly scoped agent-task PR creation with short-lived token, deny release workflow/source modification.",
+          "Require release source origin+commit digest attestation and independent high-privilege approval."
+        ],
+        "measurements": [
+          "Unauthorized release change success (mock effect ledger).",
+          "Legitimate PR-create task success.",
+          "Token material observed in API outputs, logs or memory.",
+          "Block point and false-reject counts."
+        ],
+        "negative_controls": [
+          "Normal unauthenticated inventory access is denied.",
+          "Legitimate read-only inventory request works without revealing credentials.",
+          "Legitimate scoped PR path succeeds without organization-owner credentials."
+        ]
+      },
+      "falsification": [
+        "If exposed no-readback/scoped-design still allows mock release change through any documented API route, proposed controls are insufficient.",
+        "If the valid PR workflow cannot complete under proposed scopes, usability prediction is false.",
+        "If raw credentials still leak through logs, backup, or alternate list endpoints, no-readback invariant is not met."
+      ],
+      "alternatives": [
+        "Default-deny network egress and tenant resource controls may block downstream action even when credentials are exposed.",
+        "Separate release source-pinning and signing controls could prevent artifact substitution independently of inventory hardening.",
+        "The attack might not generalize to frameworks without readable stored tokens or owner-level GitHub identities."
+      ],
+      "evidence": [
+        "S1",
+        "S2"
+      ],
+      "evidence_confidence": "High for reported incident and inspected malicious artifact behavior; hypothesis and defense benefit are unverified.",
+      "expected_value": "Provides a testable defense contract for agent orchestration platforms and release pipelines, independent of model compliance.",
+      "test_cost": "low-to-medium, local synthetic harness; no resources have been allocated or tests executed",
+      "created_at": "2026-10-26",
+      "last_advanced_at": "2026-10-26",
+      "next_step": "Create a safe local mock harness and explicit effect-ledger oracle; run baseline vs each defense separately when the authorized sandbox is available.",
+      "stop_condition": "Close as falsified if no discrimination is found between tested scoped and broad token architectures, or if existing published work already fully answers the question."
+    }
+  ],
+  "research_backlog": [
+    {
+      "id": "C-AIS-20261026-02",
+      "title": "Release-source provenance mismatch between validated commit and distributed wheel/container",
+      "status": "candidate",
+      "reason": "Promising supply-chain invariant, but overlaps established SLSA/provenance controls; defer until substantive unexplored evaluation gap is identified.",
+      "sources": [
+        "S1",
+        "S2"
+      ]
+    },
+    {
+      "id": "C-AIS-20261026-03",
+      "title": "Persistent safety monitor authority vs coding agent task commands",
+      "status": "background_only",
+      "reason": "The public report is earlier than the 72-hour scan window and agent monitoring is covered in existing FEEI.CN article; retain only if new first-party evidence appears."
+    }
+  ],
+  "weekly_review": {
+    "week_start": "2026-10-26",
+    "selected_primary_hypothesis": "H-AIS-20261026-01",
+    "rationale": "Directly motivated by an Oct 23 canonical primary-source correction, bounded mock feasibility and clear authorization boundary; avoids repeating existing PHP2Shell branch.",
+    "next_review": "2026-11-02"
+  },
+  "execution_evidence": {
+    "original_poc_executed": false,
+    "malware_sample_downloaded": false,
+    "exploit_test_executed": false,
+    "npm_check_docs_executed": false,
+    "npm_build_executed": false,
+    "reason": "This run consisted of source verification and a research-plan write to an isolated branch only."
+  }
+}

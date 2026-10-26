@@ -11,6 +11,7 @@ import {expandMarkdownIncludes} from './plugins/markdownIncludes';
 import {attachDocFrontMatterToSidebar} from './config/docusaurusSidebar';
 import {searchOptions} from './config/search';
 import remarkStaticMedia from './plugins/remarkStaticMedia';
+import rehypeComplianceReferences from './plugins/rehypeComplianceReferences';
 import {staticAssetUrl} from './src/utils/staticAssets';
 
 const isStrictBuild = process.env.CI_STRICT === 'true';
@@ -23,7 +24,7 @@ const config: Config = {
   headTags: [
     {tagName: 'link', attributes: {rel: 'icon', href: staticAssetUrl('/img/feei-icon.svg'), type: 'image/svg+xml'}},
   ],
-  presets: [['classic', {docs: {routeBasePath: '/', sidebarPath: './sidebars.ts', beforeDefaultRemarkPlugins: [remarkStaticMedia], remarkPlugins: [remarkMath], rehypePlugins: [rehypeKatex], async sidebarItemsGenerator(args) { const items = await args.defaultSidebarItemsGenerator(args); return attachDocFrontMatterToSidebar(items, args.docs); }, editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/'}, blog: false, theme: {customCss: ['./src/css/custom.css', './src/css/neutral.css', './src/css/sliding-indicator.css', './src/css/friend-links.css', './src/css/year-records.css', './src/css/contact.css']}} satisfies Preset.Options]],
+  presets: [['classic', {docs: {routeBasePath: '/', sidebarPath: './sidebars.ts', beforeDefaultRemarkPlugins: [remarkStaticMedia], remarkPlugins: [remarkMath], rehypePlugins: [rehypeKatex, rehypeComplianceReferences], async sidebarItemsGenerator(args) { const items = await args.defaultSidebarItemsGenerator(args); return attachDocFrontMatterToSidebar(items, args.docs); }, editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/'}, blog: false, theme: {customCss: ['./src/css/custom.css', './src/css/neutral.css', './src/css/sliding-indicator.css', './src/css/friend-links.css', './src/css/year-records.css', './src/css/contact.css']}} satisfies Preset.Options]],
   plugins: [docMtimePlugin, copyMarkdownPlugin, homeRecordsPlugin, [fastSearchPlugin, searchOptions]], clientModules: ['./src/clientModules/slidingIndicator.ts'],
   themeConfig: {
     docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: staticAssetUrl('/music/feei-site-theme-cover.webp'), colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},

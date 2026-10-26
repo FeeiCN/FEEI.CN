@@ -1868,6 +1868,90 @@
   }
 }
 
+.theme-doc-markdown .standard-subclauses {
+  margin: 0.5rem 0 1rem;
+  padding-inline-start: 1.5rem;
+  list-style: none;
+}
+
+.theme-doc-markdown .standard-subclauses > li {
+  margin-block: 0.4rem;
+}
+
+.theme-doc-markdown ul.standard-subclauses {
+  list-style-type: '— ';
+}
+
+.feei-table-wrap > table.standard-consent-example {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+table.standard-consent-example > :is(thead, tbody) > tr > :is(th, td):first-child {
+  width: 70%;
+  min-width: 0;
+}
+
+table.standard-consent-example > :is(thead, tbody) > tr > :is(th, td):nth-child(2) {
+  width: 30%;
+}
+
+table.standard-consent-example :is(th, td) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+table.standard-consent-example .feei-table-wrap[data-columns='3'] > table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+table.standard-consent-example .feei-table-wrap[data-columns='3'] > table :is(th, td) {
+  width: auto;
+  padding: 0.35rem;
+}
+
+@media (max-width: 640px) {
+  table.standard-consent-example > :is(thead, tbody) > tr > :is(th, td) {
+    padding: 0.4rem;
+  }
+}
+
+.standard-term-classification .feei-table-wrap[data-columns='3'] > table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.standard-term-classification .feei-table-wrap[data-columns='3'] > table :is(th, td) {
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.standard-term-classification .feei-table-wrap[data-columns='3'] > table :is(th, td):nth-child(1) {
+  width: 30%;
+}
+
+.standard-term-classification .feei-table-wrap[data-columns='3'] > table :is(th, td):nth-child(2) {
+  width: auto;
+}
+
+.standard-term-classification .feei-table-wrap[data-columns='3'] > table :is(th, td):nth-child(3) {
+  width: 4.25rem;
+  white-space: nowrap;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .standard-term-classification .feei-table-wrap[data-columns='3'] > table :is(th, td) {
+    padding: 0.4rem;
+  }
+}
+
 [data-theme='dark'] .theme-doc-markdown table thead th {
   background: rgba(255, 255, 255, 0.07);
 }

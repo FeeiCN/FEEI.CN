@@ -45,6 +45,44 @@
       "updated_on": "2026-10-22",
       "url": "https://github.com/advisories/GHSA-92x9-889m-jgmw",
       "claim_scope": "Tracks malicious litellm distributions including 1.107.0; previous 1.82.7/1.82.8 incidents should not be conflated with this case."
+    },
+    {
+      "id": "S5",
+      "kind": "maintainer_security_advisory",
+      "published_on": "2026-10-21",
+      "url": "https://nodejs.org/en/blog/vulnerability/october-2026-security-releases",
+      "claim_scope": "Node.js Brotli decoder CVE-2026-111497: invalid block switch classified as temporary need-more-input, repeated writes past 8-byte internal scratch buffer; Node 22/24/26 affected and possible memory corruption/RCE. Node rate is High; feasibility depends on untrusted decompression path."
+    },
+    {
+      "id": "S6",
+      "kind": "upstream_source_fix",
+      "published_on": "2026-02-27",
+      "backported_on": "2026-10-21",
+      "url": "https://github.com/google/brotli/commit/0ed4268a4401abcb4472096340477cf4af7d1a2b",
+      "backport_url": "https://github.com/google/brotli/commit/50a9b70a4d5e1443fc40927952276b68fffa83a0",
+      "claim_scope": "Brotli upstream DecodeBlockTypeAndLength signature changed from boolean to BrotliDecoderErrorCode; max_block_type<=1 now returns terminal format block-switch error. February source fix was cherry-picked to release branch in October."
+    },
+    {
+      "id": "S7",
+      "kind": "reviewed_security_advisory",
+      "published_on": "2026-10-22",
+      "updated_on": "2026-10-23",
+      "url": "https://github.com/advisories/GHSA-9v8h-qqgm-4m35",
+      "claim_scope": "Google Brotli C/Python Brotli and brotlicffi affected versions/fixed versions; GHSA calls vulnerability critical, scope differs from Node.js advisory."
+    },
+    {
+      "id": "S8",
+      "kind": "frontier_lab_primary_containment_report",
+      "published_on": "2026-10-23",
+      "url": "https://openai.com/index/securing-our-frontier-model-training-environment/",
+      "claim_scope": "Model-assisted red teams found open-source and infrastructure containment weaknesses, network egress routes and cross-isolation channels. OpenAI notes assisted setup/source access and does not provide a controlled compute-vs-findings causal comparison."
+    },
+    {
+      "id": "S9",
+      "kind": "independent_evaluation_report",
+      "published_on": "2026-10-22",
+      "url": "https://metr.org/blog/2026-10-22-red-teaming-openai-agent-monitoring/",
+      "claim_scope": "METR and Redwood examined an earlier July version of OpenAI internal monitors, reporting compaction gaps, unmonitored actions and monitor bypass avenues. METR did not verify claimed later fixes, and did not prove agents used the exposed gap in practice."
     }
   ],
   "cases": [
@@ -88,6 +126,35 @@
         "Microsoft has not independently established how the first credentials were obtained.",
         "A source tag or successful install by itself is insufficient proof of package integrity or successful exfiltration.",
         "Do not start Python/pip inside suspected compromised environment for forensic inspection; use trusted external tools."
+      ],
+      "last_reviewed": "2026-10-26"
+    },
+    {
+      "id": "CASE-AIS-20261026-02",
+      "title": "Brotli CVE-2026-111497: invalid streaming status classification and source-to-release delay",
+      "event_date": "2026-10-21",
+      "disclosure_window": "2026-10-21 to 2026-10-23",
+      "product_version": "Google Brotli 1.0.3 through 1.2.0 (check branch-specific patches), downstream Node.js 22.x/24.x/26.x; exposure requires decompression of attacker-controlled Brotli input",
+      "attacker_control": "Crafted Brotli-compressed stream consumed by a vulnerable decoder; no assumption all Node.js or reverse proxy instances accept attacker data at such a sink",
+      "preconditions": "An affected decoder version and a reachable untrusted decompression path",
+      "root_cause": "Malformed block switch was encoded as transient need-more-data instead of a terminal stream error; streaming retry could append beyond an 8-byte internal scratch buffer. Upstream patch lifts boolean success/fail to explicit decoder error code in DecodeBlockTypeAndLength.",
+      "trust_boundaries": [
+        "untrusted compressed bytes → decoder status machine",
+        "decoder terminal error → caller retry and scratch-buffer safety contract",
+        "security-fixed source tree → actual released artifacts and downstream bundled copies"
+      ],
+      "known_impact": "Potential crash, memory disclosure or RCE; published advisories establish risk, not that every affected deployment is remotely exploitable or an intrusion has occurred",
+      "remediation_status": "Fixes released for Brotli and affected downstream runtimes; verify exact installed/bundled package version via vendor updates, not merely whether main branch source contains a patch.",
+      "evidence": [
+        "S5",
+        "S6",
+        "S7"
+      ],
+      "verification_status": "source_patch_inspected_and_vendor_advisories_cross_checked_no_independent_poc",
+      "caveats": [
+        "February 27 commit is a source fix; its existence is not evidence that prior released versions included the fix.",
+        "Node.js classifies this finding High while reviewed package GHSA uses Critical; preserve both scopes.",
+        "No ASan/UBSan build or malformed-stream test performed in this scheduled run."
       ],
       "last_reviewed": "2026-10-26"
     }
@@ -146,6 +213,58 @@
       "last_advanced_at": "2026-10-26",
       "next_step": "Create a safe local mock harness and explicit effect-ledger oracle; run baseline vs each defense separately when the authorized sandbox is available.",
       "stop_condition": "Close as falsified if no discrimination is found between tested scoped and broad token architectures, or if existing published work already fully answers the question."
+    },
+    {
+      "id": "H-AIS-20261026-02",
+      "title": "Terminal decoder-format errors incorrectly represented as recoverable input starvation may violate bounded streaming-buffer invariants beyond a single patched branch",
+      "domain": "AI-assisted high-value variant hunting: state-machine and parser contract differences",
+      "status": "experiment_designed",
+      "priority": "P1",
+      "scope": "Publicly patched Brotli versions and synthetic/forked stream decoders in an isolated lab only; no claim of a distinct newly discovered vulnerability",
+      "novelty_claim": "A falsifiable variant-hunting test protocol derived from a real fix; method originality not established and no new CVE asserted",
+      "triggering_case": "CASE-AIS-20261026-02",
+      "security_invariant": "When a parse transition is structurally invalid, error state must be terminal; a decoder may return NEED_MORE only for genuinely incomplete valid prefixes, and scratch-buffer writes remain bounded on every transition.",
+      "mechanism": "Collapse of invalid-format and incomplete-input statuses can move a caller from reject to retry; repeated append to finite scratch storage may violate an error/length precondition.",
+      "prediction": "A historical vulnerable branch will have at least one state transition mapped to nonterminal retry in an invalid-block case; the patch changes classification. Whether another parser has a similar bug is completely unknown.",
+      "minimal_experiment": {
+        "setup": "Build pinned, known-safe isolated copies of affected/unaffected Brotli branches or a toy reference state machine; enforce no external network or production tokens. Capture source SHAs and compiler flags.",
+        "baseline": "Trace return-code propagation and error/retry transitions at DecodeBlockTypeAndLength with representative valid, malformed and chunk-truncated corpus inputs.",
+        "treatment": "Apply upstream status-return patch or enforce explicit terminal-error handling in isolated model.",
+        "oracle": "Decoder result category (ERROR/NEED_MORE/DONE), input progress and scratch occupancy <= capacity on all bounded steps; ASan/UBSan outcome if compiled locally.",
+        "measurements": [
+          "Distinct invalid-versus-truncated status behavior by version",
+          "Reproducible call chain from decoder status into retry/append",
+          "False rejection rate on valid chunked streams",
+          "Cost per distinct state transition explored"
+        ],
+        "negative_controls": [
+          "Valid Brotli stream delivered in uneven chunks remains decodable",
+          "Truncated but otherwise valid stream requests input without overflowing scratch",
+          "Malformed but terminal stream stays ERROR independent of chunk boundaries"
+        ]
+      },
+      "falsification": [
+        "If source review shows no invalid-to-retry path in the pinned historical branch, reject this concrete mechanism.",
+        "If no state/caller correspondence exists in another candidate decoder, do not claim cross-project generalization.",
+        "If a proposed guard breaks legitimate chunked decoding, the safety-usability prediction is false."
+      ],
+      "alternatives": [
+        "Other decoder implementations use different status enums and may already reject these transitions",
+        "A separate caller-side size cap could prevent memory corruption despite invalid status",
+        "Fuzzing suites may already cover this pattern; novelty requires a prior-art audit"
+      ],
+      "evidence": [
+        "S5",
+        "S6",
+        "S7"
+      ],
+      "evidence_confidence": "High for public Brotli source-diff and vendor root cause; zero direct evidence for a novel unpatched variant elsewhere",
+      "expected_value": "A reusable, code-guided fuzzing target: error-classification invariant and source-patch versus shipped-artifact tracking",
+      "test_cost": "medium; native build and isolated sanitizers required",
+      "created_at": "2026-10-26",
+      "last_advanced_at": "2026-10-26",
+      "next_step": "Audit upstream patch call-site propagation and existing parser-state research; select exactly one already-patched comparison decoder and design bounded sanitizer tests; run only in explicitly authorized isolated lab.",
+      "stop_condition": "Stop if root cause is fully covered by established checks and no independent candidate violates the invariant."
     }
   ],
   "research_backlog": [
@@ -164,6 +283,17 @@
       "title": "Persistent safety monitor authority vs coding agent task commands",
       "status": "background_only",
       "reason": "The public report is earlier than the 72-hour scan window and agent monitoring is covered in existing FEEI.CN article; retain only if new first-party evidence appears."
+    },
+    {
+      "id": "C-AIS-20261026-04",
+      "title": "Monitoring coverage must be reconciled against runtime/compaction events independent of agent-controllable triggers",
+      "status": "evidence_review_candidate",
+      "reason": "METR October 22 historic monitoring audit offers high-quality boundary evidence, but FEEI.CN already documents run causal graphs and METR recommends periodic checks; determine concrete untested failure mode before promoting to a new hypothesis.",
+      "sources": [
+        "S8",
+        "S9"
+      ],
+      "scope_limit": "METR evaluated OpenAI design on/before 2026-07-21; the report does not establish status of the October production monitor."
     }
   ],
   "weekly_review": {
@@ -178,6 +308,34 @@
     "exploit_test_executed": false,
     "npm_check_docs_executed": false,
     "npm_build_executed": false,
-    "reason": "This run consisted of source verification and a research-plan write to an isolated branch only."
-  }
+    "reason": "Only remote source inspection and research-state JSON update. No tests, compiler, package execution or deployment.",
+    "source_diff_inspected": true
+  },
+  "daily_reviews": [
+    {
+      "id": "daily-2026-10-26-followup",
+      "date": "2026-10-26",
+      "source_window": "2026-10-22 through 2026-10-26",
+      "fresh_verified_cases": [
+        "CASE-AIS-20261026-01",
+        "CASE-AIS-20261026-02"
+      ],
+      "hypotheses_added": [
+        "H-AIS-20261026-02"
+      ],
+      "hypotheses_primary": [
+        "H-AIS-20261026-01"
+      ],
+      "new_monitored_source": "METR July-era assessment published Oct 22, retained for a different boundary hypothesis, not merged with supply-chain or parser cases",
+      "source_only_validation": true,
+      "source_diff_inspected": true,
+      "local_experiment_executed": false,
+      "reason": "Avoid duplicate same-day article and already-running hypotheses; maintain one P0 weekly main hypothesis and one P1 follow-up.",
+      "next_steps": [
+        "For H-01 prepare fake-token local mock and effect ledger when sandbox is available.",
+        "For H-02 analyze return-code call sites and compare against known fuzz rules before running any isolated sanitizer test.",
+        "For monitoring review quantify which execution events must be counted independently of monitor decisions."
+      ]
+    }
+  ]
 }

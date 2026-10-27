@@ -50,3 +50,4 @@ description: 围绕网络设备、操作系统、数据库、服务器和安全�
 | [GB/T 37939-2019](./GB-T-37939-2019-网络存储安全技术要求.md) | 信息安全技术 网络存储安全技术要求 | [官方来源](https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=7F848CE7A5F44FD7D4FC1EE0D270228C) |
 | [GB/T 39680-2020](./GB-T-39680-2020-服务器安全技术要求和测评准则.md) | 信息安全技术 服务器安全技术要求和测评准则 | [官方来源](https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=8F2B83F0C3BCB52CB1A7E4E1719EFEE4) |
 | [GB/T 40653-2021](./GB-T-40653-2021-安全处理器技术要求.md) | 信息安全技术 安全处理器技术要求 | [官方来源](https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=CF20C3EDD414E7DC8B198C2178EDCC9C) |
+| [GB 8702-1988](./GB-8702-1988-电磁辐射防护规定.md) | 电磁辐射防护规定 | [官方来源](https://www.mee.gov.cn/ywgz/fgbz/bz/bzwb/hxxhj/dcfsbz/198806/t19880601_67681.shtml) |

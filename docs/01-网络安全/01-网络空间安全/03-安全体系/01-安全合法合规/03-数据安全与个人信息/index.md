@@ -86,3 +86,5 @@ description: 从数据类型和处理活动判断数据安全、个人信息保�
 | [GB/T 41819-2022](./GB-T-41819-2022-人脸识别数据安全要求.md) | 信息安全技术 人脸识别数据安全要求 | [官方来源](https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=BE74B9780B8C4852D62CF47F282478B6) |
 | [GB/T 42460-2023](./GB-T-42460-2023-个人信息去标识化效果评估指南.md) | 信息安全技术 个人信息去标识化效果评估指南 | [官方来源](https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=E1A4E7943D64346D9EF1E3D0855F8496) |
 | [GB/T 42574-2023](./GB-T-42574-2023-个人信息处理中告知和同意的实施指南.md) | 信息安全技术 个人信息处理中告知和同意的实施指南 | [官方来源](https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=09255E6D24E0BAB7F391472C6995EC56) |
+| [GB 11643-1999](./GB-11643-1999-公民身份号码.md) | 公民身份号码 | [官方来源](https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=080D6FBF2BB468F9007657F26D60013E) |
+| [GB 37300-2018](./GB-37300-2018-公共安全重点区域视频图像信息采集规范.md) | 公共安全重点区域视频图像信息采集规范 | [官方来源](https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=D232F9374137D1ADB95733694B51F504) |

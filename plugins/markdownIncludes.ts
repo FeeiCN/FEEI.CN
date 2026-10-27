@@ -68,7 +68,7 @@ export function expandMarkdownIncludes(markdown: string, sourcePath?: string): s
     const included = stripFrontMatter(fs.readFileSync(includePath, 'utf8')).trim();
     const filename = path.basename(reference);
 
-    if (/^_(?:GB|GM|GA)-T-[\d.]+-\d{4}(?:-|\.)/.test(filename)) {
+    if (/^_(?:GB(?:-[TZ])?|G[MA]-T)-[\d.]+-\d{4}(?:-|\.)/.test(filename)) {
       return rebaseStandardLinks(included.replace(/^# [^\n]+\n*/, ''), includePath, sourcePath);
     }
 

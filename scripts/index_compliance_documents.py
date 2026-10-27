@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path('docs/01-网络安全/01-网络空间安全/03-安全体系/01-安全合法合规')
 INDEX = Path('scripts/data/compliance-document-index.json')
 CATALOG = Path('scripts/data/information-security-technology-standards.json')
-STANDARD = re.compile(r'^_?((?:GB|GM|GA)-T-[\d.]+-\d{4})(?:-|\.)')
+STANDARD = re.compile(r'^_?((?:GB(?:-[TZ])?|G[MA]-T)-[\d.]+-\d{4})(?:-|\.)')
 
 
 def field(source, name):
@@ -44,7 +44,8 @@ def collect():
             entry['slug'] = slug
         standard = STANDARD.match(path.name)
         if standard:
-            entry['standard'] = standard[1].replace('-T-', '/T ', 1)
+            prefix, number = re.match(r'^(GB(?:-[TZ])?|G[MA]-T)-([\d.]+-\d{4})$', standard[1]).groups()
+            entry['standard'] = prefix.replace('-T', '/T').replace('-Z', '/Z') + ' ' + number
         if partial:
             entry['source_type'] = 'standard' if standard else 'regulatory-text'
             entry['sha256'] = hashlib.sha256(path.read_bytes()).hexdigest()

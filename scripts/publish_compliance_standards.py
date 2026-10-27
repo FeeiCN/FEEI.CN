@@ -12,11 +12,11 @@ from index_compliance_documents import ROOT, collect
 SECTION = '## 本主题标准'
 INTRO = '标准号链接到站内正文；“官方来源”用于核对正式文本。'
 OLD_INTRO = '标准号链接指向原始来源；适用范围、版本和具体条款以来源文本为准。'
-ROW = re.compile(r'^\| \[((?:GB|GM|GA)/T [\d.]+-\d{4})\]\(([^)]+)\) \| (.+?) \|(?: \[官方来源\]\(([^)]+)\) \|)?$', re.M)
+ROW = re.compile(r'^\| \[((?:GB(?:/[TZ])?|G[MA]/T) [\d.]+-\d{4})\]\(([^)]+)\) \| (.+?) \|(?: \[官方来源\]\(([^)]+)\) \|)?$', re.M)
 
 
 def key(number):
-    return number.replace('/T ', '-T-')
+    return number.replace('/', '-').replace(' ', '-')
 
 
 def planned_changes():

@@ -114,7 +114,7 @@ test('topic standards open published internal texts and keep official sources se
   const guides = [...new Set(sources.map((entry) => path.join(ROOT, entry.topic, 'index.md')))];
   for (const file of guides) {
     const table = fs.readFileSync(file, 'utf8').split('## 本主题标准')[1];
-    for (const [, number, href, official] of table.matchAll(/\| \[((?:GB|GM|GA)\/T [\d.]+-\d{4})\]\(([^)]+)\) \| [^\n]+? \| \[官方来源\]\(([^)]+)\) \|/g)) {
+    for (const [, number, href, official] of table.matchAll(/\| \[((?:GB(?:\/[TZ])?|G[MA]\/T) [\d.]+-\d{4})\]\(([^)]+)\) \| [^\n]+? \| \[官方来源\]\(([^)]+)\) \|/g)) {
       assert.ok(href.startsWith('./'), `${number}: expected an internal page`);
       const [relative, hash] = href.split('#');
       const target = path.resolve(path.dirname(file), decodeURIComponent(relative));

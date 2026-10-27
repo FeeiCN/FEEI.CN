@@ -1,0 +1,268 @@
+{
+  "schema_version": 1,
+  "workflow": "security-architecture",
+  "scope": "architecture-defense-only",
+  "owner": "ChatGPT Tasks",
+  "created_at": "2026-10-27",
+  "last_reviewed_at": "2026-10-27",
+  "public_data_only": true,
+  "status": "Experiment Designed",
+  "focus": {
+    "question": "Agent 已获批准的异步动作在委托撤销、队列重放、资源版本变化以及部分网络分区期间，何时才算失去执行权？",
+    "why_now": "NIST IR 8587 于 2026-09-15 发布；NCCoE 于 2026-09-29 确认 DevSecOps 为 AI Agent 身份授权首个实现示范；MCP 2026-07-28 引入无状态请求和工具列表缓存。以上来源没有直接证明任何当前漏洞，仅提示生命周期控制与撤销语义需要独立检验。",
+    "existing_knowledge": "FEEI.CN 的 Agent与工具调用安全.md 已描述 Capability/Action Envelope、资源 PEP、逐次授权、撤销、幂等；本研究只考察异步提交点的一致性与安全/可用性权衡。",
+    "threat_model": {
+      "assets": [
+        "模拟采购/付款指令",
+        "委托授权状态",
+        "异步任务队列",
+        "接收方与参数",
+        "权威副作用账本"
+      ],
+      "actors": [
+        "登录委托人",
+        "Agent Run Manager",
+        "授权服务",
+        "工具网关",
+        "队列 Worker",
+        "业务资源 PEP",
+        "恶意文档或受损工具返回"
+      ],
+      "attacker_capabilities": [
+        "控制低信任报价单和 MCP 工具响应",
+        "诱导 Agent 产生越权提议",
+        "在授权被撤销前预排队普通任务",
+        "模拟获得已签发而尚未过期的资源受众 Token"
+      ],
+      "constraints": [
+        "无生产凭证",
+        "无第三方系统探测",
+        "仅可重置业务模拟器"
+      ],
+      "boundary": "LLM plan/queue/credential cache 不能成为真实资源副作用授权事实来源"
+    }
+  },
+  "hypotheses": [
+    {
+      "id": "ARCH-20261027-01",
+      "title": "面向异步 Agent 委托的资源侧撤销栅栏（revocation fence）",
+      "status": "Experiment Designed",
+      "priority": "P0",
+      "novelty": "把既有资源侧 PEP 和 Action Envelope 延伸到跨服务异步队列的 revoke-ack 线性化条件、grant_epoch/拒绝旧 epoch 的资源侧原子提交检查；待验证工程设计，不宣称原创协议、漏洞或实测优越性",
+      "claim": "若高影响副作用的最终提交点在同一事务检查权威 grant epoch、动作参数摘要和对象版本，并使 revoke_ack 在相关资源侧栅栏生效后返回，则已确认撤销后的旧 grant 不应再形成新副作用；否则会有窗口风险。",
+      "invariants": [
+        "revoke_ack 后不能提交基于撤销前 grant_epoch 的新高影响副作用；撤销发起与确认之间的窗口需单独报告",
+        "resource-side commit 必须匹配经审批的 resource_id、arguments_digest、resource_version 与 policy decision",
+        "child grant 的工具/租户/资源/金额/数据去向/期限为父 grant 子集",
+        "网络分区且不能获知撤销状态时高影响写动作 fail-closed 或显式转人工，不将未知状态当成批准"
+      ],
+      "alternatives": [
+        {
+          "id": "A",
+          "name": "仅网关一次性鉴权 + 长生命周期共享 Bearer Token",
+          "strength": "集成简单、无需业务系统改造",
+          "residual_risk": "有效 token 的排队动作和同 audience 滥用，资源系统不知撤销",
+          "cost": "低",
+          "latency": "低"
+        },
+        {
+          "id": "B",
+          "name": "网关 PDP + 短生命周期 audience/sender-constrained Token + 按次动作审批",
+          "strength": "降低令牌盗用与跨资源重放",
+          "residual_risk": "Token 有效期内/队列重试中授权变化不能仅靠签名检测；DPoP 不签署 Body",
+          "cost": "中",
+          "latency": "中"
+        },
+        {
+          "id": "C",
+          "name": "方案 B + 业务资源侧 grant_epoch 撤销栅栏 + 参数/版本原子复核 + 效果账本",
+          "strength": "可以在权威副作用边界对旧授权与重试 fail-closed",
+          "residual_risk": "跨资源撤销屏障、外部不可控系统、分区期间可用性、已发生副作用仍需补偿",
+          "cost": "高",
+          "latency": "需实测"
+        }
+      ],
+      "experiment": {
+        "status": "designed-not-run",
+        "environment": "离线可重置模拟订单 API、授权服务、MCP 网关、异步 Worker 与效果账本，使用虚构凭证与可控虚拟时钟；不得连接外部生产接口",
+        "design": "三种架构 A/B/C；按撤销前排队、撤销后重放、执行中撤销、token 跨受众重用、同受众越权、资源版本变化、授权服务断联、幂等重试、子 Agent 委托等机制分层；每机制至少 2 个正向测试和 2 个负例，记录每条实际副作用与 95/99 百分位延时、误拒与正常任务完成率；明确只属设计的有限样本，不能以零失败推断绝对安全。",
+        "metrics": [
+          "revocation_ack_to_last_unauthorized_effect_ms",
+          "unauthorized_effects_after_ack / forbidden_attempts",
+          "normal_task_completion_rate",
+          "false_denial_rate",
+          "p50/p95/p99_effect_latency_ms",
+          "replay_duplicate_effect_count",
+          "cross_resource_audience_reject_rate",
+          "partition_unavailable_duration"
+        ],
+        "falsification": "在 C 方案已返回 revoke_ack 且各资源侧栅栏确认生效的实验前提下，仍出现旧 epoch 新副作用；或者所谓低风险拒绝使正常任务完成率明显低于预设业务可接受门槛而无法提供可用降级方案。",
+        "open_questions": [
+          "多资源撤销屏障是否需要中心序列化服务",
+          "如何区分取消前已完成的业务副作用与取消后非法新副作用",
+          "跨域第三方 API 不支持 resource PEP 时的降级与 SLA",
+          "跨区域灾难恢复中 epoch 一致性"
+        ]
+      },
+      "evidence": [
+        "S-001",
+        "S-002",
+        "S-004",
+        "S-005",
+        "S-006",
+        "S-007",
+        "S-008"
+      ],
+      "limitations": "完全未运行实验或源码实测，不构成产品漏洞断言；分布式场景无法对任意外部资源承诺瞬时全局撤销。",
+      "next_action": "搭建本地授权/队列/订单状态模拟器，先复现撤销已确认后旧授权被拒与正常队列未错误拒绝的两组最小对照"
+    },
+    {
+      "id": "ARCH-20261027-02",
+      "title": "MCP 工具元数据缓存与执行时能力身份绑定",
+      "status": "Evidence Review",
+      "priority": "P1",
+      "claim": "工具列表缓存或 schema 更新后，若网关未将批准动作与 tool_id、server_identity、schema_digest、capability_manifest 绑定并在执行时重新核对，已审核工具的语义变化可能在缓存有效期间悄然改变授权含义；需要受控验证，尚无本站实测漏洞。",
+      "existing_knowledge": "FEEI.CN 现文档已要求新 Server/工具版本重新审核，差距在把缓存 TTL 与执行时强制点做成可测验收规则。",
+      "invariants": [
+        "执行时 schema_digest 和 server_identity 与授权快照一致，否则要求重审批或安全失败",
+        "缓存刷新和过期不可升级当前任务能力",
+        "已审核读工具被替换为写工具时不允许隐式复用旧 Action Envelope"
+      ],
+      "alternatives": [
+        {
+          "id": "A",
+          "name": "仅工具名/权限字符串校验",
+          "cost": "低",
+          "residual_risk": "同名工具语义漂移"
+        },
+        {
+          "id": "B",
+          "name": "工具 manifest 固定摘要 + 每次执行匹配",
+          "cost": "中",
+          "residual_risk": "动态工具变化增大重审批/缓存失效率"
+        }
+      ],
+      "experiment": {
+        "status": "proposed-not-run",
+        "design": "受控 MCP mock server 在 catalog TTL 内替换 schema、变换同名工具后端、失效缓存和注入错误 headers；对照是否产生未经授权的模拟副作用。",
+        "metrics": [
+          "schema_mismatch_block_rate",
+          "false_denial_rate",
+          "tool_list_cache_hit_rate",
+          "p95_authorization_latency_ms"
+        ],
+        "falsification": "如果所有测试执行路径均已由资源侧强制显式权限且工具映射不会从缓存影响执行授权，则无法证明绑定 manifest 提供额外防护。"
+      },
+      "evidence": [
+        "S-003",
+        "S-004",
+        "S-008"
+      ],
+      "limitations": "基于协议变化和设计推理的防御假设，不是公开确认的漏洞。",
+      "next_action": "核对 MCP 正式 2026-07-28 tooling/cache 约定与现有架构工具列表缓存实现，再决定是否升级为实验"
+    }
+  ],
+  "monthly_review": {
+    "period": "2026-10",
+    "comparison": "A 网关鉴权、B 受众/发送者绑定 + 动作授权、C 增加资源侧撤销栅栏",
+    "decision": "优先验证 C 与 B 的差异；先定义“撤销发起”与“撤销确认”之间的可观察边界，不用模型输出代替业务效果账本。",
+    "tradeoffs": [
+      "B 易复用 OAuth 标准，部署轻但不能独自约束跨队列旧授权和消息体参数",
+      "C 可增强最终副作用边界，但改变业务数据库与队列提交路径，可能导致更多 fail-closed 与延迟"
+    ],
+    "known_gaps": [
+      "缺实际业务 simulator 与对照运行",
+      "未知 RFC 8693 在不同产品中是否完整保留 actor chain",
+      "未分析 NIST IR 8587 PDF 全文，仅引用官方摘要",
+      "未评测 MCP 2026-07-28 spec 在目标 SDK 版本中的实际行为"
+    ],
+    "next_review": "2026-11"
+  },
+  "sources": [
+    {
+      "id": "S-001",
+      "title": "NIST IR 8587: Protecting Tokens and Assertions from Forgery, Theft, and Misuse",
+      "url": "https://csrc.nist.gov/pubs/ir/8587/final",
+      "published_at": "2026-09-15",
+      "type": "official-final-report-summary",
+      "supported_claim": "跨服务令牌保护需涵盖验证、密钥与生命周期；此处仅核验 NIST 官方摘要，未审阅 PDF 全文"
+    },
+    {
+      "id": "S-002",
+      "title": "NCCoE Agent Identity and Authorization feedback summary",
+      "url": "https://www.nccoe.nist.gov/news-insights/comments-software-and-agentic-si-identity-concept-paper",
+      "published_at": "2026-09-29",
+      "type": "official-project-update",
+      "supported_claim": "NCCoE 将 DevSecOps 作为 Agent 身份、认证与授权首个实现用例；尚非最终控制标准"
+    },
+    {
+      "id": "S-003",
+      "title": "MCP Specification 2026-07-28 release",
+      "url": "https://blog.modelcontextprotocol.io/posts/2026-07-28/",
+      "published_at": "2026-07-28",
+      "type": "protocol-maintainers-release",
+      "supported_claim": "MCP 无状态协议核心、可缓存工具列表、header 路由与授权加强"
+    },
+    {
+      "id": "S-004",
+      "title": "MCP Authorization Security Considerations 2026-07-28",
+      "url": "https://modelcontextprotocol.info/specification/2026-07-28/basic/authorization/security-considerations/",
+      "published_at": "2026-07-28",
+      "type": "protocol-normative",
+      "supported_claim": "MCP 客户端资源指标、Server audience 校验，严禁 token passthrough；参考官方 GitHub 规范和官方发布核对"
+    },
+    {
+      "id": "S-005",
+      "title": "RFC 8693: OAuth 2.0 Token Exchange",
+      "url": "https://www.rfc-editor.org/rfc/rfc8693.html",
+      "published_at": "2020-01",
+      "type": "ietf-rfc",
+      "supported_claim": "支持 subject/actor 与委托 token exchange；不自动等于任务级参数审批"
+    },
+    {
+      "id": "S-006",
+      "title": "RFC 8707: Resource Indicators for OAuth 2.0",
+      "url": "https://www.rfc-editor.org/rfc/rfc8707.html",
+      "published_at": "2020-02",
+      "type": "ietf-rfc",
+      "supported_claim": "resource/audience 限定"
+    },
+    {
+      "id": "S-007",
+      "title": "RFC 9449: OAuth 2.0 DPoP",
+      "url": "https://www.rfc-editor.org/rfc/rfc9449.html",
+      "published_at": "2023-09",
+      "type": "ietf-rfc",
+      "supported_claim": "Sender constraint 缓解被盗 token 跨执行主体重放，但不保证请求 Body 不被篡改"
+    },
+    {
+      "id": "S-008",
+      "title": "FEEI.CN existing Agent and Tool Security",
+      "url": "https://github.com/FeeiCN/FEEI.CN/blob/main/docs/01-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8/02-%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%AE%89%E5%85%A8/02-AI%E7%B3%BB%E7%BB%9F%E5%AE%89%E5%85%A8/Agent%E4%B8%8E%E5%B7%A5%E5%85%B7%E8%B0%83%E7%94%A8%E5%AE%89%E5%85%A8.md",
+      "published_at": "2026-10-27",
+      "type": "repo-baseline",
+      "supported_claim": "已有 Capability Envelope、Action Envelope、PDP/PEP、幂等、撤销原则；本任务不重复已有架构"
+    }
+  ],
+  "dedup": {
+    "checked_main_docs": [
+      "docs/01-网络安全/02-人工智能安全/02-AI系统安全/Agent与工具调用安全.md",
+      "docs/01-网络安全/02-人工智能安全/02-AI系统安全/大模型应用安全.md",
+      "docs/01-网络安全/02-人工智能安全/02-AI系统安全/AI风险治理.md",
+      "docs/01-网络安全/02-人工智能安全/02-AI系统安全/AI安全评测与红队.md",
+      "docs/01-网络安全/01-网络空间安全/03-安全体系/03-安全体系.md"
+    ],
+    "checked_branches": [
+      "research/ai-security-20261026-agent-control-plane"
+    ],
+    "finding": "已存在的 Capability/Action Envelope 与 PEP 不重复写正文，只保留异步撤销栅栏和缓存 manifest 绑定的待验证增量。",
+    "notified_as_unverified": true
+  },
+  "run": {
+    "date": "2026-10-27",
+    "github_write": "pending",
+    "test_execution": "not-run",
+    "docs_build": "not-run",
+    "notes": "本次仅做官方公开材料和仓库文档静态分析，无本地或第三方生产利用。"
+  }
+}

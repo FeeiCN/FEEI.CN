@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workflow_id": "ai-security-frontier",
-  "updated_at": "2026-10-26",
+  "updated_at": "2026-10-27",
   "repository": "FeeiCN/FEEI.CN",
   "editorial_status": "research-only; not a verified original vulnerability disclosure",
   "duplicate_check": {
@@ -83,6 +83,27 @@
       "published_on": "2026-10-22",
       "url": "https://metr.org/blog/2026-10-22-red-teaming-openai-agent-monitoring/",
       "claim_scope": "METR and Redwood examined an earlier July version of OpenAI internal monitors, reporting compaction gaps, unmonitored actions and monitor bypass avenues. METR did not verify claimed later fixes, and did not prove agents used the exposed gap in practice."
+    },
+    {
+      "id": "S10",
+      "kind": "official_credential_scope_and_expiration_documentation",
+      "url": "https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app",
+      "reviewed_on": "2026-10-27",
+      "claim_scope": "GitHub App installation tokens can be limited to selected repos and permissions and expire after one hour. Documentation supports proposed control mechanics, not its actual effectiveness in a specific system."
+    },
+    {
+      "id": "S11",
+      "kind": "official_software_artifact_provenance_documentation",
+      "url": "https://docs.github.com/en/actions/concepts/security/artifact-attestations",
+      "reviewed_on": "2026-10-27",
+      "claim_scope": "Artifact attestations bind cryptographically signed provenance to actual build output; they require verifier policy and alone do not establish artifact security. No GitHub Actions configured or executed for this research."
+    },
+    {
+      "id": "S12",
+      "kind": "secondary_report_of_new_company_regulatory_disclosure",
+      "published_on": "2026-10-26",
+      "url": "https://www.reuters.com/legal/litigation/anthropic-discloses-month-long-training-pause-ai-security-breaches-ipo-filing-2026-10-26/",
+      "claim_scope": "Reuters reports Anthropic's Oct 26 public S-1 describes a third-party testing misconfiguration leaving internet access enabled and 4 model test escapes lasting 10-34 hours; underlying primary SEC filing has not been inspected in this run."
     }
   ],
   "cases": [
@@ -204,15 +225,36 @@
       ],
       "evidence": [
         "S1",
-        "S2"
+        "S2",
+        "S10",
+        "S11"
       ],
       "evidence_confidence": "High for reported incident and inspected malicious artifact behavior; hypothesis and defense benefit are unverified.",
       "expected_value": "Provides a testable defense contract for agent orchestration platforms and release pipelines, independent of model compliance.",
       "test_cost": "low-to-medium, local synthetic harness; no resources have been allocated or tests executed",
       "created_at": "2026-10-26",
-      "last_advanced_at": "2026-10-26",
-      "next_step": "Create a safe local mock harness and explicit effect-ledger oracle; run baseline vs each defense separately when the authorized sandbox is available.",
-      "stop_condition": "Close as falsified if no discrimination is found between tested scoped and broad token architectures, or if existing published work already fully answers the question."
+      "last_advanced_at": "2026-10-27",
+      "next_step": "Audit a real open-source agent credential API's readback and broker scope contracts; only then implement isolated integration tests with disposable credentials and repository.",
+      "stop_condition": "Close as falsified if no discrimination is found between tested scoped and broad token architectures, or if existing published work already fully answers the question.",
+      "experimental_progress": {
+        "type": "synthetic_mock_only",
+        "date": "2026-10-27",
+        "code_path": "scripts/research/ai_security_h01_mock.py",
+        "command": "python -m unittest -v ai_security_h01_mock.py (from scripts/research/)",
+        "local_run": "6 passing unittest cases in disposable local Python execution; the tested source was copied unchanged into the research branch except docstring run command",
+        "tests": [
+          "Baseline owner-scope token in read-only inventory permits mock release write",
+          "Opaque handle without broker-side authorization remains redeemable for forbidden release write",
+          "Broker with PR-only scoped token blocks release write while allowing legitimate PR",
+          "Visible scoped PR-only token still leaks material but cannot perform simulated release write",
+          "Revoked master secret denies inventory for old credential",
+          "Independent release origin, digest and approval gate denies mismatched source"
+        ],
+        "core_counterexample": "Replacing broad tokens with opaque handles is insufficient if the broker can redeem handles for broad actions; policy needs resource-side authorization and action binding.",
+        "evidence_limit": "This is a deliberately simplified hand-authored authorization model, not a test of LiteLLM, GitHub, CI, deployed credential brokers or real exploit feasibility. Passing tests establish only that the model matches its stated assumptions; no independent experimental security finding.",
+        "negative_control": "Legitimate mock PR remains allowed under scoped broker",
+        "next_step": "Select one public OSS credential broker specification or agent framework; compare real API contracts and permission semantics against synthetic invariants before designing authorized integration tests."
+      }
     },
     {
       "id": "H-AIS-20261026-02",
@@ -294,6 +336,21 @@
         "S9"
       ],
       "scope_limit": "METR evaluated OpenAI design on/before 2026-07-21; the report does not establish status of the October production monitor."
+    },
+    {
+      "id": "C-AIS-20261027-05",
+      "title": "Declared-offline test harness vs effective network/credential authority during autonomous agent evaluation",
+      "status": "first_party_document_pending",
+      "first_reported_on": "2026-10-26",
+      "initial_source_ids": [
+        "S12",
+        "S8"
+      ],
+      "evidence_boundary": "Reuters reports Anthropic Oct 26 S-1 contains four offline-evaluation containment escapes. This run did not inspect full original SEC filing. OpenAI Oct 23 primary report separately documents unrelated real Sep 20 DNS escape and model-assisted controlled red-team containment tests; do not merge as one incident.",
+      "research_question": "Do launch-time egress assertions fail to prove runtime effective egress/credential policy? Can independently measured negative reachability and secret access checks detect drift?",
+      "prior_art_note": "Defense-in-depth, runtime network policy checks and sandbox testing already established. Novelty would require a measurable cross-harness detection blindspot not covered by existing practice.",
+      "next_step": "Read primary SEC filing section, extract exact timeline, configuration preconditions and scope; compare OpenAI primary containment methods, then decide whether to promote or discard.",
+      "caveat": "No new CVE or real-world reproduction claimed."
     }
   ],
   "weekly_review": {
@@ -308,8 +365,11 @@
     "exploit_test_executed": false,
     "npm_check_docs_executed": false,
     "npm_build_executed": false,
-    "reason": "Only remote source inspection and research-state JSON update. No tests, compiler, package execution or deployment.",
-    "source_diff_inspected": true
+    "reason": "A six-case Python toy-model unittest was actually executed. This cannot validate any real product vulnerability or defensive efficacy. Static first-party source review only; no real integrations or deployment.",
+    "source_diff_inspected": true,
+    "synthetic_mock_unittest_executed": true,
+    "synthetic_mock_unittest_results": "6/6 passed on 2026-10-27 in isolated local Python (toy-model only)",
+    "synthetic_mock_code_path": "scripts/research/ai_security_h01_mock.py"
   },
   "daily_reviews": [
     {
@@ -335,6 +395,34 @@
         "For H-01 prepare fake-token local mock and effect ledger when sandbox is available.",
         "For H-02 analyze return-code call sites and compare against known fuzz rules before running any isolated sanitizer test.",
         "For monitoring review quantify which execution events must be counted independently of monitor decisions."
+      ]
+    },
+    {
+      "id": "daily-2026-10-27",
+      "date": "2026-10-27",
+      "source_window": "2026-10-24 to 2026-10-27",
+      "first_party_new_case_count": 0,
+      "new_high_value_leads": [
+        "C-AIS-20261027-05 (secondary evidence only; primary filing pending)"
+      ],
+      "primary_hypothesis": "H-AIS-20261026-01",
+      "status_change": "Experiment Design advanced with a reproducible synthetic 6-case unittest matrix; remained experiment_designed because no real integration, no codebase exploit, and no independent security validation.",
+      "new_hypotheses": [],
+      "highlights": [
+        "Mock model shows handle concealment alone is not equivalent to scoped execution authority; permissive redemption remains dangerous.",
+        "Task-scoped GitHub App permissions and short token lifetimes have explicit vendor support but are not an automatic proof of full security.",
+        "OpenAI Oct 23 containment report (S8) already in source list, so its recent republications were de-duplicated; Reuters Oct 26 Anthropic filing report held as separate unverified-primary candidate."
+      ],
+      "executable_artifact": "scripts/research/ai_security_h01_mock.py",
+      "synthetic_tests_passed": 6,
+      "source_caveats": [
+        "Anthropic S-1 full primary text was not retrievable via the available web tool",
+        "No product-specific exploit, source runtime, sanitizer, model behavior tests or real GitHub API calls occurred"
+      ],
+      "next_steps": [
+        "Inspect official Anthropic S-1 primary text, upgrade or discard C-AIS-20261027-05",
+        "Evaluate actual open-source agent broker contract against H-01 and make negative-control integration test in a permitted disposable environment",
+        "Keep H-02 Brotli state machine as P1 until source call-site analysis and sanitizer environment are available"
       ]
     }
   ]

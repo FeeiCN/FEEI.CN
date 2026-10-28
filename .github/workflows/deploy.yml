@@ -26,7 +26,8 @@ on:
 
 concurrency:
   group: deploy
-  cancel-in-progress: true
+  # Let the active deployment finish; GitHub retains only the latest pending run.
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -148,6 +149,13 @@ jobs:
           rsync -a --delete --exclude 'weather/' static/data/ "$data_root/"
           group_end "Prepare shared assets"
 
+          # Workflow-run triggers can target a commit that is already published.
+          # Shared data has been synchronized above; avoid rebuilding unchanged pages.
+          if [ -n "$deployed_head" ] && [ "$deployed_head" = "$new_head" ]; then
+            echo "Already deployed $new_head; shared assets refreshed. Skipping build."
+            exit 0
+          fi
+
           data_only=false
           if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
             changed_files="$(git diff --name-only "$deployed_head" "$new_head")"
@@ -188,6 +196,9 @@ jobs:
           mv static/data "$hidden_data_dir"
 
           group_start "Build Docusaurus"
+          echo "[build-resources] CPUs=$(nproc)"
+          free -h || true
+          df -h "$site_root" || true
           build_timeout_seconds=900
           run_build() {
             local build_status
@@ -242,7 +253,7 @@ jobs:
             else
               echo "[search-index] background rebuild failed for $release_name" >>"$search_log"
             fi
-          ' _ "$release_dir" "$repo_dir" "$search_log" "$release_name" </dev/null >/dev/null 2>&1 &
+          ' _ "$release_dir" "$repo_dir" "$search_log" "$release_name" </dev/null >/dev/null 2>&1 9>&- &
           echo "[search-index] background rebuild started pid=$! release=$release_name"
 
           group_start "Clean old releases"

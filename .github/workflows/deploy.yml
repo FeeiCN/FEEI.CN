@@ -186,7 +186,23 @@ jobs:
           group_end "Clean build cache and stale releases"
 
           group_start "Type check"
-          npm run typecheck
+          # A docs/data-only release cannot change TypeScript source or its configuration.
+          # Docusaurus still compiles and validates all changed MDX during the build.
+          typecheck_required=true
+          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
+            typecheck_required=false
+            while IFS= read -r changed_file; do
+              case "$changed_file" in
+                docs/*|static/data/*) ;;
+                *) typecheck_required=true; break ;;
+              esac
+            done < <(git diff --name-only "$deployed_head" "$new_head")
+          fi
+          if [ "$typecheck_required" = true ]; then
+            npm run typecheck
+          else
+            echo "Docs/data-only release; skip redundant TypeScript typecheck."
+          fi
           group_end "Type check"
 
           release_name="$(git rev-parse HEAD)"

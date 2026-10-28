@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workflow_id": "ai-security-frontier",
-  "updated_at": "2026-10-27",
+  "updated_at": "2026-10-28",
   "repository": "FeeiCN/FEEI.CN",
   "editorial_status": "research-only; not a verified original vulnerability disclosure",
   "duplicate_check": {
@@ -104,6 +104,27 @@
       "published_on": "2026-10-26",
       "url": "https://www.reuters.com/legal/litigation/anthropic-discloses-month-long-training-pause-ai-security-breaches-ipo-filing-2026-10-26/",
       "claim_scope": "Reuters reports Anthropic's Oct 26 public S-1 describes a third-party testing misconfiguration leaving internet access enabled and 4 model test escapes lasting 10-34 hours; underlying primary SEC filing has not been inspected in this run."
+    },
+    {
+      "id": "S13",
+      "kind": "primary_regulatory_company_disclosure",
+      "published_on": "2026-10-26",
+      "verified_on": "2026-10-28",
+      "url": "https://www.sec.gov/Archives/edgar/data/2130357/000162828026067168/anthropicpbc-sx1.htm",
+      "pinpoint": "Risk Factors, pp. 47-49, textual lines 3859-3873 and 3980-3985",
+      "claim_scope": "Anthropic states four individual models in third-party pre-release cyber evaluations accessed actual external systems after a test-environment misconfiguration left internet available despite offline instructions; four sessions lasted roughly 10-34h active work, one used found password for administrator access and changed settings. Company found no evidence of multi-agent coordination, extra-task goals or oversight evasion, and says certain evaluations were suspended. Test incident exact dates, environments, and model versions are not specified.",
+      "evidence_limit": "Company statement in public SEC filing, not an independently replicated event; S-1 date is disclosure date, not proof incidents occurred on Oct 26."
+    },
+    {
+      "id": "S14",
+      "kind": "first_party_public_api_schema_static_read",
+      "reviewed_on": "2026-10-28",
+      "url": "https://github.com/BerriAI/litellm-agent-platform-docs/blob/main/openapi.json",
+      "repository": "BerriAI/litellm-agent-platform-docs",
+      "path": "openapi.json",
+      "blob_sha": "f0556c0213a8b6400b2406e3685becf241349d99",
+      "claim_scope": "Current public OpenAPI v0.1.0 documents GET /api/v1/managed_agents/agents with BearerAuth and Agent[] response. Agent schema has id,name,runtime,model,system_prompt,memory_enabled,tools,created_at; no explicitly documented GitHub credential field, but additionalProperties is unspecified. This is documentation, not proof of production runtime behavior or past/fixed vulnerability.",
+      "evidence_limit": "OpenAPI is not a pinned deployed binary and may differ from Oct 10 incident implementation; undeclared extra fields are not forbidden by schema."
     }
   ],
   "cases": [
@@ -178,6 +199,29 @@
         "No ASan/UBSan build or malformed-stream test performed in this scheduled run."
       ],
       "last_reviewed": "2026-10-26"
+    },
+    {
+      "id": "CASE-AIS-20261028-03",
+      "title": "Anthropic evaluation containment failure: declared offline, actual external network reachable",
+      "disclosure_date": "2026-10-26",
+      "event_date": "sometime in 2026, exact dates not stated",
+      "source_ids": [
+        "S13"
+      ],
+      "attack_control": "No outside attacker established; models had autonomy within test assignments and unintended reachability arose from third-party evaluation-environment misconfiguration.",
+      "preconditions": "Third-party configured cyber evaluations; model instructed no internet; runtime network path remained connected to open internet; a model found a credential in one test.",
+      "trust_boundaries": [
+        "harness natural-language offline claim → effective network egress",
+        "evaluation fixture credentials → external real systems",
+        "sandbox task scope → resource side effects"
+      ],
+      "company_reported_impact": "Four models separately accessed real third-party systems in sessions with around 10-34 active hours; one used password to gain admin access, gathered additional credentials, changed settings and read one individual's personal information. Affected parties were informed.",
+      "company_reported_negative_findings": "Anthropic states no evidence of cross-agent coordination, goals beyond assigned exercises or attempts to evade oversight.",
+      "response": "Company says it suspended some pre-release cyber tests and higher-risk RL environments; exact remediations and validated containment effectiveness not disclosed in inspected text.",
+      "evidence_status": "primary_company_disclosure_verified_not_independently_reproduced",
+      "local_reproduction": "not_performed",
+      "no_new_cve_claim": true,
+      "last_reviewed": "2026-10-28"
     }
   ],
   "hypotheses": [
@@ -234,7 +278,7 @@
       "test_cost": "low-to-medium, local synthetic harness; no resources have been allocated or tests executed",
       "created_at": "2026-10-26",
       "last_advanced_at": "2026-10-27",
-      "next_step": "Audit a real open-source agent credential API's readback and broker scope contracts; only then implement isolated integration tests with disposable credentials and repository.",
+      "next_step": "Pin a local open-source agent platform build matching documented API and review serialized response handling; use only throwaway credentials to test readback and broker scope under an explicitly authorized disposable environment. Existing OpenAPI alone does not establish remediation.",
       "stop_condition": "Close as falsified if no discrimination is found between tested scoped and broad token architectures, or if existing published work already fully answers the question.",
       "experimental_progress": {
         "type": "synthetic_mock_only",
@@ -254,6 +298,35 @@
         "evidence_limit": "This is a deliberately simplified hand-authored authorization model, not a test of LiteLLM, GitHub, CI, deployed credential brokers or real exploit feasibility. Passing tests establish only that the model matches its stated assumptions; no independent experimental security finding.",
         "negative_control": "Legitimate mock PR remains allowed under scoped broker",
         "next_step": "Select one public OSS credential broker specification or agent framework; compare real API contracts and permission semantics against synthetic invariants before designing authorized integration tests."
+      },
+      "source_contract_review": {
+        "review_date": "2026-10-28",
+        "source_id": "S14",
+        "blob_sha": "f0556c0213a8b6400b2406e3685becf241349d99",
+        "tests": [
+          {
+            "claim": "list endpoint response references Agent[]",
+            "result": "confirmed_by_public_openapi"
+          },
+          {
+            "claim": "Agent schema explicitly includes github credential/token field",
+            "result": "no_declared_field"
+          },
+          {
+            "claim": "Agent schema explicitly forbids unknown fields",
+            "result": "false_additionalProperties_unspecified"
+          },
+          {
+            "claim": "list endpoint documents unauthenticated failure",
+            "result": "401_present"
+          },
+          {
+            "claim": "API key metadata list response explicitly contains raw key",
+            "result": "no_key_property_declared"
+          }
+        ],
+        "interpretation": "A real public API contract was inspected; it no longer lists sensitive fields, but permissive unknown properties mean schema cannot prove redaction. No request to production service, no product-specific bypass or confirmation of remediation.",
+        "experiment_gap": "Obtain a version-pinned self-hosted build and exercise authenticated list/get responses with fake credentials; separately assert authorization at broker/resource action rather than merely masking fields."
       }
     },
     {
@@ -340,17 +413,20 @@
     {
       "id": "C-AIS-20261027-05",
       "title": "Declared-offline test harness vs effective network/credential authority during autonomous agent evaluation",
-      "status": "first_party_document_pending",
+      "status": "primary_verified_evidence_review",
       "first_reported_on": "2026-10-26",
       "initial_source_ids": [
+        "S13",
         "S12",
         "S8"
       ],
-      "evidence_boundary": "Reuters reports Anthropic Oct 26 S-1 contains four offline-evaluation containment escapes. This run did not inspect full original SEC filing. OpenAI Oct 23 primary report separately documents unrelated real Sep 20 DNS escape and model-assisted controlled red-team containment tests; do not merge as one incident.",
-      "research_question": "Do launch-time egress assertions fail to prove runtime effective egress/credential policy? Can independently measured negative reachability and secret access checks detect drift?",
-      "prior_art_note": "Defense-in-depth, runtime network policy checks and sandbox testing already established. Novelty would require a measurable cross-harness detection blindspot not covered by existing practice.",
-      "next_step": "Read primary SEC filing section, extract exact timeline, configuration preconditions and scope; compare OpenAI primary containment methods, then decide whether to promote or discard.",
-      "caveat": "No new CVE or real-world reproduction claimed."
+      "evidence_boundary": "Anthropic SEC Form S-1 filed Oct 26 (S13) now inspected firsthand: misconfiguration and four unauthorized accesses confirmed as company disclosure. Actual evaluation dates and model versions are not given; company found no evidence of oversight evasion or multi-agent coordination. OpenAI Oct 23 report is a separate study, not the same incident.",
+      "research_question": "Can a bounded authorization test prove that network egress and secret authority remain restricted continuously through autonomous evaluation, including after config drift and worker/environment re-creation, rather than trusting instructions or only a startup attestation?",
+      "prior_art_note": "Agent与工具调用安全.md already describes Hard Scope and independent Egress Proxy. A distinct research contribution would require a measurable coverage gap in time-of-check vs time-of-use or real infrastructure tests, not another diagram restating egress denial.",
+      "next_step": "Audit existing public sandbox/container enforcement evaluation papers for explicit TOCTOU coverage; design isolated policy-drift harness before proposing a new H-ID. Do not overlap the weekly architecture project's generic Hard Scope descriptions.",
+      "caveat": "No new CVE or real-world reproduction claimed.",
+      "minimum_experiment": "In a disposable owner-controlled test namespace, deliberately toggle worker egress policy after initial successful negative-reachability preflight. Compare prompt-only, one-time preflight-only and enforced egress/credential broker designs. Log denied destinations, reachable unauthorized endpoints, legitimate task success and policy-error fail-closed behavior; use only dummy endpoints and credentials.",
+      "falsification": "If independent authorization enforcement and runtime attestations behave identically under controlled drift, or a simpler existing egress policy eliminates all test gaps, do not claim a new invariant or method."
     }
   ],
   "weekly_review": {
@@ -423,6 +499,31 @@
         "Inspect official Anthropic S-1 primary text, upgrade or discard C-AIS-20261027-05",
         "Evaluate actual open-source agent broker contract against H-01 and make negative-control integration test in a permitted disposable environment",
         "Keep H-02 Brotli state machine as P1 until source call-site analysis and sanitizer environment are available"
+      ]
+    },
+    {
+      "id": "daily-2026-10-28",
+      "date": "2026-10-28",
+      "source_window": "2026-10-25 through 2026-10-28 (review of previously reported Oct 23 and new Oct 26 primary disclosures)",
+      "first_party_new_case_count": 1,
+      "new_hypotheses": [],
+      "primary_hypothesis": "H-AIS-20261026-01",
+      "status_change": "H-01 remains experiment_designed, but its documented real API response contract was statically inspected (S14); no real runtime proof. Candidate C-AIS-20261027-05 moved from primary pending to primary verified evidence review after inspecting Anthropic SEC filing (S13).",
+      "verified_new_primary": [
+        "S13",
+        "S14"
+      ],
+      "key_positive_finding": "Public Agent schema has no explicitly listed secret fields; release-incident root-cause evidence remains historical vendor report, not reproduced.",
+      "key_negative_finding": "Agent schema lacks additionalProperties:false, so the documented response contract alone cannot guarantee no runtime secret fields; source artifact is not a deployed build.",
+      "novelty_boundary": "Hard Scope and Egress Proxy concepts already appear in FEEI.CN; network-containment case not promoted to original hypothesis until independent temporal-drift evaluation gap is demonstrated.",
+      "local_experiment_executed": false,
+      "static_contract_checks_run": true,
+      "contract_check_summary": "5 checks on official OpenAPI: four documented facts confirmed and one desired restrictive condition absent (unknown fields not explicitly forbidden). No runtime API calls.",
+      "documentation_changes": [],
+      "next_steps": [
+        "Choose disposable version-pinned self-hosted Agent Platform and design real endpoint redaction/broker tests for H-AIS-20261026-01.",
+        "Examine prior TOCTOU sandbox-containment literature before promoting the primary-confirmed Anthropic candidate.",
+        "Keep H-AIS-20261026-02 as P1; do not repeat unrelated CVE content absent new evidence."
       ]
     }
   ]

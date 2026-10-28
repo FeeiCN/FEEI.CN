@@ -226,10 +226,9 @@ jobs:
 
           release_name="$(git rev-parse HEAD)"
           release_dir="$releases_dir/$release_name"
-          # Keep the build output path stable across commits so Rspack can reuse
-          # its persistent compilation cache; the published release remains immutable.
-          # Both staging and releases are on the same filesystem for atomic rename.
-          staging_dir="$site_root/.build-staging.tmp"
+          # Use release-scoped staging to avoid cross-build output cache interactions.
+          # The unpublished temporary directory is renamed into its immutable release.
+          staging_dir="${release_dir}.tmp"
           rm -rf "$staging_dir"
           mv static/data "$hidden_data_dir"
 

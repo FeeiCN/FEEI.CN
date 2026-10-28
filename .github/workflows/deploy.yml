@@ -249,6 +249,7 @@ jobs:
 
           group_start "Build Docusaurus"
           echo "[build-resources] CPUs=$(nproc)"
+          echo "[build-resources] RAYON_NUM_THREADS=4 (build-only experiment; memory/swap pressure)"
           free -h || true
           df -h "$site_root" || true
           build_resource_snapshot before
@@ -260,7 +261,7 @@ jobs:
           run_build() {
             local build_status
             setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
-              env DOCUSAURUS_PERF_LOGGER=true /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
+              env RAYON_NUM_THREADS=4 DOCUSAURUS_PERF_LOGGER=true /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
             active_build_pid=$!
             if wait "$active_build_pid"; then build_status=0; else build_status=$?; fi
             active_build_pid=""

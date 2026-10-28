@@ -178,7 +178,10 @@ jobs:
           if [ -d "$build_cache" ]; then
             cache_size_kb="$(du -sk "$build_cache" | cut -f1)"
             echo "build_cache_size_kb=$cache_size_kb"
-            if [ "$cache_size_kb" -gt 2097152 ]; then rm -rf "$build_cache"; fi
+            # Preserve Rspack/MDX persistent caches across docs builds. The cache
+            # was 1.94 GiB on run 40728880639, dangerously close to the old 2 GiB
+            # eviction threshold; /data had 70 GiB free. Cap at 4 GiB instead.
+            if [ "$cache_size_kb" -gt 4194304 ]; then rm -rf "$build_cache"; fi
           fi
           mkdir -p "$releases_dir"
           find "$releases_dir" -mindepth 1 -maxdepth 1 -type d -name '*.tmp' -exec rm -rf {} +

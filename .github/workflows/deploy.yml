@@ -232,10 +232,30 @@ jobs:
           rm -rf "$staging_dir"
           mv static/data "$hidden_data_dir"
 
+          # Read-only pressure/IO snapshots help distinguish slow Rspack cache
+          # rebuilds from system-level disk and memory contention.
+          build_resource_snapshot() {
+            local phase="$1" kind
+            echo "[build-snapshot] phase=$phase at=$(date -Is)"
+            for kind in cpu io memory; do
+              if [ -r "/proc/pressure/$kind" ]; then
+                while IFS= read -r line; do echo "[build-pressure] phase=$phase kind=$kind $line"; done < "/proc/pressure/$kind"
+              fi
+            done
+            if [ -r /proc/vmstat ]; then
+              awk -v phase="$phase" '$1 ~ /^(pswpin|pswpout|pgmajfault|pgpgin|pgpgout)$/ {print "[build-vmstat] phase=" phase " " $1 "=" $2}' /proc/vmstat
+            fi
+          }
+
           group_start "Build Docusaurus"
           echo "[build-resources] CPUs=$(nproc)"
           free -h || true
           df -h "$site_root" || true
+          build_resource_snapshot before
+          if [ -d node_modules/.cache ]; then
+            echo "[build-cache] largest top-level entries (KiB):"
+            du -sk node_modules/.cache/* 2>/dev/null | sort -rn | head -n 12 || true
+          fi
           build_timeout_seconds=900
           run_build() {
             local build_status
@@ -253,6 +273,7 @@ jobs:
             if run_build; then build_ok=true; break; fi
             sleep 5
           done
+          build_resource_snapshot after
           [ "$build_ok" = true ] || { echo "Build failed after 3 attempts"; exit 1; }
           group_end "Build Docusaurus"
           restore_data_source

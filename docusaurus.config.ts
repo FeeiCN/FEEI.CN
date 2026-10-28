@@ -14,6 +14,18 @@ import remarkStaticMedia from './plugins/remarkStaticMedia';
 import rehypeComplianceReferences from './plugins/rehypeComplianceReferences';
 import {staticAssetUrl} from './src/utils/staticAssets';
 
+// Production client bundles retain module concatenation; the SSG-only server
+// bundle opts out of this costly optimization. This is reversible and avoids
+// changing client-side output or production dependencies.
+function optimizeServerBundling() {
+  return {
+    name: 'optimize-ssg-server-bundling',
+    configureWebpack(_config: unknown, isServer: boolean) {
+      return {optimization: {concatenateModules: !isServer}};
+    },
+  };
+}
+
 const isStrictBuild = process.env.CI_STRICT === 'true';
 
 const config: Config = {
@@ -25,7 +37,7 @@ const config: Config = {
     {tagName: 'link', attributes: {rel: 'icon', href: staticAssetUrl('/img/feei-icon.svg'), type: 'image/svg+xml'}},
   ],
   presets: [['classic', {docs: {routeBasePath: '/', sidebarPath: './sidebars.ts', beforeDefaultRemarkPlugins: [remarkStaticMedia], remarkPlugins: [remarkMath], rehypePlugins: [rehypeKatex, rehypeComplianceReferences], async sidebarItemsGenerator(args) { const items = await args.defaultSidebarItemsGenerator(args); return attachDocFrontMatterToSidebar(items, args.docs); }, editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/'}, blog: false, theme: {customCss: ['./src/css/custom.css', './src/css/neutral.css', './src/css/sliding-indicator.css', './src/css/friend-links.css', './src/css/year-records.css', './src/css/contact.css']}} satisfies Preset.Options]],
-  plugins: [docMtimePlugin, copyMarkdownPlugin, homeRecordsPlugin, [fastSearchPlugin, searchOptions]], clientModules: ['./src/clientModules/slidingIndicator.ts'],
+  plugins: [optimizeServerBundling, docMtimePlugin, copyMarkdownPlugin, homeRecordsPlugin, [fastSearchPlugin, searchOptions]], clientModules: ['./src/clientModules/slidingIndicator.ts'],
   themeConfig: {
     docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: staticAssetUrl('/music/feei-site-theme-cover.webp'), colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
     navbar: {hideOnScroll: false, logo: {alt: 'FEEI', src: staticAssetUrl('/img/feei-icon.svg')}, items: [

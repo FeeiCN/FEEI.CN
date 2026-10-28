@@ -8,6 +8,8 @@ const docsRoot = path.join(root, 'docs/05-吴飞飞/02-年度总结');
 const outDir = path.resolve(process.argv[2] ?? path.join(root, 'static/data/weather'));
 const locationsFile = path.join(outDir, 'locations.json');
 const daysFile = path.join(outDir, 'days.json');
+const unresolvedFile = path.join(outDir, 'unresolved.json');
+const resolutionRetryMs = 7 * 24 * 60 * 60 * 1000;
 const jiti = createJiti(import.meta.url);
 const {resolvePlace} = jiti(path.join(root, 'src/utils/locationResolver.ts'));
 
@@ -62,6 +64,7 @@ await fs.mkdir(outDir,{recursive:true});
 // Existing cache should make subsequent deploys incremental: historical days are immutable.
 const locations=await readJson(locationsFile,{});
 const days=await readJson(daysFile,{});
+const unresolvedCache=await readJson(unresolvedFile,{});
 const records=[];
 for (const file of await walk(docsRoot)) {
   const text=await fs.readFile(file,'utf8');
@@ -73,16 +76,25 @@ for (const file of await walk(docsRoot)) {
   records.push({date:match[1],locations:splitLocations(location)});
 }
 const controller=new AbortController();
-const stats={locationHits:0,locationResolveAttempts:0,locationResolveFailures:0,weatherHits:0,weatherFetches:0,weatherFailures:0};
+const stats={locationHits:0,locationResolveAttempts:0,locationResolveFailures:0,locationNegativeHits:0,weatherHits:0,weatherFetches:0,weatherFailures:0};
 const unresolved=new Set();
 for (const record of records) {
   for (const location of record.locations) {
-    if (!locations[location]) {
+    if (!locations[location] && Date.now() - (unresolvedCache[location]?.attemptedAt ?? 0) < resolutionRetryMs) {
+      stats.locationNegativeHits += 1;
+      unresolved.add(location);
+    } else if (!locations[location]) {
       stats.locationResolveAttempts += 1;
       const started=Date.now();
       const resolved=await resolvePlace(location,controller.signal,(message)=>console.log(`[weather-resolver] location="${location}" ${message}`));
-      if (resolved) locations[location]={...resolved,resolvedAt:new Date().toISOString()};
-      else { stats.locationResolveFailures += 1; unresolved.add(location); }
+      if (resolved) {
+        locations[location]={...resolved,resolvedAt:new Date().toISOString()};
+        delete unresolvedCache[location];
+      } else {
+        unresolvedCache[location]={attemptedAt:Date.now()};
+        stats.locationResolveFailures += 1;
+        unresolved.add(location);
+      }
       console.log(`[weather] resolve location="${location}" result=${resolved ? 'ok' : 'failed'} durationMs=${Date.now()-started}`);
     } else stats.locationHits += 1;
     const key=`${record.date}:${location}`;
@@ -103,5 +115,6 @@ for (const record of records) {
   }
 }
 await fs.writeFile(locationsFile,JSON.stringify(locations,null,2)+'\n');
+await fs.writeFile(unresolvedFile,JSON.stringify(unresolvedCache,null,2)+'\n');
 await fs.writeFile(daysFile,JSON.stringify(days,null,2)+'\n');
 console.log(`[weather] locations=${Object.keys(locations).length} days=${Object.keys(days).length} stats=${JSON.stringify(stats)} unresolved=${JSON.stringify([...unresolved])}`);

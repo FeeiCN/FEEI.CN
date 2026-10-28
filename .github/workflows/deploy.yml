@@ -131,6 +131,22 @@ jobs:
           fi
           quality_base="$old_head"
           if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then quality_base="$deployed_head"; fi
+          # Observe the previous release's asynchronous index build on every deploy.
+          # A successful page publish does not prove that search indexing finished.
+          if [ -n "$previous_release" ]; then
+            index_status_file="$previous_release/search-index-status.json"
+            echo "[deploy-index-check] previous_release=$deployed_head"
+            if [ -s "$index_status_file" ]; then
+              grep -E '"(status|updatedAt|pages|durationMs)"' "$index_status_file" || true
+            else
+              echo "[deploy-index-check] index_status=missing"
+            fi
+            if [ -s "$previous_release/search-index.json" ]; then
+              echo "[deploy-index-check] index_bytes=$(stat -c%s "$previous_release/search-index.json")"
+            else
+              echo "[deploy-index-check] index_file=missing"
+            fi
+          fi
           echo "old_head=$old_head"
           echo "new_head=$new_head"
           echo "deployed_head=\${deployed_head:-none}"

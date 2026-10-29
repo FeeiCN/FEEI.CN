@@ -18,7 +18,6 @@ const commitMessage = args.message ?? `[auto] 更新健康数据 ${formatLocalDa
 const remote = args.remote ?? 'origin';
 const branch = args.branch ?? currentBranch();
 const healthDir = path.join('static', 'data', 'health');
-const dailyBackfillDays = 14;
 
 ensureNoStagedChanges();
 runWithRetry('git', ['pull', '--rebase', '--autostash']);
@@ -282,10 +281,12 @@ function findMissingDailyHealthDates() {
   }
 
   const today = formatLocalDate(new Date());
-  const windowStart = new Date(`${today}T12:00:00Z`);
-  windowStart.setUTCDate(windowStart.getUTCDate() - dailyBackfillDays);
+  const latestDate = [...existingDates].sort().at(-1);
+  if (!latestDate) {
+    throw new Error('No existing daily health data found; refusing an unbounded backfill.');
+  }
   const missing = [];
-  for (let cursor = windowStart; ; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+  for (let cursor = new Date(`${latestDate}T12:00:00Z`); ; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
     const date = cursor.toISOString().slice(0, 10);
     if (date > today) break;
     if (!existingDates.has(date)) missing.push(date);

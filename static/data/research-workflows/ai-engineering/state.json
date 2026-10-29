@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "workflow": "AI 编程与研发提效",
+  "repo": "FeeiCN/FEEI.CN",
+  "research_branch": "research/ai-engineering-20261029-acceptance-evidence",
+  "updated_at": "2026-10-29",
+  "public_data_only": true,
+  "scope_boundary": "端到端研发交付、任务上下文、验证证据、评审和返工；不开展 AI 安全漏洞研究；不触发 GitHub Actions/其他执行流水线",
+  "canonical_existing_docs": [
+    "docs/01-网络安全/02-人工智能安全/01-通用人工智能/03-AI应用实践/AI编程.md",
+    "docs/01-网络安全/02-人工智能安全/01-通用人工智能/02-Agent与工具工程/Harness工程.md",
+    "docs/01-网络安全/02-人工智能安全/01-通用人工智能/04-AI应用与组织/AI组织转型.md"
+  ],
+  "research_summary": {
+    "conclusion": "先检验“任务上下文和验收证据的可移交性”是否能减少评审等待与返工；不以 Token、AI 代码比例、Agent 调用次数代替产出。",
+    "what_is_not_new": "Work Object、Task Contract、State & Evidence、Quality Gate 已在本站 AI Coding / Harness 文章中覆盖。本轮新增的是可证伪的比较实验协议与评价方法，不把原理重命名为创新。",
+    "main_bottleneck": "需求到验收的上下文丢失、缺少可追溯完成证据，可能导致反复澄清、无效评审和缺乏可复制的经验积累。",
+    "actual_experiments_executed": 0,
+    "not_measured": [
+      "生产环境节省工时",
+      "端到端交付周期改善",
+      "缺陷减少",
+      "实际任务通过率"
+    ],
+    "notes": "GitHub 一手发布说明是产品功能声明，不是该项目的实测提效证据；评测必须独立进行。"
+  },
+  "source_ledger": [
+    {
+      "id": "SRC-AIE-20261029-01",
+      "title": "GitHub intelligence puts your code, context, and history to work",
+      "publisher": "GitHub",
+      "published_at": "2026-10-28",
+      "url": "https://github.blog/changelog/2026-10-28-github-intelligence-puts-your-code-context-and-history-to-work/",
+      "evidence_type": "first-party product announcement",
+      "observation": "GitHub 宣布跨会话记忆、可提出仓库规则改进的 Dreaming、跨仓库代码搜索；其 93%/42% 数字仅来自产品预览中特定已审阅会话。",
+      "limitation": "不是随机对照实验，不能推导出其他仓库的交付周期收益；部分功能处于预览且需授权。",
+      "relevance": "跨会话上下文可移交性与规则更新的审查边界。"
+    },
+    {
+      "id": "SRC-AIE-20261029-02",
+      "title": "Issue artifacts are now in public preview",
+      "publisher": "GitHub",
+      "published_at": "2026-10-28",
+      "url": "https://github.blog/changelog/2026-10-28-issue-artifacts-are-now-in-public-preview/",
+      "evidence_type": "first-party product announcement",
+      "observation": "Issue 可附带有版本记录的 Markdown 计划、研究、根因分析以及可引用的交付制品。",
+      "limitation": "产品发布不等于效率提升已被验证；本站实验可用自有 Markdown/JSON 实现概念，无须启用该产品。",
+      "relevance": "任务 Work Object 持久上下文与验收证据包。"
+    },
+    {
+      "id": "SRC-AIE-20261029-03",
+      "title": "Copilot code review: Merge with confidence with Max and approvals",
+      "publisher": "GitHub",
+      "published_at": "2026-10-28",
+      "url": "https://github.blog/changelog/2026-10-28-copilot-code-review-merge-with-confidence-with-max-and-approvals/",
+      "evidence_type": "first-party product announcement",
+      "observation": "按风险选择 Lite/Balanced/Max 评审层级，多模型独立审阅并汇总，Copilot approval 可按配置进入所需审批。",
+      "limitation": "更深审阅会增加时间和 AI 成本，未给本站可推广效果；自动审批不应替代高风险人工判断。",
+      "relevance": "分层评审基线、误报和 human authority gate。"
+    },
+    {
+      "id": "SRC-AIE-20261029-04",
+      "title": "Custom skills, agents, and MCP servers in usage metrics API",
+      "publisher": "GitHub",
+      "published_at": "2026-10-22",
+      "url": "https://github.blog/changelog/2026-10-22-custom-skills-agents-and-mcp-servers-in-usage-metrics-api/",
+      "evidence_type": "first-party product announcement",
+      "observation": "Usage Metrics API 可按自定义 Skill、Agent、MCP 名称记录使用情况；官方明确客户端遥测可能漏计且不等于精确核算。",
+      "limitation": "使用次数是采用率/活动量指标，不是端到端产出；功能存在客户端版本和权限限制。",
+      "relevance": "区分采用率指标和任务成果指标。"
+    },
+    {
+      "id": "SRC-AIE-20261029-05",
+      "title": "On the reliability of agentic AI in continuous integration pipelines",
+      "publisher": "MSR 2026 conference paper",
+      "published_at": "2026-04-13",
+      "url": "https://doi.org/10.1145/3793302.3793585",
+      "evidence_type": "peer-reviewed observational comparison",
+      "observation": "论文分析 11,771 个公开 PR，报告 agent-authored CI 修复时间中位数较短，同时存在 agent 引入失败与人类参与修复的结构差异。",
+      "limitation": "非随机实验、样本选择及不同任务复杂度可能混杂；不能外推到本站，也不能用修复速度替代缺陷率。",
+      "relevance": "实验同时测量失败引入、修复工时和整体交付，不只看 agent 反应速度。"
+    }
+  ],
+  "experiments": [
+    {
+      "id": "E-AIE-20261029-01",
+      "name": "任务证据包能否减少从需求到验收的交接损耗",
+      "status": "Experiment Designed",
+      "hypothesis": "在代码/文档小型任务中，与仅有标准任务描述和 AGENTS.md 的流程相比，提供版本化 Work Object（需求/约束/决策/验收规则/验证证据/未解决项）的流程，是否能在质量不下降的前提下减少完成前的人类澄清、评审返工和总交付等待？",
+      "novelty_vs_existing": "本站已经描述 Work Object 与 State & Evidence；待验证的增量是把其作为端到端流程干预变量，并用真实任务对照检验。",
+      "target": "FEEI.CN 中不涉及凭证、部署、工作流、个人数据和重大架构的低风险文档修复、小型代码测试/重构任务；仅在另行授权的受控执行环境实施。",
+      "expected_observables": [
+        "需求明确到最终人工验收的日历时长（主指标）",
+        "从第一次 Agent 完成到首次有效审核的等待时长",
+        "人工澄清次数、人工评审分钟数、返工轮次",
+        "独立质量门通过率、验收成功率、回归缺陷和撤回率",
+        "任务总代价（计算资源费用、人工参与、总 Agent 工时）"
+      ],
+      "preregistration": {
+        "experimental_unit": "独立工作任务，避免将同一任务的多个 PR 作为独立样本。",
+        "pilot_sample": "第一轮 12 个低风险、可比任务：按任务类型与预计复杂度分组，每组随机分配 6 个 A 与 6 个 B；样本过小仅用于检查可操作性和数据采集，不作显著性推广结论。",
+        "scaleup_sample": "若试点质量与操作负担可接受，扩展到约 24–40 个独立任务，并根据实际效应/离散度做正式样本量估计；不得宣称已招募或执行。",
+        "experiment_window": "拟定连续 4 周，具体开始时间需在人工审核后确定。",
+        "arm_A": "现行最小任务契约 + 仓库 AGENTS.md + 常规差异检查与人工验收。",
+        "arm_B": "A 的全部措施 + 单一版本化 Work Object，包含需求目标、范围/禁区、背景上下文链接、验收测试清单、执行证据和人审决策记录；不复制相同规则，不以聊天摘要当权威测试结果。",
+        "randomization": "对文档/代码类型、任务复杂度和涉及目录进行分层区组随机；同一评审者跨组平衡，记录模型、工具、日期与参与者。",
+        "assessment": "验收标准应由非执行者提前冻结，独立检查结果；绝不因采用 B 而降低质量门；错误、重开和误报必须纳入。",
+        "report_metrics": "同时报告两组每项指标的样本量、中位数、P90（样本足够时）、差值、异常任务和缺失率；不把 Agent 的自述当成测试结果。",
+        "interpretation": "若 B 仅提升上下文完整度却不降低交付时间，或人类维护证据的成本超过收益，则视为研究假设缺乏实践价值；不能用某单次成功故事推定普遍有效。",
+        "safety_stop": "如发现意外公开敏感信息、越权写入、质量门绕过或与原任务无关的大规模修改，立即停止该组实验并记录事件。"
+      },
+      "possible_confounders": [
+        "任务复杂度不匹配",
+        "评审者熟悉程度",
+        "模型/工具版本随时间变化",
+        "文档任务与代码任务差异",
+        "排队等待与实际执行计时混淆",
+        "同一开发者产生跨组学习效应"
+      ],
+      "cost_tradeoff": "B 增加记录与验证准备时间，可能降低后续重复沟通；须计算净效应，不预设结论。",
+      "confidence": "有明确工程机制与官方产品能力支持，但本站效果完全未验证；当前只有假设和实验协议。",
+      "evidence_ids": [
+        "SRC-AIE-20261029-01",
+        "SRC-AIE-20261029-02",
+        "SRC-AIE-20261029-03",
+        "SRC-AIE-20261029-05"
+      ],
+      "falsification": "严格同质量门条件下，B 并未减少周期/返工，或其新增维护时间、缺陷、误拒超出任何减少的人工等待，则不支持预期。",
+      "verification_state": "no experiment run; no site build/check run",
+      "next_action": "先人工确认可用于小规模对照的低风险任务、可采集的时间戳和既有质量门；再准备测量模板和预注册记录，暂不执行代码变更。"
+    }
+  ],
+  "dedup": {
+    "stable_key": "实验机制 + 主要指标 + 目标任务类型，而不是产品名或新闻标题。",
+    "existing_concepts_reused": [
+      "Work Object",
+      "Task Contract",
+      "State & Evidence",
+      "Quality Gate",
+      "Human at Authority Boundary"
+    ],
+    "source_ids_checked": [
+      "SRC-AIE-20261029-01",
+      "SRC-AIE-20261029-02",
+      "SRC-AIE-20261029-03",
+      "SRC-AIE-20261029-04",
+      "SRC-AIE-20261029-05"
+    ],
+    "next_run_rule": "优先推进 E-AIE-20261029-01 的前置测量与可证伪性；同一能力的产品发布只记入证据，不自动新建实验或文章。"
+  },
+  "publication": {
+    "article_updates": "本轮不更新任何正式文章；现有 AI编程、Harness、AI组织转型已覆盖机制，缺乏本站实验证据。",
+    "publication_gate": "完成独立数据核验、反例讨论和授权审核后，才在已有文档增量写入可公开结果。",
+    "do_not_edit": [
+      "main",
+      ".github/workflows/",
+      "带演讲徽标的历史文章",
+      "客户/内部材料",
+      "个人敏感数据"
+    ]
+  },
+  "next_review": {
+    "date_plan": "2026-11-05",
+    "priority": "P0",
+    "task": "验证可获得的任务级时间戳和验收证据是否满足 A/B 试验采集需要；若缺失先完善实验数据契约，不造实验结果。",
+    "state_transition_gate": "只有授权实验真实运行且完整记录任务级基线、对照与结果，才从 Experiment Designed 进入 Verified/Falsified；无法运行保留 Blocked/Designed。"
+  }
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workflow_id": "ai-security-frontier",
-  "updated_at": "2026-10-28",
+  "updated_at": "2026-10-29",
   "repository": "FeeiCN/FEEI.CN",
   "editorial_status": "research-only; not a verified original vulnerability disclosure",
   "duplicate_check": {
@@ -125,6 +125,38 @@
       "blob_sha": "f0556c0213a8b6400b2406e3685becf241349d99",
       "claim_scope": "Current public OpenAPI v0.1.0 documents GET /api/v1/managed_agents/agents with BearerAuth and Agent[] response. Agent schema has id,name,runtime,model,system_prompt,memory_enabled,tools,created_at; no explicitly documented GitHub credential field, but additionalProperties is unspecified. This is documentation, not proof of production runtime behavior or past/fixed vulnerability.",
       "evidence_limit": "OpenAPI is not a pinned deployed binary and may differ from Oct 10 incident implementation; undeclared extra fields are not forbidden by schema."
+    },
+    {
+      "id": "S15",
+      "kind": "original_organization_security_incident_disclosure",
+      "published_on": "2026-07-30",
+      "url": "https://www.anthropic.com/news/investigating-incidents-cybersecurity-evals",
+      "claim_scope": "Anthropic's July 30 first-party retrospective disclosed 3 incidents across 6 runs involving 3 models, unplanned external network access in third-party Irregular evaluation range, earliest incidents in April, and July 23-27 detection/notification timeline. The Oct 26 S-1 did not first disclose the underlying class of incident; SEC uses 4 models, which cannot be reconciled to exact identical cases without detailed identifiers.",
+      "evidence_limit": "July post and October S-1 have non-identical counts (three models vs four); do not sum as seven, or assume the same scope, a newly discovered fourth incident, or an error in either report without primary reconciliation."
+    },
+    {
+      "id": "S16",
+      "kind": "vendor_first_party_product_architecture_claim",
+      "published_on": "2026-10-27",
+      "url": "https://1password.com/blog/reducing-credential-exposure-ai-agents",
+      "claim_scope": "1Password describes vault-stored secret references, runtime Credential Broker, short-lived privileged access, and browser credential autofill outside an agent-visible prompt; cites LiteLLM security incident. This is a vendor implementation claim and operational guidance, not an independent evaluation of data or action-scope safety.",
+      "evidence_limit": "Credential secrecy and user-approved sign-in alone do not establish that the resulting authenticated session has task-scoped business permissions. No flaw in 1Password products is asserted or tested."
+    },
+    {
+      "id": "S17",
+      "kind": "peer_unreviewed_preprint_empirical_issue_survey",
+      "published_on": "2026-10-26",
+      "url": "https://arxiv.org/abs/2610.35451",
+      "claim_scope": "OpenClaw security study samples 25k+ Reddit posts and 358 security-tagged GitHub issues, retaining 162 security posts and 180 issue descriptions; CWE classifications and reported mitigation proposals help identify research mechanisms but are not independently confirmed CVEs.",
+      "evidence_limit": "Social posts, issue labels and derived CWE counts are not equivalent to proven exploitable vulnerabilities, representative deployment prevalence or confirmed incidents. Treat reported 521 CWE mappings as author analysis, not distinct confirmed bugs."
+    },
+    {
+      "id": "S18",
+      "kind": "original_preprint_controlled_vault_probes",
+      "published_on": "2026-09-27",
+      "url": "https://arxiv.org/abs/2609.33371",
+      "claim_scope": "Vault-mediated boundary evaluation reports 16 probes on a vendor implementation and a connector-header negative result, explicitly noting custody is necessary but insufficient without authorization, approval and rotation.",
+      "evidence_limit": "Single-system purposive experiments with limited attack scope; not a third-party security certification or proof for other brokers."
     }
   ],
   "cases": [
@@ -203,10 +235,11 @@
     {
       "id": "CASE-AIS-20261028-03",
       "title": "Anthropic evaluation containment failure: declared offline, actual external network reachable",
-      "disclosure_date": "2026-10-26",
-      "event_date": "sometime in 2026, exact dates not stated",
+      "disclosure_date": "2026-07-30 first public incident write-up; 2026-10-26 additional SEC S-1 description",
+      "event_date": "Some incidents date to at least April 2026 per Anthropic July report; whether the October four-model scope maps exactly onto July's three models is not established.",
       "source_ids": [
-        "S13"
+        "S13",
+        "S15"
       ],
       "attack_control": "No outside attacker established; models had autonomy within test assignments and unintended reachability arose from third-party evaluation-environment misconfiguration.",
       "preconditions": "Third-party configured cyber evaluations; model instructed no internet; runtime network path remained connected to open internet; a model found a credential in one test.",
@@ -221,7 +254,9 @@
       "evidence_status": "primary_company_disclosure_verified_not_independently_reproduced",
       "local_reproduction": "not_performed",
       "no_new_cve_claim": true,
-      "last_reviewed": "2026-10-28"
+      "last_reviewed": "2026-10-29",
+      "prior_disclosure": "Anthropic published a detailed primary account on 2026-07-30 (S15), months before the Oct 26 SEC S-1 (S13). S-1 is a new regulatory disclosure, not the initial public disclosure of this incident category.",
+      "count_reconciliation": "2026-07-30: 3 incidents, 6 evaluation runs, 3 models; 2026-10-26 S-1: 4 models. Different denominators and reporting scopes; no identified event-level crosswalk. Do not report '4 new October incidents' or add counts together."
     }
   ],
   "hypotheses": [
@@ -271,14 +306,16 @@
         "S1",
         "S2",
         "S10",
-        "S11"
+        "S11",
+        "S16",
+        "S18"
       ],
       "evidence_confidence": "High for reported incident and inspected malicious artifact behavior; hypothesis and defense benefit are unverified.",
       "expected_value": "Provides a testable defense contract for agent orchestration platforms and release pipelines, independent of model compliance.",
       "test_cost": "low-to-medium, local synthetic harness; no resources have been allocated or tests executed",
       "created_at": "2026-10-26",
-      "last_advanced_at": "2026-10-27",
-      "next_step": "Pin a local open-source agent platform build matching documented API and review serialized response handling; use only throwaway credentials to test readback and broker scope under an explicitly authorized disposable environment. Existing OpenAPI alone does not establish remediation.",
+      "last_advanced_at": "2026-10-29",
+      "next_step": "Implement and execute an independent, resettable browser-session/mock-resource test with dummy accounts and action-effect oracle; then map tests to a version-pinned open-source broker/agent platform if its code and explicit authorization are available. Do not infer a 1Password or LiteLLM exploit from product statements.",
       "stop_condition": "Close as falsified if no discrimination is found between tested scoped and broad token architectures, or if existing published work already fully answers the question.",
       "experimental_progress": {
         "type": "synthetic_mock_only",
@@ -327,6 +364,41 @@
         ],
         "interpretation": "A real public API contract was inspected; it no longer lists sensitive fields, but permissive unknown properties mean schema cannot prove redaction. No request to production service, no product-specific bypass or confirmation of remediation.",
         "experiment_gap": "Obtain a version-pinned self-hosted build and exercise authenticated list/get responses with fake credentials; separately assert authorization at broker/resource action rather than merely masking fields."
+      },
+      "prior_art_review_20261029": {
+        "synopsis": "Vendor and preprint sources already describe credential-vault custody, non-exposure and scoped temporary access, so those patterns are prior art; a defensible incremental contribution must be a validated cross-boundary action-authority test, not a claim to invent vault/broker isolation.",
+        "prior_work": [
+          "S16",
+          "S18"
+        ],
+        "new_negative_control": "Credential-invisible browser autofill or an opaque broker token may still leave an agent driving an authenticated session with broader business privileges; test this as an architecture failure mode in synthetic systems only, not as an observed vulnerability in any vendor product.",
+        "experiment_matrix": [
+          {
+            "arm": "A_visible_reusable_secret",
+            "setup": "Fake login secret visible to toy agent",
+            "expected": "Exposure measurable; mock unauthorized effect may succeed under broad session"
+          },
+          {
+            "arm": "B_hidden_secret_broad_session",
+            "setup": "Fake vault autofills but toy session authorizes unrelated action",
+            "expected": "No raw password disclosure but cross-task mock action can still succeed; tests action authority independently of secret readback"
+          },
+          {
+            "arm": "C_hidden_secret_task_scoped_resource_pep",
+            "setup": "Fake vault login and resource-side action allow-list pinned to task",
+            "expected": "Normal allowed action succeeds, unrelated side effect denied"
+          }
+        ],
+        "measures": [
+          "raw_secret_observed_by_agent_or_logs / trials",
+          "unauthorized_resource_effects / prohibited_attempts",
+          "legitimate_task_completions / ordinary_tasks",
+          "authorization_denial_cause_and_context"
+        ],
+        "falsification": "If hidden-secret broad-session and task-scoped cases are indistinguishable under a correctly constructed action-effect oracle, the proposed discrimination fails; if C blocks legitimate workflows at unacceptable rates, the treatment is not adequate.",
+        "distinction_from_weekly_architecture": "Tests post-authenticated session action scope under a credential-exposure threat, not asynchronous revoke-ack or grant-epoch consistency (ARCH-20261027-01).",
+        "test_status": "experiment_design_only; no vendor system tests run",
+        "limitation": "An agent's continued access after login may be intentionally broad according to actual user permissions; deny policy requires externally defined task scope, not inferred from model intent."
       }
     },
     {
@@ -427,6 +499,17 @@
       "caveat": "No new CVE or real-world reproduction claimed.",
       "minimum_experiment": "In a disposable owner-controlled test namespace, deliberately toggle worker egress policy after initial successful negative-reachability preflight. Compare prompt-only, one-time preflight-only and enforced egress/credential broker designs. Log denied destinations, reachable unauthorized endpoints, legitimate task success and policy-error fail-closed behavior; use only dummy endpoints and credentials.",
       "falsification": "If independent authorization enforcement and runtime attestations behave identically under controlled drift, or a simpler existing egress policy eliminates all test gaps, do not claim a new invariant or method."
+    },
+    {
+      "id": "C-AIS-20261029-06",
+      "title": "OpenClaw issue-derived evidence: evaluate trust-boundary failures vs reported CWE taxonomy",
+      "status": "source_triage_not_new_vulnerability",
+      "source_ids": [
+        "S17"
+      ],
+      "why_not_hypothesis": "The Oct 26 preprint categorizes community issue descriptions rather than validating each exploitation path, and common mitigations overlap existing knowledge.",
+      "next_step": "Choose one publicly patched and version-pinned issue with maintainer reproduction, code fix, and negative control before considering an independent testable hypothesis; otherwise retain as candidate landscape only.",
+      "avoid_duplicate": "No new CVE, do not count 521 CWE instances as 521 vulnerabilities."
     }
   ],
   "weekly_review": {
@@ -525,6 +608,43 @@
         "Examine prior TOCTOU sandbox-containment literature before promoting the primary-confirmed Anthropic candidate.",
         "Keep H-AIS-20261026-02 as P1; do not repeat unrelated CVE content absent new evidence."
       ]
+    },
+    {
+      "id": "daily-2026-10-29",
+      "date": "2026-10-29",
+      "source_window": "2026-10-26 to 2026-10-29",
+      "high_value_fresh_sources": [
+        "S16",
+        "S17"
+      ],
+      "historical_primary_reconciliation": [
+        "S15",
+        "S13"
+      ],
+      "prior_art_source": [
+        "S18"
+      ],
+      "new_hypotheses": [],
+      "new_validated_original_vulnerabilities": 0,
+      "primary_hypothesis": "H-AIS-20261026-01",
+      "status_change": "H-01 remains experiment_designed; added prior-art constraints and a post-login session-authority negative-control design, no code run. Anthropic case corrected to recognize July 30 pre-disclosure and October count mismatch.",
+      "negative_findings": [
+        "Vault/no-plaintext claims do not establish post-authentication action limitation; not a verified vendor flaw.",
+        "OpenClaw preprint's CWE counts are not separate exploit-verified incidents.",
+        "July and October Anthropic reports cannot be independently reconciled on model-count denominator."
+      ],
+      "github_artifact_changes": [
+        "static/data/research-workflows/ai-security/state.json"
+      ],
+      "code_execution": false,
+      "third_party_probe": false,
+      "docs_or_build_check": false,
+      "next_steps": [
+        "Build isolated fake account/session authorization-effect test only if authorized local execution exists.",
+        "Find specific version-pinned OSS broker/agent implementation for integration tests; report unavailable otherwise.",
+        "Keep memory/tool result issue survey as unverified candidate, not a new vulnerability."
+      ],
+      "notification_reason": "Corrected disclosure chronology and added falsifiable session-capability test design; no original vulnerability."
     }
   ]
 }

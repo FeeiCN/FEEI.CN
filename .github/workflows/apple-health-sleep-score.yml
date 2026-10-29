@@ -90,8 +90,7 @@ jobs:
 
       - name: Capture sleep score and start Health Auto Export
         run: |
-          start_date="$({
-            python3 - <<'PY'
+          start_date="$(python3 - <<'PY'
             from datetime import datetime, timedelta
             from pathlib import Path
 
@@ -112,7 +111,7 @@ jobs:
             # No gap: retain a small overlap for late-arriving Health data.
             print((missing or (today - timedelta(days=1))).isoformat())
             PY
-          })"
+          )"
           echo "Sleep score backfill starts at $start_date"
           python3 scripts/apple_health_sleep_score.py \
             --start-date "$start_date" \

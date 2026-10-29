@@ -90,28 +90,7 @@ jobs:
 
       - name: Capture sleep score and start Health Auto Export
         run: |
-          start_date="$(python3 - <<'PY'
-            from datetime import datetime, timedelta
-            from pathlib import Path
-
-            root = Path("static/data/sleep-score")
-            existing = {
-                path.relative_to(root).with_suffix("").as_posix().replace("/", "-")
-                for path in root.glob("[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9].json")
-            }
-            today = datetime.now().astimezone().date()
-            first = min(existing) if existing else today.isoformat()
-            cursor = datetime.fromisoformat(first).date()
-            missing = None
-            while cursor <= today:
-                if cursor.isoformat() not in existing:
-                    missing = cursor
-                    break
-                cursor += timedelta(days=1)
-            # No gap: retain a small overlap for late-arriving Health data.
-            print((missing or (today - timedelta(days=1))).isoformat())
-            PY
-          )"
+          start_date="$(python3 -c 'from datetime import datetime, timedelta; from pathlib import Path; root = Path("static/data/sleep-score"); existing = {path.relative_to(root).with_suffix("").as_posix().replace("/", "-") for path in root.glob("[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9].json")}; today = datetime.now().astimezone().date(); window_start = today - timedelta(days=14); missing = next((day for day in (window_start + timedelta(days=index) for index in range((today - window_start).days + 1)) if day.isoformat() not in existing), None); print((missing or (today - timedelta(days=1))).isoformat())')"
           echo "Sleep score backfill starts at $start_date"
           python3 scripts/apple_health_sleep_score.py \
             --start-date "$start_date" \

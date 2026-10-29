@@ -139,7 +139,14 @@ jobs:
             --restart-health-server \
             --new-command-timeout 600
 
-          /opt/homebrew/bin/node scripts/health_auto_export_mcp_server.mjs --check
+          for _ in $(seq 1 15); do
+            if /opt/homebrew/bin/node scripts/health_auto_export_mcp_server.mjs --check; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Health Auto Export 在 30 秒内未就绪"
+          exit 1
 
       - name: Run selected tasks
         env:

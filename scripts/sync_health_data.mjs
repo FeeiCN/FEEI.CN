@@ -47,18 +47,22 @@ for (const month of monthsToExport) {
 }
 
 if (!args.date) {
-  const lookbackDate = previousLocalDate(new Date());
-  const [year, month, day] = lookbackDate.split('-');
-  const lookbackFile = path.join(healthDir, year, month, `${day}.json`);
+  const missingDates = findMissingDailyHealthDates();
+  console.log(`Found ${missingDates.length} missing daily health date(s).`);
 
-  run('npm', ['run', 'export-health-year', '--', '--date', lookbackDate]);
+  for (const missingDate of missingDates) {
+    const [year, month, day] = missingDate.split('-');
+    const dailyFile = path.join(healthDir, year, month, `${day}.json`);
 
-  if (!fs.existsSync(path.join(repoRoot, lookbackFile))) {
-    throw new Error(`Lookback health data file does not exist: ${lookbackFile}`);
-  }
+    run('npm', ['run', 'export-health-year', '--', '--date', missingDate]);
 
-  if (!isPathClean(lookbackFile)) {
-    changedFiles.push(lookbackFile);
+    if (!fs.existsSync(path.join(repoRoot, dailyFile))) {
+      throw new Error(`Daily health data file does not exist: ${dailyFile}`);
+    }
+
+    if (!isPathClean(dailyFile)) {
+      changedFiles.push(dailyFile);
+    }
   }
 }
 
@@ -258,6 +262,39 @@ function currentMonth() {
   return formatLocalDate(new Date()).slice(0, 7);
 }
 
+function findMissingDailyHealthDates() {
+  const dailyRoot = path.join(repoRoot, healthDir);
+  const existingDates = new Set();
+
+  for (const yearEntry of fs.readdirSync(dailyRoot, {withFileTypes: true})) {
+    if (!yearEntry.isDirectory() || !/^\d{4}$/.test(yearEntry.name)) continue;
+    const yearDir = path.join(dailyRoot, yearEntry.name);
+    for (const monthEntry of fs.readdirSync(yearDir, {withFileTypes: true})) {
+      if (!monthEntry.isDirectory() || !/^\d{2}$/.test(monthEntry.name)) continue;
+      const monthDir = path.join(yearDir, monthEntry.name);
+      for (const fileEntry of fs.readdirSync(monthDir, {withFileTypes: true})) {
+        if (fileEntry.isFile() && /^\d{2}\.json$/.test(fileEntry.name)) {
+          existingDates.add(`${yearEntry.name}-${monthEntry.name}-${fileEntry.name.slice(0, 2)}`);
+        }
+      }
+    }
+  }
+
+  const firstDate = [...existingDates].sort()[0];
+  if (!firstDate) {
+    throw new Error('No existing daily health data found; refusing an unbounded backfill.');
+  }
+
+  const today = formatLocalDate(new Date());
+  const missing = [];
+  for (let cursor = new Date(`${firstDate}T12:00:00Z`); ; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+    const date = cursor.toISOString().slice(0, 10);
+    if (date > today) break;
+    if (!existingDates.has(date)) missing.push(date);
+  }
+  return missing;
+}
+
 function formatLocalDate(date) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Shanghai',
@@ -265,17 +302,6 @@ function formatLocalDate(date) {
     month: '2-digit',
     day: '2-digit',
   }).format(date);
-}
-
-function previousLocalDate(date) {
-  const [year, month, day] = formatLocalDate(date).split('-').map(Number);
-  const previous = new Date(Date.UTC(year, month - 1, day - 1, 12));
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'UTC',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(previous);
 }
 
 function formatLocalDateTime(date) {

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workflow_id": "ai-security-frontier",
-  "updated_at": "2026-10-29",
+  "updated_at": "2026-10-30",
   "repository": "FeeiCN/FEEI.CN",
   "editorial_status": "research-only; not a verified original vulnerability disclosure",
   "duplicate_check": {
@@ -157,6 +157,45 @@
       "url": "https://arxiv.org/abs/2609.33371",
       "claim_scope": "Vault-mediated boundary evaluation reports 16 probes on a vendor implementation and a connector-header negative result, explicitly noting custody is necessary but insufficient without authorization, approval and rotation.",
       "evidence_limit": "Single-system purposive experiments with limited attack scope; not a third-party security certification or proof for other brokers."
+    },
+    {
+      "id": "S19",
+      "kind": "first_party_open_source_code_and_existing_regression_tests",
+      "reviewed_on": "2026-10-30",
+      "commit_sha": "d76db470f9e1b3bf3916f95fe94008abf08a2cf0",
+      "url": "https://github.com/BerriAI/litellm/blob/d76db470f9e1b3bf3916f95fe94008abf08a2cf0/litellm/proxy/agent_endpoints/endpoints.py",
+      "test_url": "https://github.com/BerriAI/litellm/blob/d76db470f9e1b3bf3916f95fe94008abf08a2cf0/tests/unit/proxy/agent_endpoints/test_endpoints.py",
+      "blob_sha": "89794fc2480231f0f0269064177c232efe2f85a6",
+      "claim_scope": "In a current pinned OSS LiteLLM Proxy source tree, GET /v1/agents and GET /v1/agents/{agent_id} call _redact_sensitive_agent_fields; the function masks litellm_params/kill-switch secrets for all roles and removes keys/headers/identity from non-admin results. Existing TestAgentRBACProxyAdminViewOnly tests use sentinel dummy key and assert it is absent for both viewer and admin responses. Tests were READ, not executed in this study.",
+      "evidence_limit": "OSS Proxy /v1/agents is NOT the documented LiteLLM Agent Platform /api/v1/managed_agents/agents or SDK /v1/managed_agents endpoint involved in the historical incident hypothesis. Source inspection is not proof of deployed runtime behavior, full secret-field coverage, or October 21-era status."
+    },
+    {
+      "id": "S20",
+      "kind": "first_party_public_agent_platform_sdk_route_contract",
+      "reviewed_on": "2026-10-30",
+      "commit_sha": "69cbdbc066b125713a76a7d8de463c34fc4c29b6",
+      "url": "https://github.com/BerriAI/litellm-agent-sdk/blob/69cbdbc066b125713a76a7d8de463c34fc4c29b6/src/agent.ts",
+      "readme_url": "https://github.com/BerriAI/litellm-agent-sdk/blob/69cbdbc066b125713a76a7d8de463c34fc4c29b6/README.md",
+      "claim_scope": "SDK publicly documents a distinct LAP control-plane Bearer credential vs optional LLM Gateway credential and sends POST /v1/managed_agents/agents to the LAP baseUrl, not the OSS Proxy /v1/agents path. The SDK exposes client request construction; server response serialization, permission checks and historical compromise are not testable from the SDK alone.",
+      "evidence_limit": "Historical/public OpenAPI S14 documents /api/v1/managed_agents/agents and the SDK uses /v1/managed_agents/agents; these base-path variants cannot be assumed identical deployments or interchangeable with OSS Proxy /v1/agents without verified routing."
+    },
+    {
+      "id": "S21",
+      "kind": "first_party_vendor_attack_taxonomy_update",
+      "published_on": "2026-10-29",
+      "reviewed_on": "2026-10-30",
+      "url": "https://www.crowdstrike.com/en-us/blog/new-prompt-injection-techniques-cover-agent-planning-attacks/",
+      "claim_scope": "CrowdStrike describes Goal Decomposition Exploitation, Constraint-Driven Task Steering and Session State Spoofing in its updated prompt-injection taxonomy (222 techniques claimed). The article uses a hypothetical developer-agent diagnostics/upload scenario to illustrate plan-level composition and memory-summary approval spoofing.",
+      "evidence_limit": "Taxonomy size is not confirmed exploitable vulnerabilities or attack-success measurements. Hypothetical examples are not observed compromises, independent controlled results or verified model bypasses."
+    },
+    {
+      "id": "S22",
+      "kind": "first_party_vendor_guardrail_based_vulnerability_discovery_study",
+      "published_on": "2026-10-28",
+      "reviewed_on": "2026-10-30",
+      "url": "https://www.crowdstrike.com/en-us/blog/when-ai-guardrails-expose-vulnerabilities/",
+      "claim_scope": "CrowdStrike proposes Guardrail-based Vulnerability Discovery based on model refusal/reasoning-interruption as a potential differential signal, reporting 73 correct classifications of 86 test scenarios in controlled experiments and paired clean/mutated checks (5 model attempts, refusal threshold >=3).",
+      "evidence_limit": "Vendor-reported 73/86 is a classification-accuracy count, not evidence of independent reproduction, precision, recall, previously unknown vulnerability count or performance on a representative blind corpus. Blog lacks enough public raw samples/model hashes here to independently reproduce claimed rates; 'five vulnerability classes' and two example classes are study descriptions, not validated in this run."
     }
   ],
   "cases": [
@@ -308,14 +347,17 @@
         "S10",
         "S11",
         "S16",
-        "S18"
+        "S18",
+        "S19",
+        "S20",
+        "S21"
       ],
       "evidence_confidence": "High for reported incident and inspected malicious artifact behavior; hypothesis and defense benefit are unverified.",
       "expected_value": "Provides a testable defense contract for agent orchestration platforms and release pipelines, independent of model compliance.",
-      "test_cost": "low-to-medium, local synthetic harness; no resources have been allocated or tests executed",
+      "test_cost": "Medium for real version-pinned Agent Platform environment (currently unavailable); current work was read-only source/contract inspection.",
       "created_at": "2026-10-26",
-      "last_advanced_at": "2026-10-29",
-      "next_step": "Implement and execute an independent, resettable browser-session/mock-resource test with dummy accounts and action-effect oracle; then map tests to a version-pinned open-source broker/agent platform if its code and explicit authorization are available. Do not infer a 1Password or LiteLLM exploit from product statements.",
+      "last_advanced_at": "2026-10-30",
+      "next_step": "Locate and pin an explicitly testable Agent Platform server build/source. In an owner-controlled isolated instance with dummy credentials, test list/get response redaction and the independent action authorization oracle; first map /api/v1/managed_agents vs /v1/managed_agents vs OSS Proxy /v1/agents to avoid false equivalence. If no server artifact is accessible, keep H01 blocked at real-integration level and preserve static negative evidence.",
       "stop_condition": "Close as falsified if no discrimination is found between tested scoped and broad token architectures, or if existing published work already fully answers the question.",
       "experimental_progress": {
         "type": "synthetic_mock_only",
@@ -399,6 +441,35 @@
         "distinction_from_weekly_architecture": "Tests post-authenticated session action scope under a credential-exposure threat, not asynchronous revoke-ack or grant-epoch consistency (ARCH-20261027-01).",
         "test_status": "experiment_design_only; no vendor system tests run",
         "limitation": "An agent's continued access after login may be intentionally broad according to actual user permissions; deny policy requires externally defined task scope, not inferred from model intent."
+      },
+      "source_implementation_review_20261030": {
+        "type": "static_first_party_source_and_regression_test_read_only",
+        "status": "source_contract_review_complete_not_runtime_verified",
+        "source_ids": [
+          "S14",
+          "S19",
+          "S20"
+        ],
+        "pinned_proxy_source_commit": "d76db470f9e1b3bf3916f95fe94008abf08a2cf0",
+        "pinned_agent_sdk_commit": "69cbdbc066b125713a76a7d8de463c34fc4c29b6",
+        "checked_paths": [
+          "litellm/proxy/agent_endpoints/endpoints.py",
+          "tests/unit/proxy/agent_endpoints/test_endpoints.py",
+          "litellm-agent-sdk/src/agent.ts",
+          "litellm-agent-sdk/src/http.ts",
+          "litellm-agent-sdk/README.md"
+        ],
+        "source_observations": [
+          "OSS Proxy GET /v1/agents invokes redaction helper and GET /v1/agents/{id} invokes same helper.",
+          "OSS Proxy helper masks litellm_params secrets and kill-switch auth across roles; strips keys/static_headers/extra_headers/identity for non-admin.",
+          "OSS Proxy upstream unit tests assert a fake sentinel API key is absent in both viewer and admin list responses, and virtual-key metadata is hidden from non-admin results.",
+          "Agent Platform SDK uses POST /v1/managed_agents/agents with its own LAP Bearer API key; optional gateway key is forwarded to a sandbox as documented.",
+          "Different API paths and components prevent using OSS Proxy redaction as evidence that the historical Agent Platform /api/v1/managed_agents/agents issue is fixed or persisted."
+        ],
+        "negative_evidence": "There is existing source-level redaction and upstream regression-test coverage in the OSS Proxy for a different route. The earlier hypothesis of generic 'no protections on agent list responses' is NOT supported by these current source artifacts.",
+        "remaining_gap": "Find version-pinned Agent Platform server implementation/deployable image and run isolated dummy-key response and resource-effect tests before comparing cross-system privilege. Server-side LAP list response/access policy cannot be inferred from TypeScript SDK or permissive OpenAPI alone.",
+        "checks_executed": "Source and upstream tests inspected through read-only GitHub connector; no upstream pytest, SDK integration, network API, build, or penetration test executed.",
+        "novelty_boundary": "No newly found OSS LiteLLM bug is claimed. Differentiation is a measurable cross-boundary secret exposure AND post-session authorized-effect benchmark, provided it can be run against a real version-pinned implementation."
       }
     },
     {
@@ -510,6 +581,30 @@
       "why_not_hypothesis": "The Oct 26 preprint categorizes community issue descriptions rather than validating each exploitation path, and common mitigations overlap existing knowledge.",
       "next_step": "Choose one publicly patched and version-pinned issue with maintainer reproduction, code fix, and negative control before considering an independent testable hypothesis; otherwise retain as candidate landscape only.",
       "avoid_duplicate": "No new CVE, do not count 521 CWE instances as 521 vulnerabilities."
+    },
+    {
+      "id": "C-AIS-20261030-07",
+      "title": "Planning-stage indirect injection and forged session summaries as multi-step task-authority contamination",
+      "status": "source_review_no_new_hypothesis",
+      "source_ids": [
+        "S21"
+      ],
+      "research_question": "Can seemingly individually permitted agent steps collectively form an unauthorized cross-boundary effect, and does fabricated summary approval change tool proposals without changing independent PEP decisions?",
+      "why_not_hypothesis": "CrowdStrike first-party taxonomy contains hypothetical examples but no independent root-cause case or falsifiable product-specific regression. Existing FEEI.CN Context/Action Envelope and memory provenance articles address the generic trust-boundary rule.",
+      "next_step": "If a versioned agent harness and deterministic effect ledger become available, compare malicious test-output guidance vs benign baseline, with valid and forged summarized approvals; report false-reject rates and completed benign tasks. Otherwise remain evidence-only."
+    },
+    {
+      "id": "C-AIS-20261030-08",
+      "title": "Guardrail refusal/interruption as an auxiliary differential signal in version-pinned patch-variant hunting",
+      "status": "prior_art_review_candidate_not_original_discovery",
+      "source_ids": [
+        "S22"
+      ],
+      "research_question": "Does a controlled refusal/interruption signal add statistically meaningful unique defect localization beyond baseline SAST, standard AI code review and patch-differential search on withheld labeled C/C++ bugs?",
+      "why_not_hypothesis": "The technique itself was already described in CrowdStrike's October 28 study; the blog's 73/86 self-reported classifications cannot establish external performance, precision or reliability, and overlaps H-AIS-20261026-02 until a novel measured comparison exists.",
+      "minimum_experiment": "Use authorized local clean/faulty program pairs with known root causes, multiple model versions and frozen prompts, no external targets. Report TP/FP/FN/TN, recall, precision, localization gain, normal-program false positives, model refusals unrelated to vulnerabilities and per-finding cost; keep a never-seen holdout set and baseline scanners.",
+      "falsification": "No incremental true-positive localization at a controlled false-positive rate over existing baselines, or strong prompt/model dependence, would reject the utility claim.",
+      "next_step": "Find released dataset/test code and reproducible exact model/config before promotion to a full hypothesis; avoid reusing CrowdStrike's synthetic examples as independent validation."
     }
   ],
   "weekly_review": {
@@ -528,7 +623,12 @@
     "source_diff_inspected": true,
     "synthetic_mock_unittest_executed": true,
     "synthetic_mock_unittest_results": "6/6 passed on 2026-10-27 in isolated local Python (toy-model only)",
-    "synthetic_mock_code_path": "scripts/research/ai_security_h01_mock.py"
+    "synthetic_mock_code_path": "scripts/research/ai_security_h01_mock.py",
+    "last_review": "2026-10-30",
+    "latest_run_executed_code": false,
+    "latest_run_executed_upstream_tests": false,
+    "latest_run_read_only_source_inspection": true,
+    "latest_run_used_external_prod": false
   },
   "daily_reviews": [
     {
@@ -645,6 +745,35 @@
         "Keep memory/tool result issue survey as unverified candidate, not a new vulnerability."
       ],
       "notification_reason": "Corrected disclosure chronology and added falsifiable session-capability test design; no original vulnerability."
+    },
+    {
+      "id": "daily-2026-10-30",
+      "date": "2026-10-30",
+      "source_window": "2026-10-27 through 2026-10-30 (plus version-pinned prior public code)",
+      "high_value_fresh_sources": [
+        "S21",
+        "S22"
+      ],
+      "first_party_source_read": [
+        "S19",
+        "S20"
+      ],
+      "new_hypotheses": [],
+      "new_vulnerability_disclosures": 0,
+      "primary_hypothesis": "H-AIS-20261026-01",
+      "current_phase": "experiment_designed",
+      "status_change": "H01 retains Experiment Designed but gains pinned open-source implementation and upstream unit-test negative-control comparison; clarified that the OSS Proxy /v1/agents API is not evidence for the Agent Platform /api/v1/managed_agents/agents API implicated in the historical incident.",
+      "positive_verified_source_fact": "Current OSS Proxy implementation calls redaction on list and detail responses; upstream tests assert fake secrets absent for admin and read-only viewer.",
+      "negative_result": "No indication in these artifacts of a new or ongoing LiteLLM Agent Platform leak. No cross-system action experiment, production API call or independent software test was executed.",
+      "new_source_triage": [
+        "C-AIS-20261030-07",
+        "C-AIS-20261030-08"
+      ],
+      "evidence_caveat": "CrowdStrike planning methods are classification/examples, not confirmed compromises; CrowdStrike 73/86 reported accuracy is not independent reproduction.",
+      "tests_executed": 0,
+      "source_checks": "Pinned public GitHub source and upstream test file reviewed, not run.",
+      "publication": "No article; update research-only JSON in isolated branch.",
+      "next_step": "Pin an available Agent Platform server build or declare integration-level blocked; if available perform dummy-key list/get and resource-side forbidden-effect tests with normal-task negative controls."
     }
   ]
 }

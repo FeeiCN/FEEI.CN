@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "workflow": "site-governance",
+  "as_of": "2026-10-31",
+  "base_ref": "main",
+  "base_head_at_review": "50ff8fbc0ed52debd2fa997dae9a364b609fe5ab",
+  "working_branch": "research/site-governance-20261031-metadata",
+  "review": {
+    "kind": "first weekly audit and cross-directory monthly audit",
+    "ai_markdown_files_inspected": 36,
+    "site_rules_inspected": 5,
+    "site_config_and_icon_files_inspected": 5,
+    "content_scope": [
+      "AI-system security",
+      "AI-for-security",
+      "AI abuse defense",
+      "general AI / coding / Agent engineering"
+    ],
+    "checks": [
+      "Front matter slug/description/icon on sampled pages",
+      "stable routes in sampled paths",
+      "selected Markdown relative links and first-party sources",
+      "read-only sidebar and icon registry mapping",
+      "LLMUsageDashboard JSON resource paths and top-level schema keys"
+    ],
+    "llm_summary_paths_present": [
+      "static/data/llm-usage/minimax/usage_summary.json",
+      "static/data/llm-usage/openai/usage_summary.json",
+      "static/data/llm-usage/anthropic/usage_summary.json"
+    ],
+    "limitations": [
+      "Not a full-repository content/link crawl.",
+      "External links were only checked where accessible; absent results are not treated as broken.",
+      "No npm run check:docs, npm run audit:docs, npm run build or live-site verification was performed."
+    ]
+  },
+  "findings": [
+    {
+      "id": "docs/01-网络安全/02-人工智能安全/02-AI系统安全/AI Agent安全研究方法.md|/ai-agent-security-research|frontmatter.missing_icon",
+      "category": "verified_defect",
+      "priority": "P2",
+      "owner": "site-governance",
+      "observed_on": "2026-10-31",
+      "original_evidence": "Front matter has slug/title/description/published_at but no icon key.",
+      "before": "icon: <absent>",
+      "after": "icon: target-icon",
+      "icon_verified_file": "src/components/ItsHoverIcon/icons/target-icon.tsx",
+      "status": "fixed_on_research_branch_pending_review",
+      "commit": "b5ca4e1868ce3ce887bc336078b4491385e8fe90",
+      "validation": "Static re-read needed; no npm test/build executed.",
+      "recheck_on": "2026-11-07",
+      "path": "docs/01-网络安全/02-人工智能安全/02-AI系统安全/AI Agent安全研究方法.md",
+      "slug": "/ai-agent-security-research"
+    },
+    {
+      "id": "docs/01-网络安全/02-人工智能安全/02-AI系统安全/Agent安全案例初探.md|/agent-security-case-notes|frontmatter.missing_icon",
+      "category": "verified_defect",
+      "priority": "P2",
+      "owner": "site-governance",
+      "observed_on": "2026-10-31",
+      "original_evidence": "Front matter has slug/title/description/published_at but no icon key.",
+      "before": "icon: <absent>",
+      "after": "icon: bug-icon",
+      "icon_verified_file": "src/components/ItsHoverIcon/icons/bug-icon.tsx",
+      "status": "fixed_on_research_branch_pending_review",
+      "commit": "84b9737836e12cf83fbcfc0611b56b5c16399ca6",
+      "validation": "Static re-read needed; no npm test/build executed.",
+      "recheck_on": "2026-11-07",
+      "path": "docs/01-网络安全/02-人工智能安全/02-AI系统安全/Agent安全案例初探.md",
+      "slug": "/agent-security-case-notes"
+    }
+  ],
+  "confirmed_issue_count": 2,
+  "suspected_issue_count": 0,
+  "monthly_review": "Recent AI security material has two missing icon metadata keys; examined AI knowledge partition and read-only dashboard resource paths show no further verified defect in inspected scope. No claims of full-site correctness or technical currency.",
+  "next_rotation": {
+    "date": "2026-11-07",
+    "focus": "01-网络安全/01-网络空间安全: regulations, compliance, standards; sample stable slugs, dated claims, and source links",
+    "recheck": "Review metadata-only branch against latest main and avoid conflicts; verify front matter and local icons."
+  }
+}

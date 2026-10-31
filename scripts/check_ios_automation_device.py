@@ -11,17 +11,30 @@ import time
 
 
 def run_json(command: list[str]) -> dict:
-    result = subprocess.run(
-        [*command, "--json-output", "-"],
-        check=False,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
+    try:
+        result = subprocess.run(
+            [*command, "--json-output", "-"],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError(
+            f"{' '.join(command)} 在 15 秒内未响应；请解锁 iPhone 后重试"
+        ) from error
     if result.returncode != 0:
         detail = (result.stderr or result.stdout).strip()
         raise RuntimeError(detail or f"{' '.join(command)} failed")
-    return json.loads(result.stdout)
+    output = result.stdout.strip()
+    if not output:
+        detail = result.stderr.strip()
+        raise RuntimeError(detail or f"{' '.join(command)} 未返回设备状态；请解锁 iPhone 后重试")
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"{' '.join(command)} 返回了无效设备状态：{error}") from error
 
 
 def find_device(devices: list[dict], udid: str) -> dict:

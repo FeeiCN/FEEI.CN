@@ -433,6 +433,9 @@ def create_driver(args: argparse.Namespace, udid: str):
     options.bundle_id = args.bundle_id
     options.set_capability("noReset", True)
     options.set_capability("newCommandTimeout", args.new_command_timeout)
+    # Real devices may need longer than Appium's default 60 seconds after a
+    # CoreDevice reconnection before WDA begins responding on its proxy port.
+    options.set_capability("wdaLaunchTimeout", 120000)
     if args.device_name:
         options.device_name = args.device_name
     if args.platform_version:

@@ -23,7 +23,7 @@ const tools = {
       required: ['start', 'end'],
     },
     buildRequest: (args) => ({
-      name: 'health_metrics',
+      name: 'get_health_metrics',
       arguments: {
         start: args.start,
         end: args.end,
@@ -47,7 +47,7 @@ const tools = {
       required: ['start', 'end'],
     },
     buildRequest: (args) => ({
-      name: 'workouts',
+      name: 'get_workouts',
       arguments: {
         start: args.start,
         end: args.end,
@@ -57,15 +57,15 @@ const tools = {
       },
     }),
   },
-  get_medications: simpleRangeTool('medications', 'Get medications data for a specified date range from Apple Health'),
+  get_medications: simpleRangeTool('get_medications', 'Get medications data for a specified date range from Apple Health'),
   get_heart_notifications: simpleRangeTool(
-    'heart_notifications',
+    'get_heart_notifications',
     'Get heart notification events for a specified date range from Apple Health',
   ),
-  get_state_of_mind: simpleRangeTool('state_of_mind', 'Get state of mind data for a specified date range from Apple Health'),
-  get_cycle_tracking: simpleRangeTool('cycle_tracking', 'Get menstrual cycle tracking data for a specified date range from Apple Health'),
-  get_ecg: simpleRangeTool('ecg', 'Get ECG data for a specified date range from Apple Health'),
-  get_symptoms: simpleRangeTool('symptoms', 'Get symptoms data for a specified date range from Apple Health'),
+  get_state_of_mind: simpleRangeTool('get_state_of_mind', 'Get state of mind data for a specified date range from Apple Health'),
+  get_cycle_tracking: simpleRangeTool('get_cycle_tracking', 'Get menstrual cycle tracking data for a specified date range from Apple Health'),
+  get_ecg: simpleRangeTool('get_ecg', 'Get ECG data for a specified date range from Apple Health'),
+  get_symptoms: simpleRangeTool('get_symptoms', 'Get symptoms data for a specified date range from Apple Health'),
 };
 
 if (process.argv.includes('--check')) {
@@ -266,7 +266,7 @@ async function healthCheck(host, port, timeoutMs) {
     id: 1,
     method: 'callTool',
     params: {
-      name: 'health_metrics',
+      name: 'get_health_metrics',
       arguments: {
         start: '2026-01-01 00:00:00 +0800',
         end: '2026-01-01 00:00:00 +0800',

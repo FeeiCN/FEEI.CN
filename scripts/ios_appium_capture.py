@@ -2078,13 +2078,27 @@ def start_health_auto_export_server(driver: Any, args: argparse.Namespace) -> st
         time.sleep(args.step_wait)
 
     if not has_any_text(driver, ["服务器", "Server"], contains=True):
-        menu = tap_any_text(driver, ["sidebar.left", "菜单", "Sidebar", "Menu"], timeout=3, contains=True)
-        if not menu:
-            tap_relative(driver, 0.1, 0.16)
+        # Health Auto Export 10 moved the server entry from the side bar to
+        # the bottom "Export" tab. Keep the old navigation as a fallback.
+        tapped_export = tap_any_text(driver, ["导出", "Export"], timeout=3, contains=False)
+        if not tapped_export:
+            menu = tap_any_text(driver, ["sidebar.left", "菜单", "Sidebar", "Menu"], timeout=3, contains=True)
+            if not menu:
+                tap_relative(driver, 0.1, 0.16)
         time.sleep(args.step_wait)
         tapped = tap_any_text(driver, ["服务器", "Server"], timeout=args.nav_timeout, contains=True)
         if not tapped:
             raise RuntimeError("未找到 Health Auto Export「服务器」入口")
+        time.sleep(args.step_wait)
+
+    # The v10 app defaults to HTTP MCP, while this repository's health bridge
+    # uses its supported TCP transport. Selecting it also restores the Start
+    # Server control that is absent on the HTTP server screen.
+    if has_any_text(driver, ["传输方式、HTTP", "Transport, HTTP"], contains=False):
+        if not tap_any_text(driver, ["传输方式", "Transport"], timeout=args.nav_timeout, contains=True):
+            raise RuntimeError("未找到 Health Auto Export「传输方式」选项")
+        if not tap_any_text(driver, ["TCP"], timeout=args.nav_timeout, contains=False):
+            raise RuntimeError("Health Auto Export 未提供 TCP 传输方式")
         time.sleep(args.step_wait)
 
     if has_any_text(driver, ["停止服务器", "Stop Server"], contains=True):

@@ -1,6 +1,7 @@
 ---
 slug: /ai-agent-security-research
 title: AI Agent 安全研究方法
+icon: target-icon
 description: 从公开情报、证据核验、攻击链分析到防御评估，持续积累可追溯的 Agent 安全研究。
 published_at: '2026-10-25'
 ---

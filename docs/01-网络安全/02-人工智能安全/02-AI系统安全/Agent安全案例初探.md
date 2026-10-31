@@ -1,6 +1,7 @@
 ---
 slug: /agent-security-case-notes
 title: Agent 安全案例初探
+icon: bug-icon
 description: 从 Semantic Kernel 与 AutoJack 的公开研究看模型可控参数如何穿越工具、沙箱和本地服务边界。
 published_at: '2026-10-25'
 ---

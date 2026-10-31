@@ -297,13 +297,20 @@ function findMissingDailyHealthDates() {
   if (!latestDate) {
     throw new Error('No existing daily health data found; refusing an unbounded backfill.');
   }
+
+  // Revisit recent dates: a saved daily file may contain collection fetch errors.
+  const lookback = new Date(`${today}T12:00:00Z`);
+  lookback.setUTCDate(lookback.getUTCDate() - 30);
+  const lookbackDate = lookback.toISOString().slice(0, 10);
+  const startDate = latestDate < lookbackDate ? latestDate : lookbackDate;
   const missing = [];
-  for (let cursor = new Date(`${latestDate}T12:00:00Z`); ; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+  for (let cursor = new Date(`${startDate}T12:00:00Z`); ; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
     const date = cursor.toISOString().slice(0, 10);
     if (date > today) break;
     if (!existingDates.has(date)) missing.push(date);
   }
-  return missing;
+  // Limit hourly repair work so normal monthly exports stay timely.
+  return missing.slice(0, 3);
 }
 
 function formatLocalDate(date) {

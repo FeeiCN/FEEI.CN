@@ -56,8 +56,13 @@ if (!args.date) {
 
     run('npm', ['run', 'export-health-year', '--', '--date', missingDate]);
 
-    if (!fs.existsSync(path.join(repoRoot, dailyFile))) {
+    const dailyPath = path.join(repoRoot, dailyFile);
+    if (!fs.existsSync(dailyPath)) {
       throw new Error(`Daily health data file does not exist: ${dailyFile}`);
+    }
+    const dailyPayload = JSON.parse(fs.readFileSync(dailyPath, 'utf8'));
+    if (dailyPayload.date !== missingDate || Object.keys(dailyPayload.errors ?? {}).length > 0) {
+      throw new Error(`Incomplete daily health export for ${missingDate}; refusing to commit: ${dailyFile}`);
     }
 
     if (!isPathClean(dailyFile)) {
@@ -274,7 +279,14 @@ function findMissingDailyHealthDates() {
       const monthDir = path.join(yearDir, monthEntry.name);
       for (const fileEntry of fs.readdirSync(monthDir, {withFileTypes: true})) {
         if (fileEntry.isFile() && /^\d{2}\.json$/.test(fileEntry.name)) {
-          existingDates.add(`${yearEntry.name}-${monthEntry.name}-${fileEntry.name.slice(0, 2)}`);
+          try {
+            const payload = JSON.parse(fs.readFileSync(path.join(monthDir, fileEntry.name), 'utf8'));
+            if (Object.keys(payload.errors ?? {}).length === 0) {
+              existingDates.add(`${yearEntry.name}-${monthEntry.name}-${fileEntry.name.slice(0, 2)}`);
+            }
+          } catch {
+            // Invalid daily files must be retried rather than marked complete.
+          }
         }
       }
     }

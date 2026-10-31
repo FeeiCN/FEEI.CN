@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workflow_id": "ai-security-frontier",
-  "updated_at": "2026-10-30",
+  "updated_at": "2026-10-31",
   "repository": "FeeiCN/FEEI.CN",
   "editorial_status": "research-only; not a verified original vulnerability disclosure",
   "duplicate_check": {
@@ -196,6 +196,42 @@
       "url": "https://www.crowdstrike.com/en-us/blog/when-ai-guardrails-expose-vulnerabilities/",
       "claim_scope": "CrowdStrike proposes Guardrail-based Vulnerability Discovery based on model refusal/reasoning-interruption as a potential differential signal, reporting 73 correct classifications of 86 test scenarios in controlled experiments and paired clean/mutated checks (5 model attempts, refusal threshold >=3).",
       "evidence_limit": "Vendor-reported 73/86 is a classification-accuracy count, not evidence of independent reproduction, precision, recall, previously unknown vulnerability count or performance on a representative blind corpus. Blog lacks enough public raw samples/model hashes here to independently reproduce claimed rates; 'five vulnerability classes' and two example classes are study descriptions, not validated in this run."
+    },
+    {
+      "id": "S23",
+      "kind": "unreviewed_external_advisory_with_maintainer_issue",
+      "published_on": "2026-10-27",
+      "url": "https://github.com/advisories/GHSA-3w6w-vpcf-fv9h",
+      "reported_on": "2026-10-24",
+      "maintainer_issue": "https://github.com/horw/esp-mcp/issues/49",
+      "claim_scope": "CVE-2026-117567 unreviewed GHSA reports shell metacharacter injection through esp-mcp MCP tool arguments; affected/fixed package versions unknown. Issue was opened Oct 24 and remains open as inspected Oct 31. The reporter's suggested shlex.quote fix was not merged; no deployed version or exploit is proven."
+    },
+    {
+      "id": "S24",
+      "kind": "version_pinned_first_party_source_inspection",
+      "reviewed_on": "2026-10-31",
+      "commit_sha": "28afddf9ff41ada117bb45fd49b526d3bf89749e",
+      "url": "https://github.com/horw/esp-mcp/blob/28afddf9ff41ada117bb45fd49b526d3bf89749e/main.py",
+      "related_url": "https://github.com/horw/esp-mcp/blob/28afddf9ff41ada117bb45fd49b526d3bf89749e/esp_utils.py",
+      "claim_scope": "Source constructs nested bash -c command strings with caller-controlled target, port and other strings, and passes through asyncio.create_subprocess_shell. esp_utils.py's get_export_script is os.path.join of optional idf_path and export.sh. Main branch current commit matched this pinned version at Oct 31 inspection. Static source analysis only, not esp-mcp execution."
+    },
+    {
+      "id": "S25",
+      "kind": "github_security_lab_first_party_patched_advisory_and_source",
+      "published_on": "2026-10-14",
+      "url": "https://github.com/github/gh-aw/security/advisories/GHSA-62c8-mmw9-rq5w",
+      "fixed_release": "v0.91.12",
+      "patch_pr": "https://github.com/github/gh-aw/pull/68547",
+      "patched_source": "https://github.com/github/gh-aw/blob/v0.91.12/pkg/cli/mcp_tools_management.go",
+      "test_source": "https://github.com/github/gh-aw/blob/v0.91.12/pkg/cli/mcp_tool_arguments_test.go",
+      "claim_scope": "Before patch, MCP caller positional strings could be reinterpreted by Cobra/pflag as hidden flags; another case traversed output paths via add.name. In v0.91.12 source, shared validation, explicit -- separator and destination containment were added. The upstream tests were statically read, not run."
+    },
+    {
+      "id": "S26",
+      "kind": "local_non_destructive_synthetic_parser_composition_test",
+      "tested_on": "2026-10-31",
+      "environment": "Isolated local bash and Python subprocess, stdout-only, no external network or target product, no files created",
+      "claim_scope": "Synthetic nested bash -c wrapper containing shlex.quote('esp32; printf OUTER_CALLED') executed a second printf at outer-shell level, while argv-based bash -c with positional $1 printed the entire input literally. This verifies that a single shlex.quote call is insufficient when its output is inserted into an additional single-quoted shell command. It does not test esp-mcp or gh-aw runtime."
     }
   ],
   "cases": [
@@ -296,6 +332,38 @@
       "last_reviewed": "2026-10-29",
       "prior_disclosure": "Anthropic published a detailed primary account on 2026-07-30 (S15), months before the Oct 26 SEC S-1 (S13). S-1 is a new regulatory disclosure, not the initial public disclosure of this incident category.",
       "count_reconciliation": "2026-07-30: 3 incidents, 6 evaluation runs, 3 models; 2026-10-26 S-1: 4 models. Different denominators and reporting scopes; no identified event-level crosswalk. Do not report '4 new October incidents' or add counts together."
+    },
+    {
+      "id": "CASE-AIS-20261031-04",
+      "title": "esp-mcp shell command injection through tool parameters",
+      "report_opened": "2026-10-24",
+      "advisory_published": "2026-10-27",
+      "source_commit": "28afddf9ff41ada117bb45fd49b526d3bf89749e",
+      "attacker_control": "MCP tool argument strings if caller is hostile or indirect prompt injection makes the agent pass malicious values",
+      "preconditions": "A reachable and invoked affected tool handler, attacker-influenced argument, MCP server executing with permissions and shell path",
+      "root_cause": "Untrusted MCP parameters interpolated into nested shell command string interpreted by outer shell and bash -c; distinct from command-line flag injection without shell",
+      "affected_versions": "Unreviewed advisory marks versions unknown; issue references pinned commit rather than package release",
+      "fix_status": "Open issue and no patch detected in latest fetched main source as of Oct 31; no claim of all forks or releases",
+      "independent_verification": "Source inspection plus separate synthetic parser composition check only; no esp-mcp execution or actual exploitation",
+      "evidence": [
+        "S23",
+        "S24",
+        "S26"
+      ],
+      "cross_reference": "CASE-AIS-20261031-05"
+    },
+    {
+      "id": "CASE-AIS-20261031-05",
+      "title": "gh-aw MCP positional arguments reinterpreted as CLI flags and add.name path traversal",
+      "disclosed_on": "2026-10-14",
+      "affected": "gh-aw versions below v0.91.12 per GitHub Security Lab disclosure",
+      "fixed": "v0.91.12",
+      "root_cause": "Array-based argv lacks -- boundary and caller-supplied leading hyphen is reinterpreted by cobra/pflag; independent add.name path traversal with missing directory containment",
+      "evidence_level": "GHSL first-party advisory, fixed code, upstream regression tests read only",
+      "independent_verification": "No local gh-aw runtime or Go tests performed",
+      "evidence": [
+        "S25"
+      ]
     }
   ],
   "hypotheses": [
@@ -470,7 +538,8 @@
         "remaining_gap": "Find version-pinned Agent Platform server implementation/deployable image and run isolated dummy-key response and resource-effect tests before comparing cross-system privilege. Server-side LAP list response/access policy cannot be inferred from TypeScript SDK or permissive OpenAPI alone.",
         "checks_executed": "Source and upstream tests inspected through read-only GitHub connector; no upstream pytest, SDK integration, network API, build, or penetration test executed.",
         "novelty_boundary": "No newly found OSS LiteLLM bug is claimed. Differentiation is a measurable cross-boundary secret exposure AND post-session authorized-effect benchmark, provided it can be run against a real version-pinned implementation."
-      }
+      },
+      "integration_blocker_20261031": "No publicly inspectable version-pinned LiteLLM Agent Platform server found in reviewed SDK/OpenAPI/OSS Proxy material; real protected endpoint integration remains unavailable. Resume only with an owner-controlled deployable test artifact; do not keep repeating toy experiments."
     },
     {
       "id": "H-AIS-20261026-02",
@@ -523,6 +592,84 @@
       "last_advanced_at": "2026-10-26",
       "next_step": "Audit upstream patch call-site propagation and existing parser-state research; select exactly one already-patched comparison decoder and design bounded sanitizer tests; run only in explicitly authorized isolated lab.",
       "stop_condition": "Stop if root cause is fully covered by established checks and no independent candidate violates the invariant."
+    },
+    {
+      "id": "H-AIS-20261031-03",
+      "title": "MCP tool input validation can be invalidated by a second parser; preserving data-vs-option boundaries at each parser prevents unauthorized execution semantics",
+      "domain": "agent tool implementation security, command interpreters, CLI argument grammar, path containment",
+      "status": "evidence_review",
+      "priority": "P1",
+      "novelty_claim": "Not a new vulnerability or a new technique; proposes a cross-framework regression method that models sequential parser boundaries and proves that the 'quote once' mitigation offered in esp-mcp issue #49 is not sufficient for a nested outer shell. Distinct from H01 credential leakage and H02 streaming decoder state.",
+      "scope": "Public esp-mcp commit 28afddf and patched gh-aw v0.91.12; local synthetic bash/Python parser-composition test only",
+      "research_question": "Can automatically derived tests of MCP JSON parameter -> shell/argv -> CLI/file path semantics detect hidden side effects that schema-only tool tests miss, with acceptable false-positive cost?",
+      "root_mechanism": "A string recognized as valid JSON text by MCP is reinterpreted by a downstream shell, CLI flag parser or filesystem path parser. Shell escaping at the wrong nesting level creates false security assurance.",
+      "security_invariant": "No untrusted MCP value may change the operation's executable, CLI option set, target path confinement or authorized side effects after serialization into a lower-level execution format.",
+      "evidence": [
+        "S23",
+        "S24",
+        "S25",
+        "S26"
+      ],
+      "evidence_confidence": "High for version-pinned source constructions and upstream patch intent; direct local proof for generic nested-shell quoting; no independent runtime reproduction of esp-mcp or gh-aw flaws.",
+      "preconditions": "Invocable tool, lower-privilege caller or indirectly influenced agent, value reaches shell/CLI/path interpreters",
+      "prediction": "Controlled local parser tests will distinguish unsafe nested-string constructions and argv flag smuggling from correctly parameterized and validated command paths, while preserving legitimate data strings.",
+      "minimal_experiment": {
+        "baseline": "Version-pinned normal tool calls with benign values and no side effects; record actual child argv, cwd, environment and mock effect ledger.",
+        "cases": [
+          "Shell-string interpolation (nested and single level) vs parameterized exec without shell",
+          "CLI argv flag-like positionals with and without -- boundary; separate named options from caller data",
+          "Path traversal and pre-planted symlink cases; check canonical destination containment and no writes outside temp root"
+        ],
+        "environment": "Only local disposable test namespace with fake binaries, mocked stdout and no network or production credentials; source and exact versions frozen",
+        "measurements": [
+          "Unexpected child process or option parsing",
+          "Outbound path outside temp root",
+          "Legitimate task success and false rejection",
+          "Positive/negative control pass rate"
+        ],
+        "negative_controls": [
+          "Benign ESP target and legitimate local path continue to work",
+          "Legitimate CLI named flags remain allowed before --",
+          "One shell-only string with correct shell escaping can remain safe if only parsed once"
+        ]
+      },
+      "falsification": [
+        "If carefully reproduced cases do not create any unauthorized command or option parsing under the claimed vulnerable version, abandon product-specific generalization.",
+        "If independent parser-boundary validation produces no improvement over existing product controls at equal false-positive and usability cost, reject proposed incremental test method."
+      ],
+      "alternative_explanations": [
+        "Caller may already be authorized to choose flags/shell commands, in which case this is unsafe API design rather than an additional authority crossing.",
+        "MCP may be bound to localhost and require an agent to choose the injected value, so GHSA high severity does not imply unauthenticated remote exploitation.",
+        "For embedded toolchain runtime, arbitrary idf_path selection may allow sourcing untrusted scripts even after escaping; path authorization is separate from quoting."
+      ],
+      "tradeoffs": {
+        "security": "Strong protection against accidental reinterpretation when all parser boundaries are modeled",
+        "usability": "Strictly reject leading-hyphen or absolute-path inputs only where semantically invalid",
+        "latency": "Bounded by local input validation and canonicalization",
+        "implementation_cost": "Medium static dataflow plus parser-aware test harness",
+        "operational_cost": "Regression fixtures required whenever CLI or tool schema changes"
+      },
+      "actual_local_test": {
+        "date": "2026-10-31",
+        "command": "Isolated Python subprocess using bash -c; only printf commands",
+        "input": "esp32; printf OUTER_CALLED",
+        "naive_fix": "shlex.quote(input) then interpolate into an outer single-quoted bash -c command",
+        "observed_naive_stdout": "TARGET=esp32\\nOUTER_CALLED",
+        "control": "Pass input as separate positional parameter and use quoted \"$1\" within bash -c",
+        "observed_control_stdout": "TARGET=esp32; printf OUTER_CALLED\\n",
+        "limitation": "Generic parser-composition witness; not test of esp-mcp's full method or installed dependency."
+      },
+      "current_unknowns": [
+        "esp-mcp released package/deployment status and exploitability in installed environments",
+        "Whether and when esp-mcp maintainers will merge a robust fix",
+        "Exact false-positive rate and test-method portability across Python, Go and Windows CLI parsers"
+      ],
+      "expected_value": "Portable security regression harness for MCP SDKs and tool gateways that detects downstream semantic drift beyond JSON schema and model-level filters.",
+      "test_cost": "Low for isolated fake CLI; medium for safe version-pinned product integration.",
+      "created_at": "2026-10-31",
+      "last_advanced_at": "2026-10-31",
+      "next_step": "Build a non-destructive parameterized parser test harness for a pinned, locally testable MCP handler and gh-aw CLI; measure allowed normal tasks and forbidden effects. Do not run on public servers.",
+      "stop_condition": "Stop if source is patched and contract tests already cover all tested cases with no incremental method gain, or if reliable versioned implementation cannot be obtained after three investigations."
     }
   ],
   "research_backlog": [
@@ -624,11 +771,12 @@
     "synthetic_mock_unittest_executed": true,
     "synthetic_mock_unittest_results": "6/6 passed on 2026-10-27 in isolated local Python (toy-model only)",
     "synthetic_mock_code_path": "scripts/research/ai_security_h01_mock.py",
-    "last_review": "2026-10-30",
-    "latest_run_executed_code": false,
+    "last_review": "2026-10-31",
+    "latest_run_executed_code": true,
     "latest_run_executed_upstream_tests": false,
     "latest_run_read_only_source_inspection": true,
-    "latest_run_used_external_prod": false
+    "latest_run_used_external_prod": false,
+    "latest_local_test": "Isolated Python+bash stdout-only synthetic nested-quote test and argv control; generic parser witness, not exploit of esp-mcp/gh-aw"
   },
   "daily_reviews": [
     {
@@ -774,6 +922,27 @@
       "source_checks": "Pinned public GitHub source and upstream test file reviewed, not run.",
       "publication": "No article; update research-only JSON in isolated branch.",
       "next_step": "Pin an available Agent Platform server build or declare integration-level blocked; if available perform dummy-key list/get and resource-side forbidden-effect tests with normal-task negative controls."
+    },
+    {
+      "id": "daily-2026-10-31",
+      "date": "2026-10-31",
+      "source_window": "2026-10-27 to 2026-10-31 plus GHSL 2026-10-14 fixed-version baseline",
+      "sources_added": [
+        "S23",
+        "S24",
+        "S25",
+        "S26"
+      ],
+      "primary_hypothesis": "H-AIS-20261031-03",
+      "new_hypotheses": [
+        "H-AIS-20261031-03"
+      ],
+      "status_change": "New evidence-review hypothesis with version-pinned first-party vulnerable code and patched comparison. H01 real integration still blocked by missing versioned Agent Platform server artifact; no claim of a new CVE.",
+      "meaningful_increment": "Executed non-destructive local parser-composition test disproving a one-layer shlex.quote mitigation under nested bash -c, compared with safe argv control. Read gh-aw patched code and regression tests; none executed.",
+      "test_scope": "Local generic bash/Python only, no esp-mcp or gh-aw runtime and no production testing",
+      "verified_source_facts": "Unreviewed esp-mcp GHSA published Oct 27, issue Oct 24; GitHub Security Lab GHSA Oct 14, fix included v0.91.12",
+      "article_delivery": "Complete user-facing technical article drafted in task reply for review; NOT written to repository pending explicit approval",
+      "next_step": "Only after user approves the exact article version, write content; separately conduct local safe versioned tool integration tests as feasible."
     }
   ]
 }

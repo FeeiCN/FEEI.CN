@@ -10,11 +10,19 @@ export function canonical(value) {
 }
 
 export function recordMonth(record) {
-  const value = record.date ?? record.start ?? record.end;
+  const value = record.date ?? record.start ?? record.scheduledDate ?? record.end;
   if (typeof value !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])-\d{2}/.test(value)) {
     throw new Error('Health record is missing a valid date');
   }
   return value.slice(0, 7);
+}
+
+export function recordDay(record) {
+  const value = record.date ?? record.start ?? record.scheduledDate ?? record.end;
+  if (typeof value !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])-\d{2}/.test(value)) {
+    throw new Error('Health record is missing a valid date');
+  }
+  return value.slice(0, 10);
 }
 
 export function selectMonth(data, month) {
@@ -27,6 +35,20 @@ export function selectMonth(data, month) {
         })).filter((metric) => metric.data.length)];
       }
       return [key, records.filter((record) => recordMonth(record) === month)];
+    })),
+  ]));
+}
+
+export function selectDay(data, day) {
+  return Object.fromEntries(Object.entries(data).map(([section, collection]) => [section,
+    Object.fromEntries(Object.entries(collection).map(([key, records]) => {
+      if (!Array.isArray(records)) return [key, records];
+      if (section === 'healthMetrics' && key === 'metrics') {
+        return [key, records.map((metric) => ({
+          ...metric, data: metric.data.filter((point) => recordDay(point) === day),
+        })).filter((metric) => metric.data.length)];
+      }
+      return [key, records.filter((record) => recordDay(record) === day)];
     })),
   ]));
 }
@@ -119,4 +141,38 @@ export function compactMonthlyDetails(raw) {
 
 export function writeMonthlyHealth(file, raw) {
   return writeHealthJson(file, compactMonthlyDetails(raw));
+}
+
+export function buildMonthlyHealthFromDailyFiles(healthRoot, month) {
+  const [year, number] = month.split('-');
+  const dailyDir = path.join(healthRoot, year, number);
+  if (!fs.existsSync(dailyDir)) {
+    throw new Error(`Daily health directory does not exist: ${dailyDir}`);
+  }
+
+  const files = fs.readdirSync(dailyDir)
+    .filter((name) => /^\d{2}\.json$/.test(name))
+    .sort();
+  let data = {};
+  const exportedAt = [];
+  let canonicalDays = 0;
+  for (const name of files) {
+    const daily = JSON.parse(fs.readFileSync(path.join(dailyDir, name), 'utf8'));
+    if (!daily.data || typeof daily.data !== 'object') continue;
+    data = mergeMonthData(data, daily.data);
+    if (daily.exportedAt) exportedAt.push(daily.exportedAt);
+    canonicalDays += 1;
+  }
+  if (canonicalDays === 0) {
+    throw new Error(`No canonical daily health data found for ${month}`);
+  }
+
+  return {
+    exportedAt: exportedAt.sort().at(-1) ?? null,
+    dateRange: {
+      start: `${month}-01 00:00:00 +0800`,
+      end: `${month}-${new Date(Date.UTC(Number(year), Number(number), 0)).getUTCDate()} 23:59:59 +0800`,
+    },
+    data,
+  };
 }

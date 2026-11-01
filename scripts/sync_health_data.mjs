@@ -22,54 +22,38 @@ const healthDir = path.join('static', 'data', 'health');
 ensureNoStagedChanges();
 runWithRetry('git', ['pull', '--rebase', '--autostash']);
 
-// Determine which month(s) to export
-const monthsToExport = args.date ? [args.date.slice(0, 7)] : [currentMonth()];
 const changedFiles = [];
-
-for (const month of monthsToExport) {
-  const [y, m] = month.split('-');
-  const targetFile = path.join(y, `${m}.json`);
-
-  run('npm', ['run', 'export-health-year', '--', '--year', y, '--month', month, '--skip-daily']);
-
-  if (!fs.existsSync(path.join(repoRoot, healthDir, targetFile))) {
-    throw new Error(`Health data file does not exist: ${targetFile}`);
-  }
-
-  if (!isPathClean(path.join(healthDir, targetFile))) {
-    changedFiles.push(path.join(healthDir, targetFile));
-  }
-
-  const targetDailyDir = path.join(y, m);
-  if (!isPathClean(path.join(healthDir, targetDailyDir))) {
-    changedFiles.push(path.join(healthDir, targetDailyDir));
-  }
-}
+const affectedMonths = new Set();
+const dailyDatesToExport = new Set(args.date ? [args.date] : [formatLocalDate(new Date())]);
 
 if (!args.date) {
   const missingDates = findMissingDailyHealthDates();
   console.log(`Found ${missingDates.length} missing daily health date(s).`);
+  for (const date of missingDates) dailyDatesToExport.add(date);
+}
 
-  for (const missingDate of missingDates) {
-    const [year, month, day] = missingDate.split('-');
-    const dailyFile = path.join(healthDir, year, month, `${day}.json`);
+for (const date of [...dailyDatesToExport].sort()) {
+  const [year, month, day] = date.split('-');
+  const dailyFile = path.join(healthDir, year, month, `${day}.json`);
 
-    run('npm', ['run', 'export-health-year', '--', '--date', missingDate]);
+  run('npm', ['run', 'export-health-year', '--', '--date', date]);
 
-    const dailyPath = path.join(repoRoot, dailyFile);
-    if (!fs.existsSync(dailyPath)) {
-      throw new Error(`Daily health data file does not exist: ${dailyFile}`);
-    }
-    const dailyPayload = JSON.parse(fs.readFileSync(dailyPath, 'utf8'));
-    if (dailyPayload.date !== missingDate || Object.keys(dailyPayload.errors ?? {}).length > 0) {
-      throw new Error(`Incomplete daily health export for ${missingDate}; refusing to commit: ${dailyFile}`);
-    }
-
-    if (!isPathClean(dailyFile)) {
-      changedFiles.push(dailyFile);
-    }
+  const dailyPath = path.join(repoRoot, dailyFile);
+  if (!fs.existsSync(dailyPath)) {
+    throw new Error(`Daily health data file does not exist: ${dailyFile}`);
+  }
+  const dailyPayload = JSON.parse(fs.readFileSync(dailyPath, 'utf8'));
+  if (dailyPayload.date !== date || !dailyPayload.data || Object.keys(dailyPayload.errors ?? {}).length > 0) {
+    throw new Error(`Incomplete daily health export for ${date}; refusing to commit: ${dailyFile}`);
   }
 
+  if (!isPathClean(dailyFile)) {
+    changedFiles.push(dailyFile);
+  }
+  affectedMonths.add(date.slice(0, 7));
+}
+
+if (!args.date) {
   const mutableDates = findRecentMutableDailyDates(7);
   console.log(`Refreshing mutable health data for ${mutableDates.length} recent day(s).`);
   for (const mutableDate of mutableDates) {
@@ -80,7 +64,18 @@ if (!args.date) {
     if (!isPathClean(dailyFile)) {
       changedFiles.push(dailyFile);
     }
+    affectedMonths.add(mutableDate.slice(0, 7));
   }
+}
+
+for (const month of [...affectedMonths].sort()) {
+  const [year, number] = month.split('-');
+  const monthlyFile = path.join(healthDir, year, `${number}.json`);
+  run('npm', ['run', 'export-health-year', '--', '--build-month', month]);
+  if (!fs.existsSync(path.join(repoRoot, monthlyFile))) {
+    throw new Error(`Health data file does not exist: ${monthlyFile}`);
+  }
+  if (!isPathClean(monthlyFile)) changedFiles.push(monthlyFile);
 }
 
 const historyFile = path.join(healthDir, 'history.json');

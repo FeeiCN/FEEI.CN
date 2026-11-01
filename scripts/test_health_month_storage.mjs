@@ -5,7 +5,13 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import test from 'node:test';
 import {transform} from './health_chart_transform.generated.mjs';
-import {monthlyPayload, mergeMonthData, compactMonthlyDetails} from './health_month_storage.mjs';
+import {
+  buildMonthlyHealthFromDailyFiles,
+  compactMonthlyDetails,
+  mergeMonthData,
+  monthlyPayload,
+  selectDay,
+} from './health_month_storage.mjs';
 
 const point = (date, qty = 1) => ({date: `${date} 00:00:00 +0800`, qty});
 const payload = (points) => ({exportedAt: '2025-03-01', data: {
@@ -30,6 +36,25 @@ test('annual split filters nested points and merges idempotently', () => {
   assert.equal(feb.data.workouts.workouts.length, 0);
   assert.deepEqual(mergeMonthData(jan.data, jan.data), jan.data);
   assert.equal(monthlyPayload(payload([]), '2024-02').dateRange.end, '2024-02-29 23:59:59 +0800');
+});
+
+test('daily canonical data rebuilds the matching monthly cache', (t) => {
+  const root = fixture(t);
+  const month = {data: {
+    healthMetrics: {metrics: [{name: 'step_count', units: 'count', data: [point('2025-01-01', 42), point('2025-01-02', 84)]}]},
+    workouts: {workouts: []},
+  }};
+  for (const day of ['01', '02']) {
+    const dailyDir = path.join(root, '2025/01');
+    fs.mkdirSync(dailyDir, {recursive: true});
+    fs.writeFileSync(path.join(dailyDir, `${day}.json`), JSON.stringify({
+      exportedAt: `2025-01-${day}T12:00:00.000Z`,
+      data: selectDay(month.data, `2025-01-${day}`),
+    }));
+  }
+  const rebuilt = buildMonthlyHealthFromDailyFiles(root, '2025-01');
+  assert.deepEqual(rebuilt.data, month.data);
+  assert.equal(rebuilt.exportedAt, '2025-01-02T12:00:00.000Z');
 });
 
 test('migration uses supplied root, preserves annual input and is repeatable', (t) => {
@@ -113,6 +138,8 @@ for await (const line of readline.createInterface({input: process.stdin})) {
     units: 'ms',
     samples: [{start: '2025-01-01 02:00:00 +0800', end: '2025-01-01 02:01:00 +0800', value: 42.5, source: 'Watch'}],
   });
+  assert.ok(daily.data.healthMetrics.metrics.some((metric) => metric.name === 'step_count'));
+  assert.deepEqual(daily.data.workouts.workouts[0].stepCount, [{qty: 5}]);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, '2025/02.json'))).data.healthMetrics.metrics, []);
 });
 

@@ -4,7 +4,12 @@ import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {buildHealthChartHistory} from './build_health_chart_history.mjs';
 import {buildMedicationCollection} from './health_collection_transform.mjs';
-import {monthlyPayload, writeMonthlyHealth} from './health_month_storage.mjs';
+import {
+  buildMonthlyHealthFromDailyFiles,
+  compactMonthlyDetails,
+  monthlyPayload,
+  writeMonthlyHealth,
+} from './health_month_storage.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defaultTargetRoot = path.join(repoRoot, 'static', 'data', 'health');
@@ -153,6 +158,20 @@ async function main() {
     return;
   }
 
+  const targetRoot = path.resolve(expandHome(args.target ?? defaultTargetRoot));
+  if (args.buildMonth) {
+    if (args.year || args.month || args.date || args.endDate || args.skipDaily || args.backfillHrv || args.refreshMutable) {
+      throw new Error('--build-month cannot be combined with export options');
+    }
+    assertMonth(args.buildMonth);
+    const file = path.join(targetRoot, args.buildMonth.replace('-', '/') + '.json');
+    const payload = buildMonthlyHealthFromDailyFiles(targetRoot, args.buildMonth);
+    const changed = writeMonthlyHealth(file, payload);
+    await buildHealthChartHistory({healthRoot: targetRoot});
+    console.log(`${changed ? 'Built' : 'Verified'} ${args.buildMonth} health data from daily files at ${path.relative(repoRoot, file)}`);
+    return;
+  }
+
   if (args.date && (args.month || args.endDate)) {
     throw new Error('--date cannot be combined with --month or --end-date');
   }
@@ -163,8 +182,6 @@ async function main() {
   }
   const targetMonth = args.month;
   assertYear(targetYear);
-
-  const targetRoot = path.resolve(expandHome(args.target ?? defaultTargetRoot));
 
   let startDate, endDate;
 
@@ -611,6 +628,7 @@ async function exportDailyCompactFiles(client, options) {
     const dailyStart = `${day} 00:00:00 ${timeZoneOffset}`;
     const dailyEnd = `${day} 23:59:59 ${timeZoneOffset}`;
     const data = {};
+    const canonicalData = {};
     const summary = {};
     const errors = {};
 
@@ -628,14 +646,32 @@ async function exportDailyCompactFiles(client, options) {
           [mapping.targetKey]: Array.isArray(records) ? records : [],
         };
         summary[mapping.targetSection] = sumMetricRecords(data[mapping.targetSection][mapping.targetKey]);
+        const aggregate = await collectMappingRecords(client, mapping, {
+          start: dailyStart,
+          end: dailyEnd,
+          args: mapping.args,
+          allowErrors: true,
+        });
+        if (aggregate.error) {
+          errors[mapping.targetSection] = aggregate.error;
+        }
+        canonicalData[mapping.targetSection] = {
+          [mapping.targetKey]: Array.isArray(aggregate.records) ? aggregate.records : [],
+        };
       } else if (Array.isArray(records) && records.length > 0) {
         data[mapping.targetSection] = {
           [mapping.targetKey]: records,
         };
         summary[mapping.targetSection] = records.length;
+        canonicalData[mapping.targetSection] = {
+          [mapping.targetKey]: records,
+        };
       } else {
         data[mapping.targetSection] = {};
         summary[mapping.targetSection] = 0;
+        canonicalData[mapping.targetSection] = {
+          [mapping.targetKey]: [],
+        };
       }
 
       if (error) {
@@ -654,6 +690,7 @@ async function exportDailyCompactFiles(client, options) {
         ...compactData.summary,
       },
       timeline: compactData.timeline,
+      data: compactMonthlyDetails({data: canonicalData}).data,
     };
     if (hrv) {
       dailyData.hrv = hrv;
@@ -820,6 +857,17 @@ async function refreshDailyMutableFiles(client, options) {
     const collection = buildCollectionEvents(collectionData);
 
     dailyData.weight = weight;
+    const canonicalData = structuredClone(dailyData.data ?? {});
+    canonicalData.healthMetrics ??= {};
+    const existingMetrics = canonicalData.healthMetrics.metrics ?? [];
+    canonicalData.healthMetrics.metrics = [
+      ...existingMetrics.filter((metric) => metric?.name !== 'weight_body_mass'),
+      ...findCollection(extractData(weightPayload), ['metrics']),
+    ];
+    canonicalData.medications = collectionData.medications;
+    canonicalData.stateOfMind = collectionData.stateOfMind;
+    dailyData.data = compactMonthlyDetails({data: canonicalData}).data;
+    dailyData.exportedAt = new Date().toISOString();
     dailyData.summary = dailyData.summary ?? {};
     dailyData.summary.medications = collection.summary.medications;
     dailyData.summary.stateOfMind = collection.summary.stateOfMind;
@@ -2029,7 +2077,7 @@ function parseArgs(argv) {
       continue;
     }
 
-    if (arg === '--year' || arg === '--month' || arg === '--date' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
+    if (arg === '--year' || arg === '--month' || arg === '--build-month' || arg === '--date' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
       const value = argv[index + 1];
 
       if (!value || value.startsWith('--')) {
@@ -2053,6 +2101,7 @@ function printHelp() {
 Options:
   --year <year>              Export full year into monthly files (defaults to current month).
   --month <YYYY-MM>          Export specific month.
+  --build-month <YYYY-MM>    Rebuild a month cache and chart history from canonical daily files.
   --date <YYYY-MM-DD>        Export only one daily compact file without writing month summary.
   --end-date <YYYY-MM-DD>    End date. Defaults to today for current year/month.
   --skip-daily               Skip detailed daily files when refreshing a month summary.

@@ -220,6 +220,16 @@ async function main() {
     await client.start();
     await client.initialize();
 
+    if (args.backfillHrv) {
+      const result = await backfillDailyHrvFiles(client, {
+        startDate,
+        endDate,
+        targetRoot,
+      });
+      console.log(`Backfilled HRV detail for ${result.updated} daily health file(s); ${result.empty} had no HRV samples; skipped ${result.skipped} file(s)`);
+      return;
+    }
+
     const exportedAt = new Date().toISOString();
 
     if (!args.date) {
@@ -698,6 +708,49 @@ function buildDailyHrv(metrics) {
     units: metric.units ?? 'ms',
     samples,
   };
+}
+
+async function backfillDailyHrvFiles(client, options) {
+  let updated = 0;
+  let skipped = 0;
+  let empty = 0;
+
+  for (const day of enumerateDates(options.startDate, options.endDate)) {
+    const dailyFile = path.join(options.targetRoot, day.slice(0, 4), day.slice(5, 7), `${day.slice(8, 10)}.json`);
+    if (!fs.existsSync(dailyFile)) {
+      skipped += 1;
+      continue;
+    }
+
+    let dailyData;
+    try {
+      dailyData = JSON.parse(fs.readFileSync(dailyFile, 'utf8'));
+    } catch {
+      throw new Error(`Invalid daily health file: ${path.relative(repoRoot, dailyFile)}`);
+    }
+    if (dailyData.hrv) {
+      skipped += 1;
+      continue;
+    }
+
+    const payload = await client.callTool('get_health_metrics', {
+      start: `${day} 00:00:00 ${timeZoneOffset}`,
+      end: `${day} 23:59:59 ${timeZoneOffset}`,
+      metrics: 'heart_rate_variability',
+      interval: 'hours',
+      aggregate: false,
+    });
+    const hrv = buildDailyHrv(findCollection(extractData(payload), ['metrics']));
+    if (!hrv) {
+      empty += 1;
+    }
+
+    dailyData.hrv = hrv ?? {units: 'ms', samples: []};
+    fs.writeFileSync(dailyFile, `${JSON.stringify(dailyData)}\n`);
+    updated += 1;
+  }
+
+  return {updated, skipped, empty};
 }
 
 function buildDailyCompactData(data) {
@@ -1884,6 +1937,11 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (arg === '--backfill-hrv') {
+      parsed.backfillHrv = true;
+      continue;
+    }
+
     if (arg === '--year' || arg === '--month' || arg === '--date' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
       const value = argv[index + 1];
 
@@ -1911,6 +1969,7 @@ Options:
   --date <YYYY-MM-DD>        Export only one daily compact file without writing month summary.
   --end-date <YYYY-MM-DD>    End date. Defaults to today for current year/month.
   --skip-daily               Skip detailed daily files when refreshing a month summary.
+  --backfill-hrv             Add raw HRV measurement detail to existing daily files only.
   --overwrite-daily          Compatibility flag; existing daily files are now refreshed by default.
   --target <dir>             Output directory. Defaults to static/data/health.
   --mcp-server <file>        health_auto_export MCP server path.

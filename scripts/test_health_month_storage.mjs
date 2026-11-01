@@ -156,6 +156,49 @@ for await (const line of readline.createInterface({input: process.stdin})) {
   assert.ok(!fs.existsSync(file));
 });
 
+test('HRV backfill patches only existing daily files and omits heartbeat samples', (t) => {
+  const root = fixture(t);
+  const server = path.join(root, 'mock-hrv.mjs');
+  fs.writeFileSync(server, `import readline from 'node:readline';
+for await (const line of readline.createInterface({input: process.stdin})) {
+ const message = JSON.parse(line);
+ if (!message.id) continue;
+ let result = {};
+ if (message.method === 'tools/call') result = {data:{metrics:[{name:'heart_rate_variability',units:'ms',data:[{start:'2025-01-01 02:00:00 +0800',end:'2025-01-01 02:01:00 +0800',qty:42.5,source:'Watch',heartbeatSeries:[{date:1}]}]}]}};
+ process.stdout.write(JSON.stringify({jsonrpc:'2.0', id:message.id, result})+'\\n');
+}`);
+  const file = path.join(root, '2025/01/01.json');
+  fs.mkdirSync(path.dirname(file), {recursive: true});
+  fs.writeFileSync(file, JSON.stringify({version: 2, date: '2025-01-01', timeline: [{type: 'sleep'}]}));
+  const result = run('export_health_year_from_mcp.mjs', ['--date', '2025-01-01', '--backfill-hrv', '--target', root, '--mcp-server', server]);
+  assert.equal(result.status, 0, result.stderr);
+  const daily = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.deepEqual(daily.timeline, [{type: 'sleep'}]);
+  assert.deepEqual(daily.hrv, {
+    units: 'ms',
+    samples: [{start: '2025-01-01 02:00:00 +0800', end: '2025-01-01 02:01:00 +0800', value: 42.5, source: 'Watch'}],
+  });
+});
+
+test('HRV backfill records a successful source query with no samples', (t) => {
+  const root = fixture(t);
+  const server = path.join(root, 'mock-empty-hrv.mjs');
+  fs.writeFileSync(server, `import readline from 'node:readline';
+for await (const line of readline.createInterface({input: process.stdin})) {
+ const message = JSON.parse(line);
+ if (!message.id) continue;
+ const result = message.method === 'tools/call' ? {data:{metrics:[]}} : {};
+ process.stdout.write(JSON.stringify({jsonrpc:'2.0', id:message.id, result})+'\\n');
+}`);
+  const file = path.join(root, '2025/01/01.json');
+  fs.mkdirSync(path.dirname(file), {recursive: true});
+  fs.writeFileSync(file, JSON.stringify({version: 2, date: '2025-01-01', timeline: []}));
+  const result = run('export_health_year_from_mcp.mjs', ['--date', '2025-01-01', '--backfill-hrv', '--target', root, '--mcp-server', server]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /1 had no HRV samples/);
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).hrv, {units: 'ms', samples: []});
+});
+
 test('incomplete monthly collection preserves the existing section', (t) => {
   const root = fixture(t);
   const server = path.join(root, 'mock-month-error.mjs');

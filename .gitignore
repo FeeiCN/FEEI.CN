@@ -13,6 +13,11 @@
 # Generated weather cache (persistent on deploy server)
 /static/data/weather/
 
+# Health caches derived from canonical daily files during start/build
+/static/data/health/[0-9][0-9][0-9][0-9]/[0-9][0-9].json
+/static/data/health/history/
+/static/data/health/sync-status.json
+
 # Local rsync configuration
 /config/media-rsync.env
 

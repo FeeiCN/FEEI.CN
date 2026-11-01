@@ -75,17 +75,9 @@ for (const month of [...affectedMonths].sort()) {
   if (!fs.existsSync(path.join(repoRoot, monthlyFile))) {
     throw new Error(`Health data file does not exist: ${monthlyFile}`);
   }
-  if (!isPathClean(monthlyFile)) changedFiles.push(monthlyFile);
 }
 
 run('npm', ['run', 'build-health-sync-status']);
-const syncStatusFile = path.join(healthDir, 'sync-status.json');
-if (!isPathClean(syncStatusFile)) changedFiles.push(syncStatusFile);
-
-const historyDir = path.join(healthDir, 'history');
-if (fs.existsSync(path.join(repoRoot, historyDir)) && !isPathClean(historyDir)) {
-  changedFiles.push(historyDir);
-}
 
 if (changedFiles.length === 0) {
   console.log('No changes to commit.');

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workflow_id": "ai-security-frontier",
-  "updated_at": "2026-10-31",
+  "updated_at": "2026-11-01",
   "repository": "FeeiCN/FEEI.CN",
   "editorial_status": "research-only; not a verified original vulnerability disclosure",
   "duplicate_check": {
@@ -232,6 +232,36 @@
       "tested_on": "2026-10-31",
       "environment": "Isolated local bash and Python subprocess, stdout-only, no external network or target product, no files created",
       "claim_scope": "Synthetic nested bash -c wrapper containing shlex.quote('esp32; printf OUTER_CALLED') executed a second printf at outer-shell level, while argv-based bash -c with positional $1 printed the entire input literally. This verifies that a single shlex.quote call is insufficient when its output is inserted into an additional single-quoted shell command. It does not test esp-mcp or gh-aw runtime."
+    },
+    {
+      "id": "S27",
+      "kind": "reviewed_first_party_maintainer_security_advisory",
+      "public_advisory_on": "2026-10-29",
+      "fixed_on": "2026-06-25",
+      "url": "https://github.com/advisories/GHSA-q344-5v34-gm84",
+      "maintainer_advisory": "https://github.com/SylphxAI/pdf-reader-mcp/security/advisories/GHSA-q344-5v34-gm84",
+      "cve": "CVE-2026-62264",
+      "product": "@sylphx/pdf-reader-mcp",
+      "affected_versions": ">=2.2.0 <3.0.1",
+      "fixed_version": "3.0.1",
+      "conditions": "Requires opt-in MCP_TRANSPORT=http, a reachable server port, and server-side PDF read permissions; default stdio transport unaffected. MCP_API_KEY configured but never enforced on /mcp; previous HTTP bind default was 0.0.0.0.",
+      "verified_impact": "Unauthenticated reachable client could invoke PDF tools and read files accessible to process, according to maintainer advisory. Does not establish any observed real-world compromise.",
+      "evidence_limit": "Publication in GHSA database October 29 is NOT the fix date: maintainer says fixed with June 25 v3.0.1. No live target inspection, no package runtime reproduced."
+    },
+    {
+      "id": "S28",
+      "kind": "maintainer_pinned_fix_and_regression_tests_static_review",
+      "fixed_on": "2026-06-25",
+      "reviewed_on": "2026-11-01",
+      "commit_sha": "4c35f72862d729301e3912ab8c8317d2828cf4c2",
+      "url": "https://github.com/SylphxAI/anymd/commit/4c35f72862d729301e3912ab8c8317d2828cf4c2",
+      "source_urls": [
+        "https://github.com/SylphxAI/anymd/blob/4c35f72862d729301e3912ab8c8317d2828cf4c2/src/mcp.ts",
+        "https://github.com/SylphxAI/anymd/blob/4c35f72862d729301e3912ab8c8317d2828cf4c2/src/index.ts",
+        "https://github.com/SylphxAI/anymd/blob/4c35f72862d729301e3912ab8c8317d2828cf4c2/test/integration/http-transport.test.ts"
+      ],
+      "observations": "Patch wires configured MCP_API_KEY into HTTP transport and enforces X-API-Key check before MCP request handling (401 if missing/wrong); moves default HTTP bind from 0.0.0.0 to loopback; warns when non-loopback without key. Upstream integration tests assert no key/wrong key->401, valid key->200, tools/list denied to unauthenticated callers and health route remains open. Fix source and tests read, not executed.",
+      "uncertainty": "Current repo has subsequently evolved; evidence describes version-pinned 3.0.1 fix, not the runtime of later major releases. A key only authenticates caller; file access still limited mainly by process permissions unless allow-dir is configured."
     }
   ],
   "cases": [
@@ -752,6 +782,25 @@
       "minimum_experiment": "Use authorized local clean/faulty program pairs with known root causes, multiple model versions and frozen prompts, no external targets. Report TP/FP/FN/TN, recall, precision, localization gain, normal-program false positives, model refusals unrelated to vulnerabilities and per-finding cost; keep a never-seen holdout set and baseline scanners.",
       "falsification": "No incremental true-positive localization at a controlled false-positive rate over existing baselines, or strong prompt/model dependence, would reject the utility claim.",
       "next_step": "Find released dataset/test code and reproducible exact model/config before promotion to a full hypothesis; avoid reusing CrowdStrike's synthetic examples as independent validation."
+    },
+    {
+      "id": "C-AIS-20261101-09",
+      "title": "Declared MCP API-key authentication must be enforced on every reachable data-bearing HTTP route, not just in configuration and startup logs",
+      "status": "patch_verified_source_candidate; not a new original hypothesis",
+      "source_ids": [
+        "S27",
+        "S28"
+      ],
+      "disclosure_date": "2026-10-29",
+      "fix_date": "2026-06-25",
+      "threat_model": "An unauthenticated client can reach opt-in HTTP /mcp on an affected package. No model prompt injection or authenticated caller is needed. File reads remain bounded by server process permissions.",
+      "trust_boundary": "Environment configuration/startup log (operator intent) → HTTP router guard (actual enforcement) → MCP tools/list and tools/call → filesystem",
+      "confirmed_by_static_evidence": "Patch adds real pre-dispatch authentication, and regression tests exercise missing, wrong and valid X-API-Key plus tools/list and health. Maintainer GHSA confirms pre-fix omission. No target process or upstream test suite executed.",
+      "negative_case": "stdio mode unaffected; unreachable localhost-only deployments lack the same remote network exposure; authenticating the MCP caller does not itself bind PDF file paths to task-level permission.",
+      "experimental_plan": "On owner-controlled disposable v3.0.0 vs v3.0.1 instances with synthetic PDF-only fixtures, test each HTTP verb and method under missing, wrong and correct key; use a negative-control legitimate PDF read, forbidden outside-allow-dir read, session reuse and optional CORS preflight. Observe API response, tool list, actual file access, normal task success and false denials. Do not test third-party production servers.",
+      "falsification": "If pinned v3.0.0 source already enforces the key on /mcp or pinned v3.0.1 still admits unauthenticated tool calls under controlled test, revise the pre/post claim; if identical checks already cover all tested routes in existing published practice, do not claim original method.",
+      "novelty": "The bug class is established missing auth, not new. Possible research contribution is configuration-to-effective-policy differential coverage across transports and runtime state, but it requires an implemented real test harness before suggesting originality.",
+      "next_step": "Before elevating to full article, independently run version-pinned isolated integration with dummy PDFs if available and evaluate whether this contributes a nonredundant method beyond existing Agent与工具调用安全.md. No reason to publish a second rushed essay while an October 31 complete article is awaiting explicit user approval."
     }
   ],
   "weekly_review": {
@@ -943,6 +992,24 @@
       "verified_source_facts": "Unreviewed esp-mcp GHSA published Oct 27, issue Oct 24; GitHub Security Lab GHSA Oct 14, fix included v0.91.12",
       "article_delivery": "Complete user-facing technical article drafted in task reply for review; NOT written to repository pending explicit approval",
       "next_step": "Only after user approves the exact article version, write content; separately conduct local safe versioned tool integration tests as feasible."
+    },
+    {
+      "id": "daily-2026-11-01",
+      "date": "2026-11-01",
+      "source_window": "2026-10-29 to 2026-11-01, including retrospective read of June 25 pinned fix",
+      "sources_added": [
+        "S27",
+        "S28"
+      ],
+      "existing_primary": "H-AIS-20261026-01 remains real-integration blocked pending version-pinned Agent Platform server; H-AIS-20261031-03 article still user-review pending, not saved to GitHub",
+      "new_hypotheses": [],
+      "new_issues_confirmed": 0,
+      "candidate": "C-AIS-20261101-09",
+      "evidence": "Oct 29 reviewed GHSA and June 25 maintainer patch independently reconcile the fixed version and dates; pinned code and upstream integration tests were statically checked.",
+      "negative_finding": "MCP_API_KEY alone was ineffective in vulnerable opt-in HTTP mode; patch remedy is per-request gate plus default network containment. No independent deployment reproduction, no proof of ongoing issue in patched releases or real intrusion.",
+      "tool_use": "Read-only GitHub source and official advisory; no upstream tests, builds, production requests, web scans or exploit.",
+      "editorial": "Prior Oct 31 full article awaits specific approval. New source captured as research candidate, not a second daily newsletter or draft.",
+      "next_step": "Choose the next independently testable real sandbox mechanism; if reliable isolated runtime exists, perform pre/post dummy-key request matrix and measure false rejections. Review research queue November 2."
     }
   ]
 }

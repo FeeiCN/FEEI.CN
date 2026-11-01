@@ -165,6 +165,17 @@ type MoodSummary = {
   recordedDays: number;
 };
 
+type RecoverySummary = {
+  date: string;
+  hrv: number | null;
+  restingHeartRate: number | null;
+  hrvBaseline: number | null;
+  restingHeartRateBaseline: number | null;
+  hrvSamples: number;
+  restingHeartRateSamples: number;
+  status: 'pressure' | 'recovery' | 'neutral' | 'insufficient';
+};
+
 type ActivitySummary = {
   date: string;
   exerciseMinutes: number;
@@ -201,6 +212,7 @@ type HealthSummary = {
   weight: WeightSummary | null;
   mood: MoodSummary | null;
   medication: MedicationSummary | null;
+  recovery: RecoverySummary | null;
 };
 
 const sleepScoreLevels = [
@@ -407,6 +419,24 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
     const value = recordForDate(name)?.qty;
     return typeof value === 'number' && Number.isFinite(value) ? value : null;
   };
+  const metricStats = (name: string) => {
+    const valuesByDate = new Map<string, number[]>();
+    (records.get(name) ?? []).forEach((record) => {
+      const recordDate = record.date?.slice(0, 10);
+      if (!recordDate || typeof record.qty !== 'number' || !Number.isFinite(record.qty)) return;
+      const values = valuesByDate.get(recordDate) ?? [];
+      values.push(record.qty);
+      valuesByDate.set(recordDate, values);
+    });
+    const average = (values: number[]): number | null =>
+      values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+    const current = average(valuesByDate.get(date) ?? []);
+    const baselineDays = [...valuesByDate.entries()]
+      .filter(([recordDate]) => recordDate >= shiftDate(date, -7) && recordDate < date)
+      .map(([, values]) => average(values))
+      .filter((value): value is number => value !== null);
+    return {current, baseline: average(baselineDays), baselineDays: baselineDays.length};
+  };
 
   const exerciseMinutes = valueForDate('apple_exercise_time');
   const exerciseRecords = records.get('apple_exercise_time') ?? [];
@@ -477,8 +507,49 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
     records: medicationRecords,
     taken: medicationRecords.filter((record) => record.status === '已服用').length,
   } : null;
+  const hrvStats = metricStats('heart_rate_variability');
+  const restingHeartRateStats = metricStats('resting_heart_rate');
+  const hrvDeltaPct = hrvStats.current !== null && hrvStats.baseline !== null && hrvStats.baseline > 0
+    ? (hrvStats.current - hrvStats.baseline) / hrvStats.baseline * 100
+    : null;
+  const restingHeartRateDelta = restingHeartRateStats.current !== null && restingHeartRateStats.baseline !== null
+    ? restingHeartRateStats.current - restingHeartRateStats.baseline
+    : null;
+  const comparableRecovery = (
+    hrvDeltaPct !== null
+    && restingHeartRateDelta !== null
+    && hrvStats.baselineDays >= 2
+    && restingHeartRateStats.baselineDays >= 2
+  );
+  const recovery: RecoverySummary | null = (
+    hrvStats.current !== null
+    || restingHeartRateStats.current !== null
+    || hrvStats.baseline !== null
+    || restingHeartRateStats.baseline !== null
+  ) ? {
+    date,
+    hrv: hrvStats.current,
+    restingHeartRate: restingHeartRateStats.current,
+    hrvBaseline: hrvStats.baseline,
+    restingHeartRateBaseline: restingHeartRateStats.baseline,
+    hrvSamples: hrvStats.baselineDays,
+    restingHeartRateSamples: restingHeartRateStats.baselineDays,
+    status: comparableRecovery
+      ? hrvDeltaPct <= -10 && restingHeartRateDelta >= 3
+        ? 'pressure'
+        : hrvDeltaPct >= 10 && restingHeartRateDelta <= -3
+          ? 'recovery'
+          : 'neutral'
+      : 'insufficient',
+  } : null;
 
-  return activity || weight || mood || medication ? {activity, weight, mood, medication} : null;
+  return activity || weight || mood || medication ? {
+    activity,
+    weight,
+    mood,
+    medication,
+    recovery,
+  } : null;
 }
 
 function MetricPopover({label, ariaLabel, children, wide = false, scrollable = false}: {label: string; ariaLabel: string; children: ReactNode; wide?: boolean; scrollable?: boolean}) {
@@ -793,7 +864,42 @@ function formatMoodDate(value: string | undefined): string {
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
-function MoodDetails({data}: {data: MoodSummary}) {
+function RecoveryDetails({data}: {data: RecoverySummary}) {
+  const statusLabel = {
+    pressure: '压力信号偏高',
+    recovery: '恢复信号较好',
+    neutral: '接近个人基线',
+    insufficient: '数据不足',
+  }[data.status];
+  const hrvDelta = data.hrv !== null && data.hrvBaseline !== null && data.hrvBaseline > 0
+    ? (data.hrv - data.hrvBaseline >= 0 ? '+' : '') + ((data.hrv - data.hrvBaseline) / data.hrvBaseline * 100).toFixed(0) + '%'
+    : '—';
+  const restingHeartRateDelta = data.restingHeartRate !== null && data.restingHeartRateBaseline !== null
+    ? (data.restingHeartRate - data.restingHeartRateBaseline >= 0 ? '+' : '') + (data.restingHeartRate - data.restingHeartRateBaseline).toFixed(0) + ' bpm'
+    : '—';
+  const explanation = data.status === 'insufficient'
+    ? '需要当天与此前 7 天至少两天的 HRV、静息心率记录，才能合并判断。'
+    : 'HRV 下降且静息心率上升同时出现时，提示压力负荷可能增加；仅作趋势参考，不构成医疗诊断。';
+  return (
+    <div className={styles.metricTrend} aria-label="HRV 与静息心率恢复辅助参考">
+      <div className={styles.metricTrendHeader}>
+        <span>恢复参考 · 此前 7 天基线</span>
+        <strong>{statusLabel}</strong>
+      </div>
+      <div className={styles.healthStats}>
+        <div><span>HRV（当天）</span><strong>{data.hrv === null ? '暂无' : data.hrv.toFixed(1) + ' ms'}</strong></div>
+        <div><span>静息心率（当天）</span><strong>{data.restingHeartRate === null ? '暂无' : data.restingHeartRate.toFixed(0) + ' bpm'}</strong></div>
+        <div><span>HRV 较基线</span><strong>{hrvDelta}</strong></div>
+        <div><span>静息心率较基线</span><strong>{restingHeartRateDelta}</strong></div>
+      </div>
+      <small className={styles.metricTrendNote}>
+        基线记录：HRV {data.hrvSamples} 天 · 静息心率 {data.restingHeartRateSamples} 天。{explanation}
+      </small>
+    </div>
+  );
+}
+
+function MoodDetails({data, recovery}: {data: MoodSummary; recovery: RecoverySummary | null}) {
   const primaryLabel = stateOfMindTerm(data.primary.valenceClassification, STATE_OF_MIND_CLASSIFICATION_LABELS);
   return (
     <div className={styles.metricDetails}>
@@ -821,6 +927,7 @@ function MoodDetails({data}: {data: MoodSummary}) {
         })}
       </div>
       <footer>近 30 天记录 {data.recordedDays} 天 · 来自 Apple Health 主动记录</footer>
+      {recovery && <RecoveryDetails data={recovery} />}
     </div>
   );
 }
@@ -1355,7 +1462,7 @@ export default function DailyRecordMeta() {
               label={`${healthSummary.mood.primary.kind === 'daily_mood' ? '心情' : '感受'}${stateOfMindTerm(healthSummary.mood.primary.valenceClassification, STATE_OF_MIND_CLASSIFICATION_LABELS)}`}
               ariaLabel={`${healthSummary.mood.primary.kind === 'daily_mood' ? '心情' : '感受'}${stateOfMindTerm(healthSummary.mood.primary.valenceClassification, STATE_OF_MIND_CLASSIFICATION_LABELS)}，查看详情`}
             >
-              <MoodDetails data={healthSummary.mood} />
+              <MoodDetails data={healthSummary.mood} recovery={healthSummary.recovery} />
             </MetricPopover>
           )}
           {healthSummary?.mood && (healthSummary.activity || healthSummary.weight || readingSummary || healthSummary.medication) && '，'}

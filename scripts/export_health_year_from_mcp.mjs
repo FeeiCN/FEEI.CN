@@ -5,6 +5,16 @@ import {fileURLToPath} from 'node:url';
 import {buildHealthChartHistory} from './build_health_chart_history.mjs';
 import {buildMedicationCollection} from './health_collection_transform.mjs';
 import {
+  HealthSourceCatalog,
+  validateHealthDailyV4,
+} from './health_daily_v4.mjs';
+import {
+  buildHealthDailyV5,
+  isHealthDailyV5Empty,
+  validateHealthDailyV5,
+  writeHealthDailyV5,
+} from './health_daily_v5.mjs';
+import {
   buildMonthlyHealthFromDailyFiles,
   compactMonthlyDetails,
   dailyCollections,
@@ -38,41 +48,7 @@ const daylightBucketMinutes = 5;
 const daylightSegmentThresholdMinutes = 1;
 const daylightMergeGapMinutes = 5;
 const exerciseTimeBucketMinutes = 5;
-const dailyHealthMetricCatalog = [
-  'active_energy',
-  'apple_exercise_time',
-  'apple_sleeping_wrist_temperature',
-  'apple_stand_hour',
-  'apple_stand_time',
-  'blood_oxygen_saturation',
-  'body_fat_percentage',
-  'body_mass_index',
-  'cardio_recovery',
-  'environmental_audio_exposure',
-  'flights_climbed',
-  'handwashing',
-  'heart_rate',
-  'heart_rate_variability',
-  'lean_body_mass',
-  'physical_effort',
-  'respiratory_rate',
-  'resting_heart_rate',
-  'sleep_analysis',
-  'stair_speed_down',
-  'stair_speed_up',
-  'step_count',
-  'time_in_daylight',
-  'vo2_max',
-  'walking_heart_rate_average',
-  'walking_running_distance',
-  'weight_body_mass',
-];
-const dailyHealthMetricBlacklist = new Set([
-  'basal_energy_burned',
-]);
-const dailyHealthMetrics = dailyHealthMetricCatalog
-  .filter((metric) => !dailyHealthMetricBlacklist.has(metric))
-  .join(',');
+const dailyHealthMetrics = '';
 
 const collectionMappings = [
   {
@@ -99,8 +75,8 @@ const collectionMappings = [
     },
     rawArgs: {
       includeMetadata: true,
-      includeRoutes: false,
-      metadataAggregation: 'minutes',
+      includeRoutes: true,
+      metadataAggregation: 'seconds',
     },
     targetSection: 'workouts',
     targetKey: 'workouts',
@@ -161,7 +137,7 @@ async function main() {
 
   const targetRoot = path.resolve(expandHome(args.target ?? defaultTargetRoot));
   if (args.buildMonth) {
-    if (args.year || args.month || args.date || args.endDate || args.skipDaily || args.backfillHrv || args.refreshMutable) {
+    if (args.year || args.month || args.date || args.startDate || args.endDate || args.skipDaily || args.backfillHrv || args.refreshMutable) {
       throw new Error('--build-month cannot be combined with export options');
     }
     assertMonth(args.buildMonth);
@@ -173,8 +149,8 @@ async function main() {
     return;
   }
 
-  if (args.date && (args.month || args.endDate)) {
-    throw new Error('--date cannot be combined with --month or --end-date');
+  if (args.date && (args.month || args.startDate || args.endDate)) {
+    throw new Error('--date cannot be combined with --month, --start-date, or --end-date');
   }
 
   const targetYear = args.date ? args.date.slice(0, 4) : (args.year ?? args.month?.slice(0, 4) ?? getCurrentYear());
@@ -210,8 +186,13 @@ async function main() {
     endDate = args.endDate ?? defaultEndDateMonth(y, m);
   }
 
-  if (!endDate.startsWith(targetYear)) {
-    throw new Error(`End date must be in ${targetYear}: ${endDate}`);
+  if (args.startDate) {
+    assertDate(args.startDate);
+    startDate = args.startDate;
+  }
+
+  if (!startDate.startsWith(targetYear) || !endDate.startsWith(targetYear) || startDate > endDate) {
+    throw new Error(`Date range must be ordered and contained in ${targetYear}: ${startDate} to ${endDate}`);
   }
 
   const mcpServerPath = path.resolve(expandHome(args.mcpServer ?? process.env.HEALTH_AUTO_EXPORT_MCP_SERVER ?? defaultMcpServerPath));
@@ -233,6 +214,7 @@ async function main() {
   const start = `${startDate} 00:00:00 ${timeZoneOffset}`;
   const end = `${endDate} 23:59:59 ${timeZoneOffset}`;
   const client = new McpClient('node', [mcpServerPath], {timeoutMs});
+  const sourceCatalog = new HealthSourceCatalog(targetRoot);
 
   try {
     await client.start();
@@ -260,75 +242,16 @@ async function main() {
 
     const exportedAt = new Date().toISOString();
 
-    if (!args.date) {
-      const data = {};
-      const summary = {};
-      const incompleteSections = new Set();
-
-      for (const mapping of collectionMappings) {
-        process.stderr.write(`Exporting ${mapping.targetSection}...\n`);
-        const {records, error} = await collectMappingRecords(client, mapping, {
-          start,
-          end,
-          args: mapping.args,
-          allowErrors: mapping.targetSection !== 'healthMetrics',
-        });
-
-        if (error) {
-          incompleteSections.add(mapping.targetSection);
-          process.stderr.write(`Incomplete ${mapping.targetSection} refresh: ${error}\n`);
-        }
-
-        if (mapping.targetSection === 'healthMetrics') {
-          data[mapping.targetSection] = {
-            [mapping.targetKey]: Array.isArray(records) ? records : [],
-          };
-          summary[mapping.targetSection] = sumMetricRecords(data[mapping.targetSection][mapping.targetKey]);
-          continue;
-        }
-
-        if (Array.isArray(records) && records.length > 0) {
-          data[mapping.targetSection] = {
-            [mapping.targetKey]: records,
-          };
-        } else {
-          data[mapping.targetSection] = {};
-        }
-
-        summary[mapping.targetSection] = Array.isArray(records) ? records.length : 0;
-      }
-
-      const exportData = {
-        exportedAt,
-        dateRange: {
-          start,
-          end,
-        },
-        data,
-      };
-
-      const months = [...new Set(enumerateDates(startDate, endDate).map((day) => day.slice(0, 7)))];
-      for (const month of months) {
-        const file = path.join(targetRoot, month.replace('-', '/') + '.json');
-        const payload = monthlyPayload(exportData, month);
-        if (payload.dateRange.start < start) payload.dateRange.start = start;
-        if (payload.dateRange.end > end) payload.dateRange.end = end;
-        restoreExistingMonthlySections(file, payload, incompleteSections);
-        writeMonthlyHealth(file, payload);
-        console.log(`Exported ${month} health data to ${path.relative(repoRoot, file)}`);
-      }
-      for (const [section, count] of Object.entries(summary)) {
-        console.log(`${section}: ${count}`);
-      }
-    }
-
     if (!args.skipDaily) {
       const dailyResult = await exportDailyCompactFiles(client, {
         startDate,
         endDate,
         targetRoot,
         exportedAt,
+        sourceCatalog,
       });
+
+      sourceCatalog.write();
 
       console.log(`Exported ${dailyResult.written.length} daily compact health files`);
       if (dailyResult.preserved.length > 0) {
@@ -338,6 +261,13 @@ async function main() {
         throw new Error(
           `Incomplete health refresh for ${dailyResult.failed.map((file) => path.relative(repoRoot, file)).join(', ')}; no empty daily data was written`,
         );
+      }
+
+      const months = [...new Set(enumerateDates(startDate, endDate).map((day) => day.slice(0, 7)))];
+      for (const month of months) {
+        const file = path.join(targetRoot, month.replace('-', '/') + '.json');
+        writeMonthlyHealth(file, buildMonthlyHealthFromDailyFiles(targetRoot, month));
+        console.log(`Built ${month} health cache from v5 daily indexes`);
       }
     }
   } finally {
@@ -621,122 +551,138 @@ async function exportDailyCompactFiles(client, options) {
   const written = [];
   const preserved = [];
   const failed = [];
+  const datesByMonth = new Map();
   for (const day of enumerateDates(options.startDate, options.endDate)) {
-    const [year, month, date] = day.split('-');
-    const dailyDir = path.join(options.targetRoot, year, month);
-    const dailyFile = path.join(dailyDir, `${date}.json`);
-
-    const dailyStart = `${day} 00:00:00 ${timeZoneOffset}`;
-    const dailyEnd = `${day} 23:59:59 ${timeZoneOffset}`;
-    const data = {};
-    const canonicalData = {};
-    const summary = {};
-    const errors = {};
-    const collectionStatus = {};
-
+    const key = day.slice(0, 7);
+    datesByMonth.set(key, [...(datesByMonth.get(key) ?? []), day]);
+  }
+  const batches = [...datesByMonth].flatMap(([monthKey, days]) => {
+    const result = [];
+    for (let index = 0; index < days.length; index += 7) {
+      result.push([`${monthKey} ${index + 1}-${Math.min(index + 7, days.length)}`, days.slice(index, index + 7)]);
+    }
+    return result;
+  });
+  for (const [batchLabel, days] of batches) {
+    const rangeStart = `${days[0]} 00:00:00 ${timeZoneOffset}`;
+    const rangeEnd = `${days.at(-1)} 23:59:59 ${timeZoneOffset}`;
+    const rawBySection = {};
+    const aggregateBySection = {};
+    const rangeErrors = {};
     for (const mapping of collectionMappings) {
-      process.stderr.write(`Exporting compact ${day} ${mapping.targetSection}...\n`);
+      process.stderr.write(`Exporting ${batchLabel} ${mapping.targetSection} detail...\n`);
       const {records, error} = await collectMappingRecords(client, mapping, {
-        start: dailyStart,
-        end: dailyEnd,
+        start: rangeStart,
+        end: rangeEnd,
         args: mapping.rawArgs ?? mapping.args,
         allowErrors: true,
       });
-
+      rawBySection[mapping.targetSection] = Array.isArray(records) ? records : [];
+      if (error) rangeErrors[mapping.targetSection] = error;
       if (mapping.targetSection === 'healthMetrics') {
-        data[mapping.targetSection] = {
-          [mapping.targetKey]: Array.isArray(records) ? records : [],
-        };
-        summary[mapping.targetSection] = sumMetricRecords(data[mapping.targetSection][mapping.targetKey]);
+        process.stderr.write(`Exporting ${batchLabel} healthMetrics daily aggregates...\n`);
         const aggregate = await collectMappingRecords(client, mapping, {
-          start: dailyStart,
-          end: dailyEnd,
+          start: rangeStart,
+          end: rangeEnd,
           args: mapping.args,
           allowErrors: true,
         });
-        if (aggregate.error) {
-          errors[mapping.targetSection] = aggregate.error;
+        aggregateBySection.healthMetrics = Array.isArray(aggregate.records) ? aggregate.records : [];
+        if (aggregate.error) rangeErrors.healthMetrics = aggregate.error;
+      }
+    }
+
+    if (Object.keys(rangeErrors).length) {
+      for (const day of days) {
+        const dailyFile = dailyHealthFile(options.targetRoot, day);
+        if (fs.existsSync(dailyFile) && !isEmptyDailyHealthFile(dailyFile)) {
+          process.stderr.write(`Incomplete health refresh for ${day}; existing daily file preserved\n`);
+          preserved.push(dailyFile);
+        } else {
+          process.stderr.write(`Incomplete health refresh for ${day}; no daily file written\n`);
+          failed.push(dailyFile);
         }
-        canonicalData[mapping.targetSection] = {
-          [mapping.targetKey]: Array.isArray(aggregate.records) ? aggregate.records : [],
-        };
-      } else if (Array.isArray(records) && records.length > 0) {
-        data[mapping.targetSection] = {
-          [mapping.targetKey]: records,
-        };
-        summary[mapping.targetSection] = records.length;
-        canonicalData[mapping.targetSection] = {
-          [mapping.targetKey]: records,
-        };
-      } else {
-        data[mapping.targetSection] = {};
-        summary[mapping.targetSection] = 0;
-        canonicalData[mapping.targetSection] = {
-          [mapping.targetKey]: [],
-        };
       }
-
-      if (error) {
-        errors[mapping.targetSection] = error;
-      }
-      collectionStatus[mapping.targetSection] = error ? {state: 'error', error} : {state: 'ok'};
-    }
-
-    const compactData = buildDailyCompactData(data);
-    const hrv = buildDailyHrv(data.healthMetrics?.metrics ?? []);
-    const derived = {
-      date: day,
-      summary: {
-        rawRecords: summary,
-        ...compactData.summary,
-      },
-      timeline: compactData.timeline,
-    };
-    if (hrv) {
-      derived.hrv = hrv;
-    }
-    const dailyData = {
-      version: 3,
-      date: day,
-      source: {
-        format: 'health-auto-export',
-        exportedAt: options.exportedAt,
-        collections: compactMonthlyDetails({data: canonicalData}).data,
-      },
-      derived,
-      sync: {
-        state: Object.keys(errors).length ? 'incomplete' : 'complete',
-        checkedAt: options.exportedAt,
-        collections: collectionStatus,
-      },
-    };
-
-    if (Object.keys(errors).length > 0) {
-      if (fs.existsSync(dailyFile) && !isEmptyDailyHealthFile(dailyFile)) {
-        process.stderr.write(`Incomplete health refresh for ${day}; existing daily file preserved\n`);
-        preserved.push(dailyFile);
-        continue;
-      }
-
-      // A failed first export used to create an empty timeline with errors.
-      // Keeping the day absent makes the sync job retry it instead of treating
-      // a corrupted placeholder as health data.
-      process.stderr.write(`Incomplete health refresh for ${day}; no daily file written\n`);
-      failed.push(dailyFile);
       continue;
     }
 
-    fs.mkdirSync(dailyDir, {recursive: true});
-    fs.writeFileSync(dailyFile, `${JSON.stringify(dailyData)}\n`);
-    written.push(dailyFile);
+    for (const day of days) {
+      const data = {};
+      const canonicalData = {};
+      for (const mapping of collectionMappings) {
+        const rawRecords = selectMappingDay(rawBySection[mapping.targetSection] ?? [], mapping, day);
+        data[mapping.targetSection] = {[mapping.targetKey]: rawRecords};
+        const canonicalRecords = mapping.targetSection === 'healthMetrics'
+          ? selectMappingDay(aggregateBySection.healthMetrics ?? [], mapping, day)
+          : rawRecords;
+        canonicalData[mapping.targetSection] = {[mapping.targetKey]: canonicalRecords};
+      }
+
+      const compactData = buildDailyCompactData(data);
+      const dailyData = buildHealthDailyV5({
+        date: day,
+        exportedAt: options.exportedAt,
+        aggregateMetrics: canonicalData.healthMetrics?.metrics ?? [],
+        rawMetrics: data.healthMetrics?.metrics ?? [],
+        timeline: compactData.timeline,
+        collections: canonicalData,
+        sourceCatalog: options.sourceCatalog,
+      });
+      const validationErrors = validateHealthDailyV4(dailyData.index, day)
+        .filter((error) => error !== 'version must be 4');
+      const dailyFile = dailyHealthFile(options.targetRoot, day);
+      if (validationErrors.length) {
+        if (fs.existsSync(dailyFile) && !isEmptyDailyHealthFile(dailyFile)) {
+          process.stderr.write(`Incomplete health refresh for ${day}: ${validationErrors.join('; ')}; existing daily file preserved\n`);
+          preserved.push(dailyFile);
+        } else {
+          process.stderr.write(`Incomplete health refresh for ${day}: ${validationErrors.join('; ')}; no daily file written\n`);
+          failed.push(dailyFile);
+        }
+        continue;
+      }
+      const result = writeHealthDailyV5(options.targetRoot, dailyData);
+      const writtenIndex = JSON.parse(fs.readFileSync(dailyFile, 'utf8'));
+      const shardErrors = validateHealthDailyV5(writtenIndex, day, options.targetRoot);
+      if (shardErrors.length) {
+        throw new Error(`Invalid v5 health data for ${day}: ${shardErrors.join('; ')}`);
+      }
+      process.stderr.write(`${result.changed ? 'Wrote' : 'Verified'} ${day} v5 health index with ${result.files} shard(s)\n`);
+      written.push(dailyFile);
+    }
   }
 
   return {written, preserved, failed};
 }
 
+function selectMappingDay(records, mapping, day) {
+  if (mapping.targetSection === 'healthMetrics') {
+    return records.map((metric) => ({
+      ...metric,
+      data: (metric.data ?? []).filter((record) => healthRecordDay(record) === day),
+    })).filter((metric) => metric.data.length);
+  }
+  return records.filter((record) => healthRecordDay(record) === day);
+}
+
+function healthRecordDay(record) {
+  const value = record?.date ?? record?.start ?? record?.scheduledDate ?? record?.end;
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : null;
+}
+
+function dailyHealthFile(root, day) {
+  return path.join(root, day.slice(0, 4), day.slice(5, 7), `${day.slice(8, 10)}.json`);
+}
+
 function isEmptyDailyHealthFile(file) {
   try {
     const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (data.version === 5 && data.date) {
+      return isHealthDailyV5Empty(data);
+    }
+    if (data.version === 4 && data.date) {
+      return Object.keys(data).every((key) => ['version', 'date', 'exportedAt'].includes(key));
+    }
     const presentation = data.derived ?? {};
     const rawRecords = presentation.summary?.rawRecords ?? {};
     const rawTotal = Object.values(rawRecords)
@@ -2114,7 +2060,7 @@ function parseArgs(argv) {
       continue;
     }
 
-    if (arg === '--year' || arg === '--month' || arg === '--build-month' || arg === '--date' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
+    if (arg === '--year' || arg === '--month' || arg === '--build-month' || arg === '--date' || arg === '--start-date' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
       const value = argv[index + 1];
 
       if (!value || value.startsWith('--')) {
@@ -2140,6 +2086,7 @@ Options:
   --month <YYYY-MM>          Export specific month.
   --build-month <YYYY-MM>    Rebuild a month cache and chart history from canonical daily files.
   --date <YYYY-MM-DD>        Export only one daily compact file without writing month summary.
+  --start-date <YYYY-MM-DD>  Start date for a year or month export.
   --end-date <YYYY-MM-DD>    End date. Defaults to today for current year/month.
   --skip-daily               Skip detailed daily files when refreshing a month summary.
   --backfill-hrv             Add raw HRV measurement detail to existing daily files only.

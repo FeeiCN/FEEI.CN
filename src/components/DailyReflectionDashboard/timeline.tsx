@@ -107,6 +107,7 @@ export function bandIntensity(record: DailyHealthTimelineRecord): number {
 }
 
 export function timelineBoundaryMinute(value: unknown, selectedDate: string | undefined): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
   const text = String(value || '');
   const minute = timeToMinute(text);
   if (minute === null) return null;
@@ -119,8 +120,7 @@ export function timelineBoundaryMinute(value: unknown, selectedDate: string | un
 
 export function buildHealthTimeline(dailyHealth: DailyHealthData | null): TimelineModel {
   const selectedDate = dailyHealth?.date;
-  const presentation = dailyHealth?.derived;
-  const exerciseValue = getNestedValue(presentation?.summary, ['exerciseTime', 'totalMinutes']);
+  const exerciseValue = dailyHealth?.activity?.exerciseMinutes;
   const exerciseNumber = Number(exerciseValue);
   const model: TimelineModel = {
     items: [],
@@ -136,15 +136,36 @@ export function buildHealthTimeline(dailyHealth: DailyHealthData | null): Timeli
   };
   const sleepSegments: SleepSegment[] = [];
 
-  (presentation?.timeline || []).forEach((record) => {
+  const records: DailyHealthTimelineRecord[] = [
+    ...(dailyHealth?.sleep?.stages ?? []).map(([start, end, stage]) => ({type: 'sleep', stage, start, end})),
+    ...(dailyHealth?.activity?.movementPeriods ?? []).map(([start, end, steps, distanceKm]) => ({type: 'movement', start, end, steps, distanceKm})),
+    ...(dailyHealth?.activity?.standPeriods ?? []).map(([start, end, durationMinutes]) => ({type: 'stand', start, end, durationMinutes})),
+    ...(dailyHealth?.activity?.daylightPeriods ?? []).map(([start, end, durationMinutes]) => ({type: 'daylight', start, end, durationMinutes})),
+    ...(dailyHealth?.activity?.workouts ?? []).map((item) => ({
+      type: 'workout', name: item.type, start: item.startMinute, end: item.endMinute,
+      durationMinutes: item.durationMinutes, distanceKm: item.distanceKm, activeEnergyKJ: item.activeEnergyKJ,
+      avgHeartRate: item.averageHeartRateBpm, maxHeartRate: item.maximumHeartRateBpm,
+    })),
+    ...(dailyHealth?.medications?.doses ?? []).map((item) => ({
+      type: 'medication', name: item.name, start: item.takenMinute ?? item.scheduledMinute,
+      end: item.takenMinute ?? item.scheduledMinute, status: item.status,
+    })),
+    ...(dailyHealth?.mindfulness?.stateOfMindEntries ?? []).map((item) => ({
+      type: 'state_of_mind', start: item.minute, end: item.minute, kind: item.kind,
+      valence: item.valence, valenceClassification: item.classification,
+      labels: item.labels, associations: item.associations,
+    })),
+  ];
+
+  records.forEach((record) => {
     const startMinute = timelineBoundaryMinute(record.start, selectedDate);
     const type = timelineType(record.type);
     let endMinute = timelineBoundaryMinute(record.end, selectedDate);
     if (startMinute === null) return;
     if (endMinute === null && (type === 'medication' || type === 'mind')) endMinute = startMinute;
     if (endMinute === null) return;
-    const startDate = String(record.start || '').slice(0, 10);
-    const endDate = String(record.end || '').slice(0, 10);
+    const startDate = typeof record.start === 'string' ? record.start.slice(0, 10) : '';
+    const endDate = typeof record.end === 'string' ? record.end.slice(0, 10) : '';
     if (selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate) && /^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
       if (endDate < selectedDate || startDate > selectedDate) return;
     } else if (endMinute < startMinute) {

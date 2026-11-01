@@ -100,6 +100,8 @@ function medications(meds) {
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function transform(raw) {
+    if (raw?.version === 5 && Array.isArray(raw.days))
+        return transformV4(raw.days, raw.exportedAt);
     const data = raw?.data ?? {};
     const metrics = data.healthMetrics?.metrics ?? [];
     const ws = data.workouts?.workouts ?? [];
@@ -162,6 +164,84 @@ export function transform(raw) {
             .map((n) => [n.start.slice(0, 10), n.threshold]),
         lastUpdated: raw.exportedAt ?? null,
     };
+}
+function transformV4(days, exportedAt) {
+    const scalar = (read, convert) => days.flatMap((day) => {
+        const value = read(day);
+        return typeof value === 'number' && Number.isFinite(value) ? [[day.date, r(convert ? convert(value) : value)]] : [];
+    });
+    const doses = days.flatMap((day) => (day.medications?.doses ?? []).map((dose) => ({ day, dose })));
+    const medicationSeries = (name) => days.flatMap((day) => {
+        const records = (day.medications?.doses ?? []).filter((dose) => dose.name === name);
+        return records.length ? [[day.date, records.filter((dose) => dose.status === '已服用').length, records.length]] : [];
+    });
+    const medicationMonths = new Map();
+    for (const { day, dose } of doses) {
+        const month = day.date.slice(0, 7);
+        const totals = medicationMonths.get(month) ?? { nah: [0, 0], bns: [0, 0] };
+        const target = dose.name === '碳酸氢钠片' ? totals.nah : dose.name === '苯溴马隆片' ? totals.bns : null;
+        if (target) {
+            target[1] += 1;
+            if (dose.status === '已服用')
+                target[0] += 1;
+        }
+        medicationMonths.set(month, totals);
+    }
+    return {
+        steps: scalar((day) => day.activity?.steps),
+        distance: scalar((day) => day.activity?.distanceKm),
+        exercise: scalar((day) => day.activity?.exerciseMinutes),
+        energy_active: scalar((day) => day.activity?.activeEnergyKJ, (value) => value / 4.184),
+        energy_basal: scalar((day) => day.activity?.restingEnergyKJ, (value) => value / 4.184),
+        flights: scalar((day) => day.activity?.flightsClimbed),
+        stand_time: scalar((day) => day.activity?.standMinutes),
+        stand_hour: scalar((day) => day.activity?.standHours),
+        sleep: days.flatMap((day) => day.sleep?.totalMinutes === undefined ? [] : [[day.date, r(day.sleep.totalMinutes / 60), r((day.sleep.deepMinutes ?? 0) / 60), r((day.sleep.remMinutes ?? 0) / 60), r((day.sleep.coreMinutes ?? 0) / 60), r((day.sleep.awakeMinutes ?? 0) / 60)]]),
+        sleep_score: [],
+        wrist_temp: scalar((day) => day.vitalSigns?.wristTemperatureCelsius),
+        rhr: scalar((day) => day.heart?.restingHeartRateBpm),
+        hrv: scalar((day) => day.heart?.hrv?.dailyMs),
+        walking_hr: scalar((day) => day.heart?.walkingHeartRateBpm),
+        resp_rate: scalar((day) => day.respiratory?.respiratoryRatePerMinute),
+        spo2: scalar((day) => day.respiratory?.bloodOxygenFraction, (value) => value * 100),
+        weight: scalar((day) => day.bodyMeasurements?.weight?.dailyKg),
+        fat: scalar((day) => day.bodyMeasurements?.bodyFatFraction, (value) => value * 100),
+        bmi: scalar((day) => day.bodyMeasurements?.bodyMassIndex),
+        lean: scalar((day) => day.bodyMeasurements?.leanBodyMassKg),
+        walk_speed: scalar((day) => day.activityCapability?.walkingSpeedMps),
+        step_length: scalar((day) => day.activityCapability?.walkingStepLengthM),
+        asym: scalar((day) => day.activityCapability?.walkingAsymmetryPercent),
+        double_supp: scalar((day) => day.activityCapability?.walkingDoubleSupportPercent),
+        stair_up: scalar((day) => day.activityCapability?.stairAscentSpeedMps),
+        stair_down: scalar((day) => day.activityCapability?.stairDescentSpeedMps),
+        six_min_walk: scalar((day) => day.activityCapability?.sixMinuteWalkDistanceM),
+        audio_env: scalar((day) => day.hearing?.environmentalAudioExposureDbASPL),
+        audio_hp: scalar((day) => day.hearing?.headphoneAudioExposureDbASPL),
+        daylight: scalar((day) => day.activity?.daylightMinutes),
+        mindful: scalar((day) => day.mindfulness?.minutes),
+        handwash: scalar((day) => day.activity?.handwashingSeconds),
+        physical_effort: scalar((day) => day.activity?.physicalEffortKcalPerHourKg),
+        cardio_recovery: scalar((day) => day.heart?.cardioRecoveryBpm),
+        vo2: scalar((day) => day.activity?.vo2MaxMlKgMin),
+        workouts: days.flatMap((day) => (day.activity?.workouts ?? []).map((workout) => [
+            day.date, WORKOUT_NAME_ALIASES[workout.type ?? ''] ?? workout.type ?? '其他', r(workout.durationMinutes ?? 0, 1),
+            Math.round((workout.activeEnergyKJ ?? 0) / 4.184), Math.round(workout.averageHeartRateBpm ?? 0), 0,
+            Math.round(workout.maximumHeartRateBpm ?? 0), r(workout.distanceKm ?? 0, 2), Math.round(workout.steps ?? 0), 0,
+            minuteLabel(workout.startMinute),
+        ])),
+        nah_daily: medicationSeries('碳酸氢钠片'),
+        bns_daily: medicationSeries('苯溴马隆片'),
+        med_monthly: [...medicationMonths.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, value]) => [month, value.nah[1] ? Math.round(value.nah[0] / value.nah[1] * 100) : 0, value.bns[1] ? Math.round(value.bns[0] / value.bns[1] * 100) : 0]),
+        state_of_mind: days.flatMap((day) => (day.mindfulness?.stateOfMindEntries ?? []).map((entry) => [day.date, r(entry.valence ?? 0, 3), entry.kind === 'daily_mood' ? 'daily' : 'emotion', (entry.labels ?? []).join(','), (entry.associations ?? []).join(',')])),
+        hr_notifications: days.flatMap((day) => (day.heart?.notifications ?? []).flatMap((item) => typeof item.threshold === 'number' ? [[day.date, item.threshold]] : [])),
+        lastUpdated: exportedAt ?? days.map((day) => day.exportedAt).filter(Boolean).sort().at(-1) ?? null,
+    };
+}
+function minuteLabel(value) {
+    if (typeof value !== 'number' || !Number.isFinite(value))
+        return '';
+    const minute = Math.max(0, Math.round(value));
+    return `${String(Math.floor(minute / 60) % 24).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
 }
 function avg(arr) {
     if (!arr.length)

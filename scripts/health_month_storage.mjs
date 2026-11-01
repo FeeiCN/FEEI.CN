@@ -140,7 +140,7 @@ export function compactMonthlyDetails(raw) {
 }
 
 export function writeMonthlyHealth(file, raw) {
-  return writeHealthJson(file, compactMonthlyDetails(raw));
+  return writeHealthJson(file, [4, 5].includes(raw?.version) ? raw : compactMonthlyDetails(raw));
 }
 
 export function dailyCollections(daily) {
@@ -157,21 +157,19 @@ export function buildMonthlyHealthFromDailyFiles(healthRoot, month) {
   const files = fs.readdirSync(dailyDir)
     .filter((name) => /^\d{2}\.json$/.test(name))
     .sort();
-  let data = {};
+  const days = [];
   const exportedAt = [];
   const sourceDays = [];
-  let canonicalDays = 0;
   for (const name of files) {
     const daily = JSON.parse(fs.readFileSync(path.join(dailyDir, name), 'utf8'));
-    const collections = dailyCollections(daily);
-    if (!collections || typeof collections !== 'object' || Object.keys(collections).length === 0) continue;
-    data = mergeMonthData(data, collections);
+    if (daily.version !== 5 || daily.date !== `${month}-${name.slice(0, 2)}`) {
+      throw new Error(`Expected canonical daily health v5 index: ${path.join(dailyDir, name)}`);
+    }
+    days.push(projectDailyForCache(daily));
     if (daily.exportedAt) exportedAt.push(daily.exportedAt);
-    else if (daily.source?.exportedAt) exportedAt.push(daily.source.exportedAt);
     sourceDays.push(`${month}-${name.slice(0, 2)}`);
-    canonicalDays += 1;
   }
-  if (canonicalDays === 0) {
+  if (days.length === 0) {
     throw new Error(`No canonical daily health data found for ${month}`);
   }
 
@@ -182,18 +180,48 @@ export function buildMonthlyHealthFromDailyFiles(healthRoot, month) {
   const expectedDays = Array.from({length: lastDay}, (_, index) => `${month}-${String(index + 1).padStart(2, '0')}`)
     .filter((day) => day <= today);
   return {
-    version: 2,
+    version: 5,
+    month,
     exportedAt: exportedAt.sort().at(-1) ?? null,
     dateRange: {
       start: `${month}-01 00:00:00 +0800`,
       end: `${month}-${lastDay} 23:59:59 +0800`,
     },
     cache: {
-      source: 'daily-health-v3',
+      source: 'daily-health-v5',
       sourceDays,
       missingDays: expectedDays.filter((day) => !sourceDays.includes(day)),
       generatedAt: exportedAt.sort().at(-1) ?? null,
     },
-    data,
+    days,
   };
+}
+
+export function projectDailyForCache(daily) {
+  const projected = structuredClone(daily);
+  delete projected.files;
+  delete projected.workoutDetails;
+  delete projected.ecgDetails;
+  for (const domain of Object.values(projected)) {
+    if (!domain || typeof domain !== 'object' || Array.isArray(domain)) continue;
+    delete domain.records;
+    delete domain.summaries;
+  }
+  delete projected.sleep?.stages;
+  delete projected.heart?.hrv?.measurements;
+  delete projected.bodyMeasurements?.weight?.measurements;
+  delete projected.activity?.movementPeriods;
+  delete projected.activity?.standPeriods;
+  delete projected.activity?.daylightPeriods;
+  if (projected.activity?.workouts) {
+    projected.activity.workouts = projected.activity.workouts.map((item) => ({
+      id: item.id, type: item.type, startMinute: item.startMinute, endMinute: item.endMinute,
+      durationMinutes: item.durationMinutes, distanceKm: item.distanceKm, activeEnergyKJ: item.activeEnergyKJ,
+      averageHeartRateBpm: item.averageHeartRateBpm, maximumHeartRateBpm: item.maximumHeartRateBpm, steps: item.steps,
+    }));
+  }
+  delete projected.heart?.ecg;
+  delete projected.reproductive;
+  delete projected.other?.symptoms;
+  return projected;
 }

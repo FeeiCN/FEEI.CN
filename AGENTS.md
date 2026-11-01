@@ -32,6 +32,7 @@
 | 散文、游记 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/散文写作.md` |
 | GitHub Issue 内容沉淀 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/github-issue-skill.md` |
 | 每日健康、阅读、财务、AI 数据分析 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/每日三省吾身.md` |
+| 健康数据导出、日记录结构、历史迁移、存储与缓存 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/健康数据存储规范.md` |
 | 音乐库维护 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/音乐库管理.md` |
 | 创建、移动、删除 SKILL | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL原则.md` |
 

@@ -60,8 +60,8 @@ export type DailyHealthTimelineRecord = {
   label?: string;
   level?: string;
   name?: string;
-  start?: string;
-  end?: string;
+  start?: string | number;
+  end?: string | number;
   durationMinutes?: number;
   durationSeconds?: number;
   steps?: number;
@@ -81,12 +81,18 @@ export type DailyHealthTimelineRecord = {
 };
 
 export type DailyHealthData = {
-  version?: 3;
+  version?: 5;
   date?: string;
-  derived?: {
-    summary?: Record<string, unknown>;
-    timeline?: DailyHealthTimelineRecord[];
+  activity?: {
+    exerciseMinutes?: number;
+    movementPeriods?: Array<[number, number, number?, number?]>;
+    standPeriods?: Array<[number, number, number?]>;
+    daylightPeriods?: Array<[number, number, number?]>;
+    workouts?: Array<{id?: string; type?: string; startMinute?: number; endMinute?: number; durationMinutes?: number; distanceKm?: number; activeEnergyKJ?: number; averageHeartRateBpm?: number; maximumHeartRateBpm?: number}>;
   };
+  sleep?: {stages?: Array<[number, number, string]>};
+  medications?: {doses?: Array<{scheduledMinute?: number; takenMinute?: number; name?: string; status?: string}>};
+  mindfulness?: {stateOfMindEntries?: Array<{minute?: number; kind?: string; valence?: number; classification?: string; labels?: string[]; associations?: string[]}>};
 };
 
 export type DriveLog = Record<string, {action?: string; address?: string}>;

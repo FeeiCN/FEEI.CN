@@ -75,6 +75,34 @@ export type HealthData = {
   lastUpdated: string | null;
 };
 
+type V4Day = {
+  date: string;
+  exportedAt?: string;
+  activity?: Record<string, number | V4Workout[] | undefined>;
+  activityCapability?: Record<string, number | undefined>;
+  bodyMeasurements?: {
+    bodyFatFraction?: number; bodyMassIndex?: number; leanBodyMassKg?: number;
+    weight?: {dailyKg?: number};
+  };
+  hearing?: Record<string, number | undefined>;
+  heart?: {
+    restingHeartRateBpm?: number; walkingHeartRateBpm?: number; cardioRecoveryBpm?: number;
+    hrv?: {dailyMs?: number}; notifications?: RawHeartAlert[];
+  };
+  mindfulness?: {minutes?: number; stateOfMindEntries?: V4Mood[]};
+  medications?: {doses?: V4Dose[]};
+  respiratory?: {bloodOxygenFraction?: number; respiratoryRatePerMinute?: number};
+  sleep?: {totalMinutes?: number; deepMinutes?: number; remMinutes?: number; coreMinutes?: number; awakeMinutes?: number};
+  vitalSigns?: {wristTemperatureCelsius?: number};
+};
+
+type V4Workout = {
+  type?: string; startMinute?: number; durationMinutes?: number; activeEnergyKJ?: number;
+  averageHeartRateBpm?: number; maximumHeartRateBpm?: number; distanceKm?: number; steps?: number;
+};
+type V4Dose = {scheduledMinute?: number; name?: string; status?: string};
+type V4Mood = {minute?: number; valence?: number; kind?: string; classification?: string; labels?: string[]; associations?: string[]};
+
 function r(v: number, d = 2) {
   return Math.round(v * 10 ** d) / 10 ** d;
 }
@@ -161,6 +189,7 @@ function medications(meds: RawMed[]): {nah: [string, number, number][]; bns: [st
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function transform(raw: any): HealthData {
+  if (raw?.version === 5 && Array.isArray(raw.days)) return transformV4(raw.days, raw.exportedAt);
   const data = raw?.data ?? {};
   const metrics: RawMetric[] = data.healthMetrics?.metrics ?? [];
   const ws: RawWorkout[] = data.workouts?.workouts ?? [];
@@ -225,6 +254,82 @@ export function transform(raw: any): HealthData {
       .map((n) => [n.start.slice(0, 10), n.threshold]),
     lastUpdated: raw.exportedAt ?? null,
   };
+}
+
+function transformV4(days: V4Day[], exportedAt?: string): HealthData {
+  const scalar = (read: (day: V4Day) => number | undefined, convert?: (value: number) => number): [string, number][] =>
+    days.flatMap((day) => {
+      const value = read(day);
+      return typeof value === 'number' && Number.isFinite(value) ? [[day.date, r(convert ? convert(value) : value)]] : [];
+    });
+  const doses = days.flatMap((day) => (day.medications?.doses ?? []).map((dose) => ({day, dose})));
+  const medicationSeries = (name: string): [string, number, number][] => days.flatMap((day) => {
+    const records = (day.medications?.doses ?? []).filter((dose) => dose.name === name);
+    return records.length ? [[day.date, records.filter((dose) => dose.status === '已服用').length, records.length]] : [];
+  });
+  const medicationMonths = new Map<string, {nah: [number, number]; bns: [number, number]}>();
+  for (const {day, dose} of doses) {
+    const month = day.date.slice(0, 7);
+    const totals = medicationMonths.get(month) ?? {nah: [0, 0], bns: [0, 0]};
+    const target = dose.name === '碳酸氢钠片' ? totals.nah : dose.name === '苯溴马隆片' ? totals.bns : null;
+    if (target) {target[1] += 1; if (dose.status === '已服用') target[0] += 1;}
+    medicationMonths.set(month, totals);
+  }
+  return {
+    steps: scalar((day) => day.activity?.steps as number),
+    distance: scalar((day) => day.activity?.distanceKm as number),
+    exercise: scalar((day) => day.activity?.exerciseMinutes as number),
+    energy_active: scalar((day) => day.activity?.activeEnergyKJ as number, (value) => value / 4.184),
+    energy_basal: scalar((day) => day.activity?.restingEnergyKJ as number, (value) => value / 4.184),
+    flights: scalar((day) => day.activity?.flightsClimbed as number),
+    stand_time: scalar((day) => day.activity?.standMinutes as number),
+    stand_hour: scalar((day) => day.activity?.standHours as number),
+    sleep: days.flatMap((day) => day.sleep?.totalMinutes === undefined ? [] : [[day.date, r(day.sleep.totalMinutes / 60), r((day.sleep.deepMinutes ?? 0) / 60), r((day.sleep.remMinutes ?? 0) / 60), r((day.sleep.coreMinutes ?? 0) / 60), r((day.sleep.awakeMinutes ?? 0) / 60)]]),
+    sleep_score: [],
+    wrist_temp: scalar((day) => day.vitalSigns?.wristTemperatureCelsius),
+    rhr: scalar((day) => day.heart?.restingHeartRateBpm),
+    hrv: scalar((day) => day.heart?.hrv?.dailyMs),
+    walking_hr: scalar((day) => day.heart?.walkingHeartRateBpm),
+    resp_rate: scalar((day) => day.respiratory?.respiratoryRatePerMinute),
+    spo2: scalar((day) => day.respiratory?.bloodOxygenFraction, (value) => value * 100),
+    weight: scalar((day) => day.bodyMeasurements?.weight?.dailyKg),
+    fat: scalar((day) => day.bodyMeasurements?.bodyFatFraction, (value) => value * 100),
+    bmi: scalar((day) => day.bodyMeasurements?.bodyMassIndex),
+    lean: scalar((day) => day.bodyMeasurements?.leanBodyMassKg),
+    walk_speed: scalar((day) => day.activityCapability?.walkingSpeedMps),
+    step_length: scalar((day) => day.activityCapability?.walkingStepLengthM),
+    asym: scalar((day) => day.activityCapability?.walkingAsymmetryPercent),
+    double_supp: scalar((day) => day.activityCapability?.walkingDoubleSupportPercent),
+    stair_up: scalar((day) => day.activityCapability?.stairAscentSpeedMps),
+    stair_down: scalar((day) => day.activityCapability?.stairDescentSpeedMps),
+    six_min_walk: scalar((day) => day.activityCapability?.sixMinuteWalkDistanceM),
+    audio_env: scalar((day) => day.hearing?.environmentalAudioExposureDbASPL),
+    audio_hp: scalar((day) => day.hearing?.headphoneAudioExposureDbASPL),
+    daylight: scalar((day) => day.activity?.daylightMinutes as number),
+    mindful: scalar((day) => day.mindfulness?.minutes),
+    handwash: scalar((day) => day.activity?.handwashingSeconds as number),
+    physical_effort: scalar((day) => day.activity?.physicalEffortKcalPerHourKg as number),
+    cardio_recovery: scalar((day) => day.heart?.cardioRecoveryBpm),
+    vo2: scalar((day) => day.activity?.vo2MaxMlKgMin as number),
+    workouts: days.flatMap((day) => ((day.activity?.workouts as V4Workout[] | undefined) ?? []).map((workout) => [
+      day.date, WORKOUT_NAME_ALIASES[workout.type ?? ''] ?? workout.type ?? '其他', r(workout.durationMinutes ?? 0, 1),
+      Math.round((workout.activeEnergyKJ ?? 0) / 4.184), Math.round(workout.averageHeartRateBpm ?? 0), 0,
+      Math.round(workout.maximumHeartRateBpm ?? 0), r(workout.distanceKm ?? 0, 2), Math.round(workout.steps ?? 0), 0,
+      minuteLabel(workout.startMinute),
+    ])),
+    nah_daily: medicationSeries('碳酸氢钠片'),
+    bns_daily: medicationSeries('苯溴马隆片'),
+    med_monthly: [...medicationMonths.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, value]) => [month, value.nah[1] ? Math.round(value.nah[0] / value.nah[1] * 100) : 0, value.bns[1] ? Math.round(value.bns[0] / value.bns[1] * 100) : 0]),
+    state_of_mind: days.flatMap((day) => (day.mindfulness?.stateOfMindEntries ?? []).map((entry) => [day.date, r(entry.valence ?? 0, 3), entry.kind === 'daily_mood' ? 'daily' : 'emotion', (entry.labels ?? []).join(','), (entry.associations ?? []).join(',')])),
+    hr_notifications: days.flatMap((day) => (day.heart?.notifications ?? []).flatMap((item) => typeof item.threshold === 'number' ? [[day.date, item.threshold] as [string, number]] : [])),
+    lastUpdated: exportedAt ?? days.map((day) => day.exportedAt).filter(Boolean).sort().at(-1) ?? null,
+  };
+}
+
+function minuteLabel(value?: number): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '';
+  const minute = Math.max(0, Math.round(value));
+  return `${String(Math.floor(minute / 60) % 24).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
 }
 
 function avg(arr: [string, number][]): number {

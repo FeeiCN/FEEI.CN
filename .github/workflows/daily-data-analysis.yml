@@ -55,6 +55,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Pull health data from persistent storage
+        env:
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh static/data/health
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/health_data_key
+          chmod 600 ~/.ssh/health_data_key
+          ssh-keyscan -p 10022 feei.cn >> ~/.ssh/known_hosts
+          rsync -az --partial \
+            -e "ssh -i ~/.ssh/health_data_key -p 10022" \
+            root@feei.cn:/data/wufeifei-assets/data/health/ \
+            static/data/health/
+
       - name: Resolve report date and files
         id: report
         env:

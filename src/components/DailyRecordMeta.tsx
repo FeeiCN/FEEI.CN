@@ -118,18 +118,13 @@ type HealthMetric = {
   data?: HealthMetricRecord[];
 };
 
-type HealthMonth = {
-  data?: {
-    healthMetrics?: {
-      metrics?: HealthMetric[];
-    };
-    stateOfMind?: {
-      stateOfMind?: StateOfMindRecord[];
-    };
-    medications?: {
-      medications?: MedicationRecord[];
-    };
-  };
+type HealthDay = {
+  version?: 5;
+  date: string;
+  activity?: Record<string, number | unknown[] | undefined>;
+  bodyMeasurements?: {weight?: {dailyKg?: number}; bodyFatFraction?: number; bodyMassIndex?: number; leanBodyMassKg?: number};
+  mindfulness?: {stateOfMindEntries?: Array<{minute?: number; kind?: string; valence?: number; classification?: string; labels?: string[]; associations?: string[]}>};
+  medications?: {doses?: Array<{scheduledMinute?: number; takenMinute?: number; name?: string; status?: string; dosage?: number; scheduledDosage?: number}>};
 };
 
 type MedicationRecord = {
@@ -381,24 +376,54 @@ async function loadSleepScore(date: string, signal: AbortSignal): Promise<SleepS
 async function loadHealthSummary(date: string, signal: AbortSignal): Promise<HealthSummary | null> {
   const trendStart = shiftDate(date, -6);
   const moodStart = shiftDate(date, -29);
-  const months = [...new Set(Array.from({length: 30}, (_, index) => shiftDate(date, -index).slice(0, 7)))];
-  const payloads = await Promise.all(months.map(async (monthKey) => {
-    const response = await fetch(`/data/health/${monthKey.replace('-', '/')}.json`, {signal});
-    return response.ok ? await response.json() as HealthMonth : null;
+  const dates = Array.from({length: 30}, (_, index) => shiftDate(date, -index));
+  const payloads = await Promise.all(dates.map(async (day) => {
+    const response = await fetch(`/data/health/${day.replaceAll('-', '/')}.json`, {signal, cache: 'no-store'});
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) return null;
+    const payload = await response.json() as HealthDay;
+    return payload.version === 5 && payload.date === day ? payload : null;
   }));
   const records = new Map<string, HealthMetricRecord[]>();
-  payloads.forEach((payload) => {
-    payload?.data?.healthMetrics?.metrics?.forEach((metric) => {
-      if (!metric.name) return;
-      records.set(metric.name, [...(records.get(metric.name) ?? []), ...(metric.data ?? [])]);
-    });
+  const healthDays = payloads.filter((payload): payload is HealthDay => payload !== null);
+  healthDays.forEach((day) => {
+    const values: Array<[string, number | undefined]> = [
+      ['apple_exercise_time', day.activity?.exerciseMinutes as number],
+      ['active_energy', day.activity?.activeEnergyKJ as number],
+      ['walking_running_distance', day.activity?.distanceKm as number],
+      ['step_count', day.activity?.steps as number],
+      ['apple_stand_time', day.activity?.standMinutes as number],
+      ['flights_climbed', day.activity?.flightsClimbed as number],
+      ['time_in_daylight', day.activity?.daylightMinutes as number],
+      ['weight_body_mass', day.bodyMeasurements?.weight?.dailyKg],
+      ['body_fat_percentage', day.bodyMeasurements?.bodyFatFraction === undefined ? undefined : day.bodyMeasurements.bodyFatFraction * 100],
+      ['body_mass_index', day.bodyMeasurements?.bodyMassIndex],
+      ['lean_body_mass', day.bodyMeasurements?.leanBodyMassKg],
+    ];
+    for (const [name, qty] of values) {
+      if (typeof qty !== 'number' || !Number.isFinite(qty)) continue;
+      records.set(name, [...(records.get(name) ?? []), {date: day.date, qty}]);
+    }
   });
-  const moodRecords = payloads
-    .flatMap((payload) => payload?.data?.stateOfMind?.stateOfMind ?? [])
+  const moodRecords: StateOfMindRecord[] = healthDays
+    .flatMap((day) => (day.mindfulness?.stateOfMindEntries ?? []).map((entry) => ({
+      start: dateAtMinute(day.date, entry.minute),
+      kind: entry.kind,
+      valence: entry.valence,
+      valenceClassification: entry.classification,
+      labels: entry.labels,
+      associations: entry.associations,
+    })))
     .filter((record) => typeof record.start === 'string')
     .sort((left, right) => (left.start || '').localeCompare(right.start || ''));
-  const medicationRecords = payloads
-    .flatMap((payload) => payload?.data?.medications?.medications ?? [])
+  const medicationRecords: MedicationRecord[] = healthDays
+    .flatMap((day) => (day.medications?.doses ?? []).map((dose) => ({
+      displayText: dose.name,
+      scheduledDate: dateAtMinute(day.date, dose.scheduledMinute),
+      start: dateAtMinute(day.date, dose.takenMinute),
+      status: dose.status,
+      dosage: dose.dosage,
+      scheduledDosage: dose.scheduledDosage,
+    })))
     .filter((record) => (record.scheduledDate || record.start || '').slice(0, 10) === date)
     .sort((left, right) => String(left.scheduledDate || left.start).localeCompare(String(right.scheduledDate || right.start)));
   const recordForDate = (name: string): HealthMetricRecord | undefined =>
@@ -479,6 +504,12 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
   } : null;
 
   return activity || weight || mood || medication ? {activity, weight, mood, medication} : null;
+}
+
+function dateAtMinute(date: string, value?: number): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  const minute = Math.round(value);
+  return `${date} ${String(Math.floor(minute / 60) % 24).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}:00 +0800`;
 }
 
 function MetricPopover({label, ariaLabel, children, wide = false, scrollable = false}: {label: string; ariaLabel: string; children: ReactNode; wide?: boolean; scrollable?: boolean}) {

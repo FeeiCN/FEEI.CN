@@ -4,8 +4,8 @@ import styles from './ActivityDayDetails.module.css';
 
 type ActivityRecord = {
   type: string;
-  start?: string;
-  end?: string;
+  startMinute?: number;
+  endMinute?: number;
   id?: string;
   name?: string;
   durationMinutes?: number;
@@ -15,13 +15,10 @@ type ActivityRecord = {
   avgHeartRate?: number;
 };
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
-const clock = (value?: string) => value?.match(/(?:^|T| )(\d{2}:\d{2})/)?.[1] ?? '';
-const minute = (value?: string) => {
-  const time = clock(value);
-  if (!time) return null;
-  const [h, m] = time.split(':').map(Number);
-  return h <= 24 && m < 60 && (h !== 24 || m === 0) ? h * 60 + m : null;
-};
+const clock = (value?: number) => typeof value === 'number' && Number.isFinite(value)
+  ? `${String(Math.floor(value / 60) % 24).padStart(2, '0')}:${String(Math.round(value) % 60).padStart(2, '0')}`
+  : '';
+const minute = (value?: number) => typeof value === 'number' && Number.isFinite(value) ? value : null;
 
 export default function ActivityDayDetails({date, children}: {date: string; children: ReactNode}) {
   const [records, setRecords] = useState<ActivityRecord[] | null>(null);
@@ -36,15 +33,23 @@ export default function ActivityDayDetails({date, children}: {date: string; chil
       .then(async (response) => {
         if (!response.ok) throw new Error('Daily activity unavailable');
         const payload = await response.json();
-        const timeline = payload.derived?.timeline;
-        if (!Array.isArray(timeline)) throw new Error('Invalid activity timeline');
+        const activity = payload.activity;
+        if (!activity || typeof activity !== 'object') throw new Error('Invalid activity data');
         if (!controller.signal.aborted) {
           const unique = new Map<string, ActivityRecord>();
-          for (const record of timeline) {
-            if (!record || !['movement', 'stand', 'workout'].includes(record.type)) continue;
-            unique.set(record.id ?? `${record.type}-${record.start}-${record.end}`, record);
+          for (const [startMinute, endMinute, steps, distanceKm] of activity.movementPeriods ?? []) {
+            const record = {type: 'movement', startMinute, endMinute, steps, distanceKm};
+            unique.set(`movement-${startMinute}-${endMinute}`, record);
           }
-          setRecords([...unique.values()].sort((a, b) => (a.start ?? '').localeCompare(b.start ?? '')));
+          for (const [startMinute, endMinute, durationMinutes] of activity.standPeriods ?? []) {
+            const record = {type: 'stand', startMinute, endMinute, durationMinutes};
+            unique.set(`stand-${startMinute}-${endMinute}`, record);
+          }
+          for (const workout of activity.workouts ?? []) {
+            const record = {...workout, type: 'workout', name: workout.type, avgHeartRate: workout.averageHeartRateBpm};
+            unique.set(record.id ?? `workout-${record.startMinute}-${record.endMinute}`, record);
+          }
+          setRecords([...unique.values()].sort((a, b) => (a.startMinute ?? 0) - (b.startMinute ?? 0)));
         }
       })
       .catch(() => {if (!controller.signal.aborted) {setFailed(true); setRecords([]);}});
@@ -52,8 +57,8 @@ export default function ActivityDayDetails({date, children}: {date: string; chil
   }, [date]);
   const workouts = records?.filter((record) => record.type === 'workout') ?? [];
   const segments = records?.flatMap((record) => {
-    const start = minute(record.start);
-    const end = minute(record.end);
+    const start = minute(record.startMinute);
+    const end = minute(record.endMinute);
     return record.type !== 'workout' && start !== null && end !== null && end > start ? [{record, start, end}] : [];
   }) ?? [];
 
@@ -69,7 +74,7 @@ export default function ActivityDayDetails({date, children}: {date: string; chil
                 <div className={styles.track}>
                   {segments.filter(({record}) => record.type === type).map(({record, start, end}) => {
                     const key = `${type}-${start}-${end}`;
-                    const label = `${type === 'movement' ? '移动' : '站立'} ${clock(record.start)}–${clock(record.end)}`;
+                    const label = `${type === 'movement' ? '移动' : '站立'} ${clock(record.startMinute)}–${clock(record.endMinute)}`;
                     return <Tooltip.Root key={key} open={opened === key} onOpenChange={({open}) => setOpened((current) => open ? key : current === key ? null : current)} openDelay={120} closeDelay={80} positioning={{placement: 'top'}}>
                       <Tooltip.Trigger asChild>
                         <button type="button" className={`${styles.segment} ${type === 'stand' ? styles.stand : ''}`}
@@ -94,7 +99,7 @@ export default function ActivityDayDetails({date, children}: {date: string; chil
       <div className={styles.heading}>当天训练 · {workouts.length}次</div>
       <ul>{workouts.map((workout, index) => <li key={workout.id ?? index}>
         <div className={styles.workoutHeading}><strong>{workout.name || '训练'}</strong>{isNumber(workout.durationMinutes) && <span>{Math.round(workout.durationMinutes)}分钟</span>}</div>
-        <time>{clock(workout.start)}–{clock(workout.end)}</time>
+        <time>{clock(workout.startMinute)}–{clock(workout.endMinute)}</time>
         <div className={styles.details}>
           {isNumber(workout.distanceKm) && workout.distanceKm > 0 && <span>{workout.distanceKm.toFixed(2)}公里</span>}
           {isNumber(workout.activeEnergyKJ) && <span>活动{Math.round(workout.activeEnergyKJ / 4.184)}千卡</span>}

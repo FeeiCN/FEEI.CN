@@ -7,7 +7,6 @@ import stageInstaller from '@echarts-x/custom-stage';
 echarts.use(stageInstaller);
 import styles from './SleepStageChart.module.css';
 
-type SleepRecord = {type?: string; stage?: string; start?: string; end?: string};
 type Segment = {stage: string; start: number; end: number};
 const allStages = [
   {key: 'awake', label: '清醒时间', color: 'var(--sleep-stage-awake)'},
@@ -18,7 +17,6 @@ const allStages = [
 ];
 const hour = 3600000;
 const formatMinutes = (value: number) => value >= 60 ? `${Math.floor(value / 60)}小时${value % 60}分钟` : `${value}分钟`;
-const timestamp = (value?: string) => value ? Date.parse(value.replace(' ', 'T').replace(' +0800', '+08:00')) : NaN;
 
 function sleepMinutes(segments: Segment[]) {
   let end = -Infinity;
@@ -40,16 +38,17 @@ export default function SleepStageChart({date, durationMinutes, score, scoreDeta
     setSelected(null);
     fetch(`/data/health/${date.replaceAll('-', '/')}.json`, {signal: controller.signal})
       .then(async (response) => response.ok ? response.json() : null)
-      .then((payload: {derived?: {timeline?: SleepRecord[]}} | null) => {
+      .then((payload: {sleep?: {stages?: Array<[number, number, string]>}} | null) => {
         if (controller.signal.aborted) return;
         const unique = new Map<string, Segment>();
-        for (const record of payload?.derived?.timeline ?? []) {
-          const stage = record.stage === '睡眠时长' ? 'asleep' : record.stage;
-          if (record.type !== 'sleep' || !allStages.some((item) => item.key === stage)) continue;
-          const start = timestamp(record.start);
-          const end = timestamp(record.end);
+        const dayStart = Date.parse(`${date}T00:00:00+08:00`);
+        for (const [startMinute, endMinute, rawStage] of payload?.sleep?.stages ?? []) {
+          const stage = rawStage === '睡眠时长' ? 'asleep' : rawStage;
+          if (!allStages.some((item) => item.key === stage)) continue;
+          const start = dayStart + startMinute * 60000;
+          const end = dayStart + endMinute * 60000;
           if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
-          unique.set(`${stage}-${start}-${end}`, {stage: stage!, start, end});
+          unique.set(`${stage}-${start}-${end}`, {stage, start, end});
         }
         setRecord({date, segments: [...unique.values()].sort((a, b) => a.start - b.start)});
       })

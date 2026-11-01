@@ -100,6 +100,16 @@ def ratio_to_baseline(value: float | None, baseline: float | None, digits: int =
     return round(value / baseline, digits)
 
 
+def minute_timestamp(day: str, value: Any) -> str | None:
+    if not isinstance(value, (int, float)):
+        return None
+    try:
+        instant = datetime.strptime(day, "%Y-%m-%d") + timedelta(minutes=float(value))
+    except ValueError:
+        return None
+    return instant.strftime("%Y-%m-%d %H:%M:%S +0800")
+
+
 def extract_health_context(paths: list[Path], report_date: date) -> dict[str, Any]:
     metric_aliases = {
         "step_count": "steps",
@@ -132,6 +142,48 @@ def extract_health_context(paths: list[Path], report_date: date) -> dict[str, An
         exported = payload.get("exportedAt")
         if isinstance(exported, str):
             exported_at.append(exported)
+        days = payload.get("days") or []
+        if payload.get("version") == 5 and isinstance(days, list):
+            for day in days:
+                day_key = day.get("date")
+                if not isinstance(day_key, str):
+                    continue
+                activity = day.get("activity") or {}
+                body = day.get("bodyMeasurements") or {}
+                heart = day.get("heart") or {}
+                respiratory = day.get("respiratory") or {}
+                sleep = day.get("sleep") or {}
+                values = {
+                    "step_count": activity.get("steps"),
+                    "walking_running_distance": activity.get("distanceKm"),
+                    "active_energy": activity.get("activeEnergyKJ"),
+                    "apple_exercise_time": activity.get("exerciseMinutes"),
+                    "apple_stand_hour": activity.get("standHours"),
+                    "weight_body_mass": (body.get("weight") or {}).get("dailyKg"),
+                    "body_fat_percentage": body.get("bodyFatFraction") * 100 if isinstance(body.get("bodyFatFraction"), (int, float)) else None,
+                    "body_mass_index": body.get("bodyMassIndex"),
+                    "resting_heart_rate": heart.get("restingHeartRateBpm"),
+                    "walking_heart_rate_average": heart.get("walkingHeartRateBpm"),
+                    "heart_rate_variability": (heart.get("hrv") or {}).get("dailyMs"),
+                    "blood_oxygen_saturation": respiratory.get("bloodOxygenFraction") * 100 if isinstance(respiratory.get("bloodOxygenFraction"), (int, float)) else None,
+                    "lean_body_mass": body.get("leanBodyMassKg"),
+                }
+                for name, value in values.items():
+                    if isinstance(value, (int, float)):
+                        metrics_by_name.setdefault(name, []).append({"date": day_key, "qty": value})
+                if isinstance(sleep.get("totalMinutes"), (int, float)):
+                    metrics_by_name.setdefault("sleep_analysis", []).append({
+                        "date": day_key,
+                        "totalSleep": sleep.get("totalMinutes", 0) / 60,
+                        "deep": sleep.get("deepMinutes", 0) / 60,
+                        "rem": sleep.get("remMinutes", 0) / 60,
+                        "core": sleep.get("coreMinutes", 0) / 60,
+                        "awake": sleep.get("awakeMinutes", 0) / 60,
+                        "sleepStart": minute_timestamp(day_key, sleep.get("startMinute")),
+                        "sleepEnd": minute_timestamp(day_key, sleep.get("endMinute")),
+                        "source": sleep.get("source"),
+                    })
+            continue
         metrics = (
             (((payload.get("data") or {}).get("healthMetrics") or {}).get("metrics"))
             or []
@@ -209,8 +261,6 @@ def extract_health_context(paths: list[Path], report_date: date) -> dict[str, An
             if isinstance(qty_raw, (int, float)):
                 qty = float(qty_raw)
             source = record.get("source")
-        if raw_name == "walking_running_distance" and qty is not None:
-            qty = qty / 1000.0
         if raw_name == "body_fat_percentage" and qty is not None:
             qty = qty
         today_metrics[short_name] = {
@@ -218,8 +268,6 @@ def extract_health_context(paths: list[Path], report_date: date) -> dict[str, An
             "source": source,
         }
         baseline_values = series_for_metric(raw_name, 7)
-        if raw_name == "walking_running_distance":
-            baseline_values = [value / 1000.0 for value in baseline_values]
         baselines[short_name] = {
             "avg_7d": safe_round(avg(baseline_values), 2),
             "median_7d": safe_round(median(baseline_values), 2),

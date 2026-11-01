@@ -2,9 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {writeHealthJson} from './health_month_storage.mjs';
+import {validateHealthDailyV5} from './health_daily_v5.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const healthRoot = path.resolve(process.argv[2] ?? path.join(repoRoot, 'static', 'data', 'health'));
+const healthRoot = path.resolve(process.argv[2] ?? process.env.HEALTH_DATA_ROOT ?? path.join(repoRoot, 'static', 'data', 'health'));
 const days = [];
 
 for (const year of fs.readdirSync(healthRoot, {withFileTypes: true})) {
@@ -15,10 +16,16 @@ for (const year of fs.readdirSync(healthRoot, {withFileTypes: true})) {
     for (const file of fs.readdirSync(path.join(yearDir, month.name), {withFileTypes: true})) {
       if (!file.isFile() || !/^\d{2}\.json$/.test(file.name)) continue;
       const payload = JSON.parse(fs.readFileSync(path.join(yearDir, month.name, file.name), 'utf8'));
+      const issues = [];
+      issues.push(...validateHealthDailyV5(payload, `${year.name}-${month.name}-${file.name.slice(0, 2)}`, healthRoot));
+      if (payload.sleep?.totalMinutes > 0 && !Array.isArray(payload.sleep?.stages)) issues.push('sleep summary has no stages');
+      if (payload.heart?.hrv?.dailyMs > 0 && !Array.isArray(payload.heart?.hrv?.measurements)) issues.push('HRV summary has no measurements');
+      if (payload.activity?.steps >= 3000 && !Array.isArray(payload.activity?.movementPeriods)) issues.push('steps have no movement periods');
       days.push({
         date: `${year.name}-${month.name}-${file.name.slice(0, 2)}`,
-        state: payload.sync?.state ?? 'legacy',
-        exportedAt: payload.source?.exportedAt ?? payload.exportedAt ?? null,
+        state: issues.length ? 'incomplete' : 'complete',
+        exportedAt: payload.exportedAt ?? null,
+        issues,
       });
     }
   }
@@ -32,7 +39,7 @@ const payload = {
   latestDate: latest?.date ?? null,
   latestSourceAt: [...days].map((day) => day.exportedAt).filter(Boolean).sort().at(-1) ?? null,
   incompleteDates: days.filter((day) => day.state === 'incomplete').map((day) => day.date),
-  migratedDayCount: days.filter((day) => day.state === 'migrated').length,
+  qualityIssues: days.filter((day) => day.issues.length).map((day) => ({date: day.date, issues: day.issues})),
 };
 const output = path.join(healthRoot, 'sync-status.json');
 const changed = writeHealthJson(output, payload);

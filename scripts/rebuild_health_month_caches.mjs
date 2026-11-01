@@ -5,7 +5,7 @@ import {buildHealthChartHistory} from './build_health_chart_history.mjs';
 import {buildMonthlyHealthFromDailyFiles, writeMonthlyHealth} from './health_month_storage.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const healthRoot = path.resolve(process.argv[2] ?? path.join(repoRoot, 'static', 'data', 'health'));
+const healthRoot = path.resolve(process.argv[2] ?? process.env.HEALTH_DATA_ROOT ?? path.join(repoRoot, 'static', 'data', 'health'));
 let updated = 0;
 let verified = 0;
 

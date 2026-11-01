@@ -1,383 +1,125 @@
-import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.dirname(scriptDir);
-const commandEnv = {
-  ...process.env,
-  PATH: [
-    '/opt/homebrew/bin',
-    '/usr/local/bin',
-    process.env.PATH ?? '/usr/bin:/bin:/usr/sbin:/sbin',
-  ].join(':'),
-};
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = parseArgs(process.argv.slice(2));
-const commitMessage = args.message ?? `[auto] 更新健康数据 ${formatLocalDateTime(new Date())}`;
-const remote = args.remote ?? 'origin';
-const branch = args.branch ?? currentBranch();
-const healthDir = path.join('static', 'data', 'health');
+const healthRoot = path.resolve(args.target ?? process.env.HEALTH_DATA_ROOT ?? path.join(repoRoot, 'static/data/health'));
+const remoteUser = process.env.HEALTH_SYNC_REMOTE_USER ?? 'root';
+const remoteHost = process.env.HEALTH_SYNC_REMOTE_HOST ?? 'feei.cn';
+const remotePort = process.env.HEALTH_SYNC_REMOTE_PORT ?? '10022';
+const remoteDir = process.env.HEALTH_SYNC_REMOTE_DIR ?? '/data/wufeifei-assets/data/health';
+const remote = `${remoteUser}@${remoteHost}`;
+const rsyncShell = `ssh -p ${remotePort}`;
 
-ensureNoStagedChanges();
-runWithRetry('git', ['pull', '--rebase', '--autostash']);
+fs.mkdirSync(healthRoot, {recursive: true});
 
-const changedFiles = [];
-const affectedMonths = new Set();
-const dailyDatesToExport = new Set(args.date ? [args.date] : [formatLocalDate(new Date())]);
+if (!args.pushOnly) pullRemote();
+if (args.pullOnly) process.exit(0);
 
-if (!args.date) {
-  const missingDates = findMissingDailyHealthDates();
-  console.log(`Found ${missingDates.length} missing daily health date(s).`);
-  for (const date of missingDates) dailyDatesToExport.add(date);
+const today = localDate(new Date());
+let exportArgs;
+if (args.date) {
+  exportArgs = ['--date', args.date];
+} else if (args.year) {
+  exportArgs = ['--year', args.year, '--end-date', args.endDate ?? (args.year === today.slice(0, 4) ? today : `${args.year}-12-31`)];
+  if (args.startDate) exportArgs.push('--start-date', args.startDate);
+} else {
+  const startDate = args.startDate ?? shiftDate(today, -6);
+  exportArgs = ['--year', today.slice(0, 4), '--start-date', startDate, '--end-date', args.endDate ?? today];
 }
 
-for (const date of [...dailyDatesToExport].sort()) {
-  const [year, month, day] = date.split('-');
-  const dailyFile = path.join(healthDir, year, month, `${day}.json`);
+run(process.execPath, [path.join(repoRoot, 'scripts/export_health_year_from_mcp.mjs'), ...exportArgs, '--target', healthRoot]);
+run(process.execPath, [path.join(repoRoot, 'scripts/build_health_sync_status.mjs'), healthRoot]);
+pushRemote();
 
-  run('npm', ['run', 'export-health-year', '--', '--date', date]);
-
-  const dailyPath = path.join(repoRoot, dailyFile);
-  if (!fs.existsSync(dailyPath)) {
-    throw new Error(`Daily health data file does not exist: ${dailyFile}`);
-  }
-  const dailyPayload = JSON.parse(fs.readFileSync(dailyPath, 'utf8'));
-  if (dailyPayload.date !== date || !dailyPayload.source?.collections || dailyPayload.sync?.state !== 'complete') {
-    throw new Error(`Incomplete daily health export for ${date}; refusing to commit: ${dailyFile}`);
-  }
-
-  if (!isPathClean(dailyFile)) {
-    changedFiles.push(dailyFile);
-  }
-  affectedMonths.add(date.slice(0, 7));
+function pullRemote() {
+  console.log(`Pulling health data from ${remote}:${remoteDir}/`);
+  run('rsync', [
+    '-az', '--partial', '--update', '--human-readable', '--itemize-changes',
+    '--exclude', 'example/', '-e', rsyncShell,
+    `${remote}:${remoteDir}/`, `${healthRoot}/`,
+  ]);
 }
 
-if (!args.date) {
-  const mutableDates = findRecentMutableDailyDates(7);
-  console.log(`Refreshing mutable health data for ${mutableDates.length} recent day(s).`);
-  for (const mutableDate of mutableDates) {
-    const [year, month, day] = mutableDate.split('-');
-    const dailyFile = path.join(healthDir, year, month, `${day}.json`);
-    run('npm', ['run', 'export-health-year', '--', '--date', mutableDate, '--refresh-mutable']);
+function pushRemote() {
+  console.log(`Uploading health data to ${remote}:${remoteDir}/`);
+  const dailyIndexes = countDailyIndexes(healthRoot);
+  if (dailyIndexes === 0) throw new Error(`Refusing to upload an empty health data root: ${healthRoot}`);
+  if (!args.dryRun) run('ssh', ['-p', remotePort, remote, `mkdir -p '${remoteDir}'`]);
+  const commandArgs = [
+    '-az', '--partial', '--delay-updates', '--human-readable', '--itemize-changes',
+    '--no-owner', '--no-group', '--exclude', 'example/', '-e', rsyncShell,
+  ];
+  if (!args.pushOnly) commandArgs.push('--delete-delay');
+  if (args.dryRun) commandArgs.push('--dry-run');
+  commandArgs.push(`${healthRoot}/`, `${remote}:${remoteDir}/`);
+  run('rsync', commandArgs);
+}
 
-    if (!isPathClean(dailyFile)) {
-      changedFiles.push(dailyFile);
+function countDailyIndexes(root) {
+  let count = 0;
+  for (const year of fs.readdirSync(root, {withFileTypes: true})) {
+    if (!year.isDirectory() || !/^\d{4}$/.test(year.name)) continue;
+    const yearDirectory = path.join(root, year.name);
+    for (const month of fs.readdirSync(yearDirectory, {withFileTypes: true})) {
+      if (!month.isDirectory() || !/^\d{2}$/.test(month.name)) continue;
+      count += fs.readdirSync(path.join(yearDirectory, month.name))
+        .filter((name) => /^\d{2}\.json$/.test(name)).length;
     }
-    affectedMonths.add(mutableDate.slice(0, 7));
   }
+  return count;
 }
 
-for (const month of [...affectedMonths].sort()) {
-  const [year, number] = month.split('-');
-  const monthlyFile = path.join(healthDir, year, `${number}.json`);
-  run('npm', ['run', 'export-health-year', '--', '--build-month', month]);
-  if (!fs.existsSync(path.join(repoRoot, monthlyFile))) {
-    throw new Error(`Health data file does not exist: ${monthlyFile}`);
-  }
-}
-
-run('npm', ['run', 'build-health-sync-status']);
-
-if (changedFiles.length === 0) {
-  console.log('No changes to commit.');
-  process.exit(0);
-}
-
-run('git', ['add', ...changedFiles]);
-run('git', ['commit', '-m', commitMessage]);
-pushHealthData();
-
-function run(command, commandArgs, options = {}) {
+function run(command, commandArgs) {
   const result = spawnSync(command, commandArgs, {
     cwd: repoRoot,
+    env: process.env,
     encoding: 'utf8',
-    env: commandEnv,
-    stdio: options.capture ? 'pipe' : 'inherit',
+    stdio: 'inherit',
   });
-
-  if (result.error) {
-    throw result.error;
-  }
-
-  if (result.status !== 0) {
-    throw new Error(`${command} ${commandArgs.join(' ')} failed with exit code ${result.status}`);
-  }
-
-  return result;
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`${command} ${commandArgs.join(' ')} failed with exit code ${result.status}`);
 }
 
-function runWithRetry(command, commandArgs, options = {}) {
-  const maxAttempts = options.maxAttempts ?? 3;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const result = spawnSync(command, commandArgs, {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: commandEnv,
-      stdio: 'pipe',
-    });
-
-    if (result.error) {
-      throw result.error;
-    }
-
-    if (result.status === 0) {
-      if (result.stdout) process.stdout.write(result.stdout);
-      if (result.stderr) process.stderr.write(result.stderr);
-      return result;
-    }
-
-    const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
-    if (!isTransientGitError(output) || attempt === maxAttempts) {
-      process.stdout.write(result.stdout ?? '');
-      process.stderr.write(result.stderr ?? '');
-      throw new Error(`${command} ${commandArgs.join(' ')} failed with exit code ${result.status}`);
-    }
-
-    process.stderr.write(
-      `${command} ${commandArgs.join(' ')} network failure; retrying (${attempt + 1}/${maxAttempts})...\n`,
-    );
-    sleep(attempt * 2000);
-  }
-}
-
-function isTransientGitError(output) {
-  const normalized = output.toLowerCase();
-  return [
-    "couldn't connect to server",
-    'connection reset',
-    'connection timed out',
-    'error in the http2 framing layer',
-    'failed to connect',
-    'operation timed out',
-    'recv failure',
-    'remote end hung up unexpectedly',
-    'tls connection was non-properly terminated',
-  ].some((marker) => normalized.includes(marker));
-}
-
-function pushHealthData() {
-  const maxAttempts = 3;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const result = spawnSync('git', ['push', remote, branch], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: commandEnv,
-      stdio: 'pipe',
-    });
-
-    if (result.error) {
-      throw result.error;
-    }
-
-    if (result.status === 0) {
-      process.stdout.write(result.stdout ?? '');
-      process.stderr.write(result.stderr ?? '');
-      return;
-    }
-
-    const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
-    if (!isPushRejected(output) || attempt === maxAttempts) {
-      process.stdout.write(result.stdout ?? '');
-      process.stderr.write(result.stderr ?? '');
-      throw new Error(`git push ${remote} ${branch} failed with exit code ${result.status}`);
-    }
-
-    process.stderr.write(
-      `git push was rejected by a newer remote commit; retrying (${attempt + 1}/${maxAttempts})...\n`,
-    );
-    runWithRetry('git', ['fetch', remote]);
-    run('git', ['reset', '--soft', `${remote}/${branch}`]);
-
-    const commitResult = spawnSync('git', ['commit', '-m', commitMessage], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: commandEnv,
-      stdio: 'pipe',
-    });
-
-    if (commitResult.error) {
-      throw commitResult.error;
-    }
-
-    if (commitResult.status !== 0) {
-      const commitOutput = `${commitResult.stdout ?? ''}\n${commitResult.stderr ?? ''}`;
-      if (commitOutput.toLowerCase().includes('nothing to commit')) {
-        return;
-      }
-      process.stdout.write(commitResult.stdout ?? '');
-      process.stderr.write(commitResult.stderr ?? '');
-      throw new Error(`git commit -m ${commitMessage} failed with exit code ${commitResult.status}`);
-    }
-  }
-}
-
-function isPushRejected(output) {
-  const normalized = output.toLowerCase();
-  return normalized.includes('fetch first') || normalized.includes('non-fast-forward');
-}
-
-function sleep(milliseconds) {
-  const buffer = new SharedArrayBuffer(4);
-  Atomics.wait(new Int32Array(buffer), 0, 0, milliseconds);
-}
-
-function ensureNoStagedChanges() {
-  const result = spawnSync('git', ['diff', '--cached', '--quiet'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-    env: commandEnv,
-  });
-
-  if (result.status !== 0) {
-    throw new Error('There are staged changes. Commit or unstage them before syncing health data.');
-  }
-}
-
-function isPathClean(file) {
-  const result = spawnSync('git', ['status', '--short', '--', file], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-    env: commandEnv,
-    stdio: 'pipe',
-  });
-
-  if (result.error) {
-    throw result.error;
-  }
-
-  if (result.status !== 0) {
-    throw new Error(`git status --short -- ${file} failed with exit code ${result.status}`);
-  }
-
-  return result.stdout.trim() === '';
-}
-
-function currentBranch() {
-  const result = run('git', ['branch', '--show-current'], {capture: true});
-  const branchName = result.stdout.trim();
-
-  if (!branchName) {
-    throw new Error('Unable to determine current branch.');
-  }
-
-  return branchName;
-}
-
-function currentMonth() {
-  return formatLocalDate(new Date()).slice(0, 7);
-}
-
-function findMissingDailyHealthDates() {
-  const dailyRoot = path.join(repoRoot, healthDir);
-  const existingDates = new Set();
-
-  for (const yearEntry of fs.readdirSync(dailyRoot, {withFileTypes: true})) {
-    if (!yearEntry.isDirectory() || !/^\d{4}$/.test(yearEntry.name)) continue;
-    const yearDir = path.join(dailyRoot, yearEntry.name);
-    for (const monthEntry of fs.readdirSync(yearDir, {withFileTypes: true})) {
-      if (!monthEntry.isDirectory() || !/^\d{2}$/.test(monthEntry.name)) continue;
-      const monthDir = path.join(yearDir, monthEntry.name);
-      for (const fileEntry of fs.readdirSync(monthDir, {withFileTypes: true})) {
-        if (fileEntry.isFile() && /^\d{2}\.json$/.test(fileEntry.name)) {
-          try {
-            const payload = JSON.parse(fs.readFileSync(path.join(monthDir, fileEntry.name), 'utf8'));
-            if (Object.keys(payload.errors ?? {}).length === 0) {
-              existingDates.add(`${yearEntry.name}-${monthEntry.name}-${fileEntry.name.slice(0, 2)}`);
-            }
-          } catch {
-            // Invalid daily files must be retried rather than marked complete.
-          }
-        }
-      }
-    }
-  }
-
-  const today = formatLocalDate(new Date());
-  const latestDate = [...existingDates].sort().at(-1);
-  if (!latestDate) {
-    throw new Error('No existing daily health data found; refusing an unbounded backfill.');
-  }
-
-  // Revisit recent dates: a saved daily file may contain collection fetch errors.
-  const lookback = new Date(`${today}T12:00:00Z`);
-  lookback.setUTCDate(lookback.getUTCDate() - 30);
-  const lookbackDate = lookback.toISOString().slice(0, 10);
-  const startDate = latestDate < lookbackDate ? latestDate : lookbackDate;
-  const missing = [];
-  for (let cursor = new Date(`${startDate}T12:00:00Z`); ; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-    const date = cursor.toISOString().slice(0, 10);
-    if (date > today) break;
-    if (!existingDates.has(date)) missing.push(date);
-  }
-  // Limit hourly repair work so normal monthly exports stay timely.
-  return missing.slice(0, 3);
-}
-
-function findRecentMutableDailyDates(days) {
-  const dates = [];
-  const today = formatLocalDate(new Date());
-  const cursor = new Date(`${today}T12:00:00Z`);
-
-  for (let offset = 0; offset < days; offset += 1) {
-    const date = cursor.toISOString().slice(0, 10);
-    const file = path.join(repoRoot, healthDir, date.slice(0, 4), date.slice(5, 7), `${date.slice(8, 10)}.json`);
-    if (fs.existsSync(file)) {
-      dates.push(date);
-    }
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
-  }
-
-  return dates.reverse();
-}
-
-function formatLocalDate(date) {
+function localDate(date) {
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(date);
 }
 
-function formatLocalDateTime(date) {
-  return new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(date).replace(' ', ' ');
+function shiftDate(value, offset) {
+  const date = new Date(`${value}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + offset);
+  return date.toISOString().slice(0, 10);
 }
 
 function parseArgs(argv) {
   const parsed = {};
-
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-
-    if (arg === '--date' || arg === '--message' || arg === '--remote' || arg === '--branch') {
+    if (['--pull-only', '--push-only', '--dry-run'].includes(arg)) {
+      parsed[toCamelCase(arg.slice(2))] = true;
+      continue;
+    }
+    if (['--date', '--year', '--start-date', '--end-date', '--target'].includes(arg)) {
       const value = argv[index + 1];
-
-      if (!value || value.startsWith('--')) {
-        throw new Error(`Missing value for ${arg}`);
-      }
-
-      parsed[arg.slice(2)] = value;
+      if (!value || value.startsWith('--')) throw new Error(`Missing value for ${arg}`);
+      parsed[toCamelCase(arg.slice(2))] = value;
       index += 1;
       continue;
     }
-
     throw new Error(`Unknown argument: ${arg}`);
   }
-
-  if (parsed.date && !/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
-    throw new Error(`Invalid date: ${parsed.date}`);
+  if (parsed.pullOnly && parsed.pushOnly) throw new Error('--pull-only and --push-only cannot be combined');
+  for (const key of ['date', 'startDate', 'endDate']) {
+    if (parsed[key] && !/^\d{4}-\d{2}-\d{2}$/.test(parsed[key])) throw new Error(`Invalid ${key}: ${parsed[key]}`);
   }
-
+  if (parsed.year && !/^\d{4}$/.test(parsed.year)) throw new Error(`Invalid year: ${parsed.year}`);
   return parsed;
+}
+
+function toCamelCase(value) {
+  return value.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
 }

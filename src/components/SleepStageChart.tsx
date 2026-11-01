@@ -52,8 +52,6 @@ export default function SleepStageChart({date, durationMinutes, score, scoreDeta
           unique.set(`${stage}-${start}-${end}`, {stage, start, end});
         }
         const reference = [
-          {label: '呼吸频率（日均）', value: payload?.respiratory?.respiratoryRatePerMinute, unit: '次/分', decimals: 1, multiplier: 1},
-          {label: '血氧（日均）', value: payload?.respiratory?.bloodOxygenFraction, unit: '%', decimals: 1, multiplier: 100},
           {label: '睡眠腕温', value: payload?.vitalSigns?.wristTemperatureCelsius, unit: '℃', decimals: 2, multiplier: 1},
         ];
         const vitals = reference.flatMap((item) => typeof item.value === 'number' && Number.isFinite(item.value)
@@ -79,8 +77,8 @@ export default function SleepStageChart({date, durationMinutes, score, scoreDeta
       {segments?.length ? <StagePlot segments={segments} selected={selected} onSelect={setSelected} /> : (
         <div className={styles.placeholder} role="status">{segments === null ? '正在加载睡眠分期…' : '当天暂无睡眠分期数据'}</div>
       )}
-      {record?.date === date && record.vitals.length > 0 && <section className={styles.vitals} aria-label="当日生理参考">
-        <div className={styles.heading}>当日生理参考</div>
+      {record?.date === date && record.vitals.length > 0 && <section className={styles.vitals} aria-label="睡眠生理参考">
+        <div className={styles.heading}>睡眠生理参考</div>
         <dl>{record.vitals.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{item.value}</dd></div>)}</dl>
       </section>}
       {children}

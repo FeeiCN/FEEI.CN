@@ -1,0 +1,62 @@
+.section { min-width: 0; margin: 0.75rem 0; }
+.section h4 { margin: 0 0 0.4rem; font-size: 0.8rem; }
+.list { width: 100%; }
+.item { border-bottom: 1px solid var(--ifm-color-emphasis-200); }
+.trigger { display: flex; align-items: center; gap: 0.6rem; width: 100%; border: 0; border-radius: 5px; padding: 0.55rem 0.35rem; background: transparent; color: var(--ifm-font-color-base); text-align: left; cursor: pointer; font: inherit; }
+.trigger:hover { background: var(--ifm-color-emphasis-100); }
+.trigger:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: -2px; }
+.trigger[data-state='open'] { background: var(--ifm-color-emphasis-100); }
+.label { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 0.15rem; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.label strong { font-size: 0.78rem; font-weight: 600; }
+.label > span { color: var(--ifm-font-color-base); font-size: 0.86rem; font-weight: 600; }
+.label small { margin-left: 0.4rem; color: var(--ifm-color-emphasis-600); font-size: 0.65rem; font-weight: 400; }
+.metricRow, .rowTrigger, .axisHeader { display: grid; grid-template-columns: minmax(6.4rem, 1fr) minmax(0, 1.8fr) 0.65rem; align-items: center; column-gap: 0.6rem; }
+.metricRow { padding: 0 0.35rem; }
+.rowTrigger { grid-column: 1 / -1; grid-row: 1; padding: 0.55rem 0; min-height: 3.65rem; }
+.rowTrigger > .label { grid-column: 1; grid-row: 1; }
+.rowTrigger > .indicator { grid-column: 3; grid-row: 1; }
+.metricRow:has(.band:hover) > .trigger { background: var(--ifm-color-emphasis-100); }
+.band, .bandStatus, .comparison { grid-column: 2; grid-row: 1; min-width: 0; }
+.band { position: relative; width: 100%; }
+.bandControl { z-index: 1; min-height: 44px; padding-top: 4px; }
+.bandInput { position: absolute; inset: 0 0 auto; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: crosshair; }
+.bandControl:has(.bandInput:focus-visible) { outline: 2px solid var(--ifm-color-primary); outline-offset: 2px; border-radius: 4px; }
+.bandReadout { display: block; height: 1rem; overflow: hidden; color: var(--ifm-font-color-base); font-size: 0.63rem; line-height: 1rem; text-align: center; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bandStatus, .comparison { color: var(--ifm-color-emphasis-600); font-size: 0.68rem; line-height: 1.6; text-align: center; }
+.comparison { text-align: right; }
+.axisHeader { padding: 0 0.35rem; color: var(--ifm-color-emphasis-600); font-size: 0.68rem; }
+.axisHeader > .label { font-size: inherit; }
+.axisHeader > .indicator { visibility: hidden; }
+.clearTime { align-self: flex-start; border: 0; padding: 0.15rem 0.25rem; border-radius: 4px; background: var(--ifm-color-emphasis-100); color: var(--ifm-font-color-base); font: inherit; cursor: pointer; font-variant-numeric: tabular-nums; }
+.clearTime:hover { background: var(--ifm-color-emphasis-200); }
+.chart:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 2px; border-radius: 4px; }
+.indicator { flex: 0 0 auto; color: var(--ifm-color-emphasis-600); font-size: 0.9rem; transition: transform 120ms ease; }
+.indicator[data-state='open'] { transform: rotate(180deg); }
+.content { padding: 0.3rem 0.35rem 0.7rem; }
+.content[hidden] { display: none; }
+.note { margin: 0.4rem 0; color: var(--ifm-color-emphasis-600); font-size: 0.72rem; line-height: 1.6; overflow-wrap: anywhere; }
+.records { margin: 0.4rem 0; padding: 0; list-style: none; font-size: 0.72rem; }
+.records li { display: flex; gap: 0.6rem; padding: 0.35rem 0; border-bottom: 1px solid var(--ifm-color-emphasis-100); }
+.records time { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.records span { min-width: 0; overflow-wrap: anywhere; }
+.trend { margin-top: 0.75rem; }
+.route { width: 100%; height: 180px; background: var(--ifm-color-emphasis-100); border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .indicator { transition: none; } }
+.chartHeading { display: flex; justify-content: space-between; gap: 0.5rem; margin: 0.4rem 0 0; color: var(--ifm-color-emphasis-600); font-size: 0.7rem; }
+.readout { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; min-height: 1.65rem; padding: 0.2rem 0.35rem; border-radius: 4px; background: var(--ifm-color-emphasis-100); color: var(--ifm-color-emphasis-700); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+.readout strong { color: var(--ifm-font-color-base); font-size: inherit; font-weight: 600; }
+.hint { margin: 0.4rem 0; color: var(--ifm-color-emphasis-600); font-size: 0.68rem; line-height: 1.6; }
+.baseline { margin: 0.2rem 0 0.65rem; color: var(--ifm-color-emphasis-700); font-size: 0.72rem; line-height: 1.6; }
+.baseline strong { font-weight: 600; }
+.tabList { display: flex; gap: 0.2rem; padding: 0.2rem; border-radius: 6px; background: var(--ifm-color-emphasis-100); }
+.tab { flex: 1; justify-content: center; min-height: 1.9rem; border: 0; border-radius: 4px; padding: 0.25rem 0.6rem; background: transparent; color: var(--ifm-color-emphasis-700); font: inherit; font-size: 0.75rem; cursor: pointer; }
+.tab[aria-selected='true'] { background: var(--ifm-background-surface-color); color: var(--ifm-font-color-base); font-weight: 600; box-shadow: 0 1px 3px rgb(0 0 0 / 10%); }
+.tab:hover { color: var(--ifm-font-color-base); }
+.tab:focus-visible, .tabContent:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 2px; }
+.tabContent { padding-top: 0.3rem; }
+.itemBody { padding: 0; }
+.detailScroll { max-height: min(21rem, 44dvh); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 0.15rem 0.25rem; }
+.detailScroll .tabList { position: sticky; top: 0; z-index: 1; }
+.collapseDetail { display: block; width: 100%; border: 0; border-top: 1px solid var(--ifm-color-emphasis-200); border-radius: 0 0 4px 4px; padding: 0.4rem; background: var(--ifm-color-emphasis-100); color: var(--ifm-color-emphasis-700); font: inherit; font-size: 0.7rem; cursor: pointer; }
+.collapseDetail:hover { color: var(--ifm-font-color-base); background: var(--ifm-color-emphasis-200); }
+.detailScroll:focus-visible, .clearTime:focus-visible, .collapseDetail:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: -2px; }

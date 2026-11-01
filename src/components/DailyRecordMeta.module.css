@@ -286,9 +286,9 @@
 .medicationList li > span {
   display: flex;
   min-width: 0;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.65rem;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 0.2rem;
 }
 
 .medicationList strong {
@@ -297,7 +297,7 @@
 }
 
 .medicationList small {
-  flex: 0 0 auto;
+  overflow-wrap: anywhere;
   color: var(--ifm-color-emphasis-600);
   font-size: 0.7rem;
 }
@@ -333,7 +333,7 @@
 
 .moodRecordHeader span,
 .moodRecords p > span {
-  color: var(--ifm-color-emphasis-500);
+  color: var(--ifm-color-emphasis-600);
   font-size: 0.65rem;
 }
 
@@ -651,8 +651,7 @@
   border-top: 1px solid var(--ifm-color-emphasis-200);
 }
 
-.weightTrendHeader,
-.weightTrendDates {
+.weightTrendHeader {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -666,63 +665,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.weightTrend svg {
-  display: block;
-  width: 100%;
-  height: 4.25rem;
-  margin-top: 0.25rem;
-  overflow: visible;
-}
-
-.weightTrend line {
-  stroke: var(--ifm-color-emphasis-200);
-  stroke-width: 1;
-}
-
-.weightTrend polyline {
-  fill: none;
-  stroke: var(--ifm-color-emphasis-500);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2;
-}
-
-.weightTrend circle {
-  fill: var(--ifm-color-emphasis-500);
-  stroke: var(--ifm-background-surface-color);
-  stroke-width: 2;
-}
-
-.weightTrend circle.weightTrendCurrent {
-  fill: var(--ifm-color-primary);
-}
-
-.weightTrendDates {
-  margin-top: -0.2rem;
-  font-size: 0.62rem;
-}
-
 .weightTrend + .healthStats {
   margin-top: 0.65rem;
-}
-
-.weightTrendSparse {
-  display: grid;
-  min-height: 4.25rem;
-  gap: 0.4rem;
-  place-content: center;
-  justify-items: center;
-  color: var(--ifm-color-emphasis-500);
-  font-size: 0.65rem;
-}
-
-.weightTrendSparse i {
-  width: 0.5rem;
-  height: 0.5rem;
-  border: 2px solid var(--ifm-background-surface-color);
-  border-radius: 50%;
-  background: var(--ifm-color-primary);
-  box-shadow: 0 0 0 1px var(--ifm-color-primary);
 }
 
 .metricTrend {
@@ -747,64 +691,6 @@
   white-space: nowrap;
 }
 
-.sevenDayBars {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.35rem;
-  margin-top: 0.45rem;
-}
-
-.sevenDayBars > div {
-  display: grid;
-  gap: 0.25rem;
-  justify-items: center;
-}
-
-.sevenDayBarPlot {
-  display: flex;
-  width: 100%;
-  height: 4.25rem;
-  align-items: flex-end;
-  justify-content: center;
-  border-bottom: 1px solid var(--ifm-color-emphasis-200);
-}
-
-.sevenDayBarPlot > i {
-  position: relative;
-  display: block;
-  width: min(1.15rem, 75%);
-  min-height: 0.2rem;
-  border-radius: 3px 3px 0 0;
-  background: var(--ifm-color-emphasis-300);
-  font-style: normal;
-}
-
-.sevenDayCurrent .sevenDayBarPlot > i {
-  background: var(--ifm-color-primary);
-}
-
-.sevenDayBarPlot > b {
-  width: 0.22rem;
-  height: 0.22rem;
-  margin-bottom: -0.11rem;
-  border-radius: 50%;
-  background: var(--ifm-color-emphasis-300);
-}
-
-.sevenDayBarPlot > i > span {
-  position: absolute;
-  bottom: calc(100% + 0.1rem);
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--ifm-color-emphasis-600);
-  font-size: 0.52rem;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.sevenDayBars small,
 .sevenDayLabels span,
 .sevenDayLabels small {
   color: var(--ifm-color-emphasis-500);
@@ -818,10 +704,6 @@
 .sevenDayCurrent > div + small {
   color: var(--ifm-color-primary);
   font-weight: 700;
-}
-
-.sevenDayMissing {
-  opacity: 0.45;
 }
 
 .metricTrendNote {
@@ -861,14 +743,6 @@
   background: var(--sleep-tint);
 }
 
-.sleepTrendChart {
-  display: block;
-  width: 100%;
-  height: 4.25rem;
-  margin-top: 0.1rem;
-  overflow: visible;
-}
-
 .sleepTrendPlot { position: relative; }
 .sleepTrendDay {
   display: grid;
@@ -883,67 +757,18 @@
   line-height: 1.5;
   cursor: pointer;
 }
-.sleepTrendDay::before {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--sleep-day-index) * 100% / 7);
-  width: calc(100% / 7);
-  border-radius: 4px;
-  content: '';
-}
-.sleepTrendDay:enabled:hover::before { background: color-mix(in srgb, var(--sleep-accent) 6%, transparent); }
-.sleepTrendDay:focus-visible { outline: none; }
-.sleepTrendDay:focus-visible::before { outline: 2px solid var(--sleep-accent); outline-offset: -2px; }
+.sleepTrendDay:enabled:hover { background: var(--ifm-color-emphasis-100); }
+.sleepTrendDay:focus-visible { outline: 2px solid var(--sleep-accent); outline-offset: -2px; }
 .sleepTrendDay:disabled { cursor: default; }
 .sleepPopover .sleepTrendMissing > span,
 .sleepPopover .sleepTrendMissing > small { color: var(--ifm-color-emphasis-600); }
-.sleepPopover .sleepTrendChart .sleepTrendGuide {
-  stroke: var(--ifm-color-emphasis-300);
-  stroke-width: 0.6;
-  stroke-dasharray: 2 3;
-  stroke-opacity: 0.6;
-}
-
-.sleepTrendChart rect {
-  fill: var(--sleep-tint);
-}
-
-.sleepTrendChart line {
-  stroke: var(--sleep-history);
-  stroke-linecap: round;
-  stroke-width: 1.8;
-}
-
-.sleepTrendChart circle {
-  fill: var(--sleep-history);
-  stroke: var(--ifm-background-surface-color);
-  stroke-width: 1.5;
-}
-
-.sleepTrendChart rect.sleepTrendCurrentBar {
-  fill: color-mix(in srgb, var(--sleep-accent) 22%, var(--sleep-tint));
-}
-
-.sleepTrendChart .sleepTrendCurrentPoint circle {
-  fill: var(--sleep-accent);
-}
-
-.sleepTrendChart .sleepTrendCurrentPoint text {
-  fill: var(--sleep-accent);
-}
-
-.sleepTrendChart text {
-  fill: var(--ifm-font-color-base);
-  font-size: 7px;
-  font-weight: 600;
-}
 
 .sevenDayLabels {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0.1rem;
-  margin-top: -0.3rem;
+  margin-top: 0;
+  padding: 0 14px;
 }
 
 .sevenDayLabels > div {
@@ -1185,13 +1010,9 @@
 .sleepScoreRating { font-size: 0.72rem; color: var(--ifm-color-emphasis-600); }
 .sleepPopover .sleepScoreScale { margin: 0 0 1rem; padding-top: 0.7rem; }
 .sleepPopover .metricBreakdown + .metricTrend { margin-top: 0.85rem; }
-.sleepPopover .sleepTrendChart { height: auto; aspect-ratio: 272 / 72; }
 .sleepPopover .metricBreakdown small,
 .sleepPopover .sevenDayLabels small { color: var(--ifm-color-emphasis-700); font-size: 0.8rem; line-height: 1.5; }
 .sleepPopover .metricTrendNote { color: var(--ifm-color-emphasis-700); font-size: 0.72rem; line-height: 1.5; }
-.sleepPopover .sleepTrendChart line { stroke-opacity: 0.7; }
-.sleepPopover .sleepTrendChart text { fill: var(--ifm-color-emphasis-700); font-weight: 400; }
-.sleepPopover .sleepTrendCurrentPoint text { fill: var(--sleep-accent); font-weight: 600; }
 .sleepPopover .sevenDayLabels span,
 .sleepPopover .sleepTrendLegend { color: var(--ifm-color-emphasis-650); font-size: 0.72rem; }
 .sleepPopover .sleepScoreLegend small { font-size: 0.65rem; }
@@ -1205,7 +1026,6 @@
   .sleepScoreDisclosure { animation: none !important; transition: none; }
 }
 
-.sleepPopover .sleepTrendChart text { font-size: 8.5px; }
 
 .scrollablePopover {
   max-height: min(var(--available-height, 90dvh), 90dvh, 900px);
@@ -1217,3 +1037,29 @@
   overscroll-behavior: contain;
 }
 .scrollablePopover .metricPopoverClose { z-index: 3; background: var(--ifm-background-surface-color); }
+
+.metricPopover:has(.healthDetails) { width: min(25rem, calc(100vw - 1.5rem)); }
+.healthDetails { min-width: 0; }
+.healthDetails > header { padding-right: 1.6rem; }
+.healthBack { margin-bottom: 0.7rem; padding: 0.25rem; border-radius: 4px; color: var(--ifm-color-primary); font: inherit; font-size: 0.75rem; cursor: pointer; }
+.healthBack:hover { background: var(--ifm-color-emphasis-100); }
+.healthBack:focus-visible, .healthReferenceLinks button:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 2px; }
+.healthNotifications { margin: 0.6rem 0; padding: 0.6rem; border: 1px solid var(--ifm-color-emphasis-300); border-radius: 6px; font-size: 0.75rem; }
+.healthNotifications p { margin: 0.35rem 0 0; }
+.healthReferenceLinks { display: flex; flex-direction: column; gap: 0.35rem; }
+.healthReferenceLinks button { padding: 0.5rem; border: 0; border-radius: 5px; background: var(--ifm-color-emphasis-100); color: var(--ifm-color-primary); text-align: left; cursor: pointer; font-size: 0.78rem; }
+.healthReferenceLinks button:hover { background: var(--ifm-color-emphasis-200); }
+.healthMoodTrend { margin-top: 0.8rem; font-size: 0.78rem; }
+.medicationList time small { display: block; color: var(--ifm-color-emphasis-600); font-size: 0.6rem; }
+
+.metricDetails > .vitalsHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding-right: 2rem; }
+.metricDetails > .vitalsHeading > strong { font-size: 1rem; }
+.metricDetails > .vitalsHeading > span { font-weight: 400; }
+.healthDetails > footer { padding-top: 0.6rem; border-top: 1px solid var(--ifm-color-emphasis-200); line-height: 1.6; }
+.healthDetails .metricTrendNote { color: var(--ifm-color-emphasis-600); font-size: 0.7rem; line-height: 1.6; }
+.healthDetails .moodRecordHeader { justify-content: flex-start; }
+.healthDetails .moodRecordHeader > span { margin-left: 0; color: var(--ifm-color-emphasis-600); font-size: 0.7rem; }
+.healthDetails .medicationList li { grid-template-columns: 3rem minmax(0, 1fr); padding: 0.6rem 0; border-bottom-color: var(--ifm-color-emphasis-200); }
+.healthDetails .medicationList li:last-child { border-bottom: 0; }
+.healthDetails .medicationList strong { font-size: 0.86rem; line-height: 1.5; }
+.healthDetails .medicationList small { font-size: 0.72rem; line-height: 1.6; }

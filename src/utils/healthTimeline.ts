@@ -30,8 +30,15 @@ const definitions: Record<string, Definition> = {
   step_count: {name: '步数', axisLabel: '步数', total: true, unit: '步'},
   walking_running_distance: {name: '步行与跑步距离', axisLabel: '步跑距', total: true},
   cycling_distance: {name: '骑行距离', axisLabel: '骑行', total: true},
+  swimming_distance: {name: '游泳距离', axisLabel: '游泳', total: true},
+  swimming_stroke_count: {name: '划水次数', axisLabel: '划水', total: true, unit: '次'},
   flights_climbed: {name: '爬楼层数', axisLabel: '爬楼', total: true, unit: '层'},
   handwashing: {name: '洗手', axisLabel: '洗手', total: true},
+  toothbrushing: {name: '刷牙', axisLabel: '刷牙', total: true},
+  mindful_minutes: {name: '正念', axisLabel: '正念', total: true},
+  cardio_recovery: {name: '心率恢复', axisLabel: '恢复', statistic: '测量'},
+  six_minute_walking_test_distance: {name: '六分钟步行', axisLabel: '六分步行', statistic: '测量'},
+  height: {name: '身高', axisLabel: '身高', unit: '厘米', multiplier: 100, inputUnit: 'm'},
   physical_effort: {name: '体力强度', axisLabel: '体力'},
   walking_speed: {name: '步行速度', axisLabel: '步速'},
   walking_step_length: {name: '步长', axisLabel: '步长'},
@@ -48,7 +55,7 @@ const definitions: Record<string, Definition> = {
 };
 const existingMetrics = new Set(['heart_rate_variability', 'sleep_analysis', 'time_in_daylight', 'environmental_audio_exposure']);
 const units: Record<string, string> = {
-  'count/min': '次/分', degC: '℃', min: '分钟', s: '秒', kg: '公斤', km: '公里',
+  'count/min': '次/分', degC: '℃', min: '分钟', s: '秒', kg: '公斤', km: '公里', m: '米',
   'km/hr': '公里/时', 'm/s': '米/秒', cm: '厘米', dBASPL: 'dBA', 'kcal/hr·kg': '千卡/时·公斤',
   'mL/min·kg': '毫升/分·公斤', count: '次',
 };

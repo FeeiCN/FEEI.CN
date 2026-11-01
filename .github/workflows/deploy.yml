@@ -175,7 +175,7 @@ jobs:
 
           data_only=false
           if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
-            changed_files="$(git diff --name-only "$deployed_head" "$new_head")"
+            changed_files="$(git -c core.quotePath=false diff --name-only "$deployed_head" "$new_head")"
             if [ -n "$changed_files" ] && ! printf '%s\n' "$changed_files" | grep -v '^static/data/' > /dev/null; then data_only=true; fi
           fi
           if [ "$data_only" = true ]; then
@@ -216,7 +216,7 @@ jobs:
                 docs/*|static/data/*) ;;
                 *) typecheck_required=true; break ;;
               esac
-            done < <(git diff --name-only "$deployed_head" "$new_head")
+            done < <(git -c core.quotePath=false diff --name-only "$deployed_head" "$new_head")
           fi
           if [ "$typecheck_required" = true ]; then
             npm run typecheck

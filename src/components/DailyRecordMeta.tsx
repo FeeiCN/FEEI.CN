@@ -418,7 +418,11 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
     .flatMap((payload) => payload?.data?.stateOfMind?.stateOfMind ?? [])
     .filter((record) => typeof record.start === 'string');
   const dailyMoodRecords = (dailyPayload?.timeline ?? [])
-    .filter((record) => record.type === 'state_of_mind' && typeof record.start === 'string')
+    .filter((record) => (
+      record.type === 'state_of_mind'
+      && typeof record.start === 'string'
+      && formatMoodDate(record.start) === date
+    ))
     .map(({type: _type, ...record}) => record);
   const moodByStart = new Map<string, StateOfMindRecord>();
   [...monthlyMoodRecords, ...dailyMoodRecords].forEach((record) => {

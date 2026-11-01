@@ -351,6 +351,290 @@
   font-size: 0.75rem;
 }
 
+.moodPhysiology {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.moodPhysiology p {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.68rem;
+}
+
+.hrvMeasurements {
+  --hrv-low-color: #93c5fd;
+  --hrv-high-color: #1d4ed8;
+  --timeline-low-color: #cbd5e1;
+  --timeline-high-color: #475569;
+  --daylight-color: #b45309;
+  --context-sleep-color: #6366f1;
+  --context-movement-color: #15803d;
+  --context-sound-color: #0369a1;
+  margin-top: 0;
+}
+
+[data-theme='dark'] .hrvMeasurements {
+  --hrv-low-color: #bfdbfe;
+  --hrv-high-color: #3b82f6;
+  --timeline-low-color: #64748b;
+  --timeline-high-color: #e2e8f0;
+  --daylight-color: #fbbf24;
+  --context-sleep-color: #a5b4fc;
+  --context-movement-color: #4ade80;
+  --context-sound-color: #7dd3fc;
+}
+
+.hrvMeasurementsHeading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.moodDailyMetrics {
+  margin-bottom: 1rem;
+}
+
+.moodDailyMetrics dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+}
+
+.moodDailyMetrics dl > div {
+  min-width: 0;
+  padding: 0.5rem;
+  border-radius: 5px;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.moodDailyMetrics dt,
+.moodDailyMetrics small {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.65rem;
+}
+
+.moodDailyMetrics dd {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.moodDailyMetrics small {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.6rem;
+  font-weight: 400;
+}
+
+.hrvChart {
+  position: relative;
+  margin-top: 0.45rem;
+}
+
+.metricPopover:has(.hrvMeasurements) {
+  width: min(28rem, calc(100vw - 1.5rem));
+}
+
+.metricPopoverBody:has(.hrvMeasurements) {
+  scrollbar-gutter: stable;
+}
+
+.hrvBandToggle {
+  position: absolute;
+  z-index: 1;
+  top: 13px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: 40px;
+  padding: 0 2px 0 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--hrv-high-color);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.7rem;
+}
+
+@media (hover: hover) {
+  .hrvBandToggle:hover {
+    background: color-mix(in srgb, var(--ifm-color-emphasis-500) 5%, transparent);
+  }
+}
+
+.hrvBandToggle:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+.hrvBandToggle > span {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+}
+
+.sleepBandToggle {
+  height: 40px;
+  color: var(--context-sleep-color);
+}
+
+.contextBandToggle {
+  color: var(--ifm-color-emphasis-600);
+}
+
+.timelineSecondary strong,
+.timelineSecondary span {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.65rem;
+  font-weight: 400;
+}
+
+.timelineInlineDetails {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  width: 100%;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 6px;
+  padding: 0.6rem;
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  animation: none;
+}
+
+.timelineInlineDetails[hidden],
+.timelineInlineDetails[data-state='closed'] { display: none; }
+.timelineInlineDetails p { margin: 0.45rem 0 0; color: var(--ifm-font-color-base); white-space: pre-line; }
+.timelineInlineDetails time { display: block; font-weight: 600; font-variant-numeric: tabular-nums; }
+.timelineInlineDetails small { display: block; margin-top: 0.4rem; font-size: 0.65rem; }
+.timelineDetailHeading { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 0.25rem; }
+.timelineDetailHeading button { appearance: none; border: 0; padding: 0; background: transparent; color: var(--ifm-color-primary); font: inherit; cursor: pointer; }
+.timelineDetailHeading button:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 2px; border-radius: 2px; }
+
+.hrvInlineSelection {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+.hrvInlineSelection small { display: block; margin-top: 0.2rem; font-size: 0.65rem; }
+
+.moreActivityMetrics { margin-top: 0.7rem; }
+.moreMetricsToggle {
+  appearance: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  padding: 0.6rem 0;
+  color: var(--ifm-color-primary);
+  background: transparent;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.moreMetricsToggle:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 2px; border-radius: 3px; }
+.moreMetricsOpen { display: none; }
+.moreMetricsToggle[data-state='open'] .moreMetricsClosed { display: none; }
+.moreMetricsToggle[data-state='open'] .moreMetricsOpen { display: inline; }
+.moreMetricsToggle[data-state='open'] .moreMetricsChevron { transform: rotate(180deg); }
+
+.timelineRowHeading {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  width: 104px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.timelineRowHeading > div {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 0.05rem;
+  white-space: nowrap;
+}
+
+.timelineRowHeading strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.timelineRowHeading span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ifm-font-color-base);
+  font-size: 0.72rem;
+}
+
+
+.hrvLegend,
+.soundLegend {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.62rem;
+}
+
+.hrvLegend > span,
+.soundLegend > span {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 0.4rem;
+  border-radius: 2px;
+  background: linear-gradient(to right, transparent, var(--context-sound-color));
+}
+
+.hrvLegend > span {
+  background: linear-gradient(to right, var(--hrv-low-color), var(--hrv-high-color));
+}
+
+.hrvChart:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.timelineLegend {
+  margin-top: 0.35rem;
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+
+.moodPhysiology p {
+  margin: 0.65rem 0 0;
+  line-height: 1.5;
+}
+
 .readingStats,
 .healthStats {
   display: grid;
@@ -809,6 +1093,30 @@
   overflow: hidden;
 }
 
+.embeddedSleepDetails {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  display: flow-root;
+  width: 100%;
+  max-height: none;
+  margin-top: 0;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  overflow: visible;
+}
+
+.embeddedSleepDetails section > header {
+  position: static;
+  gap: 0.5rem;
+  margin: 0 0 0.85rem;
+  padding: 0.7rem 0;
+}
+
+.embeddedSleepDetails[hidden],
+.embeddedSleepDetails[data-state='closed'] {
+  display: none;
+}
+
 .sleepPopover .metricPopoverBody {
   max-height: inherit;
   overflow-y: auto;
@@ -837,6 +1145,8 @@
 .sleepPopover .metricBreakdown > div:nth-child(n + 2) { text-align: center; }
 .sleepPopover [data-has-endpoints='true'] + .metricBreakdown > div > span { display: none; }
 .sleepPopover .metricBreakdown > div > span { color: var(--ifm-color-emphasis-700); font-size: 0.74rem; }
+.embeddedSleepDetails .metricBreakdown > div > strong { white-space: nowrap; }
+.embeddedSleepDetails .metricBreakdownScoreLabel { display: block; margin-right: 0; }
 .metricBreakdownMaximum { color: var(--ifm-color-emphasis-600); font-size: 0.7rem; font-weight: 400; }
 .metricBreakdownScoreLabel { margin-right: 0.2rem; color: var(--ifm-color-emphasis-700); font-size: 0.65rem; font-weight: 400; }
 .sleepPopover .sleepScoreLegend > div { color: var(--ifm-color-emphasis-600); }
@@ -906,4 +1216,4 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.scrollablePopover .metricPopoverClose { background: var(--ifm-background-surface-color); }
+.scrollablePopover .metricPopoverClose { z-index: 3; background: var(--ifm-background-surface-color); }

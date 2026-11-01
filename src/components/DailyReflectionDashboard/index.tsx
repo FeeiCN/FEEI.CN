@@ -2852,7 +2852,7 @@ export default function DailyReflectionDashboard({initialYear, children}: DailyR
       fetchDailyAnalysis(selectedDate),
       fetchWeather(selectedDate),
       fetchJson<DriveLog>(`/data/drive/${selectedYearPart}/${selectedMonth}/${selectedDay}.json`),
-      fetchJson<DailyHealthData>(`/data/health/${selectedYearPart}/${selectedMonth}/${selectedDay}.json`),
+      fetchJson<DailyHealthData>(staticAssetUrl(`/data/health/${selectedYearPart}/${selectedMonth}/${selectedDay}.json`)),
     ])
       .then(([
         diaryText,

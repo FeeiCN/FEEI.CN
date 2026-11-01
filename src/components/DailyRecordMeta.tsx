@@ -1,6 +1,9 @@
-import React, {type ReactNode, useEffect, useMemo, useRef, useState} from 'react';
+import React, {type ReactNode, useEffect, useId, useMemo, useRef, useState} from 'react';
 import {Button, Collapsible, Popover, Portal} from '@chakra-ui/react';
 import {useDoc} from '@docusaurus/plugin-content-docs/client';
+import {useColorMode} from '@docusaurus/theme-common';
+import ReactECharts from 'echarts-for-react';
+import {color as echartsColor, format as echartsFormat, type CustomSeriesOption, type EChartsOption} from 'echarts';
 import ActivityDayDetails from './ActivityDayDetails';
 import XIcon from '@site/src/components/ItsHoverIcon/icons/x-icon';
 import {
@@ -9,6 +12,11 @@ import {
   type WeatherSummary,
 } from '@site/src/utils/weather';
 import {resolvePlace, type ResolvedPlace} from '@site/src/utils/locationResolver';
+import {staticAssetUrl} from '@site/src/utils/staticAssets';
+import {
+  additionalHealthMetricFiles, compactHealthMetricSummary, healthTimelineCoverageMinutes, healthTimelinePeriodLabel, indexHealthTimelineRows, parseHealthMetricTimeline, pendingHealthMetricRow,
+  type HealthMetricPayload, type HealthTimelineFile, type HealthTimelinePeriod, type HealthTimelineRow,
+} from '@site/src/utils/healthTimeline';
 import {
   STATE_OF_MIND_ASSOCIATION_LABELS,
   STATE_OF_MIND_CLASSIFICATION_LABELS,
@@ -121,10 +129,28 @@ type HealthMetric = {
 type HealthDay = {
   version?: 5;
   date: string;
-  activity?: Record<string, number | unknown[] | undefined>;
+  activity?: Record<string, number | unknown[] | undefined> & {
+    daylightPeriods?: Array<[number, number, number]>;
+    movementPeriods?: Array<[number, number, number?, number?]>;
+    standPeriods?: Array<[number, number, number]>;
+    workouts?: Array<{type?: string; startMinute?: number; endMinute?: number; durationMinutes?: number; distanceKm?: number; averageHeartRateBpm?: number}>;
+  };
+  sleep?: {stages?: Array<[number, number, string]>};
+  hearing?: {environmentalAudioExposureDbASPL?: number};
+  respiratory?: {respiratoryRatePerMinute?: number; bloodOxygenFraction?: number};
+  vitalSigns?: {wristTemperatureCelsius?: number};
+  activityCapability?: {walkingStepLengthM?: number; walkingSpeedMps?: number; walkingAsymmetryPercent?: number; walkingDoubleSupportPercent?: number; stairAscentSpeedMps?: number; stairDescentSpeedMps?: number};
+  files?: Record<string, {path: string; records?: number}>;
+  heart?: {hrv?: {dailyMs?: number; source?: string; measurements?: Array<[number, number, string]>}; restingHeartRateBpm?: number; walkingHeartRateBpm?: number; heartRate?: {averageBpm?: number}};
   bodyMeasurements?: {weight?: {dailyKg?: number}; bodyFatFraction?: number; bodyMassIndex?: number; leanBodyMassKg?: number};
   mindfulness?: {stateOfMindEntries?: Array<{minute?: number; kind?: string; valence?: number; classification?: string; labels?: string[]; associations?: string[]}>};
-  medications?: {doses?: Array<{scheduledMinute?: number; takenMinute?: number; name?: string; status?: string; dosage?: number; scheduledDosage?: number}>};
+  medications?: {doses?: Array<{scheduledMinute?: number; takenMinute?: number; name?: string; displayText?: string; status?: string; dosage?: number; scheduledDosage?: number}>};
+};
+
+type HealthMonth = {
+  version?: 5;
+  month?: string;
+  days?: HealthDay[];
 };
 
 type MedicationRecord = {
@@ -153,15 +179,34 @@ type StateOfMindRecord = {
   associations?: string[];
 };
 
-type MoodSummary = {
+type MoodSummary = HealthTimelineSummary & {
   date: string;
   primary: StateOfMindRecord;
   records: StateOfMindRecord[];
   recordedDays: number;
 };
 
+type HealthTimelineSummary = {
+  date: string;
+  hrvMs: number | null;
+  hrvSource?: string;
+  hrvMeasurements: Array<[number, number, string]>;
+  hrvBaselineMs: number | null;
+  restingHeartRateBpm: number | null;
+  restingHeartRateBaselineBpm: number | null;
+  daylightMinutes: number | null;
+  daylightPeriods: Array<[number, number, number]>;
+  sleepStages: Array<[number, number, string]>;
+  movementPeriods: Array<[number, number, number?, number?]>;
+  environmentSoundDb: number | null;
+  environmentSoundFile?: string;
+  timelineFiles: HealthTimelineFile[];
+  timelineRows: HealthTimelineRow[];
+};
+
 type ActivitySummary = {
   date: string;
+  timeline: HealthTimelineSummary;
   exerciseMinutes: number;
   activeEnergyKJ: number | null;
   distanceKm: number | null;
@@ -376,15 +421,22 @@ async function loadSleepScore(date: string, signal: AbortSignal): Promise<SleepS
 async function loadHealthSummary(date: string, signal: AbortSignal): Promise<HealthSummary | null> {
   const trendStart = shiftDate(date, -6);
   const moodStart = shiftDate(date, -29);
-  const dates = Array.from({length: 30}, (_, index) => shiftDate(date, -index));
-  const payloads = await Promise.all(dates.map(async (day) => {
-    const response = await fetch(`/data/health/${day.replaceAll('-', '/')}.json`, {signal, cache: 'no-store'});
-    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) return null;
-    const payload = await response.json() as HealthDay;
-    return payload.version === 5 && payload.date === day ? payload : null;
+  const months = [...new Set(Array.from({length: 30}, (_, index) => shiftDate(date, -index).slice(0, 7)))];
+  const [dayResponse, ...monthResponses] = await Promise.all([
+    fetch(staticAssetUrl(`/data/health/${date.replaceAll('-', '/')}.json`), {signal, cache: 'no-store'}),
+    ...months.map((month) => fetch(staticAssetUrl(`/data/health/${month.replace('-', '/')}.json`), {signal, cache: 'no-store'}).catch(() => null)),
+  ]);
+  if (!dayResponse.ok || !dayResponse.headers.get('content-type')?.includes('application/json')) return null;
+  const currentDay = await dayResponse.json() as HealthDay;
+  if (currentDay.version !== 5 || currentDay.date !== date) return null;
+  const monthPayloads = await Promise.all(monthResponses.map(async (response, index) => {
+    if (!response?.ok || !response.headers.get('content-type')?.includes('application/json')) return null;
+    const payload = await response.json() as HealthMonth;
+    return payload.version === 5 && payload.month === months[index] && Array.isArray(payload.days) ? payload : null;
   }));
   const records = new Map<string, HealthMetricRecord[]>();
-  const healthDays = payloads.filter((payload): payload is HealthDay => payload !== null);
+  const healthDays = [currentDay, ...monthPayloads.flatMap((month) => month?.days ?? [])
+    .filter((day) => day.version === 5 && day.date >= moodStart && day.date < date)];
   healthDays.forEach((day) => {
     const values: Array<[string, number | undefined]> = [
       ['apple_exercise_time', day.activity?.exerciseMinutes as number],
@@ -394,6 +446,8 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
       ['apple_stand_time', day.activity?.standMinutes as number],
       ['flights_climbed', day.activity?.flightsClimbed as number],
       ['time_in_daylight', day.activity?.daylightMinutes as number],
+      ['heart_rate_variability', day.heart?.hrv?.dailyMs],
+      ['resting_heart_rate', day.heart?.restingHeartRateBpm],
       ['weight_body_mass', day.bodyMeasurements?.weight?.dailyKg],
       ['body_fat_percentage', day.bodyMeasurements?.bodyFatFraction === undefined ? undefined : day.bodyMeasurements.bodyFatFraction * 100],
       ['body_mass_index', day.bodyMeasurements?.bodyMassIndex],
@@ -432,6 +486,19 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
     const value = recordForDate(name)?.qty;
     return typeof value === 'number' && Number.isFinite(value) ? value : null;
   };
+  const previousWeekMedian = (name: string): number | null => {
+    const start = shiftDate(date, -7);
+    const values = (records.get(name) ?? [])
+      .filter((record): record is HealthMetricRecord & {date: string; qty: number} => (
+        typeof record.date === 'string' && record.date >= start && record.date < date
+        && typeof record.qty === 'number' && Number.isFinite(record.qty)
+      ))
+      .map((record) => record.qty)
+      .sort((left, right) => left - right);
+    if (values.length < 4) return null;
+    const middle = Math.floor(values.length / 2);
+    return values.length % 2 ? values[middle] : (values[middle - 1] + values[middle]) / 2;
+  };
 
   const exerciseMinutes = valueForDate('apple_exercise_time');
   const exerciseRecords = records.get('apple_exercise_time') ?? [];
@@ -458,20 +525,6 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
     ))
     .sort((left, right) => left.date.localeCompare(right.date))
     .map((record) => ({date: record.date.slice(0, 10), weightKg: record.qty}));
-  const activity = exerciseMinutes === null ? null : {
-    date,
-    exerciseMinutes,
-    activeEnergyKJ: valueForDate('active_energy'),
-    distanceKm: valueForDate('walking_running_distance'),
-    steps: valueForDate('step_count'),
-    standMinutes: valueForDate('apple_stand_time'),
-    flightsClimbed: valueForDate('flights_climbed'),
-    daylightMinutes: valueForDate('time_in_daylight'),
-    trend: Array.from({length: 7}, (_, index) => {
-      const trendDate = shiftDate(trendStart, index);
-      return {date: trendDate, minutes: exerciseByDate.get(trendDate) ?? null};
-    }),
-  };
   const weight = weightKg === null ? null : {
     date,
     weightKg,
@@ -487,8 +540,78 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
   const currentMoodRecords = moodRecords.filter((record) => formatMoodDate(record.start) === date);
   const primaryMood = [...currentMoodRecords].reverse().find((record) => record.kind === 'daily_mood')
     ?? currentMoodRecords.at(-1);
-  const mood = primaryMood ? {
+  const timeline: HealthTimelineSummary = {
     date,
+    hrvMs: valueForDate('heart_rate_variability'),
+    hrvSource: currentDay.heart?.hrv?.source,
+    hrvMeasurements: (currentDay.heart?.hrv?.measurements ?? [])
+      .filter(([minute, value]) => Number.isFinite(minute) && Number.isFinite(value))
+      .sort((left, right) => left[0] - right[0]),
+    hrvBaselineMs: previousWeekMedian('heart_rate_variability'),
+    restingHeartRateBpm: valueForDate('resting_heart_rate'),
+    restingHeartRateBaselineBpm: previousWeekMedian('resting_heart_rate'),
+    daylightMinutes: valueForDate('time_in_daylight'),
+    daylightPeriods: (currentDay.activity?.daylightPeriods ?? [])
+      .filter(([start, end, duration]) => [start, end, duration].every(Number.isFinite)
+        && start >= 0 && end <= 1440 && end > start && duration > 0)
+      .sort((left, right) => left[0] - right[0]),
+    sleepStages: currentDay.sleep?.stages ?? [],
+    movementPeriods: currentDay.activity?.movementPeriods ?? [],
+    environmentSoundDb: currentDay.hearing?.environmentalAudioExposureDbASPL ?? null,
+    environmentSoundFile: currentDay.files?.['metrics/hearing/environmental_audio_exposure.json.gz']?.path,
+    timelineFiles: additionalHealthMetricFiles(currentDay.files ?? {}, {
+      heart_rate: currentDay.heart?.heartRate?.averageBpm,
+      resting_heart_rate: currentDay.heart?.restingHeartRateBpm,
+      walking_heart_rate_average: currentDay.heart?.walkingHeartRateBpm,
+      respiratory_rate: currentDay.respiratory?.respiratoryRatePerMinute,
+      blood_oxygen_saturation: currentDay.respiratory?.bloodOxygenFraction === undefined ? undefined : currentDay.respiratory.bloodOxygenFraction * 100,
+      apple_sleeping_wrist_temperature: currentDay.vitalSigns?.wristTemperatureCelsius,
+      step_count: valueForDate('step_count') ?? undefined,
+      walking_running_distance: valueForDate('walking_running_distance') ?? undefined,
+      flights_climbed: valueForDate('flights_climbed') ?? undefined,
+      apple_exercise_time: valueForDate('apple_exercise_time') ?? undefined,
+      apple_stand_time: valueForDate('apple_stand_time') ?? undefined,
+      apple_stand_hour: currentDay.activity?.standHours as number | undefined,
+      active_energy: valueForDate('active_energy') ?? undefined,
+      basal_energy_burned: currentDay.activity?.restingEnergyKJ as number | undefined,
+      cycling_distance: currentDay.activity?.cyclingDistanceKm as number | undefined,
+      handwashing: currentDay.activity?.handwashingSeconds as number | undefined,
+      physical_effort: currentDay.activity?.physicalEffortKcalPerHourKg as number | undefined,
+      walking_step_length: currentDay.activityCapability?.walkingStepLengthM === undefined ? undefined : currentDay.activityCapability.walkingStepLengthM * 100,
+      walking_speed: currentDay.activityCapability?.walkingSpeedMps === undefined ? undefined : currentDay.activityCapability.walkingSpeedMps * 3.6,
+      walking_asymmetry_percentage: currentDay.activityCapability?.walkingAsymmetryPercent,
+      walking_double_support_percentage: currentDay.activityCapability?.walkingDoubleSupportPercent,
+      stair_speed_up: currentDay.activityCapability?.stairAscentSpeedMps,
+      stair_speed_down: currentDay.activityCapability?.stairDescentSpeedMps,
+      weight_body_mass: currentDay.bodyMeasurements?.weight?.dailyKg,
+      body_fat_percentage: currentDay.bodyMeasurements?.bodyFatFraction === undefined ? undefined : currentDay.bodyMeasurements.bodyFatFraction * 100,
+      lean_body_mass: currentDay.bodyMeasurements?.leanBodyMassKg,
+      body_mass_index: currentDay.bodyMeasurements?.bodyMassIndex,
+      vo2_max: currentDay.activity?.vo2MaxMlKgMin as number | undefined,
+    }),
+    timelineRows: indexHealthTimelineRows({
+      standMinutes: valueForDate('apple_stand_time') ?? undefined,
+      standPeriods: currentDay.activity?.standPeriods,
+      workouts: currentDay.activity?.workouts,
+    }),
+  };
+  const activity = exerciseMinutes === null ? null : {
+    date,
+    exerciseMinutes,
+    timeline,
+    activeEnergyKJ: valueForDate('active_energy'),
+    distanceKm: valueForDate('walking_running_distance'),
+    steps: valueForDate('step_count'),
+    standMinutes: valueForDate('apple_stand_time'),
+    flightsClimbed: valueForDate('flights_climbed'),
+    daylightMinutes: valueForDate('time_in_daylight'),
+    trend: Array.from({length: 7}, (_, index) => {
+      const trendDate = shiftDate(trendStart, index);
+      return {date: trendDate, minutes: exerciseByDate.get(trendDate) ?? null};
+    }),
+  };
+  const mood = primaryMood ? {
+    ...timeline,
     primary: primaryMood,
     records: currentMoodRecords,
     recordedDays: new Set(moodRecords
@@ -824,7 +947,564 @@ function formatMoodDate(value: string | undefined): string {
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
-function MoodDetails({data}: {data: MoodSummary}) {
+type ContextPeriod = HealthTimelinePeriod;
+type ContextRow = {id: string; name: string; axisLabel?: string; colorIndex: number; periods: ContextPeriod[]; summary: string; range?: [number, number]; secondary?: boolean};
+type SoundPeriod = [number, number, number];
+const dailyMetricNames = new Set(['resting_heart_rate', 'walking_heart_rate_average', 'vo2_max']);
+const moodMetricNames = new Set(['resting_heart_rate', 'heart_rate', 'headphone_audio_exposure']);
+const activityMetricNames = new Set([
+  'apple_exercise_time', 'step_count', 'walking_running_distance', 'cycling_distance', 'active_energy',
+  'apple_stand_time', 'walking_heart_rate_average', 'vo2_max',
+]);
+const extraActivityMetricNames = new Set([
+  'basal_energy_burned', 'physical_effort', 'apple_stand_hour', 'flights_climbed', 'walking_speed', 'walking_step_length',
+  'walking_double_support_percentage', 'walking_asymmetry_percentage', 'handwashing',
+]);
+const healthTimelineOrder = [
+  'sleep', 'apple_exercise_time', 'workouts', 'movement', 'daylight', 'sound', 'headphone_audio_exposure',
+  'heart_rate', 'respiratory_rate', 'blood_oxygen_saturation', 'step_count', 'walking_running_distance',
+  'cycling_distance', 'active_energy', 'basal_energy_burned', 'physical_effort', 'standing-periods', 'apple_stand_time',
+  'apple_stand_hour', 'flights_climbed', 'walking_speed', 'walking_step_length',
+  'walking_double_support_percentage', 'walking_asymmetry_percentage', 'handwashing',
+];
+
+async function loadHealthDetail(date: string, path: string, signal: AbortSignal): Promise<HealthMetricPayload> {
+  const response = await fetch(staticAssetUrl(`/data/health/${date.slice(0, 7).replace('-', '/')}/${path}`), {signal});
+  if (!response.ok) throw new Error('Health detail unavailable');
+  const buffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const stream = new Blob([buffer]).stream();
+  return await new Response(bytes[0] === 0x1f && bytes[1] === 0x8b
+    ? stream.pipeThrough(new DecompressionStream('gzip')) : stream).json() as HealthMetricPayload;
+}
+
+async function loadEnvironmentSound(date: string, path: string, signal: AbortSignal): Promise<SoundPeriod[]> {
+  const payload = await loadHealthDetail(date, path, signal);
+  const metric = payload.metric;
+  if (payload.version !== 5 || payload.date !== date || metric?.name !== 'environmental_audio_exposure'
+    || metric.units !== 'dBASPL' || !Array.isArray(metric.columns) || !Array.isArray(metric.rows)) {
+    throw new Error('Invalid environment sound data');
+  }
+  const column = (name: string) => metric.columns!.indexOf(name);
+  const startColumn = column('startMinute');
+  const dateColumn = column('dateMinute');
+  const endColumn = column('endMinute');
+  const valueColumn = column('qty');
+  if (valueColumn < 0 || (startColumn < 0 && dateColumn < 0)) throw new Error('Missing sound columns');
+  return metric.rows.flatMap((row): SoundPeriod[] => {
+    const start = row[startColumn] ?? row[dateColumn];
+    const end = row[endColumn] ?? start;
+    const value = row[valueColumn];
+    if (typeof start !== 'number' || typeof end !== 'number' || typeof value !== 'number'
+      || ![start, end, value].every(Number.isFinite) || end < start || end < 0 || start >= 1440) return [];
+    return [[Math.max(0, start), Math.min(1440, end), value]];
+  }).sort((left, right) => left[0] - right[0]);
+}
+
+function HealthDayTimeline({data, sleepScore = null, mode = 'mood'}: {data: HealthTimelineSummary; sleepScore?: SleepScoreSummary | null; mode?: 'mood' | 'activity' | 'activity-extra'}) {
+  const showHrv = mode === 'mood';
+  const {colorMode} = useColorMode();
+  const chartId = useId();
+  const detailId = useId();
+  const container = useRef<HTMLDivElement>(null);
+  const chart = useRef<ReactECharts>(null);
+  const [sleepDetailsElement, setSleepDetailsElement] = useState<HTMLDivElement | null>(null);
+  const [detailElement, setDetailElement] = useState<HTMLDivElement | null>(null);
+  const [detail, setDetail] = useState<{rowId: string; dataIndex: number} | null>(null);
+  const [detailHeight, setDetailHeight] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const [sleepOpen, setSleepOpen] = useState(false);
+  const [sleepHeight, setSleepHeight] = useState(0);
+  const [palette, setPalette] = useState<string[]>([]);
+  const [chartWidth, setChartWidth] = useState(0);
+  const [selected, setSelected] = useState<{seriesIndex: number; dataIndex: number} | null>(null);
+  const metricFiles = useMemo(() => data.timelineFiles.filter((file) => (mode === 'mood' ? moodMetricNames : mode === 'activity' ? activityMetricNames : extraActivityMetricNames).has(file.name)
+    && !(file.name === 'apple_stand_time' && data.timelineRows.some((row) => row.id === 'standing-periods'))), [data.timelineFiles, data.timelineRows, mode]);
+  const [additionalMetrics, setAdditionalMetrics] = useState<HealthTimelineRow[]>(() => metricFiles.map(pendingHealthMetricRow));
+  const measurements = useMemo(() => showHrv ? data.hrvMeasurements : [], [showHrv, data.hrvMeasurements]);
+  const timeLeft = 112;
+  const timeRight = 16;
+  const bandTop = 26;
+  const rowHeight = 40;
+  const contextTop = showHrv ? (expanded ? 268 : 66) : bandTop;
+  const sleepSummary = sleepScore?.date === data.date ? sleepScore : null;
+  const formatTime = (minute: number) => `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(Math.floor(minute % 60)).padStart(2, '0')}`;
+  const sourceName = (source: string) => source === 'watch' ? 'Apple Watch' : source;
+  const [sound, setSound] = useState<{status: 'loading' | 'ready' | 'error' | 'missing'; periods: SoundPeriod[]}>({
+    status: data.environmentSoundFile ? 'loading' : 'missing', periods: [],
+  });
+  useEffect(() => {
+    const controller = new AbortController();
+    const files = metricFiles;
+    setAdditionalMetrics(files.map(pendingHealthMetricRow));
+    let next = 0;
+    const worker = async () => {
+      while (!controller.signal.aborted && next < files.length) {
+        const file = files[next++];
+        let row: HealthTimelineRow;
+        try {
+          row = parseHealthMetricTimeline(data.date, file, await loadHealthDetail(data.date, file.path, controller.signal));
+        } catch {
+          row = {...pendingHealthMetricRow(file), summary: '明细暂不可用'};
+        }
+        if (!controller.signal.aborted) setAdditionalMetrics((previous) => previous.map((item) => item.id === row.id ? row : item));
+      }
+    };
+    void Promise.all(Array.from({length: Math.min(4, files.length)}, worker));
+    return () => controller.abort();
+  }, [data.date, metricFiles]);
+  useEffect(() => {
+    const controller = new AbortController();
+    if (mode !== 'mood' || !data.environmentSoundFile) {
+      setSound({status: 'missing', periods: []});
+      return;
+    }
+    setSound({status: 'loading', periods: []});
+    loadEnvironmentSound(data.date, data.environmentSoundFile, controller.signal)
+      .then((periods) => {if (!controller.signal.aborted) setSound({status: 'ready', periods});})
+      .catch(() => {if (!controller.signal.aborted) setSound({status: 'error', periods: []});});
+    return () => controller.abort();
+  }, [data.date, data.environmentSoundFile, mode]);
+  const dailyMetrics = useMemo(() => {
+    const rows = additionalMetrics.filter((row) => dailyMetricNames.has(row.id));
+    if (showHrv && data.restingHeartRateBpm !== null && !data.timelineFiles.some((file) => file.name === 'resting_heart_rate')) {
+      rows.unshift({id: 'resting_heart_rate', name: '静息心率', axisLabel: '静息率', periods: [], summary: `${Math.round(data.restingHeartRateBpm)} 次/分`});
+    }
+    const order = [...dailyMetricNames];
+    return rows.sort((left, right) => order.indexOf(left.id) - order.indexOf(right.id));
+  }, [additionalMetrics, data.restingHeartRateBpm, data.timelineFiles, showHrv]);
+  const contextRows = useMemo<ContextRow[]>(() => {
+    const rows: ContextRow[] = [];
+    const sleep: Array<[number, number]> = [];
+    const stages = data.sleepStages.filter(([start, end, stage]) => [start, end].every(Number.isFinite)
+      && end > start && end > 0 && start < 1440 && ['core', 'deep', 'rem', 'asleep', '睡眠时长'].includes(stage))
+      .map(([start, end]): [number, number] => [Math.max(0, start), Math.min(1440, end)])
+      .sort((left, right) => left[0] - right[0]);
+    for (const [start, end] of stages) {
+      const previous = sleep.at(-1);
+      if (previous && start <= previous[1]) previous[1] = Math.max(previous[1], end);
+      else sleep.push([start, end]);
+    }
+    if (showHrv && sleep.length) rows.push({
+      id: 'sleep', name: '睡眠', colorIndex: 7,
+      periods: sleep.map(([start, end]) => ({start, end, detail: `睡眠 ${(end - start).toFixed(1)} 分钟`})),
+      summary: typeof sleepSummary?.score === 'number' ? `${Math.round(sleepSummary.score)}分`
+        : `${Math.round(sleep.reduce((sum, [start, end]) => sum + end - start, 0))} 分钟`,
+    });
+    const movement = data.movementPeriods.filter(([start, end]) => [start, end].every(Number.isFinite)
+      && end > start && end > 0 && start < 1440)
+      .map(([start, end, steps, distanceKm]) => ({
+        start: Math.max(0, start), end: Math.min(1440, end),
+        detail: ['移动记录覆盖时段（含采样间隔）', typeof steps === 'number' && Number.isFinite(steps) ? `约 ${Math.round(steps)} 步` : '',
+          typeof distanceKm === 'number' && Number.isFinite(distanceKm) ? `${distanceKm.toFixed(2)} 公里` : ''].filter(Boolean).join(' · '),
+      }));
+    if (mode !== 'activity' && movement.length) rows.push({id: 'movement', name: '移动记录', colorIndex: 1, periods: movement, secondary: true,
+      summary: `覆盖 ${Math.round(healthTimelineCoverageMinutes(movement))} 分钟 · ${movement.length} 个移动片段（含采样间隔，非实际运动时长）`});
+    if (showHrv && (data.daylightMinutes !== null || data.daylightPeriods.length)) rows.push({
+      id: 'daylight', name: '日照', colorIndex: 5,
+      periods: data.daylightPeriods.map(([start, end, duration]) => ({start, end, detail: `累计日照 ${duration.toFixed(1)} 分钟`})),
+      summary: `${data.daylightMinutes === null ? '' : `${Math.round(data.daylightMinutes)} 分钟 · `}${data.daylightPeriods.length ? `${data.daylightPeriods.length} 个主要时段` : '暂无分时时段'}`,
+    });
+    if (showHrv && (data.environmentSoundFile || data.environmentSoundDb !== null)) rows.push({
+      id: 'sound', name: '声音', colorIndex: 9,
+      periods: sound.periods.map(([start, end, value]) => ({start, end, value, detail: `环境声音 ${value.toFixed(1)} dBA`})),
+      summary: sound.status === 'loading' ? '正在加载采样…' : sound.status === 'error' ? '声音明细暂不可用'
+        : `${data.environmentSoundDb === null ? '' : `日汇总 ${data.environmentSoundDb.toFixed(1)} dBA · `}${sound.periods.length ? `${sound.periods.length} 条采样` : '暂无声音采样'}`,
+    });
+    rows.push(...data.timelineRows.filter((row) => mode === 'activity' && ['standing-periods', 'workouts'].includes(row.id))
+      .map((row) => ({...row, colorIndex: row.id === 'standing-periods' ? 8 : 9})));
+    rows.push(...additionalMetrics.filter((row) => !dailyMetricNames.has(row.id)).map((row) => ({...row, colorIndex: 9})));
+    const rank = (id: string) => {
+      const index = healthTimelineOrder.indexOf(id);
+      return index < 0 ? healthTimelineOrder.length : index;
+    };
+    return rows.sort((left, right) => rank(left.id) - rank(right.id) || left.id.localeCompare(right.id));
+  }, [data.sleepStages, data.movementPeriods, data.daylightPeriods, data.daylightMinutes, data.environmentSoundFile, data.environmentSoundDb, data.timelineRows, additionalMetrics, sound, sleepSummary, showHrv, mode]);
+  const sleepRowIndex = contextRows.findIndex((row) => row.name === '睡眠');
+  const detailRowIndex = contextRows.findIndex((row) => row.id === detail?.rowId);
+  const detailRow = contextRows[detailRowIndex];
+  const detailPeriod = detailRow?.periods[detail?.dataIndex ?? 0];
+  const detailOffset = detailRow ? detailHeight + 12 : 0;
+  const sleepOffset = sleepOpen ? sleepHeight + 16 : 0;
+  const contextBandTop = (index: number) => contextTop + index * rowHeight + (index > sleepRowIndex ? sleepOffset : 0)
+    + (detailRowIndex >= 0 && index > detailRowIndex ? detailOffset : 0);
+  const chartHeight = contextRows.length ? contextBandTop(contextRows.length - 1) + 40
+    + (detailRowIndex === contextRows.length - 1 ? detailOffset : 0) : (expanded ? 288 : 80);
+  useEffect(() => {
+    if (!detailElement || !detailRow) return;
+    let frame = 0;
+    const measure = () => setDetailHeight(Math.ceil(detailElement.getBoundingClientRect().height));
+    measure();
+    const observer = new ResizeObserver(() => {cancelAnimationFrame(frame); frame = requestAnimationFrame(measure);});
+    observer.observe(detailElement);
+    return () => {observer.disconnect(); cancelAnimationFrame(frame);};
+  }, [detailElement, detailRow]);
+  useEffect(() => {
+    const element = sleepDetailsElement;
+    if (!sleepOpen || !element) return;
+    const measure = () => setSleepHeight(Math.ceil(element.getBoundingClientRect().height));
+    measure();
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    });
+    observer.observe(element);
+    return () => {observer.disconnect(); cancelAnimationFrame(frame);};
+  }, [sleepOpen, sleepDetailsElement]);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const instance = chart.current?.getEchartsInstance();
+      if (!instance || !container.current) return;
+      instance.resize({width: container.current.clientWidth, height: container.current.clientHeight});
+      if (selected?.seriesIndex === 0) {
+        instance.dispatchAction({type: 'showTip', seriesIndex: expanded ? contextRows.length + 1 : 0, dataIndex: selected.dataIndex});
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [expanded]);
+  useEffect(() => {
+    if (!container.current) return;
+    const css = getComputedStyle(container.current);
+    setPalette(['--ifm-color-primary', '--ifm-color-emphasis-600', '--ifm-color-emphasis-200', '--ifm-background-surface-color', '--ifm-font-color-base', '--daylight-color', '--ifm-color-emphasis-100', '--context-sleep-color', '--context-movement-color', '--context-sound-color', '--hrv-low-color', '--hrv-high-color', '--timeline-low-color', '--timeline-high-color']
+      .map((name) => css.getPropertyValue(name).trim()));
+  }, [colorMode]);
+  useEffect(() => {
+    if (!container.current) return;
+    let frame = 0;
+    const observer = new ResizeObserver(([entry]) => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const instance = chart.current?.getEchartsInstance();
+        const {width, height} = entry.contentRect;
+        setChartWidth(width);
+        if (instance && width > 0 && (instance.getWidth() !== width || instance.getHeight() !== height)) {
+          instance.resize({width, height});
+        }
+      });
+    });
+    observer.observe(container.current);
+    return () => {observer.disconnect(); cancelAnimationFrame(frame);};
+  }, []);
+  const tooltipPosition = (point: number[], size: {contentSize: number[]; viewSize: number[]}) => {
+    const bounds = container.current?.getBoundingClientRect();
+    const body = container.current?.closest('.chakra-popover__body')?.getBoundingClientRect();
+    const top = bounds ? Math.max(0, (body?.top ?? 0) - bounds.top, -bounds.top) + 4 : 4;
+    const bottom = bounds ? Math.min(size.viewSize[1], (body?.bottom ?? window.innerHeight) - bounds.top, window.innerHeight - bounds.top) - 4 : size.viewSize[1] - 4;
+    const y = point[1] + size.contentSize[1] + 12 <= bottom ? point[1] + 12 : point[1] - size.contentSize[1] - 12;
+    return [Math.max(4, Math.min(size.viewSize[0] - size.contentSize[0] - 4, point[0] + 12)),
+      Math.max(top, Math.min(bottom - size.contentSize[1], y))];
+  };
+  const option = useMemo<EChartsOption>(() => {
+    const wrapTooltip = (text: string) => text.split('\n').flatMap((line) => {
+      const lines: string[] = [];
+      let current = '';
+      for (const character of line) {
+        if (current && echartsFormat.getTextRect(current + character, '12px sans-serif').width > Math.max(120, Math.min(280, chartWidth - 48))) {
+          lines.push(current);
+          current = '';
+        }
+        current += character;
+      }
+      return [...lines, current];
+    }).join('\n');
+    const hrvColor = (value: number) => echartsColor.lerp(Math.max(0, Math.min(1, value / 100)), [palette[10], palette[11]]) ?? palette[0];
+    const timeAxis = {
+      type: 'value' as const, min: 0, max: 1440, interval: chartWidth - timeLeft - timeRight < 200 ? 720 : 360,
+      axisLabel: {color: palette[1], fontSize: 10, formatter: formatTime},
+      axisLine: {show: true, lineStyle: {color: palette[2]}},
+      axisTick: {show: false}, splitLine: {show: false},
+    };
+    const contextSeries = contextRows.map((row, index): CustomSeriesOption => ({
+      type: 'custom', name: row.name, xAxisIndex: index + 1, yAxisIndex: index + 1,
+      data: row.periods.map((period) => [period.start, period.end, period.value ?? 0, period.statistic ? 1 : 0]), encode: {x: [0, 1], y: []},
+      tooltip: {trigger: 'item'},
+      renderItem: (_params, api) => {
+        const start = api.coord([api.value(0), 0]);
+        const end = api.coord([api.value(1), 0]);
+        const point = Number(api.value(0)) === Number(api.value(1));
+        const statistic = Number(api.value(3)) === 1;
+        const fraction = row.range && row.range[1] > row.range[0] ? (Number(api.value(2)) - row.range[0]) / (row.range[1] - row.range[0]) : 0.5;
+        const fill = row.range ? echartsColor.lerp(Math.max(0, Math.min(1, fraction)), [palette[12], palette[13]]) : palette[row.colorIndex];
+        return {
+          type: 'rect',
+          shape: {x: start[0] - (point ? 2 : 0), y: start[1] - 5, width: point ? 4 : Math.max(1, end[0] - start[0]), height: 10, r: 2},
+          style: {fill, stroke: statistic ? fill : undefined, lineWidth: statistic ? 1 : 0, lineDash: statistic ? [3, 2] : undefined,
+            opacity: row.secondary ? 0.5 : statistic ? 0.45 : row.name === '声音' ? 0.15 + 0.85 * Math.max(0, Math.min(1, (Number(api.value(2)) - 30) / 70)) : 1},
+          emphasis: {style: {stroke: palette[row.colorIndex], lineWidth: 1}},
+        };
+      },
+    }));
+    return {
+      animation: false,
+      grid: [
+        {left: timeLeft, right: timeRight, top: bandTop, height: 14, outerBoundsMode: 'none'},
+        ...contextRows.map((_row, index) => ({left: timeLeft, right: timeRight, top: contextBandTop(index), height: 14, outerBoundsMode: 'none' as const})),
+        ...(expanded ? [{left: 30, right: timeRight, top: 76, height: 120, outerBoundsMode: 'none' as const}] : []),
+      ],
+      tooltip: {
+        trigger: 'item',
+        triggerOn: 'mousemove',
+        confine: true,
+        renderMode: 'richText',
+        backgroundColor: palette[3],
+        borderColor: palette[2],
+        textStyle: {color: palette[4], fontSize: 11},
+        position: (point, _params, _element, _rect, size) => tooltipPosition(point, size),
+        axisPointer: {type: 'line', snap: true, lineStyle: {color: palette[1], type: 'dotted'}},
+        formatter: (params) => {
+          const point = Array.isArray(params) ? params[0] : params;
+          if (point.seriesIndex && point.seriesIndex > 0 && point.seriesIndex <= contextRows.length) {
+            const period = contextRows[point.seriesIndex - 1]?.periods[point.dataIndex];
+            return period ? wrapTooltip(`${healthTimelinePeriodLabel(period)}\n${period.detail}`) : '';
+          }
+          const measurement = measurements[point.dataIndex];
+          if (!measurement) return '';
+          return wrapTooltip(`${formatTime(measurement[0])}\nHRV ${measurement[1].toFixed(1)} 毫秒\n${sourceName(measurement[2])}`);
+        },
+      },
+      xAxis: [
+        {...timeAxis, position: 'top', axisLabel: {...timeAxis.axisLabel, show: true, fontSize: 9, margin: 0}, axisLine: {show: false}},
+        ...contextRows.map((_row, index) => ({...timeAxis, gridIndex: index + 1,
+          axisLabel: {...timeAxis.axisLabel, show: index === contextRows.length - 1}, axisLine: {show: false}})),
+        ...(expanded ? [{...timeAxis, gridIndex: contextRows.length + 1,
+          axisLabel: {...timeAxis.axisLabel, show: contextRows.length === 0}}] : []),
+      ],
+      yAxis: [{
+        type: 'category', data: ['HRV'],
+        axisLabel: {show: false},
+        axisLine: {show: false}, axisTick: {show: false},
+        splitArea: {show: showHrv, areaStyle: {color: [palette[6]]}},
+      }, ...contextRows.map((row, index) => ({
+        type: 'category' as const, gridIndex: index + 1, data: [row.axisLabel ?? row.name],
+        axisLabel: {show: false},
+        axisLine: {show: false}, axisTick: {show: false},
+        splitArea: {show: true, areaStyle: {color: [palette[6]]}},
+      })), ...(expanded ? [{
+        type: 'value' as const, gridIndex: contextRows.length + 1, min: 0, splitNumber: 3,
+        name: '毫秒', nameGap: 9, nameTextStyle: {color: palette[1], fontSize: 10},
+        axisLabel: {color: palette[1], fontSize: 10},
+        splitLine: {lineStyle: {color: palette[2]}},
+      }] : [])],
+      series: [{
+        type: 'custom', name: 'HRV',
+        data: measurements.map(([minute, value]) => [minute, value]),
+        encode: {x: 0, y: []}, tooltip: {trigger: 'item'},
+        renderItem: (_params, api) => {
+          const point = api.coord([api.value(0), 0]);
+          return {
+            type: 'rect', cursor: 'pointer',
+            shape: {x: point[0] - 2, y: point[1] - 5, width: 4, height: 10, r: 1},
+            style: {fill: hrvColor(Number(api.value(1)))},
+            emphasis: {style: {stroke: hrvColor(Number(api.value(1))), lineWidth: 2}},
+          };
+        },
+      }, ...contextSeries, ...(expanded ? [{
+        type: 'scatter' as const, name: 'HRV 读数', xAxisIndex: contextRows.length + 1, yAxisIndex: contextRows.length + 1,
+        data: measurements.map(([minute, value]) => ({value: [minute, value], itemStyle: {color: hrvColor(value)}})),
+        symbolSize: 8,
+        emphasis: {scale: 1.5},
+        markLine: data.hrvMs === null ? undefined : {
+          silent: true, symbol: 'none', label: {show: false},
+          lineStyle: {color: palette[1], type: 'dashed' as const, width: 1},
+          data: [{yAxis: data.hrvMs}],
+        },
+      }] : [])],
+    };
+  }, [measurements, data.hrvMs, contextRows, palette, chartWidth, expanded, sleepRowIndex, sleepOffset, showHrv, detailRowIndex, detailOffset]);
+  const selectedMeasurement = selected?.seriesIndex === 0 ? measurements[selected.dataIndex] : null;
+  const selectHrvAt = (clientX: number) => {
+    if (!container.current) return;
+    const bounds = container.current.getBoundingClientRect();
+    const minute = Math.max(0, Math.min(1, (clientX - bounds.left - timeLeft) / (bounds.width - timeLeft - timeRight))) * 1440;
+    const nearest = measurements.reduce((best, measurement, index) => Math.abs(measurement[0] - minute) < Math.abs(measurements[best][0] - minute) ? index : best, 0);
+    setSelected((previous) => previous?.seriesIndex === 0 && previous.dataIndex === nearest ? previous : {seriesIndex: 0, dataIndex: nearest});
+    chart.current?.getEchartsInstance().dispatchAction({type: 'hideTip'});
+  };
+  const selectSleepAt = (clientX: number) => {
+    if (!container.current || sleepRowIndex < 0) return;
+    const bounds = container.current.getBoundingClientRect();
+    const minute = Math.max(0, Math.min(1, (clientX - bounds.left - timeLeft) / (bounds.width - timeLeft - timeRight))) * 1440;
+    const periods = contextRows[sleepRowIndex].periods;
+    const distance = (period: ContextPeriod) => Math.max(period.start - minute, minute - period.end, 0);
+    const nearest = periods.reduce((best, period, index) => distance(period) < distance(periods[best]) ? index : best, 0);
+    setSelected({seriesIndex: sleepRowIndex + 1, dataIndex: nearest});
+    chart.current?.getEchartsInstance().dispatchAction({type: 'hideTip'});
+  };
+  const selectContextAt = (index: number, clientX: number) => {
+    const periods = contextRows[index].periods;
+    if (!container.current || !periods.length) return 0;
+    const bounds = container.current.getBoundingClientRect();
+    const minute = Math.max(0, Math.min(1, (clientX - bounds.left - timeLeft) / (bounds.width - timeLeft - timeRight))) * 1440;
+    const distance = (period: ContextPeriod) => Math.max(period.start - minute, minute - period.end, 0);
+    const nearest = periods.reduce((best, period, item) => distance(period) < distance(periods[best]) ? item : best, 0);
+    setSelected({seriesIndex: index + 1, dataIndex: nearest});
+    chart.current?.getEchartsInstance().dispatchAction({type: 'hideTip'});
+    return nearest;
+  };
+  const hoverTimelineAt = (seriesIndex: number, clientX: number, clientY: number) => {
+    const instance = chart.current?.getEchartsInstance();
+    if (!container.current || !instance) return;
+    const bounds = container.current.getBoundingClientRect();
+    const x = clientX - bounds.left;
+    const y = clientY - bounds.top;
+    const width = bounds.width - timeLeft - timeRight;
+    const rowTop = seriesIndex === 0 ? bandTop : contextBandTop(seriesIndex - 1);
+    const minute = (x - timeLeft) / width * 1440;
+    const periods = seriesIndex === 0 ? measurements.map(([start]) => ({start, end: start})) : contextRows[seriesIndex - 1].periods;
+    const tolerance = 4 / width * 1440;
+    const distance = (period: {start: number; end: number}) => Math.max(period.start - minute, minute - period.end, 0);
+    const nearest = periods.reduce((best, period, index) => best < 0 || distance(period) < distance(periods[best]) ? index : best, -1);
+    const dataIndex = x >= timeLeft && x <= bounds.width - timeRight && Math.abs(y - rowTop - 7) <= 9
+      && nearest >= 0 && distance(periods[nearest]) <= tolerance ? nearest : -1;
+    if (dataIndex < 0) {
+      instance.dispatchAction({type: 'hideTip'});
+      return;
+    }
+    instance.dispatchAction({type: 'showTip', seriesIndex, dataIndex,
+      position: (_point: unknown, _params: unknown, _element: unknown, _rect: unknown, size: {contentSize: number[]; viewSize: number[]}) => [
+        ...tooltipPosition([x, y], size),
+      ],
+    });
+  };
+  const chartEvents = useMemo(() => ({click: (event: {seriesIndex?: number; dataIndex?: number}) => {
+    if (typeof event.dataIndex === 'number' && (event.seriesIndex ?? 0) > contextRows.length) {
+      setSelected({seriesIndex: 0, dataIndex: event.dataIndex});
+    }
+  }}), [contextRows.length]);
+  const toggleDetail = (index: number, dataIndex: number) => {
+    const rowId = contextRows[index].id;
+    setDetail((previous) => previous?.rowId === rowId && previous.dataIndex === dataIndex ? null : {rowId, dataIndex});
+  };
+  const renderMetricCards = (rows: HealthTimelineRow[], title: string) => rows.length > 0 && (
+    <section className={styles.moodDailyMetrics} aria-label={title}>
+      <div className={styles.hrvMeasurementsHeading}>{title}</div>
+      <dl>
+        {rows.map((row) => <div key={row.id}>
+          <dt>{row.name}</dt>
+          <dd>
+            <span title={row.summary}>{compactHealthMetricSummary(row)}</span>
+            {row.id === 'resting_heart_rate' && data.restingHeartRateBaselineBpm !== null
+              ? <small>前 7 日中位数 {Math.round(data.restingHeartRateBaselineBpm)} 次/分</small>
+              : row.periods.length === 1 && row.periods[0].start === row.periods[0].end
+                ? <small>{formatTime(row.periods[0].start)} 测量</small> : null}
+          </dd>
+        </div>)}
+      </dl>
+    </section>
+  );
+  return (
+    <>
+      {renderMetricCards(dailyMetrics, showHrv ? '身体状态参考' : '运动能力参考')}
+      <div className={styles.hrvMeasurementsHeading}>{showHrv ? '健康与生活时段' : mode === 'activity' ? '主要活动时段' : '其他活动指标'}</div>
+      <Collapsible.Root open={Boolean(detailRow)} onOpenChange={({open}) => {if (!open) setDetail(null);}} lazyMount unmountOnExit>
+        <div ref={container} className={styles.hrvChart} style={{height: chartHeight}} tabIndex={0} role="group"
+          aria-label={`${showHrv ? `HRV 采样时间带${expanded ? '与分时散点图，纵轴为毫秒' : ''}，共 ${measurements.length} 次测量。点击 HRV 时间带或按 Enter 展开、收起散点图。` : '运动与活动时间带。'}横轴为全天时间。点击各行就近展开明细，再点同一记录收起。${sleepRowIndex >= 0 ? '点击睡眠行展开完整睡眠详情。' : ''}${contextRows.length ? `下方为${contextRows.map((row) => row.name).join('、')}时间带，上下方向键切换数据行，` : ''}左右方向键查看记录，Home 和 End 跳到首尾，Enter 展开或收起当前行`}
+          onKeyDown={(event) => {
+            if (event.target !== event.currentTarget) return;
+            const series = [...(measurements.length ? [0] : []), ...contextRows.flatMap((row, index) => row.periods.length ? [index + 1] : [])];
+            if (!series.length) return;
+            let seriesIndex = selected?.seriesIndex ?? series[0];
+            if (!series.includes(seriesIndex)) seriesIndex = series[0];
+            let next: number;
+            const count = seriesIndex === 0 ? measurements.length : contextRows[seriesIndex - 1].periods.length;
+            const position = Math.max(0, series.indexOf(seriesIndex));
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              if (seriesIndex === 0) setExpanded((value) => !value);
+              else if (seriesIndex === sleepRowIndex + 1) setSleepOpen((value) => !value);
+              else toggleDetail(seriesIndex - 1, selected?.dataIndex ?? 0);
+              return;
+            }
+            if (event.key === 'ArrowDown' && series.length > 1) {seriesIndex = series[Math.min(series.length - 1, position + 1)]; next = 0;}
+            else if (event.key === 'ArrowUp') {seriesIndex = series[Math.max(0, position - 1)]; next = 0;}
+            else if (event.key === 'ArrowRight') next = selected === null ? 0 : Math.min(count - 1, selected.dataIndex + 1);
+            else if (event.key === 'ArrowLeft') next = selected === null ? count - 1 : Math.max(0, selected.dataIndex - 1);
+            else if (event.key === 'Home') next = 0;
+            else if (event.key === 'End') next = count - 1;
+            else return;
+            event.preventDefault();
+            setSelected({seriesIndex, dataIndex: next});
+            setDetail(seriesIndex > 0 && seriesIndex !== sleepRowIndex + 1 ? {rowId: contextRows[seriesIndex - 1].id, dataIndex: next} : null);
+            const scroller = container.current?.closest<HTMLElement>('.chakra-popover__body');
+            if (scroller && container.current) {
+              const rowY = seriesIndex === 0 ? bandTop + 7 : contextBandTop(seriesIndex - 1) + 7;
+              const y = container.current.getBoundingClientRect().top + rowY;
+              const bounds = scroller.getBoundingClientRect();
+              if (y < bounds.top + 36) scroller.scrollTop += y - bounds.top - 36;
+              else if (y > bounds.bottom - 24) scroller.scrollTop += y - bounds.bottom + 24;
+            }
+            chart.current?.getEchartsInstance().dispatchAction({type: 'showTip', seriesIndex: seriesIndex === 0 && expanded ? contextRows.length + 1 : seriesIndex, dataIndex: next});
+          }}>
+          {showHrv && <div className={styles.timelineRowHeading} style={{top: bandTop - 9, color: palette[11]}}>
+            <div><strong>HRV</strong><span>{data.hrvMs === null ? `${measurements.length} 次采样` : `${Math.round(data.hrvMs)} 毫秒`}</span></div>
+          </div>}
+          {contextRows.map((row, index) => <div key={row.id} className={`${styles.timelineRowHeading} ${row.secondary ? styles.timelineSecondary : ''}`}
+            style={{top: contextBandTop(index) - 9, color: palette[row.colorIndex]}} title={`${row.name} · ${row.summary}`}>
+            <div><strong>{row.name}</strong><span>{row.secondary ? '辅助参考' : compactHealthMetricSummary(row)}</span></div>
+          </div>)}
+          {showHrv && <Button unstyled className={styles.hrvBandToggle} disabled={!measurements.length} aria-expanded={expanded} aria-controls={chartId}
+            aria-label={`HRV 采样时间带，${expanded ? '收起' : '展开'}散点图`}
+            onClick={(event) => {if (event.detail > 0) selectHrvAt(event.clientX); setExpanded((value) => !value);}}
+            onPointerMove={(event) => {if (event.pointerType === 'mouse') hoverTimelineAt(0, event.clientX, event.clientY);}}
+            onPointerLeave={() => chart.current?.getEchartsInstance().dispatchAction({type: 'hideTip'})}>
+            <span aria-hidden="true">{expanded ? '⌃' : '⌄'}</span>
+          </Button>}
+          {sleepRowIndex >= 0 && <Button unstyled className={`${styles.hrvBandToggle} ${styles.sleepBandToggle}`}
+              style={{top: contextBandTop(sleepRowIndex) - 13}}
+              aria-expanded={sleepOpen} aria-controls={`${chartId}-sleep`}
+              aria-label={`睡眠时间带，${sleepOpen ? '收起' : '展开'}睡眠详情`}
+              onClick={(event) => {if (event.detail > 0) selectSleepAt(event.clientX); setSleepOpen((value) => !value);}}
+              onPointerMove={(event) => {if (event.pointerType === 'mouse') hoverTimelineAt(sleepRowIndex + 1, event.clientX, event.clientY);}}
+              onPointerLeave={() => chart.current?.getEchartsInstance().dispatchAction({type: 'hideTip'})}>
+              <span aria-hidden="true">{sleepOpen ? '⌃' : '⌄'}</span>
+            </Button>}
+          {contextRows.map((row, index) => row.id !== 'sleep' && <Button key={row.id} unstyled
+            className={`${styles.hrvBandToggle} ${styles.contextBandToggle}`} data-timeline-row={row.id}
+            style={{top: contextBandTop(index) - 13}} aria-expanded={detail?.rowId === row.id} aria-controls={detailId}
+            aria-label={`${row.name}时间带，${detail?.rowId === row.id ? '收起' : '展开'}明细`}
+            onClick={(event) => toggleDetail(index, event.detail > 0 ? selectContextAt(index, event.clientX) : selected?.seriesIndex === index + 1 ? selected.dataIndex : 0)}
+            onPointerMove={(event) => {if (event.pointerType === 'mouse') hoverTimelineAt(index + 1, event.clientX, event.clientY);}}
+            onPointerLeave={() => chart.current?.getEchartsInstance().dispatchAction({type: 'hideTip'})}>
+            <span aria-hidden="true">{detail?.rowId === row.id ? '⌃' : '⌄'}</span>
+          </Button>)}
+          {expanded && <div className={styles.hrvInlineSelection} style={{top: 204}} aria-live="polite">
+            {selectedMeasurement ? `${formatTime(selectedMeasurement[0])} · ${selectedMeasurement[1].toFixed(1)} 毫秒 · ${sourceName(selectedMeasurement[2])}` : '点击散点查看 HRV 测量值'}
+            <small>{data.hrvMs !== null ? `虚线为日汇总 ${Math.round(data.hrvMs)} 毫秒` : ''}{data.hrvBaselineMs !== null ? ` · 前 7 日中位数 ${Math.round(data.hrvBaselineMs)} 毫秒` : ''}</small>
+          </div>}
+          <div id={chartId} style={{height: '100%'}}>{palette.length > 0 && <ReactECharts ref={chart} option={option} notMerge autoResize={false} opts={{renderer: 'svg'}} style={{height: '100%'}} onEvents={chartEvents} />}</div>
+          <Collapsible.Root open={sleepOpen} onOpenChange={({open}) => setSleepOpen(open)} lazyMount unmountOnExit>
+            <Collapsible.Content id={`${chartId}-sleep`} ref={setSleepDetailsElement} className={`${styles.sleepPopover} ${styles.embeddedSleepDetails}`}
+              style={{top: contextBandTop(sleepRowIndex) + 24}}>
+              {sleepSummary ? <SleepScoreDetails data={sleepSummary} />
+                : <SleepStageChart date={data.date} durationMinutes={null} score={null} scoreDetails={null}>{null}</SleepStageChart>}
+            </Collapsible.Content>
+          </Collapsible.Root>
+          <Collapsible.Content id={detailId} ref={setDetailElement} className={styles.timelineInlineDetails}
+            style={{top: contextBandTop(detailRowIndex) + 24}} aria-live="polite">
+            {detailRow && <>
+              <div className={styles.timelineDetailHeading}><strong>{detailRow.name}</strong>
+                <Button unstyled onClick={() => {
+                  [...(container.current?.querySelectorAll<HTMLButtonElement>('[data-timeline-row]') ?? [])].find((button) => button.dataset.timelineRow === detailRow.id)?.focus();
+                  setDetail(null);
+                }}>收起</Button>
+              </div>
+              <div>{detailRow.summary}</div>
+              {detailPeriod && <p><time>{healthTimelinePeriodLabel(detailPeriod)}</time>{detailPeriod.detail}</p>}
+              {detailRow.range && <small>深浅仅表示这项指标当日数值的高低，不代表健康好坏，也不用于跨指标比较。</small>}
+            </>}
+          </Collapsible.Content>
+        </div>
+      </Collapsible.Root>
+      {showHrv && <div className={styles.hrvLegend}><span aria-hidden="true" />HRV 浅→深：0–100+ 毫秒</div>}
+      {sound.periods.length > 0 && <div className={styles.soundLegend}><span aria-hidden="true" />声音浅→深：30–100 dBA；灰底无采样</div>}
+      <div className={styles.timelineLegend}>灰色阶：各指标当日数值由低到高；纯色带：记录时段；灰底：无记录。颜色不代表健康好坏，不同指标之间不可比较深浅。</div>
+      <div className={styles.timelineLegend}>点击时间带就近查看明细，再点同一记录收起。密集记录按 5 分钟汇总，采样合计可能与日汇总不同。</div>
+    </>
+  );
+}
+
+function MoodDetails({data, sleepScore}: {data: MoodSummary; sleepScore: SleepScoreSummary | null}) {
   const primaryLabel = stateOfMindTerm(data.primary.valenceClassification, STATE_OF_MIND_CLASSIFICATION_LABELS);
   return (
     <div className={styles.metricDetails}>
@@ -851,7 +1531,15 @@ function MoodDetails({data}: {data: MoodSummary}) {
           );
         })}
       </div>
-      <footer>近 30 天记录 {data.recordedDays} 天 · 来自 Apple Health 主动记录</footer>
+      <footer>近 30 天心情记录 {data.recordedDays} 天 · 来自 Apple Health 主动记录</footer>
+      {(data.hrvMs !== null || data.restingHeartRateBpm !== null || data.hrvMeasurements.length > 0 || data.timelineFiles.length > 0 || data.timelineRows.length > 0 || data.sleepStages.length > 0) && (
+        <div className={styles.moodPhysiology}>
+          <div className={styles.hrvMeasurements}>
+            <HealthDayTimeline key={data.date} data={data} sleepScore={sleepScore} />
+          </div>
+          <p>HRV 与静息心率受睡眠、运动等因素影响，不能单独判断心情。</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -867,18 +1555,16 @@ function ActivityDetails({data}: {data: ActivitySummary}) {
         <span>运动 · {formatShortDate(data.date)}</span>
         <strong>{Math.round(data.exerciseMinutes)}<small>分钟</small></strong>
       </header>
-      <ActivityDayDetails date={data.date}>
-        <div className={styles.healthStats}>
-          {data.steps !== null && <div><span>步数</span><strong>{Math.round(data.steps).toLocaleString()}步</strong></div>}
-          {data.standMinutes !== null && <div><span>站立时长</span><strong>{Math.round(data.standMinutes)}分钟</strong></div>}
-          {data.activeEnergyKJ !== null && (
-            <div><span>活动能量</span><strong>{Math.round(data.activeEnergyKJ / 4.184)}千卡</strong></div>
-          )}
-          {data.distanceKm !== null && (
-            <div><span>步行与跑步</span><strong>{data.distanceKm.toFixed(1)}公里</strong></div>
-          )}
-          {data.flightsClimbed !== null && <div><span>爬楼层数</span><strong>{Math.round(data.flightsClimbed)}层</strong></div>}
-          {data.daylightMinutes !== null && <div><span>日光照射时长</span><strong>{Math.round(data.daylightMinutes)}分钟</strong></div>}
+      <ActivityDayDetails date={data.date} showTimeline={false}>
+        <div className={styles.hrvMeasurements}>
+          <HealthDayTimeline key={data.date} data={data.timeline} mode="activity" />
+          {(data.timeline.movementPeriods.length > 0 || data.timeline.timelineFiles.some((file) => extraActivityMetricNames.has(file.name))) && <Collapsible.Root className={styles.moreActivityMetrics} lazyMount>
+            <Collapsible.Trigger asChild><Button unstyled className={styles.moreMetricsToggle}>
+              <span className={styles.moreMetricsClosed}>更多指标</span><span className={styles.moreMetricsOpen}>收起更多指标</span>
+              <span aria-hidden="true" className={styles.moreMetricsChevron}>⌄</span>
+            </Button></Collapsible.Trigger>
+            <Collapsible.Content><HealthDayTimeline data={data.timeline} mode="activity-extra" /></Collapsible.Content>
+          </Collapsible.Root>}
         </div>
       </ActivityDayDetails>
       <div className={styles.metricTrend}>
@@ -1382,11 +2068,11 @@ export default function DailyRecordMeta() {
           )}
           {sleepScore !== null && (healthSummary?.mood || healthSummary?.activity || healthSummary?.weight || readingSummary || healthSummary?.medication) && '，'}
           {healthSummary?.mood && (
-            <MetricPopover
+            <MetricPopover scrollable
               label={`${healthSummary.mood.primary.kind === 'daily_mood' ? '心情' : '感受'}${stateOfMindTerm(healthSummary.mood.primary.valenceClassification, STATE_OF_MIND_CLASSIFICATION_LABELS)}`}
               ariaLabel={`${healthSummary.mood.primary.kind === 'daily_mood' ? '心情' : '感受'}${stateOfMindTerm(healthSummary.mood.primary.valenceClassification, STATE_OF_MIND_CLASSIFICATION_LABELS)}，查看详情`}
             >
-              <MoodDetails data={healthSummary.mood} />
+              <MoodDetails data={healthSummary.mood} sleepScore={sleepScore} />
             </MetricPopover>
           )}
           {healthSummary?.mood && (healthSummary.activity || healthSummary.weight || readingSummary || healthSummary.medication) && '，'}

@@ -1,5 +1,6 @@
 import React, {type ReactNode, useEffect, useState} from 'react';
 import {Portal, Tooltip} from '@chakra-ui/react';
+import {staticAssetUrl} from '@site/src/utils/staticAssets';
 import styles from './ActivityDayDetails.module.css';
 
 type ActivityRecord = {
@@ -20,7 +21,7 @@ const clock = (value?: number) => typeof value === 'number' && Number.isFinite(v
   : '';
 const minute = (value?: number) => typeof value === 'number' && Number.isFinite(value) ? value : null;
 
-export default function ActivityDayDetails({date, children}: {date: string; children: ReactNode}) {
+export default function ActivityDayDetails({date, children, showTimeline = true}: {date: string; children: ReactNode; showTimeline?: boolean}) {
   const [records, setRecords] = useState<ActivityRecord[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [opened, setOpened] = useState<string | null>(null);
@@ -29,7 +30,7 @@ export default function ActivityDayDetails({date, children}: {date: string; chil
     setRecords(null);
     setFailed(false);
     setOpened(null);
-    fetch(`/data/health/${date.replaceAll('-', '/')}.json`, {signal: controller.signal})
+    fetch(staticAssetUrl(`/data/health/${date.replaceAll('-', '/')}.json`), {signal: controller.signal})
       .then(async (response) => {
         if (!response.ok) throw new Error('Daily activity unavailable');
         const payload = await response.json();
@@ -63,7 +64,7 @@ export default function ActivityDayDetails({date, children}: {date: string; chil
   }) ?? [];
 
   return <>
-    <section className={styles.timeline} aria-label="当天活动时段">
+    {showTimeline && <section className={styles.timeline} aria-label="当天活动时段">
       <div className={styles.heading}>当天活动时段</div>
       {records === null ? <p className={styles.note} role="status">正在加载活动记录…</p>
         : failed ? <p className={styles.note} role="status">当天活动明细暂不可用</p>
@@ -93,7 +94,7 @@ export default function ActivityDayDetails({date, children}: {date: string; chil
               <div className={styles.axis}><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
               <p className={styles.note}>记录到的活动片段，不等同于全天运动分钟数</p>
             </>}
-    </section>
+    </section>}
     {children}
     {workouts.length > 0 && <section className={styles.workouts} aria-label="当天训练记录">
       <div className={styles.heading}>当天训练 · {workouts.length}次</div>

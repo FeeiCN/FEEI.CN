@@ -4,6 +4,7 @@ import {
   STATE_OF_MIND_FEELING_LABELS,
   STATE_OF_MIND_KIND_LABELS,
 } from '@site/src/utils/stateOfMind';
+import {staticAssetUrl} from '@site/src/utils/staticAssets';
 import {transform, computeDashboard, getDateRange, type HealthData, type DashCard} from './transform';
 import {
   RANGE_DAYS,
@@ -109,7 +110,7 @@ export function loadHealthChartHistory(): Promise<HealthData | null> {
   if (healthHistoryRequestCache) return healthHistoryRequestCache;
 
   healthHistoryRequestCache = Promise.all([
-    fetch('/data/health/history/index.json', {cache: 'force-cache'}),
+    fetch(staticAssetUrl('/data/health/history/index.json'), {cache: 'force-cache'}),
     loadSleepScoreHistory(),
   ]).then(async ([response, sleepScores]) => {
       if (!response.ok) return null;
@@ -119,7 +120,7 @@ export function loadHealthChartHistory(): Promise<HealthData | null> {
       const loaded = await Promise.all(years.map(async (year) => {
         const cached = healthHistoryYearCache.get(year);
         if (cached) return cached;
-        const yearResponse = await fetch(`/data/health/history/${year}.json`, {cache: 'force-cache'});
+        const yearResponse = await fetch(staticAssetUrl(`/data/health/history/${year}.json`), {cache: 'force-cache'});
         if (!yearResponse.ok) return null;
         const payload = await yearResponse.json() as HealthHistoryPayload;
         if (!payload.data || !Array.isArray(payload.data.steps)) return null;
@@ -172,7 +173,7 @@ export function fetchHealthMonth(key: string, currentKey: string): Promise<Healt
   if (inFlight) return inFlight;
 
   const [year, month] = key.split('-');
-  const request = fetch(`/data/health/${year}/${month}.json`, {
+  const request = fetch(staticAssetUrl(`/data/health/${year}/${month}.json`), {
     cache: key === currentKey ? 'no-store' : 'default',
   })
     .then(async (response) => {

@@ -33,3 +33,30 @@
 .chart :global(svg text) { font-variant-numeric: tabular-nums; }
 .chart:focus-visible { outline: 2px solid var(--sleep-accent); outline-offset: 3px; }
 .placeholder { padding: 20px 8px; color: var(--ifm-color-emphasis-600); font-size: 13px; }
+
+.vitals {
+  margin-top: 0.8rem;
+}
+.vitals dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin: 0.4rem 0 0;
+}
+.vitals dl > div {
+  min-width: 0;
+  padding: 0.45rem;
+  border-radius: 5px;
+  background: var(--ifm-color-emphasis-100);
+}
+.vitals dt {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.64rem;
+}
+.vitals dd {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}

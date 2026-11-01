@@ -296,6 +296,11 @@ async function main() {
       if (dailyResult.preserved.length > 0) {
         console.warn(`Preserved ${dailyResult.preserved.length} existing daily health file(s) after incomplete refresh`);
       }
+      if (dailyResult.failed.length > 0) {
+        throw new Error(
+          `Incomplete health refresh for ${dailyResult.failed.map((file) => path.relative(repoRoot, file)).join(', ')}; no empty daily data was written`,
+        );
+      }
     }
   } finally {
     await client.close();
@@ -577,6 +582,7 @@ async function collectMappingRecords(client, mapping, options) {
 async function exportDailyCompactFiles(client, options) {
   const written = [];
   const preserved = [];
+  const failed = [];
   for (const day of enumerateDates(options.startDate, options.endDate)) {
     const [year, month, date] = day.split('-');
     const dailyDir = path.join(options.targetRoot, year, month);
@@ -635,7 +641,13 @@ async function exportDailyCompactFiles(client, options) {
         preserved.push(dailyFile);
         continue;
       }
-      dailyData.errors = errors;
+
+      // A failed first export used to create an empty timeline with errors.
+      // Keeping the day absent makes the sync job retry it instead of treating
+      // a corrupted placeholder as health data.
+      process.stderr.write(`Incomplete health refresh for ${day}; no daily file written\n`);
+      failed.push(dailyFile);
+      continue;
     }
 
     fs.mkdirSync(dailyDir, {recursive: true});
@@ -643,7 +655,7 @@ async function exportDailyCompactFiles(client, options) {
     written.push(dailyFile);
   }
 
-  return {written, preserved};
+  return {written, preserved, failed};
 }
 
 function isEmptyDailyHealthFile(file) {

@@ -133,6 +133,24 @@ for await (const line of readline.createInterface({input: process.stdin})) {
   assert.equal(fs.readFileSync(file, 'utf8'), original);
 });
 
+test('incomplete first daily refresh fails without writing an empty timeline', (t) => {
+  const root = fixture(t);
+  const server = path.join(root, 'mock-error.mjs');
+  fs.writeFileSync(server, `import readline from 'node:readline';
+for await (const line of readline.createInterface({input: process.stdin})) {
+ const message = JSON.parse(line);
+ if (!message.id) continue;
+ const result = message.method === 'tools/call' ? {isError:true,content:[{type:'text',text:'Unavailable'}]} : {};
+ process.stdout.write(JSON.stringify({jsonrpc:'2.0', id:message.id, result})+'\\n');
+}`);
+  const file = path.join(root, '2025/01/01.json');
+  const result = run('export_health_year_from_mcp.mjs', ['--date', '2025-01-01', '--target', root, '--mcp-server', server]);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /no daily file written/);
+  assert.match(result.stderr, /no empty daily data was written/);
+  assert.ok(!fs.existsSync(file));
+});
+
 test('incomplete monthly collection preserves the existing section', (t) => {
   const root = fixture(t);
   const server = path.join(root, 'mock-month-error.mjs');

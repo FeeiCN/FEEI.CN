@@ -199,6 +199,41 @@ for await (const line of readline.createInterface({input: process.stdin})) {
   assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).hrv, {units: 'ms', samples: []});
 });
 
+test('mutable refresh replaces mood and medication timeline data and adds weight detail', (t) => {
+  const root = fixture(t);
+  const server = path.join(root, 'mock-mutable.mjs');
+  fs.writeFileSync(server, `import readline from 'node:readline';
+for await (const line of readline.createInterface({input: process.stdin})) {
+ const message = JSON.parse(line);
+ if (!message.id) continue;
+ let result = {};
+ if (message.method === 'tools/call') {
+  const name = message.params.name;
+  if (name === 'get_health_metrics') result = {data:{metrics:[{name:'weight_body_mass',units:'kg',data:[{date:'2025-01-01 08:00:00 +0800',qty:70.2,source:'Scale'}]}]}};
+  if (name === 'get_medications') result = {data:{medications:[{displayText:'Vitamin',start:'2025-01-01 09:00:00 +0800',status:'Taken',dosage:1,units:'count'}]}};
+  if (name === 'get_state_of_mind') result = {data:{stateOfMind:[{kind:'momentaryEmotion',start:'2025-01-01 10:00:00 +0800',end:'2025-01-01 10:01:00 +0800',valence:0.5,valenceClassification:'pleasant'}]}};
+ }
+ process.stdout.write(JSON.stringify({jsonrpc:'2.0', id:message.id, result})+'\\n');
+}`);
+  const file = path.join(root, '2025/01/01.json');
+  fs.mkdirSync(path.dirname(file), {recursive: true});
+  fs.writeFileSync(file, JSON.stringify({
+    version: 2,
+    date: '2025-01-01',
+    summary: {medications: {count: 9}, stateOfMind: {count: 9}},
+    timeline: [{type: 'sleep'}, {type: 'medication', name: 'Old'}, {type: 'state_of_mind', kind: 'Old'}],
+  }));
+  const result = run('export_health_year_from_mcp.mjs', ['--date', '2025-01-01', '--refresh-mutable', '--target', root, '--mcp-server', server]);
+  assert.equal(result.status, 0, result.stderr);
+  const daily = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.deepEqual(daily.weight, {units: 'kg', samples: [{start: '2025-01-01 08:00:00 +0800', value: 70.2, source: 'Scale'}]});
+  assert.equal(daily.summary.medications.count, 1);
+  assert.equal(daily.summary.stateOfMind.count, 1);
+  assert.equal(daily.timeline.filter((item) => item.type === 'medication').length, 1);
+  assert.equal(daily.timeline.filter((item) => item.type === 'state_of_mind').length, 1);
+  assert.equal(daily.timeline.filter((item) => item.type === 'sleep').length, 1);
+});
+
 test('incomplete monthly collection preserves the existing section', (t) => {
   const root = fixture(t);
   const server = path.join(root, 'mock-month-error.mjs');

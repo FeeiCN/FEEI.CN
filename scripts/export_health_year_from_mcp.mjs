@@ -230,6 +230,16 @@ async function main() {
       return;
     }
 
+    if (args.refreshMutable) {
+      const result = await refreshDailyMutableFiles(client, {
+        startDate,
+        endDate,
+        targetRoot,
+      });
+      console.log(`Refreshed mood, medication, and weight data for ${result.updated} daily health file(s); skipped ${result.skipped} file(s)`);
+      return;
+    }
+
     const exportedAt = new Date().toISOString();
 
     if (!args.date) {
@@ -710,6 +720,25 @@ function buildDailyHrv(metrics) {
   };
 }
 
+function buildDailyWeight(metrics) {
+  const metric = metrics.find((item) => item?.name === 'weight_body_mass');
+  if (!metric || !Array.isArray(metric.data) || metric.data.length === 0) {
+    return {units: metric?.units ?? 'kg', samples: []};
+  }
+
+  return {
+    units: metric.units ?? 'kg',
+    samples: metric.data
+      .map((sample) => dropUndefined({
+        start: sample.start ?? sample.date,
+        end: sample.end,
+        value: finiteNumber(sample.qty),
+        source: sample.source,
+      }))
+      .filter((sample) => sample.start && sample.value !== undefined),
+  };
+}
+
 async function backfillDailyHrvFiles(client, options) {
   let updated = 0;
   let skipped = 0;
@@ -751,6 +780,59 @@ async function backfillDailyHrvFiles(client, options) {
   }
 
   return {updated, skipped, empty};
+}
+
+async function refreshDailyMutableFiles(client, options) {
+  let updated = 0;
+  let skipped = 0;
+
+  for (const day of enumerateDates(options.startDate, options.endDate)) {
+    const dailyFile = path.join(options.targetRoot, day.slice(0, 4), day.slice(5, 7), `${day.slice(8, 10)}.json`);
+    if (!fs.existsSync(dailyFile)) {
+      skipped += 1;
+      continue;
+    }
+
+    let dailyData;
+    try {
+      dailyData = JSON.parse(fs.readFileSync(dailyFile, 'utf8'));
+    } catch {
+      throw new Error(`Invalid daily health file: ${path.relative(repoRoot, dailyFile)}`);
+    }
+
+    const timeRange = {
+      start: `${day} 00:00:00 ${timeZoneOffset}`,
+      end: `${day} 23:59:59 ${timeZoneOffset}`,
+    };
+    const weightPayload = await client.callTool('get_health_metrics', {
+      ...timeRange,
+      metrics: 'weight_body_mass',
+      interval: 'hours',
+      aggregate: false,
+    });
+    const medicationsPayload = await client.callTool('get_medications', timeRange);
+    const stateOfMindPayload = await client.callTool('get_state_of_mind', timeRange);
+    const weight = buildDailyWeight(findCollection(extractData(weightPayload), ['metrics']));
+    const collectionData = {
+      medications: {medications: findCollection(extractData(medicationsPayload), ['medications'])},
+      stateOfMind: {stateOfMind: findCollection(extractData(stateOfMindPayload), ['stateOfMind', 'state_of_mind'])},
+    };
+    const collection = buildCollectionEvents(collectionData);
+
+    dailyData.weight = weight;
+    dailyData.summary = dailyData.summary ?? {};
+    dailyData.summary.medications = collection.summary.medications;
+    dailyData.summary.stateOfMind = collection.summary.stateOfMind;
+    const timeline = Array.isArray(dailyData.timeline) ? dailyData.timeline : [];
+    dailyData.timeline = timeline
+      .filter((item) => item?.type !== 'medication' && item?.type !== 'state_of_mind')
+      .concat(collection.timeline)
+      .sort(compareTimelineItems);
+    fs.writeFileSync(dailyFile, `${JSON.stringify(dailyData)}\n`);
+    updated += 1;
+  }
+
+  return {updated, skipped};
 }
 
 function buildDailyCompactData(data) {
@@ -1942,6 +2024,11 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (arg === '--refresh-mutable') {
+      parsed.refreshMutable = true;
+      continue;
+    }
+
     if (arg === '--year' || arg === '--month' || arg === '--date' || arg === '--end-date' || arg === '--target' || arg === '--mcp-server' || arg === '--timeout') {
       const value = argv[index + 1];
 
@@ -1970,6 +2057,7 @@ Options:
   --end-date <YYYY-MM-DD>    End date. Defaults to today for current year/month.
   --skip-daily               Skip detailed daily files when refreshing a month summary.
   --backfill-hrv             Add raw HRV measurement detail to existing daily files only.
+  --refresh-mutable          Refresh mood, medication, and weight in existing daily files only.
   --overwrite-daily          Compatibility flag; existing daily files are now refreshed by default.
   --target <dir>             Output directory. Defaults to static/data/health.
   --mcp-server <file>        health_auto_export MCP server path.

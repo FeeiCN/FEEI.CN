@@ -69,6 +69,18 @@ if (!args.date) {
       changedFiles.push(dailyFile);
     }
   }
+
+  const mutableDates = findRecentMutableDailyDates(3);
+  console.log(`Refreshing mutable health data for ${mutableDates.length} recent day(s).`);
+  for (const mutableDate of mutableDates) {
+    const [year, month, day] = mutableDate.split('-');
+    const dailyFile = path.join(healthDir, year, month, `${day}.json`);
+    run('npm', ['run', 'export-health-year', '--', '--date', mutableDate, '--refresh-mutable']);
+
+    if (!isPathClean(dailyFile)) {
+      changedFiles.push(dailyFile);
+    }
+  }
 }
 
 const historyFile = path.join(healthDir, 'history.json');
@@ -311,6 +323,23 @@ function findMissingDailyHealthDates() {
   }
   // Limit hourly repair work so normal monthly exports stay timely.
   return missing.slice(0, 3);
+}
+
+function findRecentMutableDailyDates(days) {
+  const dates = [];
+  const today = formatLocalDate(new Date());
+  const cursor = new Date(`${today}T12:00:00Z`);
+
+  for (let offset = 0; offset < days; offset += 1) {
+    const date = cursor.toISOString().slice(0, 10);
+    const file = path.join(repoRoot, healthDir, date.slice(0, 4), date.slice(5, 7), `${date.slice(8, 10)}.json`);
+    if (fs.existsSync(file)) {
+      dates.push(date);
+    }
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+
+  return dates.reverse();
 }
 
 function formatLocalDate(date) {

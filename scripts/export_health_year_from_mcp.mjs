@@ -624,6 +624,7 @@ async function exportDailyCompactFiles(client, options) {
     }
 
     const compactData = buildDailyCompactData(data);
+    const hrv = buildDailyHrv(data.healthMetrics?.metrics ?? []);
     const dailyData = {
       version: 2,
       exportedAt: options.exportedAt,
@@ -634,6 +635,9 @@ async function exportDailyCompactFiles(client, options) {
       },
       timeline: compactData.timeline,
     };
+    if (hrv) {
+      dailyData.hrv = hrv;
+    }
 
     if (Object.keys(errors).length > 0) {
       if (fs.existsSync(dailyFile) && !isEmptyDailyHealthFile(dailyFile)) {
@@ -669,6 +673,31 @@ function isEmptyDailyHealthFile(file) {
   } catch {
     return true;
   }
+}
+
+function buildDailyHrv(metrics) {
+  const metric = metrics.find((item) => item?.name === 'heart_rate_variability');
+  if (!metric || !Array.isArray(metric.data) || metric.data.length === 0) {
+    return null;
+  }
+
+  const samples = metric.data
+    .map((sample) => dropUndefined({
+      start: sample.start ?? sample.date,
+      end: sample.end,
+      value: finiteNumber(sample.qty),
+      source: sample.source,
+    }))
+    .filter((sample) => sample.start && sample.value !== undefined);
+
+  if (samples.length === 0) {
+    return null;
+  }
+
+  return {
+    units: metric.units ?? 'ms',
+    samples,
+  };
 }
 
 function buildDailyCompactData(data) {
@@ -1692,6 +1721,11 @@ function sumWorkoutRecords(records) {
 
 function dropUndefined(value) {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined && item !== null));
+}
+
+function finiteNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
 }
 
 function normalizeSleepStage(value) {

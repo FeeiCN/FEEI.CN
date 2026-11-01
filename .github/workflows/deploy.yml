@@ -16,6 +16,7 @@ on:
       - 'scripts/check_docs_quality.mjs'
       - 'scripts/build_search_index.mjs'
       - 'scripts/build_weather_cache.mjs'
+      - 'scripts/prepare_build_dependencies.mjs'
       - 'docusaurus.config.ts'
       - 'config/search.ts'
       - 'sidebars.ts'
@@ -186,18 +187,18 @@ jobs:
           fi
 
           group_start "Install dependencies if needed"
-          if ! git diff --quiet "$old_head" "$new_head" -- package.json package-lock.json; then npm ci; else echo "Dependencies unchanged. Skipping npm ci."; fi
+          node scripts/prepare_build_dependencies.mjs "$site_root/build-cache"
           group_end "Install dependencies if needed"
 
           group_start "Clean build cache and stale releases"
-          build_cache="node_modules/.cache"
+          build_cache="$site_root/build-cache"
           if [ -d "$build_cache" ]; then
             cache_size_kb="$(du -sk "$build_cache" | cut -f1)"
             echo "build_cache_size_kb=$cache_size_kb"
             # Preserve Rspack/MDX persistent caches across docs builds. The cache
             # was 1.94 GiB on run 40728880639, dangerously close to the old 2 GiB
             # eviction threshold; /data had 70 GiB free. Cap at 4 GiB instead.
-            if [ "$cache_size_kb" -gt 4194304 ]; then rm -rf "$build_cache"; fi
+            if [ "$cache_size_kb" -gt 4194304 ]; then rm -rf "$build_cache"; mkdir -p "$build_cache"; fi
           fi
           mkdir -p "$releases_dir"
           find "$releases_dir" -mindepth 1 -maxdepth 1 -type d -name '*.tmp' -exec rm -rf {} +
@@ -249,7 +250,8 @@ jobs:
 
           group_start "Build Docusaurus"
           echo "[build-resources] CPUs=$(nproc)"
-          echo "[build-resources] RAYON_NUM_THREADS=4 (build-only experiment; memory/swap pressure)"
+          echo "[build-resources] RAYON_NUM_THREADS=4"
+          echo "[build-resources] DOCUSAURUS_SSG_WORKER_THREAD_COUNT=4"
           free -h || true
           df -h "$site_root" || true
           build_resource_snapshot before
@@ -261,7 +263,7 @@ jobs:
           run_build() {
             local build_status
             setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
-              env RAYON_NUM_THREADS=4 DOCUSAURUS_PERF_LOGGER=true HEALTH_DATA_ROOT="$data_root/health" /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
+              env RAYON_NUM_THREADS=4 DOCUSAURUS_SSG_WORKER_THREAD_COUNT=4 DOCUSAURUS_PERF_LOGGER=true /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
             active_build_pid=$!
             if wait "$active_build_pid"; then build_status=0; else build_status=$?; fi
             active_build_pid=""

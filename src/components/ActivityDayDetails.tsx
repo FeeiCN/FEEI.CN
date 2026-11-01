@@ -36,10 +36,11 @@ export default function ActivityDayDetails({date, children}: {date: string; chil
       .then(async (response) => {
         if (!response.ok) throw new Error('Daily activity unavailable');
         const payload = await response.json();
-        if (!Array.isArray(payload.timeline)) throw new Error('Invalid activity timeline');
+        const timeline = payload.derived?.timeline;
+        if (!Array.isArray(timeline)) throw new Error('Invalid activity timeline');
         if (!controller.signal.aborted) {
           const unique = new Map<string, ActivityRecord>();
-          for (const record of payload.timeline) {
+          for (const record of timeline) {
             if (!record || !['movement', 'stand', 'workout'].includes(record.type)) continue;
             unique.set(record.id ?? `${record.type}-${record.start}-${record.end}`, record);
           }

@@ -119,7 +119,8 @@ export function timelineBoundaryMinute(value: unknown, selectedDate: string | un
 
 export function buildHealthTimeline(dailyHealth: DailyHealthData | null): TimelineModel {
   const selectedDate = dailyHealth?.date;
-  const exerciseValue = getNestedValue(dailyHealth?.summary, ['exerciseTime', 'totalMinutes']);
+  const presentation = dailyHealth?.derived;
+  const exerciseValue = getNestedValue(presentation?.summary, ['exerciseTime', 'totalMinutes']);
   const exerciseNumber = Number(exerciseValue);
   const model: TimelineModel = {
     items: [],
@@ -135,7 +136,7 @@ export function buildHealthTimeline(dailyHealth: DailyHealthData | null): Timeli
   };
   const sleepSegments: SleepSegment[] = [];
 
-  (dailyHealth?.timeline || []).forEach((record) => {
+  (presentation?.timeline || []).forEach((record) => {
     const startMinute = timelineBoundaryMinute(record.start, selectedDate);
     const type = timelineType(record.type);
     let endMinute = timelineBoundaryMinute(record.end, selectedDate);

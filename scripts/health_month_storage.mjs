@@ -143,6 +143,10 @@ export function writeMonthlyHealth(file, raw) {
   return writeHealthJson(file, compactMonthlyDetails(raw));
 }
 
+export function dailyCollections(daily) {
+  return daily.source?.collections ?? {};
+}
+
 export function buildMonthlyHealthFromDailyFiles(healthRoot, month) {
   const [year, number] = month.split('-');
   const dailyDir = path.join(healthRoot, year, number);
@@ -155,23 +159,40 @@ export function buildMonthlyHealthFromDailyFiles(healthRoot, month) {
     .sort();
   let data = {};
   const exportedAt = [];
+  const sourceDays = [];
   let canonicalDays = 0;
   for (const name of files) {
     const daily = JSON.parse(fs.readFileSync(path.join(dailyDir, name), 'utf8'));
-    if (!daily.data || typeof daily.data !== 'object') continue;
-    data = mergeMonthData(data, daily.data);
+    const collections = dailyCollections(daily);
+    if (!collections || typeof collections !== 'object' || Object.keys(collections).length === 0) continue;
+    data = mergeMonthData(data, collections);
     if (daily.exportedAt) exportedAt.push(daily.exportedAt);
+    else if (daily.source?.exportedAt) exportedAt.push(daily.source.exportedAt);
+    sourceDays.push(`${month}-${name.slice(0, 2)}`);
     canonicalDays += 1;
   }
   if (canonicalDays === 0) {
     throw new Error(`No canonical daily health data found for ${month}`);
   }
 
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  const lastDay = new Date(Date.UTC(Number(year), Number(number), 0)).getUTCDate();
+  const expectedDays = Array.from({length: lastDay}, (_, index) => `${month}-${String(index + 1).padStart(2, '0')}`)
+    .filter((day) => day <= today);
   return {
+    version: 2,
     exportedAt: exportedAt.sort().at(-1) ?? null,
     dateRange: {
       start: `${month}-01 00:00:00 +0800`,
-      end: `${month}-${new Date(Date.UTC(Number(year), Number(number), 0)).getUTCDate()} 23:59:59 +0800`,
+      end: `${month}-${lastDay} 23:59:59 +0800`,
+    },
+    cache: {
+      source: 'daily-health-v3',
+      sourceDays,
+      missingDays: expectedDays.filter((day) => !sourceDays.includes(day)),
+      generatedAt: exportedAt.sort().at(-1) ?? null,
     },
     data,
   };

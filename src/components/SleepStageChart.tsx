@@ -40,10 +40,10 @@ export default function SleepStageChart({date, durationMinutes, score, scoreDeta
     setSelected(null);
     fetch(`/data/health/${date.replaceAll('-', '/')}.json`, {signal: controller.signal})
       .then(async (response) => response.ok ? response.json() : null)
-      .then((payload: {timeline?: SleepRecord[]} | null) => {
+      .then((payload: {derived?: {timeline?: SleepRecord[]}} | null) => {
         if (controller.signal.aborted) return;
         const unique = new Map<string, Segment>();
-        for (const record of payload?.timeline ?? []) {
+        for (const record of payload?.derived?.timeline ?? []) {
           const stage = record.stage === '睡眠时长' ? 'asleep' : record.stage;
           if (record.type !== 'sleep' || !allStages.some((item) => item.key === stage)) continue;
           const start = timestamp(record.start);

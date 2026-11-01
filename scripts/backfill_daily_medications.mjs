@@ -32,18 +32,22 @@ for (const year of fs.readdirSync(healthRoot).filter((entry) => /^\d{4}$/.test(e
       }
 
       const daily = JSON.parse(fs.readFileSync(dailyFile, 'utf8'));
+      if (daily.version !== 3 || !daily.source || !daily.derived) {
+        throw new Error(`${date}: expected canonical daily health v3 file`);
+      }
       const built = buildMedicationCollection(dayRecords, {normalizeDateTime});
       const replacements = [...built.timeline];
-      const timeline = (daily.timeline ?? [])
+      const timeline = (daily.derived.timeline ?? [])
         .map((item) => item.type === 'medication' ? replacements.shift() ?? null : item)
         .filter(Boolean);
       timeline.push(...replacements);
 
-      daily.summary ??= {};
-      daily.summary.rawRecords ??= {};
-      daily.summary.rawRecords.medications = dayRecords.length;
-      daily.summary.medications = built.summary;
-      daily.timeline = timeline;
+      daily.source.collections.medications = {medications: dayRecords};
+      daily.derived.summary ??= {};
+      daily.derived.summary.rawRecords ??= {};
+      daily.derived.summary.rawRecords.medications = dayRecords.length;
+      daily.derived.summary.medications = built.summary;
+      daily.derived.timeline = timeline;
 
       verifyMedicationCollection(daily, built, date);
 
@@ -57,11 +61,11 @@ for (const year of fs.readdirSync(healthRoot).filter((entry) => /^\d{4}$/.test(e
 console.log(`${args.dryRun ? 'Would update' : 'Updated'} ${updated} daily health files; verified ${verified}; ${missing} source dates had no daily file.`);
 
 function verifyMedicationCollection(daily, expected, date) {
-  const actualTimeline = (daily.timeline ?? []).filter((item) => item.type === 'medication');
+  const actualTimeline = (daily.derived.timeline ?? []).filter((item) => item.type === 'medication');
   if (JSON.stringify(actualTimeline) !== JSON.stringify(expected.timeline)) {
     throw new Error(`${date}: daily medication timeline does not match monthly source`);
   }
-  if (JSON.stringify(daily.summary?.medications) !== JSON.stringify(expected.summary)) {
+  if (JSON.stringify(daily.derived.summary?.medications) !== JSON.stringify(expected.summary)) {
     throw new Error(`${date}: daily medication summary does not match monthly source`);
   }
   if (actualTimeline.some((item) => !item.name || !item.status || !item.scheduledDate)) {

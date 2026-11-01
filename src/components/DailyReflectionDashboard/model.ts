@@ -81,10 +81,12 @@ export type DailyHealthTimelineRecord = {
 };
 
 export type DailyHealthData = {
-  exportedAt?: string;
+  version?: 3;
   date?: string;
-  summary?: Record<string, unknown>;
-  timeline?: DailyHealthTimelineRecord[];
+  derived?: {
+    summary?: Record<string, unknown>;
+    timeline?: DailyHealthTimelineRecord[];
+  };
 };
 
 export type DriveLog = Record<string, {action?: string; address?: string}>;

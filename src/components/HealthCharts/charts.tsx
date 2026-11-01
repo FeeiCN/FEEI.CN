@@ -36,6 +36,7 @@ export const healthMonthCache = new Map<string, {data: HealthData; cachedAt: num
 export const healthMonthRequestCache = new Map<string, Promise<HealthData | null>>();
 export let healthHistoryCache: HealthData | null = null;
 export let healthHistoryRequestCache: Promise<HealthData | null> | null = null;
+export const healthHistoryYearCache = new Map<string, HealthData>();
 export let sleepScoreCache: HealthData['sleep_score'] | null = null;
 export let sleepScoreRequestCache: Promise<HealthData['sleep_score']> | null = null;
 export const sleepScoreDetailCache = new Map<string, SleepScoreDetailPayload>();
@@ -43,6 +44,10 @@ export const sleepScoreDetailRequests = new Map<string, Promise<SleepScoreDetail
 
 export type HealthHistoryPayload = {
   data?: HealthData;
+};
+
+type HealthHistoryIndexPayload = {
+  years?: Array<{year?: string}>;
 };
 
 export type SleepScoreHistoryPayload = {
@@ -104,13 +109,31 @@ export function loadHealthChartHistory(): Promise<HealthData | null> {
   if (healthHistoryRequestCache) return healthHistoryRequestCache;
 
   healthHistoryRequestCache = Promise.all([
-    fetch('/data/health/history.json', {cache: 'no-store'}),
+    fetch('/data/health/history/index.json', {cache: 'force-cache'}),
     loadSleepScoreHistory(),
   ]).then(async ([response, sleepScores]) => {
       if (!response.ok) return null;
-      const payload = await response.json() as HealthHistoryPayload;
-      if (!payload.data || !Array.isArray(payload.data.steps)) return null;
-      healthHistoryCache = {...payload.data, sleep_score: sleepScores};
+      const index = await response.json() as HealthHistoryIndexPayload;
+      const years = (index.years ?? []).map((entry) => entry.year)
+        .filter((year): year is string => typeof year === 'string' && /^\d{4}$/.test(year));
+      const loaded = await Promise.all(years.map(async (year) => {
+        const cached = healthHistoryYearCache.get(year);
+        if (cached) return cached;
+        const yearResponse = await fetch(`/data/health/history/${year}.json`, {cache: 'force-cache'});
+        if (!yearResponse.ok) return null;
+        const payload = await yearResponse.json() as HealthHistoryPayload;
+        if (!payload.data || !Array.isArray(payload.data.steps)) return null;
+        healthHistoryYearCache.set(year, payload.data);
+        return payload.data;
+      }));
+      const byYear: Record<string, HealthData> = {};
+      loaded.forEach((item, index) => {
+        const year = years[index];
+        if (item && year) byYear[year] = item;
+      });
+      const data = mergeData(byYear, years);
+      if (!Array.isArray(data.steps)) return null;
+      healthHistoryCache = {...data, sleep_score: sleepScores};
       return healthHistoryCache;
     })
     .catch(() => null)

@@ -48,8 +48,8 @@ test('daily canonical data rebuilds the matching monthly cache', (t) => {
     const dailyDir = path.join(root, '2025/01');
     fs.mkdirSync(dailyDir, {recursive: true});
     fs.writeFileSync(path.join(dailyDir, `${day}.json`), JSON.stringify({
-      exportedAt: `2025-01-${day}T12:00:00.000Z`,
-      data: selectDay(month.data, `2025-01-${day}`),
+      version: 3,
+      source: {exportedAt: `2025-01-${day}T12:00:00.000Z`, collections: selectDay(month.data, `2025-01-${day}`)},
     }));
   }
   const rebuilt = buildMonthlyHealthFromDailyFiles(root, '2025-01');
@@ -116,7 +116,7 @@ for await (const line of readline.createInterface({input: process.stdin})) {
 }`);
   fs.mkdirSync(path.join(root, '2025/01'), {recursive: true});
   const dailyFile = path.join(root, '2025/01/01.json');
-  fs.writeFileSync(dailyFile, JSON.stringify({version: 2, summary: {old: true}, timeline: [{type: 'old'}]}));
+  fs.writeFileSync(dailyFile, JSON.stringify({version: 3, source: {collections: {}}, derived: {summary: {old: true}, timeline: [{type: 'old'}]}}));
   const result = run('export_health_year_from_mcp.mjs', ['--year', '2025', '--end-date', '2025-02-01', '--target', root, '--mcp-server', server]);
   assert.equal(result.status, 0, result.stderr);
   assert.ok(fs.existsSync(path.join(root, '2025/01.json')));
@@ -129,17 +129,17 @@ for await (const line of readline.createInterface({input: process.stdin})) {
   assert.equal(month.data.ecg.ecg[0].averageHeartRate, 80);
   assert.ok(!fs.existsSync(path.join(root, '.archives')));
   const daily = JSON.parse(fs.readFileSync(dailyFile));
-  assert.equal(daily.summary.old, undefined);
-  const nap = daily.timeline.find((item) => item.type === 'sleep');
+  assert.equal(daily.derived.summary.old, undefined);
+  const nap = daily.derived.timeline.find((item) => item.type === 'sleep');
   assert.equal(nap.stage, 'asleep');
   assert.equal(nap.durationMinutes, 81);
   assert.equal(nap.end, '2025-01-01 14:51:00 +0800');
-  assert.deepEqual(daily.hrv, {
+  assert.deepEqual(daily.derived.hrv, {
     units: 'ms',
     samples: [{start: '2025-01-01 02:00:00 +0800', end: '2025-01-01 02:01:00 +0800', value: 42.5, source: 'Watch'}],
   });
-  assert.ok(daily.data.healthMetrics.metrics.some((metric) => metric.name === 'step_count'));
-  assert.deepEqual(daily.data.workouts.workouts[0].stepCount, [{qty: 5}]);
+  assert.ok(daily.source.collections.healthMetrics.metrics.some((metric) => metric.name === 'step_count'));
+  assert.deepEqual(daily.source.collections.workouts.workouts[0].stepCount, [{qty: 5}]);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, '2025/02.json'))).data.healthMetrics.metrics, []);
 });
 
@@ -155,7 +155,11 @@ for await (const line of readline.createInterface({input: process.stdin})) {
 }`);
   fs.mkdirSync(path.join(root, '2025/01'), {recursive: true});
   const file = path.join(root, '2025/01/01.json');
-  const original = JSON.stringify({version: 2, summary: {rawRecords: {healthMetrics: 1}}, timeline: []});
+  const original = JSON.stringify({
+    version: 3,
+    source: {collections: {healthMetrics: {metrics: [{name: 'step_count', data: [{date: '2025-01-01', qty: 1}]}]}}},
+    derived: {summary: {rawRecords: {healthMetrics: 1}}, timeline: []},
+  });
   fs.writeFileSync(file, original);
   fs.writeFileSync(path.join(root, '2025/01.json'), JSON.stringify(payload([])));
   const result = run('export_health_year_from_mcp.mjs', ['--date', '2025-01-01', '--target', root, '--mcp-server', server]);
@@ -196,12 +200,12 @@ for await (const line of readline.createInterface({input: process.stdin})) {
 }`);
   const file = path.join(root, '2025/01/01.json');
   fs.mkdirSync(path.dirname(file), {recursive: true});
-  fs.writeFileSync(file, JSON.stringify({version: 2, date: '2025-01-01', timeline: [{type: 'sleep'}]}));
+  fs.writeFileSync(file, JSON.stringify({version: 3, date: '2025-01-01', source: {collections: {}}, derived: {timeline: [{type: 'sleep'}]}}));
   const result = run('export_health_year_from_mcp.mjs', ['--date', '2025-01-01', '--backfill-hrv', '--target', root, '--mcp-server', server]);
   assert.equal(result.status, 0, result.stderr);
   const daily = JSON.parse(fs.readFileSync(file, 'utf8'));
-  assert.deepEqual(daily.timeline, [{type: 'sleep'}]);
-  assert.deepEqual(daily.hrv, {
+  assert.deepEqual(daily.derived.timeline, [{type: 'sleep'}]);
+  assert.deepEqual(daily.derived.hrv, {
     units: 'ms',
     samples: [{start: '2025-01-01 02:00:00 +0800', end: '2025-01-01 02:01:00 +0800', value: 42.5, source: 'Watch'}],
   });
@@ -219,11 +223,11 @@ for await (const line of readline.createInterface({input: process.stdin})) {
 }`);
   const file = path.join(root, '2025/01/01.json');
   fs.mkdirSync(path.dirname(file), {recursive: true});
-  fs.writeFileSync(file, JSON.stringify({version: 2, date: '2025-01-01', timeline: []}));
+  fs.writeFileSync(file, JSON.stringify({version: 3, date: '2025-01-01', source: {collections: {}}, derived: {timeline: []}}));
   const result = run('export_health_year_from_mcp.mjs', ['--date', '2025-01-01', '--backfill-hrv', '--target', root, '--mcp-server', server]);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /1 had no HRV samples/);
-  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).hrv, {units: 'ms', samples: []});
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).derived.hrv, {units: 'ms', samples: []});
 });
 
 test('mutable refresh replaces mood and medication timeline data and adds weight detail', (t) => {
@@ -245,20 +249,20 @@ for await (const line of readline.createInterface({input: process.stdin})) {
   const file = path.join(root, '2025/01/01.json');
   fs.mkdirSync(path.dirname(file), {recursive: true});
   fs.writeFileSync(file, JSON.stringify({
-    version: 2,
+    version: 3,
     date: '2025-01-01',
-    summary: {medications: {count: 9}, stateOfMind: {count: 9}},
-    timeline: [{type: 'sleep'}, {type: 'medication', name: 'Old'}, {type: 'state_of_mind', kind: 'Old'}],
+    source: {collections: {}},
+    derived: {summary: {medications: {count: 9}, stateOfMind: {count: 9}}, timeline: [{type: 'sleep'}, {type: 'medication', name: 'Old'}, {type: 'state_of_mind', kind: 'Old'}]},
   }));
   const result = run('export_health_year_from_mcp.mjs', ['--date', '2025-01-01', '--refresh-mutable', '--target', root, '--mcp-server', server]);
   assert.equal(result.status, 0, result.stderr);
   const daily = JSON.parse(fs.readFileSync(file, 'utf8'));
-  assert.deepEqual(daily.weight, {units: 'kg', samples: [{start: '2025-01-01 08:00:00 +0800', value: 70.2, source: 'Scale'}]});
-  assert.equal(daily.summary.medications.count, 1);
-  assert.equal(daily.summary.stateOfMind.count, 1);
-  assert.equal(daily.timeline.filter((item) => item.type === 'medication').length, 1);
-  assert.equal(daily.timeline.filter((item) => item.type === 'state_of_mind').length, 1);
-  assert.equal(daily.timeline.filter((item) => item.type === 'sleep').length, 1);
+  assert.deepEqual(daily.derived.weight, {units: 'kg', samples: [{start: '2025-01-01 08:00:00 +0800', value: 70.2, source: 'Scale'}]});
+  assert.equal(daily.derived.summary.medications.count, 1);
+  assert.equal(daily.derived.summary.stateOfMind.count, 1);
+  assert.equal(daily.derived.timeline.filter((item) => item.type === 'medication').length, 1);
+  assert.equal(daily.derived.timeline.filter((item) => item.type === 'state_of_mind').length, 1);
+  assert.equal(daily.derived.timeline.filter((item) => item.type === 'sleep').length, 1);
 });
 
 test('incomplete monthly collection preserves the existing section', (t) => {

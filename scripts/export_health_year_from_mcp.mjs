@@ -7,6 +7,7 @@ import {buildMedicationCollection} from './health_collection_transform.mjs';
 import {
   buildMonthlyHealthFromDailyFiles,
   compactMonthlyDetails,
+  dailyCollections,
   monthlyPayload,
   writeMonthlyHealth,
 } from './health_month_storage.mjs';
@@ -631,6 +632,7 @@ async function exportDailyCompactFiles(client, options) {
     const canonicalData = {};
     const summary = {};
     const errors = {};
+    const collectionStatus = {};
 
     for (const mapping of collectionMappings) {
       process.stderr.write(`Exporting compact ${day} ${mapping.targetSection}...\n`);
@@ -677,24 +679,37 @@ async function exportDailyCompactFiles(client, options) {
       if (error) {
         errors[mapping.targetSection] = error;
       }
+      collectionStatus[mapping.targetSection] = error ? {state: 'error', error} : {state: 'ok'};
     }
 
     const compactData = buildDailyCompactData(data);
     const hrv = buildDailyHrv(data.healthMetrics?.metrics ?? []);
-    const dailyData = {
-      version: 2,
-      exportedAt: options.exportedAt,
+    const derived = {
       date: day,
       summary: {
         rawRecords: summary,
         ...compactData.summary,
       },
       timeline: compactData.timeline,
-      data: compactMonthlyDetails({data: canonicalData}).data,
     };
     if (hrv) {
-      dailyData.hrv = hrv;
+      derived.hrv = hrv;
     }
+    const dailyData = {
+      version: 3,
+      date: day,
+      source: {
+        format: 'health-auto-export',
+        exportedAt: options.exportedAt,
+        collections: compactMonthlyDetails({data: canonicalData}).data,
+      },
+      derived,
+      sync: {
+        state: Object.keys(errors).length ? 'incomplete' : 'complete',
+        checkedAt: options.exportedAt,
+        collections: collectionStatus,
+      },
+    };
 
     if (Object.keys(errors).length > 0) {
       if (fs.existsSync(dailyFile) && !isEmptyDailyHealthFile(dailyFile)) {
@@ -722,11 +737,12 @@ async function exportDailyCompactFiles(client, options) {
 function isEmptyDailyHealthFile(file) {
   try {
     const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-    const rawRecords = data.summary?.rawRecords ?? {};
+    const presentation = data.derived ?? {};
+    const rawRecords = presentation.summary?.rawRecords ?? {};
     const rawTotal = Object.values(rawRecords)
       .reduce((sum, value) => sum + (Number(value) || 0), 0);
-    const timelineCount = Array.isArray(data.timeline) ? data.timeline.length : 0;
-    return rawTotal === 0 && timelineCount === 0;
+    const timelineCount = Array.isArray(presentation.timeline) ? presentation.timeline.length : 0;
+    return rawTotal === 0 && timelineCount === 0 && Object.keys(dailyCollections(data)).length === 0;
   } catch {
     return true;
   }
@@ -794,7 +810,7 @@ async function backfillDailyHrvFiles(client, options) {
     } catch {
       throw new Error(`Invalid daily health file: ${path.relative(repoRoot, dailyFile)}`);
     }
-    if (dailyData.hrv) {
+    if (dailyData.derived?.hrv) {
       skipped += 1;
       continue;
     }
@@ -811,7 +827,10 @@ async function backfillDailyHrvFiles(client, options) {
       empty += 1;
     }
 
-    dailyData.hrv = hrv ?? {units: 'ms', samples: []};
+    if (dailyData.version !== 3 || !dailyData.derived) {
+      throw new Error(`Expected canonical daily health v3 file: ${path.relative(repoRoot, dailyFile)}`);
+    }
+    dailyData.derived.hrv = hrv ?? {units: 'ms', samples: []};
     fs.writeFileSync(dailyFile, `${JSON.stringify(dailyData)}\n`);
     updated += 1;
   }
@@ -856,8 +875,7 @@ async function refreshDailyMutableFiles(client, options) {
     };
     const collection = buildCollectionEvents(collectionData);
 
-    dailyData.weight = weight;
-    const canonicalData = structuredClone(dailyData.data ?? {});
+    const canonicalData = structuredClone(dailyCollections(dailyData));
     canonicalData.healthMetrics ??= {};
     const existingMetrics = canonicalData.healthMetrics.metrics ?? [];
     canonicalData.healthMetrics.metrics = [
@@ -866,16 +884,35 @@ async function refreshDailyMutableFiles(client, options) {
     ];
     canonicalData.medications = collectionData.medications;
     canonicalData.stateOfMind = collectionData.stateOfMind;
-    dailyData.data = compactMonthlyDetails({data: canonicalData}).data;
-    dailyData.exportedAt = new Date().toISOString();
-    dailyData.summary = dailyData.summary ?? {};
-    dailyData.summary.medications = collection.summary.medications;
-    dailyData.summary.stateOfMind = collection.summary.stateOfMind;
-    const timeline = Array.isArray(dailyData.timeline) ? dailyData.timeline : [];
-    dailyData.timeline = timeline
+    const checkedAt = new Date().toISOString();
+    const derived = structuredClone(dailyData.derived ?? {date: dailyData.date ?? day, summary: {}, timeline: []});
+    derived.weight = weight;
+    derived.summary = derived.summary ?? {};
+    derived.summary.medications = collection.summary.medications;
+    derived.summary.stateOfMind = collection.summary.stateOfMind;
+    const timeline = Array.isArray(derived.timeline) ? derived.timeline : [];
+    derived.timeline = timeline
       .filter((item) => item?.type !== 'medication' && item?.type !== 'state_of_mind')
       .concat(collection.timeline)
       .sort(compareTimelineItems);
+    dailyData.version = 3;
+    dailyData.date = dailyData.date ?? day;
+    dailyData.source = {
+      format: 'health-auto-export',
+      exportedAt: checkedAt,
+      collections: compactMonthlyDetails({data: canonicalData}).data,
+    };
+    dailyData.derived = derived;
+    dailyData.sync = {
+      state: 'complete',
+      checkedAt,
+      collections: {
+        ...(dailyData.sync?.collections ?? {}),
+        healthMetrics: {state: 'ok'},
+        medications: {state: 'ok'},
+        stateOfMind: {state: 'ok'},
+      },
+    };
     fs.writeFileSync(dailyFile, `${JSON.stringify(dailyData)}\n`);
     updated += 1;
   }

@@ -43,7 +43,7 @@ for (const date of [...dailyDatesToExport].sort()) {
     throw new Error(`Daily health data file does not exist: ${dailyFile}`);
   }
   const dailyPayload = JSON.parse(fs.readFileSync(dailyPath, 'utf8'));
-  if (dailyPayload.date !== date || !dailyPayload.data || Object.keys(dailyPayload.errors ?? {}).length > 0) {
+  if (dailyPayload.date !== date || !dailyPayload.source?.collections || dailyPayload.sync?.state !== 'complete') {
     throw new Error(`Incomplete daily health export for ${date}; refusing to commit: ${dailyFile}`);
   }
 
@@ -78,9 +78,13 @@ for (const month of [...affectedMonths].sort()) {
   if (!isPathClean(monthlyFile)) changedFiles.push(monthlyFile);
 }
 
-const historyFile = path.join(healthDir, 'history.json');
-if (fs.existsSync(path.join(repoRoot, historyFile)) && !isPathClean(historyFile)) {
-  changedFiles.push(historyFile);
+run('npm', ['run', 'build-health-sync-status']);
+const syncStatusFile = path.join(healthDir, 'sync-status.json');
+if (!isPathClean(syncStatusFile)) changedFiles.push(syncStatusFile);
+
+const historyDir = path.join(healthDir, 'history');
+if (fs.existsSync(path.join(repoRoot, historyDir)) && !isPathClean(historyDir)) {
+  changedFiles.push(historyDir);
 }
 
 if (changedFiles.length === 0) {

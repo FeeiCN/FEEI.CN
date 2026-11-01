@@ -72,25 +72,35 @@ export async function buildHealthChartHistory({healthRoot = defaultHealthRoot} =
     key,
     data: filterToNominalMonth(transform(JSON.parse(fs.readFileSync(file, 'utf8'))), key),
   }));
-  const data = mergeHealthData(months);
-  const dates = Object.entries(data)
-    .filter(([key, value]) => key !== 'lastUpdated' && Array.isArray(value))
-    .flatMap(([, value]) => value.map((row) => String(row[0] || '').slice(0, 10)))
-    .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
-    .sort();
-  const payload = {
-    version: 1,
-    generatedAt: data.lastUpdated,
-    range: {start: dates[0] ?? null, end: dates.at(-1) ?? null},
-    months: monthFiles.length,
-    data,
-  };
-  const outputPath = path.join(resolvedRoot, 'history.json');
-  const temporaryPath = `${outputPath}.tmp`;
-  fs.writeFileSync(temporaryPath, `${JSON.stringify(payload)}\n`);
-  fs.renameSync(temporaryPath, outputPath);
-  console.log(`Built health chart history from ${monthFiles.length} months: ${path.relative(repoRoot, outputPath)}`);
-  return outputPath;
+  const historyDir = path.join(resolvedRoot, 'history');
+  fs.mkdirSync(historyDir, {recursive: true});
+  const years = [...new Set(months.map((month) => month.key.slice(0, 4)))];
+  const index = [];
+  for (const year of years) {
+    const yearMonths = months.filter((month) => month.key.startsWith(`${year}-`));
+    const data = mergeHealthData(yearMonths);
+    const dates = Object.entries(data)
+      .filter(([key, value]) => key !== 'lastUpdated' && Array.isArray(value))
+      .flatMap(([, value]) => value.map((row) => String(row[0] || '').slice(0, 10)))
+      .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+      .sort();
+    const payload = {
+      version: 2,
+      generatedAt: data.lastUpdated,
+      range: {start: dates[0] ?? null, end: dates.at(-1) ?? null},
+      months: yearMonths.length,
+      data,
+    };
+    const outputPath = path.join(historyDir, `${year}.json`);
+    fs.writeFileSync(`${outputPath}.tmp`, `${JSON.stringify(payload)}\n`);
+    fs.renameSync(`${outputPath}.tmp`, outputPath);
+    index.push({year, ...payload.range, generatedAt: payload.generatedAt});
+  }
+  const indexPath = path.join(historyDir, 'index.json');
+  fs.writeFileSync(`${indexPath}.tmp`, `${JSON.stringify({version: 1, years: index})}\n`);
+  fs.renameSync(`${indexPath}.tmp`, indexPath);
+  console.log(`Built ${years.length} yearly health history caches from ${monthFiles.length} months: ${path.relative(repoRoot, historyDir)}`);
+  return indexPath;
 }
 
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {

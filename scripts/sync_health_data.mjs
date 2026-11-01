@@ -70,7 +70,7 @@ if (!args.date) {
     }
   }
 
-  const mutableDates = findRecentMutableDailyDates(3);
+  const mutableDates = findRecentMutableDailyDates(7);
   console.log(`Refreshing mutable health data for ${mutableDates.length} recent day(s).`);
   for (const mutableDate of mutableDates) {
     const [year, month, day] = mutableDate.split('-');

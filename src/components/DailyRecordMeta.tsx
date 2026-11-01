@@ -879,7 +879,7 @@ function RecoveryDetails({data}: {data: RecoverySummary}) {
     : '—';
   const explanation = data.status === 'insufficient'
     ? '需要当天与此前 7 天至少两天的 HRV、静息心率记录，才能合并判断。'
-    : 'HRV 下降且静息心率上升同时出现时，提示压力负荷可能增加；仅作趋势参考，不构成医疗诊断。';
+    : 'HRV 较基线下降约 10% 且静息心率上升约 3 bpm 时标为压力信号，反向变化标为恢复信号；仅作趋势参考，不构成医疗诊断。';
   return (
     <div className={styles.metricTrend} aria-label="HRV 与静息心率恢复辅助参考">
       <div className={styles.metricTrendHeader}>

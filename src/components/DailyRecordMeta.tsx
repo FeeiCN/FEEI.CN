@@ -132,6 +132,10 @@ type HealthMonth = {
   };
 };
 
+type HealthDay = {
+  timeline?: Array<StateOfMindRecord & {type?: string}>;
+};
+
 type MedicationRecord = {
   displayText?: string;
   nickname?: string;
@@ -398,6 +402,11 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
     const response = await fetch(`/data/health/${monthKey.replace('-', '/')}.json`, {signal});
     return response.ok ? await response.json() as HealthMonth : null;
   }));
+  const dailyResponse = await fetch(
+    `/data/health/${date.slice(0, 4)}/${date.slice(5, 7)}/${date.slice(8, 10)}.json`,
+    {signal},
+  );
+  const dailyPayload = dailyResponse.ok ? await dailyResponse.json() as HealthDay : null;
   const records = new Map<string, HealthMetricRecord[]>();
   payloads.forEach((payload) => {
     payload?.data?.healthMetrics?.metrics?.forEach((metric) => {
@@ -405,9 +414,28 @@ async function loadHealthSummary(date: string, signal: AbortSignal): Promise<Hea
       records.set(metric.name, [...(records.get(metric.name) ?? []), ...(metric.data ?? [])]);
     });
   });
-  const moodRecords = payloads
+  const monthlyMoodRecords = payloads
     .flatMap((payload) => payload?.data?.stateOfMind?.stateOfMind ?? [])
-    .filter((record) => typeof record.start === 'string')
+    .filter((record) => typeof record.start === 'string');
+  const dailyMoodRecords = (dailyPayload?.timeline ?? [])
+    .filter((record) => record.type === 'state_of_mind' && typeof record.start === 'string')
+    .map(({type: _type, ...record}) => record);
+  const moodByStart = new Map<string, StateOfMindRecord>();
+  [...monthlyMoodRecords, ...dailyMoodRecords].forEach((record) => {
+    if (typeof record.start !== 'string') return;
+    const existing = moodByStart.get(record.start);
+    moodByStart.set(record.start, {
+      ...existing,
+      ...record,
+      start: record.start,
+      kind: record.kind ?? existing?.kind,
+      valenceClassification: record.valenceClassification ?? existing?.valenceClassification,
+      valence: record.valence ?? existing?.valence,
+      labels: record.labels ?? existing?.labels,
+      associations: record.associations ?? existing?.associations,
+    });
+  });
+  const moodRecords = [...moodByStart.values()]
     .sort((left, right) => (left.start || '').localeCompare(right.start || ''));
   const medicationRecords = payloads
     .flatMap((payload) => payload?.data?.medications?.medications ?? [])

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workflow_id": "ai-security-frontier",
-  "updated_at": "2026-11-01",
+  "updated_at": "2026-11-02",
   "repository": "FeeiCN/FEEI.CN",
   "editorial_status": "research-only; not a verified original vulnerability disclosure",
   "duplicate_check": {
@@ -262,6 +262,53 @@
       ],
       "observations": "Patch wires configured MCP_API_KEY into HTTP transport and enforces X-API-Key check before MCP request handling (401 if missing/wrong); moves default HTTP bind from 0.0.0.0 to loopback; warns when non-loopback without key. Upstream integration tests assert no key/wrong key->401, valid key->200, tools/list denied to unauthenticated callers and health route remains open. Fix source and tests read, not executed.",
       "uncertainty": "Current repo has subsequently evolved; evidence describes version-pinned 3.0.1 fix, not the runtime of later major releases. A key only authenticates caller; file access still limited mainly by process permissions unless allow-dir is configured."
+    },
+    {
+      "id": "S29",
+      "kind": "aws_first_party_security_bulletin_and_maintainer_advisory",
+      "published_on": "2026-10-27",
+      "url": "https://aws.amazon.com/security/security-bulletins/2026-152-aws/",
+      "maintainer_advisory": "https://github.com/awslabs/mcp/security/advisories/GHSA-4prq-p2x5-w9fh",
+      "cve": "CVE-2026-115413",
+      "product": "awslabs.aws-api-mcp-server",
+      "affected_versions": ">=1.3.0 <1.6.0",
+      "fixed_version": "1.6.0",
+      "preconditions": "streamable-http with AUTH_TYPE=oauth; caller has a valid bearer token for a different app client in same configured identity-provider tenant",
+      "control_failure": "Signature, issuer and expiry checked without token intended audience/client identity; host-configured AWS credentials give downstream authority",
+      "remediation": "Upgrade 1.6.0 and set AUTH_AUDIENCE or AUTH_CLIENT_ID; default stdio transport not affected",
+      "limitations": "Vendor disclosure does not establish actual customer compromise, Internet-wide reachability or whether host permissions allowed particular AWS calls."
+    },
+    {
+      "id": "S30",
+      "kind": "version_pinned_public_source_and_upstream_negative_tests_read_only",
+      "reviewed_on": "2026-11-02",
+      "repo": "awslabs/mcp",
+      "pinned_search_commit": "dc8221efe04220a5b6a765dabda6f0db743eb6bd",
+      "source_url": "https://github.com/awslabs/mcp/blob/dc8221efe04220a5b6a765dabda6f0db743eb6bd/src/aws-api-mcp-server/awslabs/aws_api_mcp_server/core/common/auth.py",
+      "config_url": "https://github.com/awslabs/mcp/blob/dc8221efe04220a5b6a765dabda6f0db743eb6bd/src/aws-api-mcp-server/awslabs/aws_api_mcp_server/core/common/config.py",
+      "test_url": "https://github.com/awslabs/mcp/blob/dc8221efe04220a5b6a765dabda6f0db743eb6bd/src/aws-api-mcp-server/tests/common/test_auth.py",
+      "observed": "ClientIdJWTVerifier.load_access_token checks client_id or azp against configured client ID after standard JWT verification. Server config rejects OAuth missing both expected audience and expected client ID. Upstream tests include same-tenant wrong app, missing client_id, wrong issuer, valid azp and combined client_id/aud negative controls.",
+      "limits": "Main/source search commit is later than advisory and is NOT verified as the v1.6.0 package artifact. Tests were read, not executed; exact vulnerable-vs-patched release diff not independently replayed. CHANGELOG current main has new controls under Unreleased while vendor says fixed 1.6.0; confirm tag/package lineage before claiming shipped test equivalence."
+    },
+    {
+      "id": "S31",
+      "kind": "maintainer_reviewed_sdk_advisory",
+      "published_to_advisory_database": "2026-10-27",
+      "url": "https://github.com/advisories/GHSA-5h93-6whr-6q8j",
+      "cve": "CVE-2026-116685",
+      "product": "modelcontextprotocol/python-sdk mcp pip",
+      "affected_versions": "1.8.0..<1.30.0; 2.0.0..<2.2.0",
+      "fixed_versions": "1.30.0 and 2.2.0",
+      "mechanism": "Pre-fix HTTP and OAuth clients followed cross-origin redirects forwarding custom headers; HTTP 307/308 also resend request body. Authorization bearer header was already stripped by library on origin change, so do not claim it leaked.",
+      "independent_source": "https://github.com/modelcontextprotocol/python-sdk/blob/d7845c073a2b9ba5ab2817ecf93d3e45ef24cd14/src/mcp/shared/_httpx_utils.py",
+      "limits": "Current default-branch source documents origin-limited redirects, but does not verify exact released binary or live exploitation. Distinct client redirection trust boundary, not evidence for AWS server bug."
+    },
+    {
+      "id": "S32",
+      "kind": "oauth_standards_primary_prior_art",
+      "url": "https://datatracker.ietf.org/doc/html/rfc8707",
+      "published_on": "2020-02",
+      "claim_scope": "Access token resource/audience restriction is established normative prior art; cannot label missing audience check or scope-binding as a newly invented security invariant."
     }
   ],
   "cases": [
@@ -401,8 +448,8 @@
       "id": "H-AIS-20261026-01",
       "title": "An agent inventory endpoint that returns reusable cross-system credentials defeats nominally read-only control-plane access",
       "domain": "agent identity, delegation, credential broker and software supply chain",
-      "status": "experiment_designed",
-      "priority": "P0",
+      "status": "blocked",
+      "priority": "P2-blocked",
       "scope": "Synthetic agent inventory API, mock repository and release approval; not a claim of a new vulnerability in current LiteLLM releases",
       "novelty_claim": "Research hypothesis to operationalize authority-amplification invariant as a negative-control test; no claim this principle is first discovered.",
       "independent_variable": "(a) plaintext owner token in inventory; (b) no-readback credential handle; (c) task-scoped GitHub App delegation; (d) independent release approval and source-attestation checks",
@@ -569,7 +616,10 @@
         "checks_executed": "Source and upstream tests inspected through read-only GitHub connector; no upstream pytest, SDK integration, network API, build, or penetration test executed.",
         "novelty_boundary": "No newly found OSS LiteLLM bug is claimed. Differentiation is a measurable cross-boundary secret exposure AND post-session authorized-effect benchmark, provided it can be run against a real version-pinned implementation."
       },
-      "integration_blocker_20261031": "No publicly inspectable version-pinned LiteLLM Agent Platform server found in reviewed SDK/OpenAPI/OSS Proxy material; real protected endpoint integration remains unavailable. Resume only with an owner-controlled deployable test artifact; do not keep repeating toy experiments."
+      "integration_blocker_20261031": "No publicly inspectable version-pinned LiteLLM Agent Platform server found in reviewed SDK/OpenAPI/OSS Proxy material; real protected endpoint integration remains unavailable. Resume only with an owner-controlled deployable test artifact; do not keep repeating toy experiments.",
+      "blocked_since": "2026-11-02",
+      "blocker": "No publicly inspectable and owner-deployable version-pinned LiteLLM Agent Platform server artifact. SDK/OpenAPI and OSS Proxy are different endpoints and cannot support live claims.",
+      "resume_condition": "Explicitly authorized, local, pinned LAP server artifact with fake secrets and executable list/get + resource action test; otherwise do not repeat synthetic oracle."
     },
     {
       "id": "H-AIS-20261026-02",
@@ -801,13 +851,51 @@
       "falsification": "If pinned v3.0.0 source already enforces the key on /mcp or pinned v3.0.1 still admits unauthenticated tool calls under controlled test, revise the pre/post claim; if identical checks already cover all tested routes in existing published practice, do not claim original method.",
       "novelty": "The bug class is established missing auth, not new. Possible research contribution is configuration-to-effective-policy differential coverage across transports and runtime state, but it requires an implemented real test harness before suggesting originality.",
       "next_step": "Before elevating to full article, independently run version-pinned isolated integration with dummy PDFs if available and evaluate whether this contributes a nonredundant method beyond existing Agent与工具调用安全.md. No reason to publish a second rushed essay while an October 31 complete article is awaiting explicit user approval."
+    },
+    {
+      "id": "C-AIS-20261102-10",
+      "title": "HTTP MCP effective token-recipient and transport authorization contract",
+      "status": "cross_product_evidence_review_not_original_bug",
+      "sources": [
+        "S27",
+        "S28",
+        "S29",
+        "S30",
+        "S31",
+        "S32"
+      ],
+      "research_question": "Can a single isolated client-server conformance matrix catch intended-authentication vs actual-enforcement drift (HTTP missing auth, same-issuer wrong audience, cross-origin redirection of non-bearer secrets) beyond ordinary per-tool JSON Schema checks, without rejecting legitimate clients?",
+      "scope": "Already-patched fixed versions of @sylphx/pdf-reader-mcp, awslabs.aws-api-mcp-server and MCP Python SDK; only owned loopback endpoints, synthetic JWTs, dummy files, fake credentials.",
+      "prior_art": "RFC8707 and official MCP SDK docs already demand token audience restrictions; this is a candidate comparative evaluation method, not an original flaw or confirmed new CVE.",
+      "observed_sources": "AWS primary bulletin says signatures/issuer/expiry checked but audience omitted for 1.3.0..<1.6.0 OAuth+HTTP; public fixed-looking code reads client_id/azp, expected aud and checks them with upstream tests. PDF MCP report shows configured but ignored X-API-Key in opt-in HTTP. Python SDK advisory documents cross-origin custom-header/307-body forwarding.",
+      "hypothesis_to_test": "At least one of the three distinct trust-boundary regressions is missed by Schema-only/endpoint-existence checks but detected by end-to-end source-aware token and HTTP-effect tests; low-risk authorized operations still succeed.",
+      "minimal_experiment": "Pin exact vulnerable and patched release artifacts before any runtime claim. In isolated synthetic loopback namespace, compare HTTP missing/wrong/valid X-API-Key, JWT wrong issuer/expiry/aud/client_id and correct controls, redirects on same-origin vs foreign-origin under 302/307/308 with dummy custom headers and bodies; record actual fake tool side effects and echo collector observations. Include stdio and legitimate calls as negative controls.",
+      "measures": [
+        "unauthorized tool effect / prohibited attempts",
+        "dummy secret reaching wrong endpoint / redirect trials",
+        "normal task completions / legitimate attempts",
+        "false denial and latency",
+        "coverage of schema/static-only baseline versus protocol-and-effects matrix"
+      ],
+      "falsification": "If version-pinned builds do not reproduce vendor-stated pre-fix behavior, reject/revise the particular case. If an existing simpler test has equivalent detection and normal-use tradeoff, the claimed incremental method is unsupported. If upgraded OAuth configuration still permits wrong audience under same-tenant tests, escalate as potentially incomplete remediation only after independent confirm, privately.",
+      "unknowns": [
+        "Exact package v1.6.0 patch lineage vs current main changelog",
+        "Pre/post fixed-release test runner and dependency availability",
+        "Suitability of open-source HTTP integration as realistic agent host",
+        "Whether HTTP authentication is checked for stream/session resume paths"
+      ],
+      "priority": "P1-candidate",
+      "not_duplicate_of": "H-AIS-20261031-03 covers shell/CLI/path grammar; this candidate covers HTTP authorization and redirection. ARCH weekly project addresses reference architectures, not specific SDK conformance."
     }
   ],
   "weekly_review": {
-    "week_start": "2026-10-26",
-    "selected_primary_hypothesis": "H-AIS-20261026-01",
-    "rationale": "Directly motivated by an Oct 23 canonical primary-source correction, bounded mock feasibility and clear authorization boundary; avoids repeating existing PHP2Shell branch.",
-    "next_review": "2026-11-02"
+    "week_start": "2026-11-02",
+    "selected_primary_hypothesis": "H-AIS-20261031-03",
+    "why": "It has fixed source, upstream tests, a local parser counterexample and an independent tool-handler verification path. H-AIS-20261026-01 is blocked on a real LAP server artifact; stop toy-model loops. Newly reviewed transport auth cases remain candidates pending version-pinned executable validation.",
+    "updated_falsification": "Reject any claimed method increment if schema-aware static checks plus a simple argv/path unit test already detect all cases with no worse false positives or cost. Reject any cross-product generalization if exact pinned handler implementations do not share the expected parser boundaries. Do not count the already delivered Oct31 article as an experimental result.",
+    "next_experiment": "Pin an owner-installable gh-aw or esp-mcp release in a disposable environment; using benign marker strings only, trace MCP param to executable/argv/effect oracle; compare legit tasks and disallowed side effects. If dependencies unavailable, record blocked and move to the transport-auth candidate.",
+    "next_review": "2026-11-09",
+    "stop_condition": "After three no-delta executions, hold this question until an actual runtime artifact/experiment is possible."
   },
   "execution_evidence": {
     "original_poc_executed": false,
@@ -1010,6 +1098,48 @@
       "tool_use": "Read-only GitHub source and official advisory; no upstream tests, builds, production requests, web scans or exploit.",
       "editorial": "Prior Oct 31 full article awaits specific approval. New source captured as research candidate, not a second daily newsletter or draft.",
       "next_step": "Choose the next independently testable real sandbox mechanism; if reliable isolated runtime exists, perform pre/post dummy-key request matrix and measure false rejections. Review research queue November 2."
+    },
+    {
+      "id": "daily-2026-11-02",
+      "date": "2026-11-02",
+      "source_window": "2026-10-30 through 2026-11-02 primary-source scan; additional Oct 27 advisories reviewed for monthly thematic synthesis",
+      "fresh_window_high_value_new_primary_disclosures": 0,
+      "retrospective_primary_source_ids": [
+        "S29",
+        "S30",
+        "S31",
+        "S32"
+      ],
+      "source_observations": "AWS OAuth token audience flaw is vendor-confirmed and fixed v1.6.0; pinned latest source implements client_id/azp and aud checks, tests read but not run. Distinct Python SDK redirect secret forwarding flaw fixed in 1.30.0/2.2.0. These are known patches, not novel CVEs.",
+      "weekly_review": "Selected H-AIS-20261031-03; marked H01 real integration blocked, retained stopping/resume conditions.",
+      "monthly_review": "Created first working day November topical evidence synthesis and effect-based A/B test protocol; no quarterly review scheduled in November.",
+      "new_hypotheses": [],
+      "new_confirmed_original_vulnerabilities": 0,
+      "experiments_executed": 0,
+      "github_article_written": false,
+      "github_state_written": "pending-this-commit",
+      "editorial": "Existing Oct 31 full article awaits user approval; today's candidate has no verified nonredundant experimental or editorial contribution sufficient for another complete article. Do not send routine report.",
+      "next_step": "Pin actual fixed/pre-fix release artifacts and stage authorized localhost-only protocol/side-effect tests; do not extrapolate current main code to released v1.6.0."
     }
-  ]
+  ],
+  "monthly_review": {
+    "month": "2026-11",
+    "first_working_day": "2026-11-02",
+    "focus": "MCP HTTP authentication and recipient trust boundaries — declarations vs actual enforcement and cross-origin data flow",
+    "first_party_evidence": [
+      "S27",
+      "S28",
+      "S29",
+      "S30",
+      "S31"
+    ],
+    "standard_prior_art": [
+      "S32"
+    ],
+    "evidence_summary": "Three different already disclosed boundary errors: (1) configured X-API-Key not enforced on opt-in PDF MCP HTTP route; (2) accepted AWS API MCP tokens for other same-issuer applications despite valid signature/issuer/expiry; (3) MCP Python SDK client followed cross-origin redirects carrying custom headers and (307/308) bodies. They are not one shared CVE, and not independent demonstrations of a single new bug. Main-branch static code/tests of AWS remediation require exact v1.6.0 package pin before claiming runtime verification.",
+    "test_design": "Create a version-pinned, owner-controlled HTTP MCP conformance lab with dummy identities, tokens and non-sensitive fixture files; run pre/post patch matrix on auth missing/wrong/correct, cross-app audience/client_id/azp, expired/wrong issuer, transport stdio/http, cross-origin 302/307/308, same-origin valid redirects, session reuse. Record actual tool outcome and credential flow, legitimate completion, false-deny and cost. No third-party targets.",
+    "research_gap": "Current source reviews cannot establish exact shipped artifact, per-session auth enforcement or client redirect behavior under representative host integration. Similar checks exist in standards; method originality must be justified by measured detection over simpler baselines.",
+    "next_checkpoint": "Obtain exact public package release artifacts plus offline dependencies, then run real tests; if unavailable, do not claim execution or write a second article about only a known class.",
+    "publication_policy": "Oct 31 complete MCP parser article remains user-review pending; do not write or resend it and do not auto-publish a new draft."
+  }
 }

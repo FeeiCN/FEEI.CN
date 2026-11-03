@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workflow_id": "ai-security-frontier",
-  "updated_at": "2026-11-02",
+  "updated_at": "2026-11-03",
   "repository": "FeeiCN/FEEI.CN",
   "editorial_status": "research-only; not a verified original vulnerability disclosure",
   "duplicate_check": {
@@ -309,6 +309,43 @@
       "url": "https://datatracker.ietf.org/doc/html/rfc8707",
       "published_on": "2020-02",
       "claim_scope": "Access token resource/audience restriction is established normative prior art; cannot label missing audience check or scope-binding as a newly invented security invariant."
+    },
+    {
+      "id": "S33",
+      "kind": "verified_pypi_publication_attestation_and_source_provenance",
+      "version": "awslabs.aws-api-mcp-server 1.6.0",
+      "published_on": "2026-10-27",
+      "pypi_url": "https://pypi.org/project/awslabs.aws-api-mcp-server/1.6.0/",
+      "publisher_claim_verified_by_pypi": true,
+      "published_wheel_sha256": "484305708f665e9f0b59192892ebf5ffad1a7cec5adce2f48ab788e61b521e3f",
+      "attested_source_commit": "1bf810fd5a0d9d22b3bfd87bde69ce19eb1a177b",
+      "claim_scope": "PyPI public provenance states 1.6.0 wheel and sdist were trusted-published from an attested awslabs/mcp commit; this pins the announced fixed release to inspectable source and packaging date.",
+      "limit": "Wheel bytes were not downloaded or independently compared with source; attestation is publisher-origin evidence, not a binary or runtime security test."
+    },
+    {
+      "id": "S34",
+      "kind": "verified_pypi_prior_release_attestation_and_source_provenance",
+      "version": "awslabs.aws-api-mcp-server 1.5.6",
+      "published_on": "2026-09-30",
+      "pypi_url": "https://pypi.org/project/awslabs.aws-api-mcp-server/1.5.6/",
+      "published_wheel_sha256": "11133612071939b06bd389172b6abe7e8ada3a60de02ca31d14f7f98ddaeb357",
+      "attested_source_commit": "d80b52d8a8892f312c9191c5f6f9fe43bd85cd78",
+      "claim_scope": "PyPI attests vulnerable predecessor release's source commit; exact source at that commit instantiates JWTVerifier(issuer, jwks_uri) with no configured audience or client ID.",
+      "limit": "No dependency runtime or JWT credential tested; statement is source-level comparison cross-checked with vendor advisory."
+    },
+    {
+      "id": "S35",
+      "kind": "version_and_provenance_pinned_first_party_code_static_diff",
+      "reviewed_on": "2026-11-03",
+      "old_commit": "d80b52d8a8892f312c9191c5f6f9fe43bd85cd78",
+      "fixed_commit": "1bf810fd5a0d9d22b3bfd87bde69ce19eb1a177b",
+      "before_source": "https://github.com/awslabs/mcp/blob/d80b52d8a8892f312c9191c5f6f9fe43bd85cd78/src/aws-api-mcp-server/awslabs/aws_api_mcp_server/core/common/config.py",
+      "fixed_source": "https://github.com/awslabs/mcp/blob/1bf810fd5a0d9d22b3bfd87bde69ce19eb1a177b/src/aws-api-mcp-server/awslabs/aws_api_mcp_server/core/common/config.py",
+      "verifier_source": "https://github.com/awslabs/mcp/blob/1bf810fd5a0d9d22b3bfd87bde69ce19eb1a177b/src/aws-api-mcp-server/awslabs/aws_api_mcp_server/core/common/auth.py",
+      "test_source": "https://github.com/awslabs/mcp/blob/1bf810fd5a0d9d22b3bfd87bde69ce19eb1a177b/src/aws-api-mcp-server/tests/common/test_auth.py",
+      "positive_source_observations": "1.6.0 requires AUTH_AUDIENCE or AUTH_CLIENT_ID when HTTP OAuth is enabled, passing audience to JWTVerifier or using ClientIdJWTVerifier to compare raw client_id/azp to configured client ID. The version-pinned upstream test file covers same-tenant other-client denial, absent client ID, valid azp, wrong issuer, wrong aud, and both controls configured.",
+      "prior_source_observation": "1.5.6 HTTP OAuth get_server_auth only requires issuer/JWKS and builds JWTVerifier without expected audience; auth.py and new test file are not present in old commit.",
+      "limits": "Static first-party source inspection; upstream tests were not executed, wheel artifacts were not downloaded or hash-validated, and no actual MCP server was instantiated."
     }
   ],
   "cases": [
@@ -855,14 +892,17 @@
     {
       "id": "C-AIS-20261102-10",
       "title": "HTTP MCP effective token-recipient and transport authorization contract",
-      "status": "cross_product_evidence_review_not_original_bug",
+      "status": "release_provenance_pinned_source_diff_verified; runtime still untested",
       "sources": [
         "S27",
         "S28",
         "S29",
         "S30",
         "S31",
-        "S32"
+        "S32",
+        "S33",
+        "S34",
+        "S35"
       ],
       "research_question": "Can a single isolated client-server conformance matrix catch intended-authentication vs actual-enforcement drift (HTTP missing auth, same-issuer wrong audience, cross-origin redirection of non-bearer secrets) beyond ordinary per-tool JSON Schema checks, without rejecting legitimate clients?",
       "scope": "Already-patched fixed versions of @sylphx/pdf-reader-mcp, awslabs.aws-api-mcp-server and MCP Python SDK; only owned loopback endpoints, synthetic JWTs, dummy files, fake credentials.",
@@ -885,7 +925,10 @@
         "Whether HTTP authentication is checked for stream/session resume paths"
       ],
       "priority": "P1-candidate",
-      "not_duplicate_of": "H-AIS-20261031-03 covers shell/CLI/path grammar; this candidate covers HTTP authorization and redirection. ARCH weekly project addresses reference architectures, not specific SDK conformance."
+      "not_duplicate_of": "H-AIS-20261031-03 covers shell/CLI/path grammar; this candidate covers HTTP authorization and redirection. ARCH weekly project addresses reference architectures, not specific SDK conformance.",
+      "last_advanced_on": "2026-11-03",
+      "verified_increment": "PyPI-attested source commits for vulnerable 1.5.6 and fixed 1.6.0, exact config code comparison, and version-pinned upstream negative-control tests. Thus source code fix is established for the released 1.6.0 publishing commit, although wheel byte-level and runtime behavior remain unverified.",
+      "next_step": "In disposable authorized environment, obtain pinned wheel bytes and hashes and run legitimate/wrong-client synthetic JWT verification with no AWS credentials or network; compare to other MCP HTTP authorization paths only if measured increment over baseline."
     }
   ],
   "weekly_review": {
@@ -908,8 +951,8 @@
     "synthetic_mock_unittest_executed": true,
     "synthetic_mock_unittest_results": "6/6 passed on 2026-10-27 in isolated local Python (toy-model only)",
     "synthetic_mock_code_path": "scripts/research/ai_security_h01_mock.py",
-    "last_review": "2026-10-31",
-    "latest_run_executed_code": true,
+    "last_review": "2026-11-03",
+    "latest_run_executed_code": false,
     "latest_run_executed_upstream_tests": false,
     "latest_run_read_only_source_inspection": true,
     "latest_run_used_external_prod": false,
@@ -1120,6 +1163,26 @@
       "github_state_written": "pending-this-commit",
       "editorial": "Existing Oct 31 full article awaits user approval; today's candidate has no verified nonredundant experimental or editorial contribution sufficient for another complete article. Do not send routine report.",
       "next_step": "Pin actual fixed/pre-fix release artifacts and stage authorized localhost-only protocol/side-effect tests; do not extrapolate current main code to released v1.6.0."
+    },
+    {
+      "id": "daily-2026-11-03",
+      "date": "2026-11-03",
+      "source_window": "2026-10-31 to 2026-11-03, plus version-pinned Sep 30 and Oct 27 release artifacts and public attestations",
+      "fresh_window_new_high_value_disclosures": 0,
+      "primary_hypothesis": "H-AIS-20261031-03 remains evidence_review; Oct31 article awaits explicit user approval, no repeated submission",
+      "sources_added": [
+        "S33",
+        "S34",
+        "S35"
+      ],
+      "secondary_candidate_advanced": "C-AIS-20261102-10",
+      "status_change": "AWS MCP OAuth candidate advanced from unpinned-main static source to published-release-attested 1.5.6 vs 1.6.0 source-level negative-control comparison, without claiming actual runtime validation or a new CVE.",
+      "evidence_verified": "PyPI publication provenance connects v1.5.6 to source commit d80b52d and v1.6.0 to source commit 1bf810f; 1.5.6 config lacks audience/client ID and 1.6.0 config enforces a configured expected token audience or client identity, with corresponding first-party upstream tests.",
+      "negative_finding": "No new defect was independently found; source-level patch presence does not prove wheel byte content or particular deployment runtime security.",
+      "experiments_executed": 0,
+      "upstream_tests_executed": false,
+      "github_article_written": false,
+      "next_step": "Either obtain safe fixed/prefixed package artifacts for isolated auth/normal-call test or continue primary H03 only if a nonredundant real handler test becomes possible; do not repeat unapproved Oct31 article."
     }
   ],
   "monthly_review": {

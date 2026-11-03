@@ -4,12 +4,12 @@
   "scope": "architecture-defense-only",
   "owner": "ChatGPT Tasks",
   "created_at": "2026-10-27",
-  "last_reviewed_at": "2026-10-27",
+  "last_reviewed_at": "2026-11-03",
   "public_data_only": true,
   "status": "Experiment Designed",
   "focus": {
     "question": "Agent 已获批准的异步动作在委托撤销、队列重放、资源版本变化以及部分网络分区期间，何时才算失去执行权？",
-    "why_now": "NIST IR 8587 于 2026-09-15 发布；NCCoE 于 2026-09-29 确认 DevSecOps 为 AI Agent 身份授权首个实现示范；MCP 2026-07-28 引入无状态请求和工具列表缓存。以上来源没有直接证明任何当前漏洞，仅提示生命周期控制与撤销语义需要独立检验。",
+    "why_now": "2026-10-27 身份厂商新发布聚焦短凭证和撤销，RFC 7009/7662 与 SpiceDB 一致性文档共同说明：Token 失效、权限检查最新快照和业务副作用停止属于不同提交点；这不是新 CVE 或已验证产品缺陷。",
     "existing_knowledge": "FEEI.CN 的 Agent与工具调用安全.md 已描述 Capability/Action Envelope、资源 PEP、逐次授权、撤销、幂等；本研究只考察异步提交点的一致性与安全/可用性权衡。",
     "threat_model": {
       "assets": [
@@ -54,7 +54,10 @@
         "revoke_ack 后不能提交基于撤销前 grant_epoch 的新高影响副作用；撤销发起与确认之间的窗口需单独报告",
         "resource-side commit 必须匹配经审批的 resource_id、arguments_digest、resource_version 与 policy decision",
         "child grant 的工具/租户/资源/金额/数据去向/期限为父 grant 子集",
-        "网络分区且不能获知撤销状态时高影响写动作 fail-closed 或显式转人工，不将未知状态当成批准"
+        "网络分区且不能获知撤销状态时高影响写动作 fail-closed 或显式转人工，不将未知状态当成批准",
+        "撤销请求受理与业务撤销生效必须分别确认：强语义 revoke_ack 只能在所有相关资源提交点已确认旧授权不可形成新效果时返回；若无法确认则返回 accepted/pending，不能标为完成",
+        "授权检查和业务副作用提交之间必须具有事务序列化或等效原子条件；仅用 fully_consistent 或旧权限缓存检查不足以保证执行期间撤销不竞态",
+        "既已提交的外部不可撤销动作不能因之后 revoke_ack 而被追溯阻断；跨第三方边界只能报告明确的停止能力、unknown/in-flight、补偿和风险"
       ],
       "alternatives": [
         {
@@ -85,7 +88,7 @@
       "experiment": {
         "status": "designed-not-run",
         "environment": "离线可重置模拟订单 API、授权服务、MCP 网关、异步 Worker 与效果账本，使用虚构凭证与可控虚拟时钟；不得连接外部生产接口",
-        "design": "三种架构 A/B/C；按撤销前排队、撤销后重放、执行中撤销、token 跨受众重用、同受众越权、资源版本变化、授权服务断联、幂等重试、子 Agent 委托等机制分层；每机制至少 2 个正向测试和 2 个负例，记录每条实际副作用与 95/99 百分位延时、误拒与正常任务完成率；明确只属设计的有限样本，不能以零失败推断绝对安全。",
+        "design": "三种架构 A/B/C；按撤销前排队、撤销后重放、执行中撤销、token 跨受众重用、同受众越权、资源版本变化、授权服务断联、幂等重试、子 Agent 委托等机制分层；每机制至少 2 个正向测试和 2 个负例，记录每条实际副作用与 95/99 百分位延时、误拒与正常任务完成率；明确只属设计的有限样本，不能以零失败推断绝对安全。；增加撤销受理/确认分别计时、授权变更与动作提交竞态的可重复调度、ZedToken 读后写一致性与完全一致检查对照、Outbox 消费晚于撤销确认的外部副作用、第三方接收但本地超时的 UNKNOWN 状态；只以权威效果账本核实最终动作，不把模拟器内正确拒绝外推为真实产品防护。",
         "metrics": [
           "revocation_ack_to_last_unauthorized_effect_ms",
           "unauthorized_effects_after_ack / forbidden_attempts",
@@ -101,7 +104,9 @@
           "多资源撤销屏障是否需要中心序列化服务",
           "如何区分取消前已完成的业务副作用与取消后非法新副作用",
           "跨域第三方 API 不支持 resource PEP 时的降级与 SLA",
-          "跨区域灾难恢复中 epoch 一致性"
+          "跨区域灾难恢复中 epoch 一致性",
+          "采用独立 AuthZ Zanzibar 权限存储时如何把其版本信息与业务库提交原子绑定，避免 check-then-commit TOCTOU",
+          "撤销确认 SLA 如何表示三方系统已接单但尚未落账或撤销不可达的 UNKNOWN 副作用"
         ]
       },
       "evidence": [
@@ -111,10 +116,16 @@
         "S-005",
         "S-006",
         "S-007",
-        "S-008"
+        "S-008",
+        "S-009",
+        "S-010",
+        "S-011",
+        "S-012",
+        "S-013",
+        "S-014"
       ],
-      "limitations": "完全未运行实验或源码实测，不构成产品漏洞断言；分布式场景无法对任意外部资源承诺瞬时全局撤销。",
-      "next_action": "搭建本地授权/队列/订单状态模拟器，先复现撤销已确认后旧授权被拒与正常队列未错误拒绝的两组最小对照"
+      "limitations": "完全未运行实验或源码实测，不构成产品漏洞断言；分布式场景无法对任意外部资源承诺瞬时全局撤销。 此次仅基于 RFC、厂商文档与数据库文档修订架构；没有真实系统基准、外部服务集成或性能测量。",
+      "next_action": "在授权隔离模拟环境实现两个撤销接口契约（received 与 effective），把授权版本检查、订单意图及 effect ledger 放进同一数据库事务；增加异步 outbox/不可控第三方边界与读后写修订测试，验证无法提供强撤销 ack 时系统能否如实报告 pending/unknown。"
     },
     {
       "id": "ARCH-20261027-02",
@@ -163,20 +174,21 @@
     }
   ],
   "monthly_review": {
-    "period": "2026-10",
-    "comparison": "A 网关鉴权、B 受众/发送者绑定 + 动作授权、C 增加资源侧撤销栅栏",
-    "decision": "优先验证 C 与 B 的差异；先定义“撤销发起”与“撤销确认”之间的可观察边界，不用模型输出代替业务效果账本。",
+    "period": "2026-11",
+    "comparison": "A：网关短 Token + 撤销回调；B：A + 授权存储 read-after-write/ZedToken；C：B + 业务资源侧事务撤销栅栏与效果账本",
+    "decision": "把 revoke_received 与 revoke_effective_ack 分开；只有所有可控执行点能对旧授权提供提交序列化且在 ack 前确认时，才允许声称撤销后无新效果。先测 B→C 的端到端增量，不宣称生产有效。",
     "tradeoffs": [
-      "B 易复用 OAuth 标准，部署轻但不能独自约束跨队列旧授权和消息体参数",
-      "C 可增强最终副作用边界，但改变业务数据库与队列提交路径，可能导致更多 fail-closed 与延迟"
+      "A 实施成本最低，但自包含 JWT、内省缓存及已排队任务产生失效传播窗口。",
+      "B 用权限版本提高撤销后的读后写可见性，但检查开始后仍可能有 TOCTOU，且特定多区域部署 fully_consistent 仍有新鲜度例外；引入版本传递、授权查询开销。",
+      "C 适用于资源和事务可控的高影响写操作，增加锁等待、队列复杂度、故障降级；第三方不可撤销动作只能阻断新动作/补偿已发生动作，不能承诺瞬时完全停止。"
     ],
     "known_gaps": [
-      "缺实际业务 simulator 与对照运行",
-      "未知 RFC 8693 在不同产品中是否完整保留 actor chain",
-      "未分析 NIST IR 8587 PDF 全文，仅引用官方摘要",
-      "未评测 MCP 2026-07-28 spec 在目标 SDK 版本中的实际行为"
+      "未部署 SpiceDB/CockroachDB、无法据文档推断各版本实现的实际表现",
+      "没有真实隔离队列/订单/第三方模拟集成实测",
+      "跨区域栅栏与第三方业务外部副作用未建立可核验 ack 机制",
+      "缺正常任务完成率与取消延迟的真实样本"
     ],
-    "next_review": "2026-11"
+    "next_review": "2026-12"
   },
   "sources": [
     {
@@ -242,6 +254,54 @@
       "published_at": "2026-10-27",
       "type": "repo-baseline",
       "supported_claim": "已有 Capability Envelope、Action Envelope、PDP/PEP、幂等、撤销原则；本任务不重复已有架构"
+    },
+    {
+      "id": "S-009",
+      "title": "RFC 7009: OAuth 2.0 Token Revocation",
+      "url": "https://www.rfc-editor.org/rfc/rfc7009.html",
+      "published_at": "2013-08",
+      "type": "ietf-rfc",
+      "supported_claim": "token 撤销具有传播窗口；授权服务器撤销确认不能自动证明队列中的业务副作用已停止"
+    },
+    {
+      "id": "S-010",
+      "title": "RFC 7662: OAuth 2.0 Token Introspection",
+      "url": "https://datatracker.ietf.org/doc/html/rfc7662",
+      "published_at": "2015-10",
+      "type": "ietf-rfc",
+      "supported_claim": "introspection 缓存会产生已撤销 token 仍获准的窗口；不应将缓存授权结果当高影响提交点的最新事实"
+    },
+    {
+      "id": "S-011",
+      "title": "SpiceDB consistency",
+      "url": "https://authzed.com/docs/spicedb/concepts/consistency",
+      "accessed_at": "2026-11-03",
+      "type": "maintainer-documentation",
+      "supported_claim": "at_least_as_fresh 依赖关系变更点 ZedToken；fully_consistent 在请求开始时选择快照，并不能保护请求后的提交竞态；未独立部署"
+    },
+    {
+      "id": "S-012",
+      "title": "Authzed Multi-Region Deployments",
+      "url": "https://authzed.com/docs/authzed/concepts/multi-region",
+      "accessed_at": "2026-11-03",
+      "type": "maintainer-documentation",
+      "supported_claim": "多区域 CockroachDB 后端 fully_consistent 不能必然实现 read-after-write；官方推荐明确传递 ZedToken；仅该特定部署条件"
+    },
+    {
+      "id": "S-013",
+      "title": "PostgreSQL 18: Explicit Locking",
+      "url": "https://www.postgresql.org/docs/current/explicit-locking.html",
+      "accessed_at": "2026-11-03",
+      "type": "database-official-documentation",
+      "supported_claim": "FOR UPDATE 同行锁可对同资源事务建立互斥序；不能跨外部系统形成分布式原子提交"
+    },
+    {
+      "id": "S-014",
+      "title": "IBM Oct 27 2026 Agent Identity and Control",
+      "url": "https://newsroom.ibm.com/2026-10-27-ibm-introduces-identity-and-control-for-ai-agents,-securing-frontier-intelligence-for-the-enterprise",
+      "published_at": "2026-10-27",
+      "type": "vendor-announcement",
+      "supported_claim": "身份治理、短期凭证与实时撤销为厂商主张，未提供跨队列端到端停止副作用的独立评测"
     }
   ],
   "dedup": {
@@ -259,10 +319,10 @@
     "notified_as_unverified": true
   },
   "run": {
-    "date": "2026-10-27",
-    "github_write": "pending",
+    "date": "2026-11-03",
+    "github_write": "index-only; commit pending",
     "test_execution": "not-run",
     "docs_build": "not-run",
-    "notes": "本次仅做官方公开材料和仓库文档静态分析，无本地或第三方生产利用。"
+    "notes": "核查主分支 AGENTS.md/既有 AI 安全文档与隔离研究分支，比对 OAuth RFC、SpiceDB 多区域一致性及数据库行锁文档；本次不写文章或部署，准备一篇完整待审技术文章。"
   }
 }

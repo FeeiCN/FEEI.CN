@@ -50,6 +50,13 @@ description: SSRF 服务端请求伪造的完整技术细节：覆盖 PHP/Java �
 
 既然能翻译其它网站的内容，那肯定会去爬取其它网站的内容，那就得有一个请求服务（`Request Service`）用来获取远程内容。我们简化下代码逻辑，看看最简单的获取远程内容的服务是如何实现的？
 
+```mermaid
+flowchart TD
+  input["用户可控 URL"] --> app["网页翻译等业务入口"]
+  app --> request["服务端 Request Service"]
+  request --> target["按 URL 访问目标服务或文件"]
+```
+
 ### PHP例子
 
 PHP语言里有三个常用的请求服务（`Request Service`）的方法：`file_get_contents`、`cURL`以及`fsockopen`。
@@ -121,7 +128,10 @@ Java里面最常用的请求服务（`Request Service`）的方法：`new URL`
 
 #### example1： URL
 
-```java
+<details>
+<summary>查看完整 Java URL 请求示例</summary>
+
+```java title="Java URL 请求服务示例"
 /**
  * Request service(Base fsockopen)
  *
@@ -195,6 +205,8 @@ public class SSRFController {
     }
 }
 ```
+
+</details>
 
 了解了“网页翻译”服务背后的代码逻辑之后，那我们可以猜测开篇的例子是因为请求服务（`Request Service`）最起码就支持`HTTP[S]`和`file`协议，我们再跟进去看看还支持哪些协议呢？
 

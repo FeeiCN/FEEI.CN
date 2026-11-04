@@ -27,23 +27,19 @@ last_reviewed: '2026-07-10'
 
 ## 看懂一次行动循环
 
-每轮都沿着同一条数据路径运行：
+一次合法行动沿着以下路径运行：
 
-```text
-权威状态
-   ↓ 生成当前轮视图
-模型提出 action 或 final 请求
-   ↓
-解析格式 → 校验工具、参数和权限
-   ↓
-工具执行 → 返回未验证观察
-   ↓
-校验来源、结构和外部证据
-   ↓
-提交已确认事实到权威状态
-   ↓
-继续 / 成功 / 失败 / 受阻 / 达到步数上限
+```mermaid
+flowchart TD
+  state["读取权威状态，生成当前轮视图"] --> request["模型提出 action 请求"]
+  request --> authorize["解析格式，校验工具、参数和权限"]
+  authorize --> observation["执行工具，返回未验证观察"]
+  observation --> verify["校验来源、结构和外部证据"]
+  verify --> commit["通过后提交已确认事实"]
+  commit --> state
 ```
+
+模型提出 `final` 时，控制器检查完成证据，齐全才接受结束；证据不足时在剩余预算内继续。格式错误、越权或观察无效时的处理见[检查停止与失败路径](#检查停止与失败路径)。
 
 这里有五个容易混淆的对象：
 
@@ -59,7 +55,16 @@ last_reviewed: '2026-07-10'
 
 下面的程序故意让模拟模型在第一轮返回非 JSON 文本，用来展示解析失败后的有界恢复。后续行动由已经提交的事实决定：先复现，再搜索，再读文件，最后运行定向测试。
 
-```python
+将完整程序保存为 `react_demo.py`，运行：
+
+```bash
+python3 react_demo.py
+```
+
+<details>
+<summary>查看完整 Python 教学代码</summary>
+
+```python title="react_demo.py"
 from dataclasses import dataclass, field
 import json
 from typing import Any
@@ -327,6 +332,8 @@ def run_agent(max_steps: int = 8) -> AgentState:
 if __name__ == "__main__":
     run_agent()
 ```
+
+</details>
 
 正常运行会得到类似输出：
 

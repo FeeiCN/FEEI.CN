@@ -1,0 +1,100 @@
+.viewport {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.viewport:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+:global(.incident-diagram) .viewport {
+  width: max-content;
+  max-width: none;
+  overflow: visible;
+  margin: 0 auto;
+}
+
+.diagram {
+  --diagram-bg: #ffffff;
+  --diagram-fg: #273449;
+  --diagram-line: #8392a5;
+  --diagram-accent: #3767bc;
+  --diagram-muted: #53647a;
+  --diagram-surface: #f7f9fc;
+  --diagram-border: #d7dfe9;
+  --diagram-main-bg: #edf3ff;
+  --diagram-main-border: #91add7;
+  --diagram-note-bg: #f7f9fc;
+  --diagram-note-border: #b9c4d3;
+  --diagram-response-bg: #edf7f3;
+  --diagram-response-border: #93bbac;
+  width: max-content;
+  max-width: none;
+  margin: 0 auto;
+  zoom: 1.15;
+}
+
+:global([data-theme='dark']) .diagram {
+  --diagram-bg: #1b1b1d;
+  --diagram-fg: #e0e6ef;
+  --diagram-line: #8292a8;
+  --diagram-accent: #9bbcff;
+  --diagram-muted: #b7c3d4;
+  --diagram-surface: #232830;
+  --diagram-border: #465267;
+  --diagram-main-bg: #26364f;
+  --diagram-main-border: #6785b0;
+  --diagram-note-bg: #252b34;
+  --diagram-note-border: #5b6a7e;
+  --diagram-response-bg: #223a33;
+  --diagram-response-border: #5f9382;
+}
+
+.diagram > svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram :global(text) {
+  font-family: var(--ifm-font-family-base);
+}
+
+.diagram :global(.node > rect) {
+  rx: 6px;
+}
+
+.diagram :global(.node[data-class='main'] > rect) {
+  fill: var(--diagram-main-bg);
+  stroke: var(--diagram-main-border);
+}
+
+.diagram :global(.node[data-class='note'] > rect) {
+  fill: var(--diagram-note-bg);
+  stroke: var(--diagram-note-border);
+  stroke-dasharray: 4 4;
+}
+
+.diagram :global(.node[data-class='response'] > rect) {
+  fill: var(--diagram-response-bg);
+  stroke: var(--diagram-response-border);
+}
+
+.diagram :global(.node[data-class='main'] > text),
+.diagram :global(.node[data-class='response'] > text) {
+  fill: var(--diagram-fg);
+}
+
+.diagram :global(.node[data-class='note'] > text) {
+  fill: var(--diagram-muted);
+}
+
+.diagram :global(polyline[stroke='#3767bc']),
+.diagram :global(polygon[stroke='#3767bc']) {
+  stroke: var(--diagram-accent);
+}
+
+.diagram :global(polygon[fill='#3767bc']) {
+  fill: var(--diagram-accent);
+}

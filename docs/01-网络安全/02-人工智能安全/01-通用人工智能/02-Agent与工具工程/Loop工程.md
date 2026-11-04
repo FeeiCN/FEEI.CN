@@ -16,14 +16,14 @@ last_reviewed: '2026-07-11'
 
 一个可运行的执行循环至少包含六个部分：当前状态、下一步行动、环境观察、独立验证、停止条件和资源预算。
 
-```text
-目标与权威状态
-      |
-      v
-Agent 提议行动 -> Harness 执行 -> 环境返回观察
-      ^                              |
-      |                              v
-      +---- 更新状态 <- 独立验证与停止判断
+```mermaid
+flowchart TD
+  state["目标与权威状态"] --> action["Agent 提议行动"]
+  action --> execute["Harness 执行"]
+  execute --> observe["环境返回观察"]
+  observe --> verify["独立验证与停止判断"]
+  verify -->|未停止：更新状态| state
+  verify -->|达到停止条件| stop["结束或交接"]
 ```
 
 模型可以提出行动和解释观察，Harness 负责权限、执行、状态和停止判断。测试退出码、业务状态、Schema 校验和人工批准都可以成为外部信号；“我认为已经完成”只能作为模型意见。
@@ -65,17 +65,13 @@ Agent 提议行动 -> Harness 执行 -> 环境返回观察
 
 可以把这种 Loop 写得更严格：
 
-```text
-Observe
-  ↓
-Hypothesize
-  ↓
-Test
-  ↓
-Update Belief
-  ↓
-Re-plan
-  └──────────────↺
+```mermaid
+flowchart TD
+  observe["Observe：观察"] --> hypothesize["Hypothesize：提出假设"]
+  hypothesize --> test["Test：检验"]
+  test --> update["Update Belief：更新判断"]
+  update --> replan["Re-plan：调整计划"]
+  replan --> observe
 ```
 
 这里最重要的是 **Update Belief**。测试失败只说明当前证据削弱了某个假设，不能自动证明另一个假设成立。例如“没有发现 SQL Injection”并不能推出“目标使用 ORM”，更不能直接推出“存在 Mass Assignment”。正确做法是记录失败证据，调整候选假设优先级，再为新的解释寻找独立证据。

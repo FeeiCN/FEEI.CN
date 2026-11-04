@@ -31,16 +31,13 @@ Harness 的核心不是某一种 Worktree 或命令执行方式，而是把模�
 
 可以把运行关系压缩为：
 
-```text
-Human / Team
-    ↓ delegation
-Agent Identity ──→ Work Object
-    ↓ request          ↑ events / evidence
-Capability Check → Execute → Validate → Gate
-                         ↓
-                 Authoritative State
-                         ↓
-                 Checkpoint / Recovery
+```mermaid
+flowchart TD
+  identity["Human / Team 委派 Agent 身份"] --> work["关联 Work Object：任务与证据"]
+  work --> capability["Capability Check：检查权限"]
+  capability --> execute["Execute：隔离执行"]
+  execute --> validate["Validate / Gate：外部验证"]
+  validate --> state["权威状态、检查点与恢复"]
 ```
 
 模型负责提出下一步行动和解释观察；Harness 负责身份、授权、执行、证据、状态和终止。模型能力升级可以减少 Capability Scaffold，但不能自动取消这些 Safety / Assurance Control。

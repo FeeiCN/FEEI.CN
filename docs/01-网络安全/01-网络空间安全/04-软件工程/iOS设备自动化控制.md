@@ -13,8 +13,12 @@ iOS 真机自动化的目标，是让一台未越狱 iPhone 成为可以被脚�
 
 未越狱 iPhone 的控制链路是：
 
-```text
-Python 脚本 -> Appium Server -> XCUITest Driver -> WebDriverAgent -> iPhone App
+```mermaid
+flowchart TD
+  script["Python 脚本"] --> appium["Appium Server"]
+  appium --> driver["XCUITest Driver"]
+  driver --> wda["WebDriverAgent"]
+  wda --> app["iPhone App"]
 ```
 
 每一层负责一件事。
@@ -156,7 +160,7 @@ com.yourname.WebDriverAgentRunner
 
 首次验证 WDA 时，直接跑 Xcode 构建命令。把 `UDID`、`YOUR_TEAM_ID` 和 `com.yourname.WebDriverAgentRunner` 替换掉：
 
-```bash
+```bash title="首次构建并运行 WebDriverAgent" {4,7-8}
 xcodebuild \
   -project ~/.appium/node_modules/appium-xcuitest-driver/node_modules/appium-webdriveragent/WebDriverAgent.xcodeproj \
   -scheme WebDriverAgentRunner \
@@ -169,6 +173,9 @@ xcodebuild \
 ```
 
 第一次执行可能会比较慢。Xcode 会尝试创建 profile、注册设备、安装 WDA。
+
+<details>
+<summary>WDA 签名异常：证书信任与钥匙串弹窗</summary>
 
 如果 Xcode 报开发者证书未被信任，在 iPhone 上打开：
 
@@ -212,6 +219,8 @@ kill -9 PID
 
 处理完钥匙串授权后重新开始，不要在弹窗堆叠时继续反复运行脚本。
 
+</details>
+
 ## 第四步：跑通一次基础控制
 
 先启动 Appium。这个命令会占用当前终端窗口，保持它运行：
@@ -234,7 +243,7 @@ cd ~/Projects/FEEI.CN
 
 先用 Safari 做最小验证。把命令里的值替换成自己的：
 
-```bash
+```bash title="用 Safari 验证基础控制链路" {2,4-5}
 python3 scripts/ios_appium_capture.py \
   --udid UDID \
   --bundle-id com.apple.mobilesafari \

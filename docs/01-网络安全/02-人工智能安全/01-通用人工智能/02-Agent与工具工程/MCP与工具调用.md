@@ -21,6 +21,16 @@ description: 从模型提出工具请求，到 Host 校验、MCP Client 连接 S
 
 Server 暴露的是能力，Host 决定这些能力是否进入当前任务。Server 不应看到完整对话，也不应直接访问其他 Server 的内容；跨 Server 的组合由 Host 控制。这个隔离让连接方式可以复用，同时保留应用侧的权限、同意和审计责任。
 
+```mermaid
+flowchart TD
+  subgraph host["Host：AI 应用与安全策略"]
+    policy["工具选择与权限校验"] --> clientA["Client A"]
+    policy --> clientB["Client B"]
+  end
+  clientA --> serverA["Server A"]
+  clientB --> serverB["Server B"]
+```
+
 ## MCP 如何传输消息
 
 MCP 使用 JSON-RPC 编码请求、通知和响应。标准传输包括本地进程常用的 stdio，以及面向远程服务的 Streamable HTTP；客户端和服务器在初始化阶段交换协议版本与能力，之后才能使用双方声明过的功能。[官方传输规范](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)还规定了会话、认证、来源校验和消息流的边界。

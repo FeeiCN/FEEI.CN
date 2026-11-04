@@ -8,6 +8,60 @@ icon: history-circle-icon
 **专门从事网络监控业务的安全公司，自身却成为被入侵的对象。** 2015年7月5日，意大利间谍软件公司Hacking Team超过400GB数据通过其官方Twitter账号公开泄露，内容涵盖员工账号密码、电子邮件、客户信息和源代码。攻击者Phineas Fisher随后发布了详尽的攻击复盘，完整还原了入侵路径、利用的漏洞和攻击动机。
 
 
+## 事件全貌
+
+备份是取得域权限的跳板，管理员终端与监控服务器又成为进入隔离研发网络的桥梁。邮件、源码和监控测试数据沿不同路径汇入最终泄露，不能视为同一条线性步骤。图可横向滚动。
+
+<div class="incident-diagram" role="region" tabindex="0" aria-label="Hacking Team 跨越边界、域与研发网络的入侵，可横向滚动">
+
+```mermaid
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 28
+    rankSpacing: 40
+    padding: 12
+---
+flowchart TB
+accTitle: Hacking Team 跨越边界、域与研发网络的入侵
+accDescr: 备份是取得域权限的跳板，管理员终端与监控服务器又成为进入隔离研发网络的桥梁。邮件、源码和监控测试数据沿不同路径汇入最终泄露，不能视为同一条线性步骤。
+  attacker([攻击者]) -->|逆向发现 RCE，植入后门固件| edge[公网嵌入式设备]:::weakness
+  subgraph lan[内部网络与 Windows 域]
+    scan[内网扫描与监听]
+    mongo[(未认证 MongoDB<br/>音频与内部文档)]:::weakness
+    backup[(未认证 iSCSI<br/>Exchange 虚拟机备份)]:::weakness
+    service[备份中的服务账号密码]
+    domain[在线主机内存中的<br/>域管理员凭据]:::weakness
+    scan --> mongo
+    scan --> backup -->|离线提取，验证仍有效| service
+    service -->|访问在线主机，提取凭据| domain
+  end
+  subgraph ops[邮件与运维管理]
+    mail[公司邮件]
+    pc[管理员电脑与<br/>已挂载的加密卷]
+    nagios[Nagios 监控服务器]:::weakness
+    pc -->|取得密码，利用代码执行漏洞| nagios
+  end
+  subgraph dev[隔离的研发网络]
+    repo[Git 仓库与 RCS 源码]
+  end
+  edge --> scan
+  domain -->|域权限访问| mail
+  domain -->|键盘记录与屏幕监控| pc
+  nagios -->|监控通路跨入研发网络| repo
+  domain -->|复用已获取的账号密码| repo
+  mail -->|重置 GitLab 与 Twitter 密码| accounts[公开发布渠道]
+  repo --> leak([邮件、文件与源码公开泄露]):::impact
+  mail --> leak
+  mongo --> leak
+  accounts -->|发布泄露内容| leak
+  classDef weakness fill:#fff1f2,stroke:#e11d48,color:#881337
+  classDef impact fill:#fef3c7,stroke:#d97706,color:#78350f
+```
+
+</div>
+
 #### Hacking Team APT事件关键步骤与安全启示
 
 Phineas Fisher对Hacking Team的入侵是一系列精心策划的步骤，其手法还是比较专业的。对于甲方安全建设有很强的启示作用，以下为主要入侵动作以及对甲方安全建设的启示。

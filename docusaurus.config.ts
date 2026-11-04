@@ -19,12 +19,13 @@ const isStrictBuild = process.env.CI_STRICT === 'true';
 const config: Config = {
   title: '吴飞飞', tagline: '把所有的时间、精力和金钱都投入到长期目标中',
   future: {v4: {removeLegacyPostBuildHeadAttribute: true, useCssCascadeLayers: true, siteStorageNamespacing: true, mdx1CompatDisabledByDefault: true, fasterByDefault: true}, faster: {gitEagerVcs: false}},
-  markdown: {format: 'detect', hooks: {onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn', onBrokenMarkdownImages: 'ignore'}, preprocessor: ({filePath, fileContent}) => expandMarkdownIncludes(fileContent, filePath).replace(/https?:\/\/\S+/g, (url) => url.replace(/\*/g, '\\*'))},
+  markdown: {format: 'detect', mermaid: true, hooks: {onBrokenMarkdownLinks: isStrictBuild ? 'throw' : 'warn', onBrokenMarkdownImages: 'ignore'}, preprocessor: ({filePath, fileContent}) => expandMarkdownIncludes(fileContent, filePath).replace(/https?:\/\/\S+/g, (url) => url.replace(/\*/g, '\\*'))},
   url: 'https://feei.cn', baseUrl: '/', organizationName: 'feeicn', projectName: 'FEEI.CN', onBrokenLinks: isStrictBuild ? 'throw' : 'warn', i18n: {defaultLocale: 'zh-Hans', locales: ['zh-Hans']},
   headTags: [
     {tagName: 'link', attributes: {rel: 'icon', href: staticAssetUrl('/img/feei-icon.svg'), type: 'image/svg+xml'}},
   ],
   presets: [['classic', {docs: {routeBasePath: '/', sidebarPath: './sidebars.ts', beforeDefaultRemarkPlugins: [remarkStaticMedia], remarkPlugins: [remarkMath], rehypePlugins: [rehypeKatex, rehypeComplianceReferences], async sidebarItemsGenerator(args) { const items = await args.defaultSidebarItemsGenerator(args); return attachDocFrontMatterToSidebar(items, args.docs); }, editUrl: 'https://github.com/FeeiCN/FEEI.CN/tree/main/'}, blog: false, theme: {customCss: ['./src/css/custom.css', './src/css/neutral.css', './src/css/sliding-indicator.css', './src/css/friend-links.css', './src/css/year-records.css', './src/css/contact.css']}} satisfies Preset.Options]],
+  themes: ['@docusaurus/theme-mermaid'],
   plugins: [docMtimePlugin, copyMarkdownPlugin, homeRecordsPlugin, [fastSearchPlugin, searchOptions]], clientModules: ['./src/clientModules/slidingIndicator.ts'],
   themeConfig: {
     docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: staticAssetUrl('/music/feei-site-theme-cover.webp'), colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},

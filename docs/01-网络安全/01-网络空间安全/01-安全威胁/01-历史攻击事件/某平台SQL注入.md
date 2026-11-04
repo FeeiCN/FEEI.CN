@@ -11,6 +11,48 @@ icon: history-circle-icon
 
 ## 1 漏洞入口
 
+注入发生在平台管理查询接口，影响却沿短信服务的客户关系向外扩散。虚线表示暴露的发送权限可带来的业务影响，原文未记录冒用企业发送短信。图可横向滚动。
+
+<div class="incident-diagram" role="region" tabindex="0" aria-label="短信平台从弱口令到跨客户影响的过程，可横向滚动">
+
+```mermaid
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 28
+    rankSpacing: 40
+    padding: 12
+---
+flowchart TB
+accTitle: 短信平台从弱口令到跨客户影响的过程
+accDescr: 注入发生在平台管理查询接口，影响却沿短信服务的客户关系向外扩散。虚线表示暴露的发送权限可带来的业务影响，原文未记录冒用企业发送短信。
+  actor([测试者]) -->|弱口令登录| console[短信平台管理系统]:::weakness
+  subgraph platform[短信服务商的数据与权限]
+    query[统计查询的时间参数<br/>存在 SQL 注入]:::weakness
+    db[(多个短信业务数据库)]
+    records[短信记录与联系人数据]
+    accounts[企业客户账户<br/>与短信发送权限]
+    query -->|枚举结构，提取数据| db
+    db --> records
+    db --> accounts
+  end
+  console --> query
+  records --> privacy([终端用户数据暴露]):::impact
+  accounts -. 可冒用企业发送，未执行 .-> send[企业名义的短信通道]:::unverified
+  subgraph customers[依赖同一短信平台的企业]
+    banks[银行等金融客户]
+    businesses[零售、物流等客户]
+  end
+  send -. 潜在业务影响 .-> banks
+  send -. 潜在业务影响 .-> businesses
+  classDef weakness fill:#fff1f2,stroke:#e11d48,color:#881337
+  classDef impact fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef unverified fill:#f8fafc,stroke:#64748b,color:#334155,stroke-dasharray:5 4
+```
+
+</div>
+
 **弱口令与注入漏洞的叠加，使初始入口极易突破。** 通过之前发现的弱口令登录系统后，在统计查询接口的时间参数处发现注入点。该参数未经充分过滤，存在布尔盲注、报错注入和时间盲注三种可利用的注入类型，攻击者可借此枚举数据库结构并提取数据。
 
 ## 2 漏洞证明

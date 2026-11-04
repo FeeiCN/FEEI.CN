@@ -11,6 +11,46 @@ icon: history-circle-icon
 
 ## 1 找切入点
 
+同一 SSRF 连接两类原本不向外部开放的资源：本机文件和内网 Redis。文件读取与 Redis 写入是并行路径；cron 已被写入，但本次未运行，因此没有取得反弹 Shell。虚线表示条件满足时的理论结果。图可横向滚动。
+
+<div class="incident-diagram" role="region" tabindex="0" aria-label="支付 SSRF 如何跨入主机文件与内网 Redis，可横向滚动">
+
+```mermaid
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 28
+    rankSpacing: 40
+    padding: 12
+---
+flowchart TB
+accTitle: 支付 SSRF 如何跨入主机文件与内网 Redis
+accDescr: 同一 SSRF 连接两类原本不向外部开放的资源：本机文件和内网 Redis。文件读取与 Redis 写入是并行路径；cron 已被写入，但本次未运行，因此没有取得反弹 Shell。虚线表示条件满足时的理论结果。
+  actor([测试者]) -->|控制支付回调 URL| callback[payaction 参数<br/>未限制目标与协议]:::weakness
+  subgraph business[业务服务器与负载均衡集群]
+    request[服务器代发请求]
+    files[本机文件、目录与配置]
+    secrets[代码配置与密钥暴露]:::impact
+    request -->|file 协议读取| files --> secrets
+  end
+  callback --> request
+  request -->|回连自控服务器| confirm[访问日志确认 SSRF]
+  subgraph internal[内网 Redis 所在主机]
+    redis[探测到的匿名 Redis]:::weakness
+    cron[Redis 持久化写入<br/>cron 文件]:::weakness
+    stopped[实际：crond 未运行<br/>未触发反弹 Shell]
+    redis -->|可修改落盘位置| cron --> stopped
+  end
+  request -->|内网探测后，以 gopher 操作| redis
+  cron -. 若定时任务正常执行 .-> shell[理论：命令执行<br/>与反弹 Shell]:::unverified
+  classDef weakness fill:#fff1f2,stroke:#e11d48,color:#881337
+  classDef impact fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef unverified fill:#f8fafc,stroke:#64748b,color:#334155,stroke-dasharray:5 4
+```
+
+</div>
+
 **参数中携带 URL 是 SSRF 的经典信号。** 在支付回调接口 `http://zhifu.game.weibo.com/topay.php` 的 `payaction` 参数中发现了 URL 类型的值。后端在处理这类参数时，若会主动向该 URL 发起请求，就构成了服务端请求伪造的条件。通过将参数值替换为自控服务器地址并观察访问日志，即可验证漏洞是否存在。
 
 ![](/media/01-历史攻击事件/v_weibo_01-1024x479.webp)

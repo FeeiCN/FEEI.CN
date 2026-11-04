@@ -35,14 +35,27 @@ RFC 7662 进一步定义了 Token Introspection。资源服务器可以通过该
 
 考虑以下示例时间线：
 
-```text
-T0  用户批准 Agent 创建订单
-T1  Agent 获得授权并将任务写入队列
-T2  Worker 验证 Token 和订单权限
-T3  用户请求撤销授权
-T4  授权服务器返回撤销成功
-T5  Worker 向订单系统提交操作
-T6  订单创建成功
+```mermaid
+---
+config:
+  sequence:
+    actorMargin: 10
+    width: 70
+    wrap: true
+---
+sequenceDiagram
+  actor U as 用户
+  participant W as Agent / Worker
+  participant A as 授权服务
+  participant O as 订单系统
+  U->>W: T0 批准创建订单
+  Note over W: T1 获得授权并入队
+  W->>A: T2 验证权限
+  A-->>W: 验证通过
+  U->>A: T3 请求撤销
+  A-->>U: T4 撤销成功
+  W->>O: T5 提交订单
+  O-->>W: T6 创建成功
 ```
 
 这里的关键不是 T5 时 Token 是否仍然有效，而是 Worker 在 T2 已经完成权限检查，并将此前的检查结果用于后续执行。

@@ -8,9 +8,46 @@ icon: history-circle-icon
 **一个 Nday 漏洞的应急遗漏，足以让拥有百人安全团队的企业付出惨痛代价。** 2017年，美国最大的信用评级机构 Equifax 遭到黑客入侵，导致逾亿用户个人敏感数据泄露。事后通过美国众议院监督和政府改革委员会、美国政府问责办公室（GAO）以及美国公共事务办公室等机构发布的调查文件，完整的入侵过程得以公开。这是难得的真实案例，每个关键环节都能对甲方安全建设提供具体参照。
 
 
-![入侵Equifax盗取数据流程](/media/equifax数据泄露/入侵Equifax盗取数据流程-1024x637.webp)
+## 事件全貌
 
-*入侵Equifax盗取数据的主要步骤*
+主线从公网入口延伸到数据外流，再到发现、切断与调查披露。虚线表示修复和检测链路的失效，以及处置对入口的切断；图可横向滚动。
+
+<div class="incident-diagram" role="region" tabindex="0" aria-label="Equifax 从入侵到发现与处置的完整过程，可横向滚动">
+
+```mermaid
+flowchart TB
+  attacker["攻击者<br/>3 月探测 · 5 月起入侵"]
+  patch["修复遗漏<br/>通知未达负责人 · 扫描漏检"]
+  portal["ACIS 公网门户<br/>Struts RCE → Webshell"]
+  db["内部数据层<br/>配置文件泄露数据库凭据"]
+  stolen["数据外流<br/>查询多个数据库 · 压缩分批下载"]
+  blind["检测盲区<br/>证书过期 · 流量绕过监控"]
+  detect["7 月 29 日 · 发现入侵<br/>更新证书后识别窃取流量"]
+  response["7 月 30 日 · 下线门户<br/>8 月外部调查 → 9 月公开"]
+
+  attacker -->|利用漏洞| portal
+  portal -->|读取凭据 · 横向访问| db
+  db -->|查询 · 打包 · 下载| stolen
+  stolen -->|检测恢复后暴露| detect
+  detect -->|启动应急| response
+  patch -. 未修补 .-> portal
+  blind -. 窃取持续未被发现 .-> stolen
+  response -. 切断入口 .-> portal
+
+  classDef main fill:#edf3ff,stroke:#91add7,color:#273449
+  classDef note fill:#f7f9fc,stroke:#b9c4d3,color:#53647a,stroke-dasharray:4 4
+  classDef response fill:#edf7f3,stroke:#93bbac,color:#273449
+  class portal,db,stolen main
+  class patch,blind note
+  class detect,response response
+  linkStyle 0,1,2 stroke:#3767bc,stroke-width:2
+```
+
+</div>
+
+[原始入侵步骤示意图](/media/equifax数据泄露/入侵Equifax盗取数据流程-1024x637.webp)
+
+## 详细时间线与安全启示
 
 - **2017年03月02日，[Apache Struts发布S2-045（CVE-2017-5638）漏洞预警](https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=68717735)** 。该漏洞由安恒的Nike Zheng发现并提交，Apache Struts 2 2.3.x（2.3.32 之前）和 2.5.x（2.5.10.1 之前）中的 Jakarta Multipart 解析器在文件上传尝试期间存在不正确的异常处理和错误消息生成，这使得远程攻击者可以通过精心设计的Content-Type、Content-Disposition 或 Content-Length HTTP 标头执行任意命令。CVE评分为满分10.0，解决方案建议大家尽快升级到新版本。
 - **2017年03月07日，[漏洞发现者在Metasploit的GitHub上公开提交漏洞利用代码](https://github.com/rapid7/metasploit-framework/issues/8064)。**

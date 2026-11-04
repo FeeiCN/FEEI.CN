@@ -9,6 +9,43 @@ icon: history-circle-icon
 
 ## 1 信息收集
 
+共享管理员凭据扩大到多个托管实例，客户账号又通向各自站点；两种身份路径都来自实例数据库的泄露，影响范围由集中托管和凭据设计共同决定。图可横向滚动。
+
+<div class="incident-diagram" role="region" tabindex="0" aria-label="建站平台注入与跨客户权限扩散，可横向滚动">
+
+```mermaid
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 28
+    rankSpacing: 40
+    padding: 12
+---
+flowchart TB
+accTitle: 建站平台注入与跨客户权限扩散
+accDescr: 共享管理员凭据扩大到多个托管实例，客户账号又通向各自站点；两种身份路径都来自实例数据库的泄露，影响范围由集中托管和凭据设计共同决定。
+  attacker([测试者]) -->|枚举 testwebN 子域| endpoints[多个托管实例的查询接口]
+  subgraph hosting[建站厂商托管平台]
+    query[可注入的页面参数]:::weakness
+    db[(各实例 maindb<br/>账号、明文密码与配置)]:::weakness
+    shared[相同的内置管理员凭据]:::weakness
+    customer[各客户的账号凭据]
+    query -->|SQL 注入读取| db
+    db --> shared
+    db --> customer
+  end
+  endpoints --> query
+  shared -->|登录多个子域| admin[多个实例的管理后台]
+  customer -->|以客户身份登录| sites[客户网站后台]
+  admin -->|集中管理客户网站| sites
+  sites --> impact([网站权限、数据库<br/>与源代码暴露]):::impact
+  classDef weakness fill:#fff1f2,stroke:#e11d48,color:#881337
+  classDef impact fill:#fef3c7,stroke:#d97706,color:#78350f
+```
+
+</div>
+
 **信息收集阶段可以直接揭示目标的整体架构。** 通过搜索引擎枚举子域名，发现该厂商使用了大量 `testwebN.***world.com` 格式的子域作为客户网站的临时访问入口，每个子域下托管了数千个客户网站。这种多实例统一托管的结构，意味着任何一个子域上的安全漏洞都具有横向传播到所有实例的潜力。
 
 **`testwebN` 子域的存在揭示了一种典型的运维便利性设计。** 建站厂商为了让客户在域名未备案或尚未购买时也能访问网站，将所有客户统一挂载在自己的子域下。多实例部署配合统一的弱防御机制，意味着横向移动几乎零阻力——攻破一个子域，就拿到了进入其他子域的钥匙。

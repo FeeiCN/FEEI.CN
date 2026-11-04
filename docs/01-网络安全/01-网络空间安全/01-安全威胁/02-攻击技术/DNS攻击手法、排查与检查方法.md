@@ -4,7 +4,12 @@ title: DNS 攻击手法、排查与检查方法
 icon: router-icon
 sidebar_position: 31
 description: 从权威 DNS、递归解析、终端与网络链路出发，系统排查 DNS 劫持、缓存污染、隧道、反射放大、子域接管和 DNSSEC 风险。
+mdx:
+  format: mdx
 ---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 ## 摘要
 
@@ -14,14 +19,20 @@ DNS 把域名转换为 IP，是访问网站、邮件、API、身份认证和内�
 
 本文面向安全运营、网络安全、域名和基础设施工程师，讨论常见攻击、检查方法、修复思路，并以 `feei.cn` 的异常解析作为案例。文中命令只应在自有或明确授权的网络、域名和服务器上执行；公网探测、区域传送和流量抓包都应遵守组织授权和合规要求。
 
-<!-- truncate -->
+{/* truncate */}
 
 ## DNS 请求经过哪些环节
 
-一次普通解析通常包含以下角色：
+一次普通解析的查询与返回路径可以这样理解：
 
-解析路径可以按“终端或应用 → 本地路由器/缓存转发器 → 运营商或公共递归 DNS → 根/TLD/权威 DNS → A、AAAA、CNAME 等记录 → 返回终端”理解。每一层都可能改变结果，因此排查必须逐层比对。
+```mermaid
+flowchart TD
+  client["终端或应用"] <-->|查询 / 结果| local["本地路由器 / 缓存转发器"]
+  local <-->|查询 / 结果| resolver["运营商 / 公共递归 DNS"]
+  resolver <-->|未命中缓存时逐级查询| authority["根 / TLD / 权威 DNS"]
+```
 
+终端拿到 A、AAAA、CNAME 等解析结果后，再访问目标服务。每一层都可能改变结果，因此排查必须逐层比对。
 
 异常可能发生在任意一层：
 
@@ -196,28 +207,34 @@ dig @<权威NS> feei.cn IXFR=0
 
 ### 第二步：查看终端当前使用的 DNS
 
-Linux：
+<Tabs defaultValue="linux" groupId="operating-system">
+<TabItem value="linux" label="Linux">
 
-```bash
+```bash title="查看 Linux 当前解析配置"
 resolvectl status
 cat /etc/resolv.conf
 getent ahosts feei.cn
 ```
 
-macOS：
+</TabItem>
+<TabItem value="macos" label="macOS">
 
-```bash
+```bash title="查看 macOS 当前解析配置"
 scutil --dns
 networksetup -getdnsservers Wi-Fi
 ```
 
-Windows：
+</TabItem>
+<TabItem value="windows" label="Windows">
 
-```powershell
+```powershell title="查看 Windows 当前解析配置"
 ipconfig /all
 nslookup feei.cn
 Get-DnsClientServerAddress
 ```
+
+</TabItem>
+</Tabs>
 
 移动设备还要检查“私人 DNS/加密 DNS”、VPN 配置、代理配置和 IPv6 网络信息。
 
@@ -322,16 +339,31 @@ Wireshark 重点字段：
 
 清理缓存后复测：
 
-```bash
-# Linux systemd-resolved
+<Tabs defaultValue="linux" groupId="operating-system">
+<TabItem value="linux" label="Linux">
+
+```bash title="清理 systemd-resolved 缓存"
 sudo resolvectl flush-caches
+```
 
-# Windows
-ipconfig /flushdns
+</TabItem>
+<TabItem value="macos" label="macOS">
 
-# macOS，可重启 mDNSResponder 或重启网络接口
+可重启 mDNSResponder 或重启网络接口：
+
+```bash title="刷新 macOS DNS 缓存"
 sudo killall -HUP mDNSResponder
 ```
+
+</TabItem>
+<TabItem value="windows" label="Windows">
+
+```powershell title="清理 Windows DNS 缓存"
+ipconfig /flushdns
+```
+
+</TabItem>
+</Tabs>
 
 不同系统和路由器命令会有差异，执行前应确认设备型号和运行环境。
 

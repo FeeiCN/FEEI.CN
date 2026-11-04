@@ -9,6 +9,41 @@ icon: history-circle-icon
 
 ## 1 信息泄露
 
+仓库写入权限和生产更新入口在服务器上汇合：攻击者既能让恶意代码进入私有仓库，又能主动触发上线。虚线标出同组织另一个项目重复出现的机制。图可横向滚动。
+
+<div class="incident-diagram" role="region" tabindex="0" aria-label="Git 凭据泄露如何借部署链进入生产环境，可横向滚动">
+
+```mermaid
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 28
+    rankSpacing: 40
+    padding: 12
+---
+flowchart TB
+accTitle: Git 凭据泄露如何借部署链进入生产环境
+accDescr: 仓库写入权限和生产更新入口在服务器上汇合：攻击者既能让恶意代码进入私有仓库，又能主动触发上线。虚线标出同组织另一个项目重复出现的机制。
+  attacker([外部访问者]) -->|访问泄露的 Git 信息| metadata[暴露 auth-token 的<br/>私有仓库地址]:::weakness
+  metadata -->|使用令牌| repo[GitHub 私有仓库]
+  attacker -->|凭令牌提交 Webshell| repo
+  subgraph production[生产 Web 服务器]
+    pull[无访问控制的<br/>在线更新脚本]:::weakness
+    webshell[部署到站点的 Webshell]
+    pull -->|将新版本写入生产目录| webshell
+  end
+  repo -->|拉取已提交的代码| pull
+  attacker -->|HTTP 请求触发更新| pull
+  webshell --> impact([站点命令执行<br/>数据库账号与数据暴露]):::impact
+  metadata -. 同类问题重复出现 .-> other[同组织另一项目<br/>泄露令牌 + 在线更新]
+  other --> second[另一站点也被验证可 GetShell]:::impact
+  classDef weakness fill:#fff1f2,stroke:#e11d48,color:#881337
+  classDef impact fill:#fef3c7,stroke:#d97706,color:#78350f
+```
+
+</div>
+
 **公开的 Git 泄露可以直接暴露私有代码仓库的访问凭据。** 通过浏览器插件检测发现目标站点存在 Git 信息泄露。
 
 ![](/media/01-历史攻击事件/v_baixing_01-1024x618.webp)

@@ -11,6 +11,14 @@ description: 2021 年 GitLab Workhorse 漏洞是教科书级的"多低危链式�
 
 ## 利用链 4 层
 
+```mermaid
+flowchart TD
+  extension["扩展名通过 Workhorse 白名单"] --> magic["ExifTool 按内容识别为 DjVu"]
+  magic --> annotation["DjVu 模块处理注释与转义"]
+  annotation --> continuation["字符串延续改变 eval 输入"]
+  continuation --> execute["用户数据进入代码执行"]
+```
+
 ### 缺陷 1：扩展名白名单与解析器识别错配
 
 **GitLab Workhorse 的逻辑**：用户上传文件时，只对扩展名 `jpg|jpeg|tiff` 调用 ExifTool 去除 EXIF。

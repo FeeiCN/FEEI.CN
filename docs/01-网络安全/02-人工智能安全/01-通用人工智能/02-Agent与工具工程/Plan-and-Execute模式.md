@@ -165,7 +165,12 @@ Observation 只是带来源的记录。只有代码检查、测试结果或其�
 
 Replanner 接收任务契约、当前计划、已验证事实和触发观察。它保留 `inspect` 的结果，将无法执行的原步骤标记为 `superseded`，再替换尚未完成的路径。下面展示的是控制器接受新步骤后形成的权威状态；`facts` 仍来自此前的观察验证器，不属于 Replanner 提案。
 
-```json
+本轮保留 `inspect`，废弃原 `reproduce`，后续依次执行 `extend-fixture → red-test → patch → reject-external → verify`。
+
+<details>
+<summary>查看 revision 2 的完整计划状态</summary>
+
+```json title="重规划后的权威状态" {2-4}
 {
   "revision": 2,
   "scope": "current_repository",
@@ -255,6 +260,8 @@ Replanner 接收任务契约、当前计划、已验证事实和触发观察。�
   ]
 }
 ```
+
+</details>
 
 这次 Replan 增加了夹具步骤和先失败后修复的回归测试。它没有重新调查已经确认的数据流，也没有把“外部 URL 会被拒绝”从约束中删除。旧计划进入 `plan_history`，因此可以解释计划为什么变化。
 

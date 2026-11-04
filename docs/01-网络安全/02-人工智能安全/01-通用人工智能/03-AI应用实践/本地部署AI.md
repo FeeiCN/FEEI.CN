@@ -27,11 +27,17 @@ last_reviewed: '2026-07-10'
 
 **权重内存。** 量化是用更低精度保存模型权重，以减少内存和计算开销；`4-bit` 表示每个权重按 4 位估算，实际质量和框架兼容性仍要测试。只计权重的粗略下界可以写成：
 
-```text
-权重内存 GB ≈ 参数量（十亿）× 每个权重位数 ÷ 8
-```
+$$
+M_{\text{weights}}\ (\mathrm{GB}) \approx \frac{N_{\text{B}}\times b}{8}
+$$
+
+其中 $N_{\text{B}}$ 是以十亿为单位的参数量，$b$ 是每个权重的位数。
+
+:::note[权重下界不等于设备需求]
 
 例如，8B 模型的 4-bit 权重原始下界约为 4GB。实际运行还需要程序、中间激活、KV cache 和系统预留，所以不能把权重下界当成设备需求。
+
+:::
 
 **模型格式。** 格式规定权重和相关元数据怎样存储，推理框架必须明确支持。`GGUF` 常用于 llama.cpp 生态；Hugging Face 权重和 MLX 转换版采用其他加载路径，不能随意混用。
 
@@ -65,7 +71,7 @@ ollama run gemma4
 
 安装并至少启动一次 LM Studio 后，可以使用随应用安装的 `lms` CLI。下面的 `<model-name>` 和 `<model-key>` 需要替换为实际模型：
 
-```bash
+```bash title="LM Studio 下载、加载与 API 验证" {1,3}
 lms get <model-name>
 lms ls
 lms load <model-key> --identifier local-model
@@ -142,4 +148,8 @@ curl http://localhost:8000/v1/models
 
 **API 无法连接。** 核对监听地址、端口、base URL、路径和容器网络。开发阶段默认绑定 `127.0.0.1`，不用一个公网端口来解决本地连接问题。
 
+:::warning[共享服务的安全边界]
+
 团队共享服务需要身份认证、最小权限、TLS、请求限制、日志脱敏、密钥轮换和网络隔离。不将 Ollama、MLX-LM、llama.cpp 或 Open WebUI 的开发端口直接暴露到公网。更完整的威胁模型见 [AI 安全](/ai-security)。
+
+:::

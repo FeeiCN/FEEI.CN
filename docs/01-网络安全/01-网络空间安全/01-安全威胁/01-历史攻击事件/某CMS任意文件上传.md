@@ -9,6 +9,46 @@ icon: history-circle-icon
 
 ## 1 漏洞入口
 
+演示代码被供应商集成并分发到企业站点；未认证上传与上传目录可执行同时成立，才把一个文件提交变成站点执行权限。图可横向滚动。
+
+<div class="incident-diagram" role="region" tabindex="0" aria-label="CMS 上传缺陷向多家企业传递的过程，可横向滚动">
+
+```mermaid
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 28
+    rankSpacing: 40
+    padding: 12
+---
+flowchart TB
+accTitle: CMS 上传缺陷向多家企业传递的过程
+accDescr: 演示代码被供应商集成并分发到企业站点；未认证上传与上传目录可执行同时成立，才把一个文件提交变成站点执行权限。
+  subgraph supplier[供应商与代码分发]
+    demo[Uploadify 演示代码]
+    cms[BocWeb CMS<br/>未补充认证与类型校验]:::weakness
+    demo -->|直接集成| cms
+  end
+  attacker([外部请求者])
+  subgraph customer[使用该 CMS 的多家企业官网]
+    upload[公开的上传接口]:::weakness
+    file[保存到站点目录的<br/>Webshell 文件]
+    execute[Web 执行环境]
+    upload -->|接受并保存文件| file
+    file -->|目录允许执行| execute
+  end
+  cms -->|随 CMS 部署| upload
+  attacker -->|无需登录即可上传| upload
+  attacker -->|访问已上传文件| execute
+  execute --> impact([站点代码执行<br/>与业务数据暴露]):::impact
+  cms -. 同一缺陷随代码复制 .-> impact
+  classDef weakness fill:#fff1f2,stroke:#e11d48,color:#881337
+  classDef impact fill:#fef3c7,stroke:#d97706,color:#78350f
+```
+
+</div>
+
 **这个漏洞的根本原因是把演示代码直接用于生产环境，而没有补充任何权限控制。** 吉利、万科、广厦、万向、大华等大量企业官网底部标注着技术支持：杭州博采网络（[BocWeb](http://www.bocweb.cn/)）。在获得一份 BocWeb CMS 系统源码后，经过简单审计发现了多处问题，其中以 `/j/uploadify.php` 最为严重。[Uploadify](http://www.uploadify.com/) 是一款用来处理上传文件的开源组件，其官网 `demo` 中的 `uploadify.php` 用于演示后端处理上传文件的逻辑。
 
 ```php

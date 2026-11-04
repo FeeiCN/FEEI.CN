@@ -1,0 +1,61 @@
+.poem {
+  min-width: 0;
+  max-width: 100%;
+  margin-bottom: 2rem;
+}
+
+.viewport {
+  width: 100%;
+  height: min(75svh, 48rem);
+  min-height: 16rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  direction: rtl;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ifm-color-emphasis-500) transparent;
+}
+
+.viewport:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 4px;
+}
+
+.content {
+  writing-mode: vertical-rl;
+  direction: ltr;
+  height: 100%;
+  width: max-content;
+  padding: 1rem;
+  font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'BiauKai', serif;
+  font-size: 1.25rem;
+  line-height: 2;
+}
+
+.header {
+  margin-left: 1.5rem;
+}
+
+.title {
+  margin: 0;
+  font-family: inherit;
+  font-size: 1.75rem;
+  line-height: 1.5;
+  letter-spacing: 0.25em;
+}
+
+.author {
+  margin: 1rem 0 0;
+  font-size: 1rem;
+  letter-spacing: 0.15em;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.body p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 767px) {
+  .content {
+    font-size: 1.125rem;
+  }
+}

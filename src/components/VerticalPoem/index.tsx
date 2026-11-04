@@ -1,4 +1,5 @@
-import React from 'react';
+import React, {useId} from 'react';
+import styles from './styles.module.css';
 
 interface Props {
   title: string;
@@ -6,42 +7,20 @@ interface Props {
   children: React.ReactNode;
 }
 
-export default function VerticalPoem({ title, author, children }: Props) {
+export default function VerticalPoem({title, author, children}: Props) {
+  const id = useId();
+
   return (
-    <div style={{
-      writingMode: 'vertical-rl',
-      height: 'fit-content',
-      maxHeight: '75vh',
-      overflowX: 'auto',
-      overflowY: 'hidden',
-      fontFamily: "'Kaiti SC', 'STKaiti', 'KaiTi', 'BiauKai', serif",
-      fontSize: '1.25rem',
-      lineHeight: '1.8',
-    }}>
-      <div style={{
-        fontSize: '1.7rem',
-        fontWeight: 'bold',
-        letterSpacing: '1rem',
-        padding: '0 1rem',
-        marginLeft: '0.5rem',
-      }}>
-        {title}
-        {author && (
-          <span style={{
-            fontSize: '1rem',
-            fontWeight: 'normal',
-            letterSpacing: '0.2rem',
-            opacity: 0.75,
-            marginTop: '1.5rem',
-            display: 'block',
-          }}>
-            {author}
-          </span>
-        )}
+    <section className={styles.poem}>
+      <div role="region" aria-labelledby={`${id}-title`} tabIndex={0} className={styles.viewport}>
+        <div className={styles.content}>
+          <header className={styles.header}>
+            <h1 id={`${id}-title`} className={styles.title}>{title}</h1>
+            {author && <p className={styles.author}>{author}</p>}
+          </header>
+          <div className={styles.body}>{children}</div>
+        </div>
       </div>
-      <div style={{ padding: '0 1.5rem' }}>
-        {children}
-      </div>
-    </div>
+    </section>
   );
 }

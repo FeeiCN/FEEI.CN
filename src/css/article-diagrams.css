@@ -1,0 +1,65 @@
+.article-diagram {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+.article-diagram:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 3px;
+}
+
+.article-diagram-svg {
+  display: block;
+  width: 100%;
+  min-width: 760px;
+  height: auto;
+  color: var(--ifm-font-color-base);
+  font-family: var(--ifm-font-family-base);
+}
+
+.article-diagram-edge {
+  fill: none;
+  stroke: var(--ifm-color-emphasis-600);
+  stroke-width: 1.5;
+}
+
+.article-diagram-arrow {
+  fill: var(--ifm-color-emphasis-600);
+}
+
+.article-diagram-node rect {
+  fill: var(--ifm-background-surface-color);
+  stroke: var(--ifm-color-emphasis-300);
+}
+
+.article-diagram-main rect {
+  fill: var(--ifm-color-primary-contrast-background);
+  stroke: var(--ifm-color-primary);
+}
+
+.article-diagram-control rect {
+  fill: var(--ifm-color-success-contrast-background);
+  stroke: var(--ifm-color-emphasis-400);
+}
+
+.article-diagram-heading {
+  fill: currentColor;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.article-diagram-detail {
+  fill: var(--ifm-color-emphasis-800);
+  font-size: 13px;
+}
+
+.article-diagram-labelBackground {
+  fill: var(--ifm-background-color);
+}
+
+.article-diagram-label {
+  fill: var(--ifm-color-emphasis-700);
+  font-size: 13px;
+}

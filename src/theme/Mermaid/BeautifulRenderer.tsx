@@ -1,4 +1,4 @@
-import React, {useId, useMemo, type ReactNode} from 'react';
+import React, {useId, useLayoutEffect, useMemo, useRef, type ReactNode} from 'react';
 import {parseMermaid, renderMermaidSVG} from 'beautiful-mermaid';
 import OriginalMermaid from '@theme-original/Mermaid';
 import type {Props} from '@theme/Mermaid';
@@ -7,6 +7,7 @@ import styles from './styles.module.css';
 
 export default function BeautifulRenderer({value, diagram}: Props & {diagram: BeautifulDiagram}): ReactNode {
   const namespace = `beautiful-${useId().replace(/[^\w-]/g, '')}`;
+  const viewportRef = useRef<HTMLDivElement>(null);
   const {source, kind, title, description} = diagram;
   const svg = useMemo(() => {
     try {
@@ -70,10 +71,29 @@ export default function BeautifulRenderer({value, diagram}: Props & {diagram: Be
     }
   }, [source, kind, title, description, namespace]);
 
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!svg || !viewport || kind !== 'flowchart' || !/^(?:flowchart|graph)\s+(?:TB|TD|BT)\b/i.test(source)) return;
+    const region = viewport.closest<HTMLElement>('.incident-diagram') ?? viewport;
+    const graph = parseMermaid(source);
+    const startId = [...graph.nodes.keys()].find(id => graph.classAssignments.get(id) !== 'note');
+    const start = [...viewport.querySelectorAll<SVGGElement>('.node')].find(node => node.getAttribute('data-id') === startId);
+    if (!start) return;
+    const showStart = () => {
+      const nodeBounds = start.getBoundingClientRect();
+      const regionBounds = region.getBoundingClientRect();
+      region.scrollLeft = Math.max(0, region.scrollLeft + nodeBounds.left - regionBounds.left - region.clientLeft + nodeBounds.width / 2 - region.clientWidth / 2);
+    };
+    showStart();
+    const observer = new ResizeObserver(showStart);
+    observer.observe(region);
+    return () => observer.disconnect();
+  }, [svg, source, kind]);
+
   if (!svg) return <OriginalMermaid value={value} />;
 
   return (
-    <div className={styles.viewport} role="region" tabIndex={0} aria-label={`${title ?? '图表'}，可横向滚动`}>
+    <div ref={viewportRef} className={styles.viewport} role="region" tabIndex={0} aria-label={`${title ?? '图表'}，可横向滚动`}>
       <div
         className={`docusaurus-mermaid-container ${styles.diagram}`}
         data-renderer="beautiful-mermaid"

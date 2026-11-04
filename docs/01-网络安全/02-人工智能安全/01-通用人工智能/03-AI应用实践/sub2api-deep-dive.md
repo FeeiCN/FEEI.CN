@@ -1,6 +1,8 @@
 ---
 slug: /sub2api
 icon: router-icon
+mdx:
+  format: mdx
 description: Sub2API 将多协议兼容、上游账号池、负载调度、分布式并发和幂等计费连成一条请求链路；理解它，要从一笔请求如何被执行并入账开始。
 last_reviewed: '2026-07-11'
 ---
@@ -55,16 +57,79 @@ Sub2API 同时运行数据面和控制面：
 
 理解数据面，先抓住四个业务对象和一张事实表：
 
-```text
-User 1 ── N APIKey N ── 1 Group N ── N Account
-  │           │             │              │
-  │           │             │              └─ 上游凭证、平台、并发、代理、健康状态
-  │           │             └─ 平台、倍率、订阅、模型路由、能力开关
-  │           └─ 下游凭证、额度、有效期、IP ACL、费用窗口
-  └─ 余额、角色、并发、RPM、平台额度
+<div className="article-diagram" role="region" tabIndex="0" aria-label="User 消费、APIKey 授权、Group 定策略、Account 执行，UsageLog 关联调用事实，可横向滚动">
+  <svg className="article-diagram-svg" viewBox="0 0 760 340" role="img" aria-labelledby="sub2api-objects-title" aria-describedby="sub2api-objects-description">
+    <title id="sub2api-objects-title">User 消费、APIKey 授权、Group 定策略、Account 执行，UsageLog 关联调用事实</title>
+    <desc id="sub2api-objects-description">一个用户拥有多个 API Key，每个 Key 绑定一个 Group，Group 与上游 Account 为多对多。一次调用的 UsageLog 关联这些对象及可选订阅，业务表保存余额和额度，UsageLog 提供事实明细。连线为实体关联，不表示调用顺序。</desc>
+    <defs>
+      <marker id="sub2api-objects-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 Z" className="article-diagram-arrow"/>
+      </marker>
+    </defs>
+    <path d="M170 60 H210" className="article-diagram-edge"/>
+    <path d="M360 60 H400" className="article-diagram-edge"/>
+    <path d="M550 60 H590" className="article-diagram-edge"/>
+    <path d="M95 100 V190 H270 V220" className="article-diagram-edge" strokeDasharray="5 5"/>
+    <path d="M285 100 V160 H340 V220" className="article-diagram-edge" strokeDasharray="5 5"/>
+    <path d="M475 100 V160 H420 V220" className="article-diagram-edge" strokeDasharray="5 5"/>
+    <path d="M665 100 V190 H490 V220" className="article-diagram-edge" strokeDasharray="5 5"/>
+    <path d="M520 263 H560" className="article-diagram-edge" strokeDasharray="5 5"/>
+    <g className="article-diagram-node">
+      <rect x="20" y="20" width="150" height="80" rx="10"/>
+      <text x="95" y="37" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">User</text>
+      <text x="95" y="60" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">消费主体</text>
+      <text x="95" y="83" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">余额与用户限额</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="210" y="20" width="150" height="80" rx="10"/>
+      <text x="285" y="37" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">APIKey</text>
+      <text x="285" y="60" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">下游授权</text>
+      <text x="285" y="83" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">额度与有效期</text>
+    </g>
+    <g className="article-diagram-main">
+      <rect x="400" y="20" width="150" height="80" rx="10"/>
+      <text x="475" y="37" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">Group</text>
+      <text x="475" y="60" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">平台与策略</text>
+      <text x="475" y="83" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">倍率与模型路由</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="590" y="20" width="150" height="80" rx="10"/>
+      <text x="665" y="37" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">Account</text>
+      <text x="665" y="60" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">上游执行身份</text>
+      <text x="665" y="83" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">凭证与容量</text>
+    </g>
+    <g className="article-diagram-control">
+      <rect x="240" y="220" width="280" height="86" rx="10"/>
+      <text x="380" y="240" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">UsageLog</text>
+      <text x="380" y="263" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">一次调用的对象关联与用量明细</text>
+      <text x="380" y="286" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">用于审计和运营分析</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="560" y="220" width="180" height="86" rx="10"/>
+      <text x="650" y="240" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">Subscription</text>
+      <text x="650" y="263" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">调用涉及的订阅</text>
+      <text x="650" y="286" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">可选关联</text>
+    </g>
+    <g>
+      <rect x="163.5" y="49" width="53" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="190" y="60" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">1:N</text>
+    </g>
+    <g>
+      <rect x="353.5" y="49" width="53" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="380" y="60" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">N:1</text>
+    </g>
+    <g>
+      <rect x="543.5" y="49" width="53" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="570" y="60" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">N:N</text>
+    </g>
+    <g>
+      <rect x="301.5" y="176" width="157" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="380" y="187" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">关联本次调用涉及的对象</text>
+    </g>
+  </svg>
+</div>
 
-每次调用 ──> UsageLog ──> User / APIKey / Group / Account / Subscription
-```
+实线表示业务对象的关联基数，虚线表示一次调用的事实关联，不表示请求执行顺序。余额与额度保存在对应业务表，UsageLog 提供明细；同一 Account 可供多个 Group 使用。图可横向滚动。
 
 **User 是消费主体。** [`user.go`](https://github.com/Wei-Shaw/sub2api/blob/v0.1.151/backend/ent/schema/user.go) 保存余额、冻结余额、状态、并发、RPM、TOTP 和通知配置。
 
@@ -99,18 +164,108 @@ User 1 ── N APIKey N ── 1 Group N ── N Account
 
 同一路径在 OpenAI 或 Grok Group 下会进入另一套兼容 Handler；Gemini、媒体和 WebSocket 也有自己的链路。下面的细节不外推到所有协议。
 
-```text
-客户端
-  -> 路由与本地 API Key 鉴权
-  -> 用户并发槽与计费资格复查
-  -> 会话锚点、模型路由和账号调度
-  -> 账号并发槽
-  -> 协议改写、凭证替换和上游请求
-  -> SSE 或 JSON 返回
-  -> Usage Worker
-  -> PostgreSQL 幂等结算
-  -> Redis 缓存与通知更新
-```
+<div className="article-diagram" role="region" tabIndex="0" aria-label="Anthropic Group 的 messages 请求如何返回响应并进入用量处理，可横向滚动">
+  <svg className="article-diagram-svg" viewBox="0 0 760 595" role="img" aria-labelledby="sub2api-request-title" aria-describedby="sub2api-request-description">
+    <title id="sub2api-request-title">Anthropic Group 的 messages 请求如何返回响应并进入用量处理</title>
+    <desc id="sub2api-request-description">本地 Key 鉴权后先取用户槽并复查资格，再选账号和抢账号槽，以 Account 凭证转发。输出业务字节前可按条件有限重试，输出后停止账号切换。客户端响应与后置用量处理是不同完成边界，Worker 队列满时默认同步回退。</desc>
+    <defs>
+      <marker id="sub2api-request-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 Z" className="article-diagram-arrow"/>
+      </marker>
+    </defs>
+    <path d="M292 57 H430" className="article-diagram-edge" markerEnd="url(#sub2api-request-arrow)"/>
+    <path d="M579 95 V125 H162 V170" className="article-diagram-edge" markerEnd="url(#sub2api-request-arrow)"/>
+    <path d="M292 215 H430" className="article-diagram-edge" markerEnd="url(#sub2api-request-arrow)"/>
+    <path d="M579 260 V330" className="article-diagram-edge" markerEnd="url(#sub2api-request-arrow)"/>
+    <path d="M430 375 H292" className="article-diagram-edge" markerEnd="url(#sub2api-request-arrow)"/>
+    <path d="M579 420 V490" className="article-diagram-edge" markerEnd="url(#sub2api-request-arrow)"/>
+    <path d="M430 532 H292" className="article-diagram-edge" markerEnd="url(#sub2api-request-arrow)"/>
+    <path d="M728 375 H746 V145 H162 V170" className="article-diagram-edge" strokeDasharray="5 5" markerEnd="url(#sub2api-request-arrow)"/>
+    <g className="article-diagram-node">
+      <rect x="32" y="20" width="260" height="75" rx="10"/>
+      <text x="162" y="46" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">本地 Key 鉴权与请求解析</text>
+      <text x="162" y="69" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">User / APIKey / Group 上下文</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="430" y="20" width="298" height="75" rx="10"/>
+      <text x="579" y="46" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">用户并发槽</text>
+      <text x="579" y="69" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">取得槽后复查余额、订阅与额度</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="32" y="170" width="260" height="90" rx="10"/>
+      <text x="162" y="192" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">账号调度</text>
+      <text x="162" y="215" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">Group 策略、模型与粘性</text>
+      <text x="162" y="238" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">选出符合当前条件的候选</text>
+    </g>
+    <g className="article-diagram-control">
+      <rect x="430" y="170" width="298" height="90" rx="10"/>
+      <text x="579" y="203.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">账号并发槽</text>
+      <text x="579" y="226.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">原子申请成功才可执行</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="430" y="330" width="298" height="90" rx="10"/>
+      <text x="579" y="352" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">上游执行与协议转发</text>
+      <text x="579" y="375" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">替换为 Account 的上游凭证</text>
+      <text x="579" y="398" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">供应商响应转换为 SSE / JSON</text>
+    </g>
+    <g className="article-diagram-main">
+      <rect x="32" y="330" width="260" height="90" rx="10"/>
+      <text x="162" y="352" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">客户端收到响应</text>
+      <text x="162" y="375" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">数据面完成</text>
+      <text x="162" y="398" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">不代表结算已经完成</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="430" y="490" width="298" height="85" rx="10"/>
+      <text x="579" y="509.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">Usage Worker</text>
+      <text x="579" y="532.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">通常入队</text>
+      <text x="579" y="555.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">队列满时默认同步执行</text>
+    </g>
+    <g className="article-diagram-main">
+      <rect x="32" y="490" width="260" height="85" rx="10"/>
+      <text x="162" y="509.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">用量与账务处理</text>
+      <text x="162" y="532.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">幂等结算 · UsageLog</text>
+      <text x="162" y="555.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">数据库提交后更新缓存与通知</text>
+    </g>
+    <g>
+      <rect x="288" y="46" width="144" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="360" y="57" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">进入 Handler</text>
+    </g>
+    <g>
+      <rect x="317.5" y="114" width="105" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="370" y="125" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">资格复查后调度</text>
+    </g>
+    <g>
+      <rect x="327" y="204" width="66" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="360" y="215" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">选中候选</text>
+    </g>
+    <g>
+      <rect x="546" y="284" width="66" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="579" y="295" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">抢槽成功</text>
+    </g>
+    <g>
+      <rect x="288" y="364" width="144" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="360" y="375" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">SSE / JSON</text>
+    </g>
+    <g>
+      <rect x="513.5" y="444" width="131" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="579" y="455" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">请求结束后记录用量</text>
+    </g>
+    <g>
+      <rect x="327" y="521" width="66" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="360" y="532" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">执行任务</text>
+    </g>
+    <g>
+      <rect x="369" y="134" width="222" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="480" y="145" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">业务输出前，按条件有限重试或换号</text>
+    </g>
+    <g>
+      <rect x="155" y="444" width="170" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="240" y="455" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">业务输出后：停止账号切换</text>
+    </g>
+  </svg>
+</div>
+
+实线连接请求执行、响应返回和后置用量处理，虚线只表示业务输出前按错误类型允许的有限重试或换号。客户端响应和账务处理是不同完成边界；队列满时默认同步回退，也不能用客户端最后的状态码单独推断结算结果。此图仅对应上述固定场景，图可横向滚动。
 
 **第一步：路由先确定协议入口。** `RegisterGatewayRoutes` 给 `/v1` 依次挂上请求体限制、客户端 Request ID、运维错误采集、端点规范化、API Key 鉴权和 Group 检查。本场景最终进入 [`GatewayHandler.Messages`](https://github.com/Wei-Shaw/sub2api/blob/v0.1.151/backend/internal/handler/gateway_handler.go)。
 
@@ -169,6 +324,100 @@ Chat Completions Request
 
 EWMA 是“近期样本权重更高”的移动平均。它允许调度器在粘性账号质量明显下降时临时逃逸，也避免偶发单次错误立刻改变所有流量。
 
+下面把“选择合适账号”和“取得执行容量”分开：粘性只是健康条件下的优先复用，调度快照只提供候选，最终原子抢槽才决定是否可进入上游。
+
+<div className="article-diagram" role="region" tabIndex="0" aria-label="调度选择候选，粘性优先复用，原子抢槽决定当前能否执行，可横向滚动">
+  <svg className="article-diagram-svg" viewBox="0 0 760 585" role="img" aria-labelledby="sub2api-scheduling-title" aria-describedby="sub2api-scheduling-description">
+    <title id="sub2api-scheduling-title">调度选择候选，粘性优先复用，原子抢槽决定当前能否执行</title>
+    <desc id="sub2api-scheduling-description">请求条件和调度快照共同提供候选选择依据，健康粘性账号可优先复用。快照可能短暂陈旧，Redis 原子槽位申请才决定是否执行。未获得槽位时按计划有限等待或结束请求，不能把选中候选等同于占有容量。</desc>
+    <defs>
+      <marker id="sub2api-scheduling-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 Z" className="article-diagram-arrow"/>
+      </marker>
+    </defs>
+    <path d="M150 80 V140" className="article-diagram-edge" markerEnd="url(#sub2api-scheduling-arrow)"/>
+    <path d="M530 80 V140" className="article-diagram-edge" markerEnd="url(#sub2api-scheduling-arrow)"/>
+    <path d="M260 180 H350" className="article-diagram-edge" markerEnd="url(#sub2api-scheduling-arrow)"/>
+    <path d="M600 220 V320" className="article-diagram-edge" markerEnd="url(#sub2api-scheduling-arrow)"/>
+    <path d="M350 360 H260" className="article-diagram-edge" markerEnd="url(#sub2api-scheduling-arrow)"/>
+    <path d="M150 320 V280 H450 V320" className="article-diagram-edge" strokeDasharray="5 5" markerEnd="url(#sub2api-scheduling-arrow)"/>
+    <path d="M150 400 V500" className="article-diagram-edge" markerEnd="url(#sub2api-scheduling-arrow)"/>
+    <path d="M600 400 V500" className="article-diagram-edge" markerEnd="url(#sub2api-scheduling-arrow)"/>
+    <g className="article-diagram-node">
+      <rect x="40" y="20" width="670" height="60" rx="10"/>
+      <text x="375" y="38.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">当前请求</text>
+      <text x="375" y="61.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">Group、平台、模型、会话与能力要求</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="40" y="140" width="220" height="80" rx="10"/>
+      <text x="150" y="157" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">Redis 调度快照</text>
+      <text x="150" y="180" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">候选读模型</text>
+      <text x="150" y="203" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">允许短暂陈旧</text>
+    </g>
+    <g className="article-diagram-main">
+      <rect x="350" y="140" width="360" height="80" rx="10"/>
+      <text x="530" y="157" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">候选过滤与粘性优先</text>
+      <text x="530" y="180" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">状态、模型、额度、优先级与负载</text>
+      <text x="530" y="203" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">粘性账号仍健康时优先沿用</text>
+    </g>
+    <g className="article-diagram-control">
+      <rect x="350" y="320" width="360" height="80" rx="10"/>
+      <text x="530" y="337" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">Redis 原子抢槽</text>
+      <text x="530" y="360" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">多实例共享、服务端时间</text>
+      <text x="530" y="383" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">真正决定此刻能否进入</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="40" y="320" width="220" height="80" rx="10"/>
+      <text x="150" y="348.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">未获得可用槽位</text>
+      <text x="150" y="371.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">按等待计划处理</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="40" y="500" width="220" height="60" rx="10"/>
+      <text x="150" y="518.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">结束本次请求</text>
+      <text x="150" y="541.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">等待超时或队列无法接纳</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="350" y="500" width="360" height="60" rx="10"/>
+      <text x="530" y="518.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">占用账号槽并执行</text>
+      <text x="530" y="541.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">选中账号不等于已获得执行容量</text>
+    </g>
+    <g>
+      <rect x="117" y="99" width="66" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="150" y="110" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">读取候选</text>
+    </g>
+    <g>
+      <rect x="497" y="99" width="66" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="530" y="110" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">请求条件</text>
+    </g>
+    <g>
+      <rect x="272" y="169" width="66" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="305" y="180" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">辅助选择</text>
+    </g>
+    <g>
+      <rect x="554" y="259" width="92" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="600" y="270" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">尝试取得容量</text>
+    </g>
+    <g>
+      <rect x="278.5" y="349" width="53" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="305" y="360" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">未获槽</text>
+    </g>
+    <g>
+      <rect x="225" y="269" width="170" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="310" y="280" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">按计划有限等待 / 重试</text>
+    </g>
+    <g>
+      <rect x="104" y="439" width="92" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="150" y="450" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">无法继续等待</text>
+    </g>
+    <g>
+      <rect x="580" y="439" width="40" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="600" y="450" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">成功</text>
+    </g>
+  </svg>
+</div>
+
+实线表示选择与容量判断，虚线表示等待计划允许时继续尝试，不表示无限重试。此图聚焦账号槽，用户槽及拿槽后的资格复查见请求生命线；OpenAI 高级调度评分仍以本节源码说明为准。图可横向滚动。
+
 用户槽和账号槽由 [`concurrency_cache.go`](https://github.com/Wei-Shaw/sub2api/blob/v0.1.151/backend/internal/repository/concurrency_cache.go) 在 Redis 中原子申请，并使用 Redis 服务端时间减少多实例时钟漂移。调度快照即使短暂陈旧，最终原子抢槽仍能守住并发上限。
 
 **SSE 把网络连接变成账务输入。** 流开始后，HTTP 状态码已经不足以描述结果；系统还要判断是否看见业务事件、终止事件、完整 usage，以及客户端是否中途断开。
@@ -198,6 +447,101 @@ EWMA 是“近期样本权重更高”的移动平均。它允许调度器在粘
 **Usage Worker 在吞吐和正确性之间设置了明确默认值。** [`usage_record_worker_pool.go`](https://github.com/Wei-Shaw/sub2api/blob/v0.1.151/backend/internal/service/usage_record_worker_pool.go) 默认 128 个 worker、16384 个排队任务，并可自动扩到 512。队列满时默认 `sync`：提交方内联执行任务，以尾部延迟换取计费任务不被静默丢弃。
 
 `drop` 和 `sample` 仍可显式配置。部署者一旦改用它们，就要自行承担 UsageLog 缺口和漏计费风险，并监控 Dropped、队列长度、同步回退和数据库连接池。这里的关键不在“用了异步”，而在过载时谁承担损失。
+
+下面区分资格预判、扣费事务和提交后的处理。幂等保护针对扣费，不能把 UsageLog 的追加或 Redis 更新也看成同一事务中的原子动作。
+
+<div className="article-diagram" role="region" tabIndex="0" aria-label="Redis 预判与 PostgreSQL 幂等扣费的不同边界，可横向滚动">
+  <svg className="article-diagram-svg" viewBox="0 0 760 610" role="img" aria-labelledby="sub2api-billing-title" aria-describedby="sub2api-billing-description">
+    <title id="sub2api-billing-title">Redis 预判与 PostgreSQL 幂等扣费的不同边界</title>
+    <desc id="sub2api-billing-description">执行前 Redis 检查资格，实际请求结果形成成本后，以 request_id 和 api_key_id 抢占幂等键。首次结算在 PostgreSQL 事务中更新余额或订阅用量、Key 额度与账号统计；同键同指纹不重复扣费，同键不同指纹冲突。UsageLog 另行追加，缓存与通知在事务提交后更新。</desc>
+    <defs>
+      <marker id="sub2api-billing-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 Z" className="article-diagram-arrow"/>
+      </marker>
+    </defs>
+    <g className="article-diagram-node">
+      <rect x="395" y="120" width="341" height="330" rx="12"/>
+      <text x="409" y="144" className="article-diagram-detail">PostgreSQL 扣费事务</text>
+    </g>
+    <path d="M164 105 V170" className="article-diagram-edge" markerEnd="url(#sub2api-billing-arrow)"/>
+    <path d="M304 212 H420" className="article-diagram-edge" markerEnd="url(#sub2api-billing-arrow)"/>
+    <path d="M420 212 H360 V325 H304" className="article-diagram-edge" markerEnd="url(#sub2api-billing-arrow)"/>
+    <path d="M420 235 H380 V430 H304" className="article-diagram-edge" markerEnd="url(#sub2api-billing-arrow)"/>
+    <path d="M570 255 V340" className="article-diagram-edge" markerEnd="url(#sub2api-billing-arrow)"/>
+    <path d="M540 420 V480 H164 V510" className="article-diagram-edge" markerEnd="url(#sub2api-billing-arrow)"/>
+    <path d="M600 420 V500" className="article-diagram-edge" markerEnd="url(#sub2api-billing-arrow)"/>
+    <g className="article-diagram-node">
+      <rect x="24" y="20" width="280" height="85" rx="10"/>
+      <text x="164" y="39.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">执行前：Redis 资格预判</text>
+      <text x="164" y="62.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">余额、订阅、额度与 RPM</text>
+      <text x="164" y="85.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">不作为最终财务账本</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="24" y="170" width="280" height="85" rx="10"/>
+      <text x="164" y="189.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">执行后：用量任务</text>
+      <text x="164" y="212.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">实际 usage、价格与倍率</text>
+      <text x="164" y="235.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">计算本次成本</text>
+    </g>
+    <g className="article-diagram-main">
+      <rect x="420" y="170" width="300" height="85" rx="10"/>
+      <text x="570" y="189.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">幂等键与请求指纹</text>
+      <text x="570" y="212.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">(request_id, api_key_id)</text>
+      <text x="570" y="235.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">原子占用并核对指纹</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="24" y="290" width="280" height="70" rx="10"/>
+      <text x="164" y="313.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">相同键与相同指纹</text>
+      <text x="164" y="336.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">不重复扣费</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="24" y="395" width="280" height="70" rx="10"/>
+      <text x="164" y="418.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">相同键但不同指纹</text>
+      <text x="164" y="441.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">判为冲突</text>
+    </g>
+    <g className="article-diagram-control">
+      <rect x="420" y="340" width="300" height="80" rx="10"/>
+      <text x="570" y="357" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">更新账务状态</text>
+      <text x="570" y="380" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">用户余额或订阅用量</text>
+      <text x="570" y="403" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">Key 额度 / 窗口与账号统计</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="24" y="510" width="280" height="70" rx="10"/>
+      <text x="164" y="533.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">UsageLog</text>
+      <text x="164" y="556.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">另行追加请求事实与审计明细</text>
+    </g>
+    <g className="article-diagram-node">
+      <rect x="420" y="500" width="300" height="80" rx="10"/>
+      <text x="570" y="528.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-heading">缓存与通知</text>
+      <text x="570" y="551.5" dominantBaseline="central" textAnchor="middle" className="article-diagram-detail">更新 Redis 中的余额与额度</text>
+    </g>
+    <g>
+      <rect x="98.5" y="126" width="131" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="164" y="137" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">执行后取得实际用量</text>
+    </g>
+    <g>
+      <rect x="342" y="201" width="40" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="362" y="212" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">结算</text>
+    </g>
+    <g>
+      <rect x="315.5" y="314" width="79" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="355" y="325" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">同键同指纹</text>
+    </g>
+    <g>
+      <rect x="315.5" y="419" width="79" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="355" y="430" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">同键异指纹</text>
+    </g>
+    <g>
+      <rect x="537" y="289" width="66" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="570" y="300" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">首次占用</text>
+    </g>
+    <g>
+      <rect x="550.5" y="469" width="79" height="22" rx="4" className="article-diagram-labelBackground"/>
+      <text x="590" y="480" dominantBaseline="central" textAnchor="middle" className="article-diagram-label">事务提交后</text>
+    </g>
+  </svg>
+</div>
+
+外框仅圈定 PostgreSQL 扣费事务，UsageLog 和缓存通知位于框外。图展开首次结算的后续处理；同键同指纹不会重复扣费，并不据此断言审计日志也只有一条。账号统计仅针对需要本地统计额度的账号；本图未展开批量图片的余额预占流程。图可横向滚动。
 
 两类存储的职责可以压缩成下表：
 

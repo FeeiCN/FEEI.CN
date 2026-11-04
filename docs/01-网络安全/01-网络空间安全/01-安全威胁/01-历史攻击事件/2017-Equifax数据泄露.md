@@ -1,6 +1,7 @@
 ---
 slug: /equifax-breach
-title: Equifax遭入侵导致1.47亿用户数据泄露的安全分析
+title: 2017-Equifax遭入侵导致1.47亿用户数据泄露的安全分析
+sidebar_position: -2017
 description: Equifax 数据泄露事件按完整时间线还原：每个关键环节都附甲方安全教训，是最具参考价值的安全事件复盘之一。
 icon: history-circle-icon
 ---

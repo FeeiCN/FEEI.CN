@@ -1,0 +1,147 @@
+name: ChatGPT scheduled tasks
+
+on:
+  schedule:
+    - cron: "37 0 * * *"
+    - cron: "25 1 1 * *"
+    - cron: "0 1 * * 0"
+    - cron: "0 1 * * 1"
+    - cron: "0 1 * * 3"
+    - cron: "0 2 * * 1"
+    - cron: "0 2 * * 6"
+    - cron: "30 13 * * *"
+    - cron: "0 0,4,8,12 * * *"
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: "任务 ID，不填则按当前调度运行"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: chatgpt-scheduled-tasks-${{ github.event.schedule || github.event.inputs.task_id || 'manual' }}
+  cancel-in-progress: false
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      tasks: ${{ steps.select.outputs.tasks }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/chatgpt-tasks/tasks.json
+      - id: select
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_TASK_ID: ${{ github.event.inputs.task_id }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          data=json.load(open(".github/chatgpt-tasks/tasks.json", encoding="utf-8"))
+          manual=os.environ.get("INPUT_TASK_ID","").strip()
+          mapping={
+            "37 0 * * *":["6addbfb8e0448191b492ace706c26b34"],
+            "25 1 1 * *":["6acf58cd3a988191b090a6bf3ae94470"],
+            "0 1 * * 0":["6aeac5b9fd788191adc1cf248cc00a99","6a9cd5698b088191a96b111d0983ccd8"],
+            "0 1 * * 1":["6adde2ba4e0c81919120c35aca059a7e"],
+            "0 1 * * 3":["6adde2dd7eb081919990121c58761351"],
+            "0 2 * * 1":["6adde336d4a08191b944b363a451f27e"],
+            "0 2 * * 6":["6adde30134b88191ac9bb08769fbcca1"],
+            "30 13 * * *":["6a9cef0340ac81918785e0b6a09f264e"],
+            "0 0,4,8,12 * * *":["6abb4138d88c8191a1077c979a4d85d8"],
+          }
+          ids=[manual] if manual else mapping.get(os.environ.get("SCHEDULE",""),[])
+          known={x["id"] for x in data["tasks"]}
+          ids=[x for x in ids if x in known]
+          if not ids: raise SystemExit("没有匹配到任务")
+          print("tasks="+json.dumps(ids,separators=(",",":")))
+          PY
+
+  run:
+    needs: select
+    strategy:
+      fail-fast: false
+      matrix:
+        task_id: ${{ fromJSON(needs.select.outputs.tasks) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check credentials
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: test -n "$OPENAI_API_KEY"
+      - name: Prepare prompt
+        env:
+          TASK_ID: ${{ matrix.task_id }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          data=json.load(open(".github/chatgpt-tasks/tasks.json", encoding="utf-8"))
+          task=next(x for x in data["tasks"] if x["id"]==os.environ["TASK_ID"])
+          prompt=f"""你正在 GitHub Actions 中执行 FEEI.CN 的定时任务“{task['title']}”。
+
+原始任务提示词：
+<task_prompt>
+{task['prompt']}
+</task_prompt>
+
+本次运行会将完整结果发布到 GitHub Issue，供用户在 Issue 中继续修改、确认或拒绝。
+你可以读取仓库文件并进行公开网络检索。
+你不能使用 ChatGPT 连接器、Personal Context、ImageGen、手机设备或其他未提供给 GitHub Actions 的工具。
+你不能自行提交 GitHub 文件。需要外部数据或权限但无法访问时，明确说明缺口，不要编造。
+请直接输出本次任务的完整结果，不要输出运行日志、JSON 或寒暄。"""
+          Path("/tmp/prompt.md").write_text(prompt, encoding="utf-8")
+          Path("/tmp/task-title").write_text(task["title"], encoding="utf-8")
+      - name: Run task
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          responses-api-endpoint: ${{ secrets.OPENAI_BASE_URL }}/responses
+          prompt-file: /tmp/prompt.md
+          output-file: /tmp/result.md
+          sandbox: read-only
+          model: ${{ secrets.OPENAI_MODEL }}
+          effort: high
+      - name: Publish Issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK_ID: ${{ matrix.task_id }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          data=json.load(open(".github/chatgpt-tasks/tasks.json", encoding="utf-8"))
+          task=next(x for x in data["tasks"] if x["id"]==os.environ["TASK_ID"])
+          result=Path("/tmp/result.md").read_text(encoding="utf-8").strip()
+          body=f"""<!-- scheduled-task:id={task['id']} -->
+          <!-- scheduled-task:status=awaiting-review -->
+
+          # {task['title']}
+
+          - 任务 ID：{task['id']}
+          - 运行时间：{datetime.now(timezone.utc).isoformat()}
+
+          ## 本次结果
+
+          {result}
+
+          ## Issue 交互
+
+          - 修改结果：评论 `/revise 修改要求`
+          - 确认并允许按任务规则写入：评论 `/approve`
+          - 放弃本次结果：评论 `/reject`
+          """
+          Path("/tmp/issue.md").write_text(body, encoding="utf-8")
+          PY
+          gh label create scheduled-task --repo "$REPO" --color 1d76db --description "ChatGPT scheduled task" 2>/dev/null || true
+          gh label create scheduled-task:awaiting-review --repo "$REPO" --color fbca04 --description "Awaiting review" 2>/dev/null || true
+          gh issue create --repo "$REPO" --title "[定时任务] $(cat /tmp/task-title) · $(date '+%Y-%m-%d %H:%M')" --body-file /tmp/issue.md --label scheduled-task --label scheduled-task:awaiting-review

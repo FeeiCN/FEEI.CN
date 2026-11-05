@@ -1,8 +1,10 @@
-version: 4
-generated_at: 2026-11-05T11:57:00Z
+version: 5
+generated_at: 2026-11-05T12:10:00Z
 source: .github/chatgpt-tasks/tasks.json
+source_sha: c6a83055410fd6f995e2eb9dcc895942e3a6d72a
 repository: FeeiCN/FEEI.CN
 default_timezone: Asia/Shanghai
+inventory_note: observed 10 tasks in tasks.json; Issue #791 historically mentioned 31, remaining inventory requires separate verification
 
 execution_policy:
   default_migration: none
@@ -20,8 +22,13 @@ tasks:
     title: 安全事件研究复盘
     schedule: "WEEKLY MO 09:00"
     prompt_source: .github/chatgpt-tasks/tasks.json
+    workflow: .github/workflows/security-event-research.yml
     migration_status: dry_run
+    lifecycle_status: migrated_dry_run
     enabled: true
+    workflow_created: true
+    original_task_preserved: true
+    source_task_status: unknown
     execution_mode: read_only_research
     writes_repository: false
     creates_issue_result: true
@@ -33,78 +40,126 @@ tasks:
     title: 日记提示词同步检查
     schedule: "MONTHLY day1 09:00"
     prompt_source: .github/chatgpt-tasks/tasks.json
-    migration_status: synced_disabled
+    workflow: .github/workflows/diary-prompt-sync.yml
+    migration_status: pending_designation
+    lifecycle_status: mirrored_disabled
     enabled: false
-    execution_mode: not_migrated
+    workflow_created: true
+    original_task_preserved: true
+    source_task_status: unknown
+    execution_mode: gated_by_repository_variable
 
   - source_task_id: 6adde30134b88191ac9bb08769fbcca1
     id: knowledge-base-governance
     title: FEEI.CN 知识库治理
     schedule: "WEEKLY SA 10:00"
     prompt_source: .github/chatgpt-tasks/tasks.json
-    migration_status: synced_disabled
+    workflow: .github/workflows/knowledge-base-governance.yml
+    migration_status: pending_designation
+    lifecycle_status: mirrored_disabled
     enabled: false
-    execution_mode: not_migrated
+    workflow_created: true
+    original_task_preserved: true
+    source_task_status: unknown
+    execution_mode: gated_by_repository_variable
 
   - source_task_id: 6addbfb8e0448191b492ace706c26b34
     id: ai-security-frontier-research
     title: AI 安全前沿研究流水线
     schedule: "DAILY 08:00"
     prompt_source: .github/chatgpt-tasks/tasks.json
-    migration_status: synced_disabled
+    workflow: .github/workflows/ai-security-frontier-research.yml
+    migration_status: pending_designation
+    lifecycle_status: mirrored_disabled
     enabled: false
-    execution_mode: not_migrated
+    workflow_created: true
+    original_task_preserved: true
+    source_task_status: unknown
+    execution_mode: gated_by_repository_variable
 
   - source_task_id: 6adde2dd7eb081919990121c58761351
     id: ai-coding-rd-efficiency
     title: AI 编程与研发提效
     schedule: "WEEKLY TH 09:00"
     prompt_source: .github/chatgpt-tasks/tasks.json
-    migration_status: synced_disabled
+    workflow: .github/workflows/ai-coding-rd-efficiency.yml
+    migration_status: pending_designation
+    lifecycle_status: mirrored_disabled
     enabled: false
-    execution_mode: not_migrated
+    workflow_created: true
+    original_task_preserved: true
+    source_task_status: unknown
+    execution_mode: gated_by_repository_variable
 
-  - source_task_id: 6adde2ba4e0c81919120c35aca059a7e
+  - source_task_id: 6adde2ba4e0c8191a1077c979a4d85d8
     id: security-architecture-defense
     title: 安全架构与防御创新
     schedule: "WEEKLY TU 09:00"
     prompt_source: .github/chatgpt-tasks/tasks.json
-    migration_status: synced_disabled
+    workflow: .github/workflows/security-architecture-defense.yml
+    migration_status: pending_designation
+    lifecycle_status: mirrored_disabled
     enabled: false
-    execution_mode: not_migrated
+    workflow_created: true
+    original_task_preserved: true
+    source_task_status: unknown
+    execution_mode: gated_by_repository_variable
 
   - source_task_id: 6adde336d4a08191b944b363a451f27e
     id: personal-health-trend-research
     title: 个人健康趋势研究
     schedule: "WEEKLY MO 10:00"
     prompt_source: .github/chatgpt-tasks/tasks.json
-    migration_status: synced_disabled
+    workflow: .github/workflows/personal-health-trend-research.yml
+    migration_status: pending_designation
+    lifecycle_status: mirrored_disabled
     enabled: false
-    execution_mode: not_migrated
+    workflow_created: true
+    original_task_preserved: true
+    source_task_status: unknown
+    execution_mode: gated_by_repository_variable
+    sensitive_data: health
 
   - source_task_id: 6a9cd5698b088191a96b111d0983ccd8
     id: update-weight-wallpaper
     title: 更新体重壁纸
     schedule: "WEEKLY SU 09:00"
     prompt_source: .github/chatgpt-tasks/tasks.json
-    migration_status: synced_disabled
+    workflow: .github/workflows/update-weight-wallpaper.yml
+    migration_status: pending_designation
+    lifecycle_status: mirrored_disabled
     enabled: false
-    execution_mode: not_migrated
+    workflow_created: true
+    original_task_preserved: true
+    source_task_status: unknown
+    execution_mode: gated_by_repository_variable
+    sensitive_data: health
 
   - source_task_id: 6abb4138d88c8191a1077c979a4d85d8
     id: hk-ipo-alerts
     title: 港股热门新股提醒
     schedule: "DAILY 08:00,12:00,16:00,20:00"
     prompt_source: .github/chatgpt-tasks/tasks.json
-    migration_status: synced_disabled
+    workflow: .github/workflows/hk-ipo-alerts.yml
+    migration_status: pending_designation
+    lifecycle_status: mirrored_disabled
     enabled: false
-    execution_mode: not_migrated
+    workflow_created: true
+    original_task_preserved: true
+    source_task_status: unknown
+    execution_mode: gated_by_repository_variable
+    sensitive_data: financial_market_data
 
   - source_task_id: 6a9cef0340ac81918785e0b6a09f264e
     id: daily-personal-record
     title: 每日个人记录
     schedule: "DAILY 21:30"
     prompt_source: .github/chatgpt-tasks/tasks.json
-    migration_status: synced_disabled
+    workflow: .github/workflows/daily-personal-record.yml
+    migration_status: pending_designation
+    lifecycle_status: mirrored_disabled
     enabled: false
-    execution_mode: not_migrated
+    workflow_created: true
+    original_task_preserved: true
+    source_task_status: unknown
+    execution_mode: gated_by_repository_variable

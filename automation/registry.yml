@@ -48,6 +48,7 @@ tasks:
   delivery: issue
   variable: AUTOMATION_SECURITY_EVENT_RESEARCH
   cron: 0 1 * * 1
+  public_issue_result: true
 - source_task_id: 6acf58cd3a988191b090a6bf3ae94470
   id: diary-prompt-sync
   title: 日记提示词同步检查
@@ -67,6 +68,11 @@ tasks:
   delivery: issue
   variable: AUTOMATION_DIARY_PROMPT_SYNC
   cron: 0 1 1 * *
+  public_issue_result: true
+  required_secrets:
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL
+  - OPENAI_MODEL
 - source_task_id: 6adde30134b88191ac9bb08769fbcca1
   id: knowledge-base-governance
   title: FEEI.CN 知识库治理
@@ -86,6 +92,11 @@ tasks:
   delivery: issue
   variable: AUTOMATION_KNOWLEDGE_BASE_GOVERNANCE
   cron: 0 2 * * 6
+  public_issue_result: true
+  required_secrets:
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL
+  - OPENAI_MODEL
 - source_task_id: 6addbfb8e0448191b492ace706c26b34
   id: ai-security-frontier-research
   title: AI 安全前沿研究流水线
@@ -105,6 +116,11 @@ tasks:
   delivery: issue
   variable: AUTOMATION_AI_SECURITY_FRONTIER_RESEARCH
   cron: 0 0 * * *
+  public_issue_result: true
+  required_secrets:
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL
+  - OPENAI_MODEL
 - source_task_id: 6adde2dd7eb081919990121c58761351
   id: ai-coding-rd-efficiency
   title: AI 编程与研发提效
@@ -124,6 +140,11 @@ tasks:
   delivery: issue
   variable: AUTOMATION_AI_CODING_RD_EFFICIENCY
   cron: 0 1 * * 4
+  public_issue_result: true
+  required_secrets:
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL
+  - OPENAI_MODEL
 - source_task_id: 6adde2ba4e0c81919120c35aca059a7e
   id: security-architecture-defense
   title: 安全架构与防御创新
@@ -143,6 +164,11 @@ tasks:
   delivery: issue
   variable: AUTOMATION_SECURITY_ARCHITECTURE_DEFENSE
   cron: 0 1 * * 2
+  public_issue_result: true
+  required_secrets:
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL
+  - OPENAI_MODEL
 - source_task_id: 6adde336d4a08191b944b363a451f27e
   id: personal-health-trend-research
   title: 个人健康趋势研究
@@ -159,10 +185,16 @@ tasks:
   sensitive_data: health
   designation: explicit_user_confirmation_2026-11-05_all_tasks
   writes_repository: false
-  creates_issue_result: false
+  creates_issue_result: true
   delivery: private_issue
   variable: AUTOMATION_PERSONAL_HEALTH_TREND_RESEARCH
   cron: 0 2 * * 1
+  public_issue_result: false
+  required_secrets:
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL
+  - OPENAI_MODEL
+  - AUTOMATION_PRIVATE_TOKEN
 - source_task_id: 6a9cd5698b088191a96b111d0983ccd8
   id: update-weight-wallpaper
   title: 更新体重壁纸
@@ -179,10 +211,16 @@ tasks:
   sensitive_data: health
   designation: explicit_user_confirmation_2026-11-05_all_tasks
   writes_repository: false
-  creates_issue_result: false
+  creates_issue_result: true
   delivery: private_issue
   variable: AUTOMATION_UPDATE_WEIGHT_WALLPAPER
   cron: 0 1 * * 0
+  public_issue_result: false
+  required_secrets:
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL
+  - OPENAI_MODEL
+  - AUTOMATION_PRIVATE_TOKEN
 - source_task_id: 6abb4138d88c8191a1077c979a4d85d8
   id: hk-ipo-alerts
   title: 港股热门新股提醒
@@ -203,6 +241,11 @@ tasks:
   delivery: issue
   variable: AUTOMATION_HK_IPO_ALERTS
   cron: 0 0,4,8,12 * * *
+  public_issue_result: true
+  required_secrets:
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL
+  - OPENAI_MODEL
 - source_task_id: 6a9cef0340ac81918785e0b6a09f264e
   id: daily-personal-record
   title: 每日个人记录
@@ -218,7 +261,13 @@ tasks:
   execution_mode: review_before_publish
   designation: explicit_user_confirmation_2026-11-05_all_tasks
   writes_repository: false
-  creates_issue_result: false
+  creates_issue_result: true
   delivery: private_issue
   variable: AUTOMATION_DAILY_PERSONAL_RECORD
   cron: 30 13 * * *
+  public_issue_result: false
+  required_secrets:
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL
+  - OPENAI_MODEL
+  - AUTOMATION_PRIVATE_TOKEN

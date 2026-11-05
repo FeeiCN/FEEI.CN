@@ -84,6 +84,8 @@ def check():
             raise ValueError(f"{t['id']}: 调度时间不一致")
         if not t['enabled'] or t['writes_repository']:
             raise ValueError(f"{t['id']}: 启用状态或写入权限不正确")
+        if not t['creates_issue_result'] or t['public_issue_result'] != (t['delivery'] == 'issue'):
+            raise ValueError(f"{t['id']}: Issue 交付可见性不一致")
     print('通过：10 个任务、文档提示词、源 ID 与 workflow 消费链一致')
 
 
@@ -135,6 +137,41 @@ def collect_personal_data(t, out):
 
     with ThreadPoolExecutor(max_workers=6) as pool:
         records = list(pool.map(fetch, dates))
+    missing_months = sorted({r['date'][:7] for r in records if 'error' in r})
+    for month in missing_months:
+        url = f"https://feei.cn/static/data/health/{month.replace('-', '/')}.json"
+        try:
+            with urlopen(Request(url, headers={'User-Agent': 'FEEI-automation/1.0'}), timeout=30) as response:
+                raw = response.read(20_000_001)
+            if len(raw) > 20_000_000:
+                continue
+            if raw[:2] == b'\x1f\x8b':
+                raw = gzip.decompress(raw)
+            value = json.loads(raw)
+            if not isinstance(value.get('data', {}).get('healthMetrics', {}).get('metrics'), list):
+                continue  # Generated month caches are not an original measurement source.
+            local = folder / f'{month}-legacy.json'
+            local.write_bytes(raw)
+            records.append({'month': month, 'format': 'legacy_original', 'source': url,
+                            'local': str(local.relative_to(ROOT)), 'sha256': hashlib.sha256(raw).hexdigest()})
+        except (HTTPError, URLError, OSError, ValueError, AttributeError):
+            continue
+    if t['id'] == 'daily-personal-record':
+        for relative in [today.strftime('sleep-score/%Y/%m/%d.json'),
+                         f'reading/{today.year}.json', f'reading/weeks/{today.year}.json']:
+            url = 'https://feei.cn/data/' + relative
+            try:
+                with urlopen(url, timeout=30) as response:
+                    raw = response.read(10_000_001)
+                if len(raw) > 10_000_000:
+                    continue
+                value = json.loads(raw)
+                local = out / relative.replace('/', '-')
+                local.write_text(json.dumps(value, ensure_ascii=False))
+                records.append({'source': url, 'local': str(local.relative_to(ROOT)),
+                                'sha256': hashlib.sha256(raw).hexdigest()})
+            except (HTTPError, URLError, OSError, ValueError):
+                records.append({'source': url, 'error': 'network_or_json_error'})
     (out / 'personal-data-index.json').write_text(json.dumps(records, ensure_ascii=False, indent=2))
 
 

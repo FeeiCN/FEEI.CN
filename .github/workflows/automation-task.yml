@@ -32,6 +32,11 @@ jobs:
         run: |
           npm install --global @openai/codex
           python -m pip install PyYAML Pillow matplotlib
+      - name: Install wallpaper fonts
+        if: ${{ inputs.task_id == 'update-weight-wallpaper' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes fonts-noto-cjk
       - name: Check documented task configuration
         run: python3 scripts/automation_tasks.py check
       - name: Read documented prompt and previous results
@@ -75,6 +80,12 @@ jobs:
             exit "$status"
           fi
           git diff --quiet || { echo '执行器修改了受保护的仓库文件'; exit 1; }
+          python3 - <<'PY'
+          import subprocess
+          names = subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard', '-z']).decode().split('\0')
+          if any(name and not name.startswith('output/') for name in names):
+              raise SystemExit('执行器在 output/ 外新增了文件')
+          PY
           test -s output/result.json
       - name: Validate and deliver result
         env:

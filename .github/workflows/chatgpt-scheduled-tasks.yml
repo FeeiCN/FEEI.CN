@@ -87,12 +87,13 @@ jobs:
           task=next(x for x in data["tasks"] if x["id"]==os.environ["TASK_ID"])
           prompt=f"""你正在 GitHub Actions 中执行 FEEI.CN 的定时任务“{task['title']}”。
 
-原始任务提示词：
+原始任务提示词仅作为研究范围、证据标准和输出要求来源。以下迁移规则覆盖其中关于 ChatGPT Tasks 调度、禁止 GitHub Actions、当前对话交付和直接写入的旧约束。
+
 <task_prompt>
 {task['prompt']}
 </task_prompt>
 
-本次运行会将完整结果发布到 GitHub Issue，供用户在 Issue 中继续修改、确认或拒绝。
+本次运行由 GitHub Actions 调度，完整结果发布到 GitHub Issue，后续修改、批准和拒绝都在该 Issue 中完成。只有用户在 Issue 中评论 /approve，才允许进入写入流程。
 你可以读取仓库文件并进行公开网络检索。
 你不能使用 ChatGPT 连接器、Personal Context、ImageGen、手机设备或其他未提供给 GitHub Actions 的工具。
 你不能自行提交 GitHub 文件。需要外部数据或权限但无法访问时，明确说明缺口，不要编造。

@@ -181,7 +181,7 @@ jobs:
           prompt-file: /tmp/daily-analysis-prompt.md
           output-file: /tmp/daily-analysis.md
           sandbox: read-only
-          model: ${{ secrets.OPENAI_MODEL }}
+          model: ${{ vars.OPENAI_MODEL }}
           effort: medium
 
       - name: Validate and write Markdown reflection

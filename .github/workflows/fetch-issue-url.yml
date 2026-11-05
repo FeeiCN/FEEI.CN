@@ -182,7 +182,7 @@ jobs:
           URL: ${{ steps.classify.outputs.url }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: |
           python3 scripts/fetch_url_content.py "$URL" ${{ steps.creds.outputs.translate_flag }} > /tmp/result.json || true
           python3 - <<'PY'

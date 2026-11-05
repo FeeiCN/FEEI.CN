@@ -373,7 +373,7 @@ jobs:
           COMMAND_ACTOR: ${{ github.event.sender.login || github.actor }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: |
           BASE_SHA="$(git rev-parse origin/main)"
           echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"

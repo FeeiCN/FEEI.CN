@@ -1,0 +1,43 @@
+version: 1
+generated_at: 2026-11-05T05:42:00Z
+source: chatgpt_automations
+repository: FeeiCN/FEEI.CN
+default_timezone: Asia/Shanghai
+execution_policy:
+  issue_commands: [/run, /approve, /reject, /pause, /resume, /change, /status]
+  allowlist: repository_owner_and_maintainers
+  external_side_effects_require_approval: true
+  stop_existing_chatgpt_tasks_automatically: false
+  secrets_in_repository: false
+tasks:
+  - {id: 6a9cef0340ac81918785e0b6a09f264e, title: "每日个人记录", schedule: "DAILY 21:30", migration_status: needs_review}
+  - {id: 6abb4138d88c8191a1077c979a4d85d8, title: "港股热门新股提醒", schedule: "DAILY 08:00,12:00,16:00,20:00", migration_status: needs_credentials_and_market_data}
+  - {id: 6a9cd5698b088191a96b111d0983ccd8, title: "更新体重壁纸", schedule: "WEEKLY SU 09:00", migration_status: needs_github_and_image_pipeline}
+  - {id: 6adde336d4a08191b944b363a451f27e, title: "个人健康趋势研究", schedule: "WEEKLY MO 10:00", migration_status: needs_health_data_access}
+  - {id: 6adde2ba4e0c81919120c35aca059a7e, title: "安全架构与防御创新", schedule: "WEEKLY TU 09:00", migration_status: needs_research_executor}
+  - {id: 6adde2dd7eb081919990121c58761351, title: "AI 编程与研发提效", schedule: "WEEKLY TH 09:00", migration_status: needs_research_executor}
+  - {id: 6addbfb8e0448191b492ace706c26b34, title: "AI 安全前沿研究流水线", schedule: "DAILY 08:00", migration_status: needs_research_executor}
+  - {id: 6adde30134b88191ac9bb08769fbcca1, title: "FEEI.CN 知识库治理", schedule: "WEEKLY SA 10:00", migration_status: needs_github_write_approval}
+  - {id: 6acf58cd3a988191b090a6bf3ae94470, title: "日记提示词同步检查", schedule: "MONTHLY day1 09:00", migration_status: needs_review}
+  - {id: 6aeac5b9fd788191adc1cf248cc00a99, title: "安全事件研究复盘", schedule: "WEEKLY MO 09:00", migration_status: needs_research_executor}
+  - {id: 6acf5623283881918451c296bb270bd1, title: "日记数据辅助试运行复盘", schedule: "ONCE 2026-10-19 19:00", migration_status: completed_or_expired}
+  - {id: 6a9a8822af748191b4608aad4c50ca79, title: "AI 安全研究周报", schedule: "WEEKLY FR 09:00", migration_status: needs_research_executor}
+  - {id: 6a99f74b4990819182663d84d7e21c4b, title: "AI 科技每日简报", schedule: "DAILY 09:00", migration_status: needs_web_search}
+  - {id: 6a9cdc57fe14819190ebe412e9a45bc7, title: "港美A股每日简报", schedule: "DAILY 09:00", migration_status: needs_market_data}
+  - {id: 6a9a5d3133c4819185307b727c6edc41, title: "智谱期权异常监控", schedule: "WEEKDAYS 10:00-16:00 hourly", migration_status: needs_market_data}
+  - {id: 6a9d650330748191820f6bec0d5e73f2, title: "检查维生素D", schedule: "ONCE 2026-09-09 15:00", migration_status: completed_or_expired}
+  - {id: 6a9ce0358d3481919b1bd43fd568e520, title: "每日个人记录", schedule: "DAILY 21:30", migration_status: duplicate_or_legacy}
+  - {id: 6a9cdf618dd08191b2f6862c6a21ab1a, title: "每日个人记录", schedule: "DAILY 21:30", migration_status: duplicate_or_legacy}
+  - {id: 6a9cdfe49ae8819187a26acacc25afe6, title: "每日感恩与反思", schedule: "DAILY 21:30", migration_status: duplicate_or_legacy}
+  - {id: 69b58bcf8a6481919181f9c5fbf538d2, title: "Send daily news briefing", schedule: "DAILY 08:00", migration_status: needs_web_search}
+  - {id: 69b5f77339c481919df39f185c3d1672, title: "Monitor AI policy changes", schedule: "EVERY 6 HOURS", migration_status: needs_web_search}
+  - {id: 69b58e5072748191a59a63f5bc2f5000, title: "Monitor major AI or cybersecurity incidents", schedule: "HOURLY", migration_status: needs_web_search}
+  - {id: 69b64328f5688191b944d6ab2fc06634, title: "Monitor US premarket major news", schedule: "EVERY 30 MINUTES", migration_status: needs_market_data}
+  - {id: 69b58d6720b88191b77a464409d51766, title: "Monitor Trump Truth Social posts", schedule: "EVERY 15 MINUTES", migration_status: needs_web_search}
+  - {id: 69b5f76e30408191b528fbece0cdad1b, title: "Monitor market volatility", schedule: "EVERY 30 MINUTES", migration_status: needs_market_data}
+  - {id: 69b58deeb4d0819188b52611661427a0, title: "Monitor AI ecosystem news", schedule: "EVERY 30 MINUTES", migration_status: needs_web_search}
+  - {id: 69b74b01082081918e272fea968e7a41, title: "Monitor feei.cn new posts", schedule: "EVERY 15 MINUTES", migration_status: needs_web_or_rss}
+  - {id: 69b5f769d9748191aec87fe0a5a39edf, title: "Monitor AI research breakthroughs", schedule: "EVERY 6 HOURS", migration_status: needs_web_search}
+  - {id: 69b58e5508208191917a6667b5cc32f8, title: "Discover new AI tools and agents", schedule: "DAILY 12:00", migration_status: needs_web_search}
+  - {id: 69b58e4cad5881919fb00433e666d777, title: "Monitor major AI model releases", schedule: "HOURLY", migration_status: needs_web_search}
+  - {id: 69b5f7647f588191be4145544800a1da, title: "Monitor AI startup funding", schedule: "EVERY 6 HOURS", migration_status: needs_web_search}

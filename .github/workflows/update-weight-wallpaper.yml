@@ -19,4 +19,51 @@ jobs:
     uses: ./.github/workflows/automation-task.yml
     with:
       task_id: update-weight-wallpaper
+      prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/定时任务/更新体重壁纸任务提示词.md
+      delivery: issue
     secrets: inherit
+
+  publish:
+    needs: run
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: feei.cn
+    permissions:
+      contents: write
+      issues: write
+    env:
+      TASK_ID: update-weight-wallpaper
+      TASK_PROMPT_SOURCE: ${{ needs.run.outputs.prompt_source }}
+      TASK_DELIVERY: issue
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: feei.cn
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install delivery dependencies
+        run: python -m pip install PyYAML Pillow
+      - name: Install GitHub CLI with image attachment support
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh_dir="$RUNNER_TEMP/automation-gh"
+          mkdir -p "$gh_dir"
+          gh release download v2.103.3 --repo cli/cli \
+            --pattern gh_2.103.3_linux_amd64.tar.gz \
+            --pattern gh_2.103.3_checksums.txt --dir "$gh_dir"
+          cd "$gh_dir"
+          sha256sum --check --ignore-missing gh_2.103.3_checksums.txt
+          tar -xzf gh_2.103.3_linux_amd64.tar.gz
+          echo "$gh_dir/gh_2.103.3_linux_amd64/bin" >> "$GITHUB_PATH"
+      - uses: actions/download-artifact@v4
+        with:
+          name: wallpaper-delivery-${{ github.run_id }}
+          path: feei.cn/output
+      - name: Validate and publish wallpaper
+        run: python3 scripts/automation_tasks.py deliver --task "$TASK_ID"

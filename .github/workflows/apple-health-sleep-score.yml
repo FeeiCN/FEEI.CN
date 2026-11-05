@@ -1,4 +1,4 @@
-name: Apple Health sleep score
+name: 苹果健康睡眠评分采集
 
 # 每天北京时间 09:00 在 Mac mini self-hosted runner 上运行。
 # GitHub Actions cron 使用 UTC，北京时间 09:00 = UTC 01:00。
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   capture:
-    name: Capture Apple Health sleep score
+    name: 采集苹果健康睡眠评分
     runs-on: [self-hosted, macnimi]
     timeout-minutes: 30
     env:

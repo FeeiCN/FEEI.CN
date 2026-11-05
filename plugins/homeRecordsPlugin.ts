@@ -60,7 +60,8 @@ export default function homeRecordsPlugin(context: LoadContext): Plugin {
       const entries = docs
         .filter((doc) => {
           const badge = doc.frontMatter.sidebar_badge;
-          return !(badge && typeof badge === 'object' && 'text' in badge && badge.text === 'SKILL')
+          return !doc.source.startsWith('@site/docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/')
+            && !(badge && typeof badge === 'object' && 'text' in badge && badge.text === 'SKILL')
             && typeof doc.frontMatter.published_at === 'string';
         })
         .map((doc) => ({

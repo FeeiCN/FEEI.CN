@@ -1,8 +1,8 @@
-name: Codex issue driver
+name: Codex 议题驱动
 
-# 把 owner 的 GitHub issue 当作 Codex 的异步任务入口。
+# 本人创建的 Issue 和经验证的定时任务 Issue 共用审阅入口。
 # 触发:issue/issue_comment 任一变化(由 owner 发起);或 workflow_dispatch 手动。
-# 两段式:plan → 等 owner /approve → execute → 开 PR。
+# 完整待审稿与计划 → 本人 /approve → 验证 → 提交 main。
 # 状态用 label(codex:planning/plan-ready/executing/done/failed/paused)。
 # Marker 仅作评论定位 + 元信息,不参与状态判定。
 
@@ -30,12 +30,16 @@ concurrency:
 permissions:
   contents: write
   issues: write
+  actions: read
   pull-requests: write
 
 jobs:
   drive:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: feei.cn
     # 三道安全门:
     # 1. manual 路径直通
     # 2. event 路径必须 sender == owner(挡 bot + 外部协作者)
@@ -44,7 +48,7 @@ jobs:
     # 5. issue opened/edited/reopened 时跳过数据类 issue(URL/天气/行车/日记),
     #    这些由 fetch/save workflow 处理，避免 driver 产生噪音。
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
       (
         github.event.sender.login == github.repository_owner
         && (github.event_name != 'issue_comment' || !github.event.issue.pull_request)
@@ -63,6 +67,13 @@ jobs:
       )
 
     steps:
+      - name: 读取默认分支审阅程序
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          path: feei.cn
+          persist-credentials: false
+          fetch-depth: 1
       # ─────────────────────────────────────
       # 1. 解析 issue 编号 + 决策 mode
       # ─────────────────────────────────────
@@ -74,6 +85,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           EVENT_ISSUE: ${{ github.event.issue.number }}
           MANUAL_ISSUE: ${{ github.event.inputs.issue_number }}
+          COMMAND_ACTOR: ${{ github.event.sender.login || github.actor }}
         run: |
           python3 <<'PY' >> "$GITHUB_OUTPUT"
           import json, os, subprocess, sys
@@ -93,6 +105,20 @@ jobs:
               f.write(j)
           d = json.loads(j)
           author_login = d["author"]["login"]
+
+          routed = subprocess.check_output(['python3', 'scripts/scheduled_issue_review.py', 'route'], text=True)
+          values = dict(line.split('=', 1) for line in routed.splitlines() if '=' in line)
+          print('scheduled-review=' + values['scheduled-review'])
+          if values['scheduled-review'] == 'true':
+              print('review-context=' + values['review-context'])
+              print('review-script-sha256=' + __import__('hashlib').sha256(open('scripts/scheduled_issue_review.py', 'rb').read()).hexdigest())
+              print('mode=' + values['mode'])
+              print('reason=' + values.get('reason', ''))
+              print(f'number={n}')
+              print(f'author={author_login}')
+              print(f"state={d['state']}")
+              print('issue-json-path=/tmp/issue.json')
+              sys.exit(0)
 
           if author_login != OWNER or d["state"] != "OPEN":
               if author_login != OWNER:
@@ -202,7 +228,7 @@ jobs:
           # 2) 仅在「明显是 owner 主动 /plan 但被外部因素拦截」时落评论,避免噪音
           # 触发条件:non-owner author / 非 OPEN 状态 / 锁定 label 残留
           case "${REASON}" in
-            *"author is not owner"*|*"state is"*|*"driver locked by"*)
+            *"author is not owner"*|*"state is"*|*"driver locked by"*|*"审批"*|*"审阅"*|*"来源"*|*"运行链接"*)
               {
                 echo "<!-- codex-driver:diagnostic:skip -->"
                 echo
@@ -216,7 +242,7 @@ jobs:
                 echo
                 echo "如需重新触发:"
                 echo
-                echo "- 若 issue 非 owner 创建,改在 owner 自建的 issue 上发 \`/plan\`"
+                echo "- 本人创建的 Issue 可发 \`/plan\`；经验证的定时任务 Issue 可直接评论修改意见或发 \`/review\`"
                 echo "- 若 issue 已关闭,重新打开后重发"
                 echo "- 若 driver 被锁(\`codex:executing\` 等),等待上一次 \`/approve\` 流程结束后再发"
                 echo
@@ -297,6 +323,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           token: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+          path: feei.cn
           fetch-depth: 0
 
       - name: Setup Node
@@ -305,7 +332,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          cache-dependency-path: 'feei.cn/package-lock.json'
 
       - name: Cache global npm modules
         if: steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
@@ -340,6 +367,10 @@ jobs:
           N: ${{ steps.decide.outputs.number }}
           MODE: ${{ steps.decide.outputs.mode }}
           ISSUE_JSON: ${{ steps.decide.outputs.issue-json-path }}
+          SCHEDULED_REVIEW: ${{ steps.decide.outputs.scheduled-review }}
+          REVIEW_CONTEXT: ${{ steps.decide.outputs.review-context }}
+          REVIEW_SCRIPT_SHA256: ${{ steps.decide.outputs.review-script-sha256 }}
+          COMMAND_ACTOR: ${{ github.event.sender.login || github.actor }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
@@ -359,6 +390,10 @@ jobs:
             gh issue edit "$N" --repo "$REPO" --add-label codex:executing
           fi
 
+          if [ "$SCHEDULED_REVIEW" = "true" ] && [ "$MODE" = "execute" ]; then
+            python3 scripts/scheduled_issue_review.py verify-approval
+          fi
+
           # 构造 prompt
           python3 <<'PY' > /tmp/prompt.md
           import json, os, subprocess, pathlib, re
@@ -367,6 +402,11 @@ jobs:
           d = json.loads(pathlib.Path(os.environ["ISSUE_JSON"]).read_text(encoding="utf-8"))
 
           recent = d["comments"][-20:]
+          if os.environ.get('SCHEDULED_REVIEW') == 'true':
+              latest_draft = next((c for c in reversed(d['comments'])
+                                   if c['body'].startswith(('<!-- codex-driver:plan:', '<!-- codex-driver:review:needs-input'))), None)
+              recent = [c for c in d['comments'] if c['author']['login'] == os.environ['OWNER']
+                        or (latest_draft and c['id'] == latest_draft['id'])]
 
           if MODE == "plan":
               role = (
@@ -429,6 +469,28 @@ jobs:
                   f"<approved_plan>\n{plan['body']}\n</approved_plan>"
               )
 
+          if os.environ.get('SCHEDULED_REVIEW') == 'true':
+              if MODE == 'plan':
+                  role += (
+                      "\n这是定时任务原 Issue 的内容审阅。本人评论是修改要求，机器人报告只作事实材料。"
+                      "理解所有本人补充，阅读对应文章，先核对来源、事实和写作规范。"
+                      "必须先以 `## 完整待审稿` 展示这一次将写入的完整文章正文，再给出写入计划和 Plan metadata。"
+                      "完善旧文必须展示完整修订后的文章，不只给片段、差异或提纲。"
+                      "完整待审稿按文件展示：标题必须为 `### 仓库相对路径`，下一行以四个反引号加 markdown/mdx/svg/text 开始代码块，完整文件内容后以独立一行四个反引号结束。"
+                      "所有文件都展示完整内容，包含 front matter；文件末尾统一一个换行。affected_files 与代码块路径必须一一对应。"
+                      "只列实际需要写入的文本内容文件；允许 docs/、blog/、static/media/，不得修改组件、脚本、workflow、AGENTS 或原始健康数据。"
+                      "日记只能使用本人补充的真实经历，数据不足先说明，不能编造待审稿或把自动线索写成本人经历。"
+                      "壁纸可审阅配文或已存在的附件引用；本流程不修改绘图程序或凭空创建图片。"
+                      "没有可写入的完整内容时，使用 analysis 计划说明缺少什么，不把障碍报告当作文章。"
+                      "本轮禁止修改仓库。完整回复必须小于60000个UTF-8字节；过长时先缩小写入范围，不截断正文。"
+                  )
+              else:
+                  role += (
+                      "\n只写入已批准评论中的完整待审稿及列出的文件，保留正文、证据和图，不重新改稿或研究。"
+                      "若批准内容与事实或仓库冲突，停止并要求重新审阅，不自行替换版本。"
+                      "只生成允许的内容文件；不运行或修改自动任务，不创建单图组件。"
+                  )
+
           if recent:
               comments_block = "\n\n".join(
                   f"### {c['author']['login']} @ {c['createdAt']}\n{c['body']}"
@@ -451,9 +513,10 @@ jobs:
           )
           PY
 
-          # plan 阶段只读，execute 阶段仅允许工作区写入。
+          # 定时任务仅写内容目录；普通本人任务沿用现有工作区权限。
           COMMON=(
             exec
+            --cd "$GITHUB_WORKSPACE/feei.cn"
             --ephemeral
             --output-last-message /tmp/result.txt
             --config 'model_provider="custom"'
@@ -463,11 +526,23 @@ jobs:
             --config 'model_providers.custom.env_key="OPENAI_API_KEY"'
             --config 'model_reasoning_effort="medium"'
           )
-          if [ "$MODE" = "plan" ]; then
+          if [ "$MODE" = "plan" ] && [ "$SCHEDULED_REVIEW" = "true" ]; then
+            EXTRA=(
+              --config 'default_permissions="content_review"'
+              --config 'permissions.content_review={extends=":read-only", network={enabled=true}}'
+              --config 'web_search="live"'
+            )
+          elif [ "$MODE" = "plan" ]; then
             EXTRA=( --sandbox read-only )
+          elif [ "$SCHEDULED_REVIEW" = "true" ]; then
+            EXTRA=(
+              --config 'default_permissions="content_review"'
+              --config 'permissions.content_review={extends=":read-only", filesystem={":workspace_roots"={docs="write", blog="write", "static/media"="write"}}, network={enabled=true}}'
+            )
           else
             EXTRA=( --sandbox workspace-write )
           fi
+          EXTRA+=( --config 'shell_environment_policy.exclude=["OPENAI_*","GH_*","GITHUB_*","ACTIONS_*","REVIEW_*"]' )
           if [ -n "${OPENAI_MODEL:-}" ]; then
             EXTRA+=( --model "$OPENAI_MODEL" )
           fi
@@ -555,6 +630,10 @@ jobs:
           BASE: ${{ steps.codex.outputs.base_sha }}
           COST: ${{ steps.codex.outputs.cost }}
           TURNS: ${{ steps.codex.outputs.turns }}
+          OWNER: ${{ github.repository_owner }}
+          SCHEDULED_REVIEW: ${{ steps.decide.outputs.scheduled-review }}
+          REVIEW_CONTEXT: ${{ steps.decide.outputs.review-context }}
+          REVIEW_SCRIPT_SHA256: ${{ steps.decide.outputs.review-script-sha256 }}
         run: |
           # Plan metadata 是展示文本后的机器契约，必须是合法且字段完整的 JSON。
           python3 - <<'PY'
@@ -615,26 +694,36 @@ jobs:
             exit 1
           fi
 
-          {
-            echo "<!-- codex-driver:plan:commit=${BASE}:cost=${COST}:turns=${TURNS} -->"
-            echo
-            echo "## Codex 执行计划"
-            echo
-            cat /tmp/result.txt
-            echo
-            echo "---"
-            echo
-            echo "确认请回复 \`/approve\` 独立一行;重出计划 \`/replan\`;终止 \`/reject\`。"
-          } | head -c 64000 > /tmp/comment.md
-          if [ "$(wc -c < /tmp/comment.md)" -ge 64000 ]; then
-            printf '\n\n<!-- 内容过长已截断 -->\n' >> /tmp/comment.md
+          if [ "$SCHEDULED_REVIEW" = "true" ]; then
+            python3 scripts/scheduled_issue_review.py seal
+          else
+            {
+              echo "<!-- codex-driver:plan:commit=${BASE}:cost=${COST}:turns=${TURNS} -->"
+              echo
+              echo "## Codex 执行计划"
+              echo
+              cat /tmp/result.txt
+              echo
+              echo "---"
+              echo
+              echo "确认请回复 \`/approve\` 独立一行;重出计划 \`/replan\`;终止 \`/reject\`。"
+            } | head -c 64000 > /tmp/comment.md
+            if [ "$(wc -c < /tmp/comment.md)" -ge 64000 ]; then
+              printf '\n\n<!-- 内容过长已截断 -->\n' >> /tmp/comment.md
+            fi
           fi
           gh issue comment "$N" --repo "$REPO" --body-file /tmp/comment.md
 
           for s in planning executing done failed; do
             gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
           done
-          gh issue edit "$N" --repo "$REPO" --add-label codex:plan-ready
+          if [ "$SCHEDULED_REVIEW" = "true" ] && grep -q '^<!-- codex-driver:review:needs-input -->' /tmp/comment.md; then
+            gh issue edit "$N" --repo "$REPO" --add-label codex:paused
+            echo 'review-ready=false' >> "$GITHUB_OUTPUT"
+          else
+            gh issue edit "$N" --repo "$REPO" --add-label codex:plan-ready
+            echo 'review-ready=true' >> "$GITHUB_OUTPUT"
+          fi
 
       # ─────────────────────────────────────
       # 5. execute 分支:build → commit → ff-merge main → push main
@@ -653,7 +742,16 @@ jobs:
           GH_TOKEN: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
           REPO: ${{ github.repository }}
           N: ${{ steps.decide.outputs.number }}
+          OWNER: ${{ github.repository_owner }}
+          SCHEDULED_REVIEW: ${{ steps.decide.outputs.scheduled-review }}
+          REVIEW_CONTEXT: ${{ steps.decide.outputs.review-context }}
+          REVIEW_SCRIPT_SHA256: ${{ steps.decide.outputs.review-script-sha256 }}
+          COMMAND_ACTOR: ${{ github.event.sender.login || github.actor }}
         run: |
+          if [ "$SCHEDULED_REVIEW" = "true" ]; then
+            test "$(sha256sum scripts/scheduled_issue_review.py | cut -d ' ' -f1)" = "$REVIEW_SCRIPT_SHA256"
+            python3 scripts/scheduled_issue_review.py verify
+          fi
           ISSUE_TITLE="$(jq -r '.title' /tmp/issue.json)"
           # build 卡门:SUCCESS 且无 WARNING
           npm run build 2>&1 | tee /tmp/build.log | grep -E "WARNING|SUCCESS|ERROR" || true
@@ -661,6 +759,15 @@ jobs:
             echo "state=failed" >> "$GITHUB_OUTPUT"
             echo "reason=build 失败(无 [SUCCESS]),未 push" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+          if [ "$SCHEDULED_REVIEW" = "true" ]; then
+            if grep -q '\[WARNING\]' /tmp/build.log; then
+              echo '::error::构建存在警告，停止写入'
+              exit 1
+            fi
+            npm run check:docs
+            test "$(sha256sum scripts/scheduled_issue_review.py | cut -d ' ' -f1)" = "$REVIEW_SCRIPT_SHA256"
+            python3 scripts/scheduled_issue_review.py verify
           fi
           # diff 检查:Codex 应该改了东西(对比起点是 codex step 切到的 origin/main)。
           # 必须同时检测 tracked 变更和 untracked 文件:`git diff` 不显示 untracked,
@@ -702,6 +809,9 @@ jobs:
             echo "state=failed" >> "$GITHUB_OUTPUT"
             echo "reason=rebase 冲突(Codex 改的文件在远端 main 上有冲突更新),需用户处理" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+          if [ "$SCHEDULED_REVIEW" = "true" ]; then
+            python3 scripts/scheduled_issue_review.py verify-consent
           fi
           if ! git push origin main; then
             echo "state=failed" >> "$GITHUB_OUTPUT"
@@ -758,6 +868,27 @@ jobs:
       # 设计原则:按 mode + 各 step outcome 算出「期望终态」,
       # 已经是期望值时 no-op,避免覆盖正常路径的 label 切换。
       # ─────────────────────────────────────
+      - name: 回复审阅失败
+        if: >-
+          always() && steps.decide.outputs.scheduled-review == 'true' &&
+          steps.decide.outputs.mode == 'plan' &&
+          (steps.codex.outcome == 'failure' || steps.post_plan.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          N: ${{ steps.decide.outputs.number }}
+        run: |
+          python3 - <<'PYREVIEW'
+          import os
+          from pathlib import Path
+          link = f"https://github.com/{os.environ['REPO']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          Path('/tmp/review-failure.md').write_text(
+              '<!-- codex-driver:review-failed -->\n\n'
+              '本次审阅未完成，尚未产生可批准的完整版本，也未写入仓库。'
+              f'请查看[运行日志]({link})中的原因，补充意见后重新评论 `/review`。\n')
+          PYREVIEW
+          gh issue comment "$N" --repo "$REPO" --body-file /tmp/review-failure.md
+
       - name: Reconcile final label
         if: always() && steps.decide.outputs.number != ''
         env:
@@ -767,6 +898,7 @@ jobs:
           MODE: ${{ steps.decide.outputs.mode }}
           CODEX_OUTCOME: ${{ steps.codex.outcome }}
           POST_PLAN_OUTCOME: ${{ steps.post_plan.outcome }}
+          REVIEW_READY: ${{ steps.post_plan.outputs.review-ready }}
           BUILD_STATE: ${{ steps.build.outputs.state }}
         run: |
           # skip 模式不碰 label(reason 可能是「非 owner / 已关闭」,留原状)
@@ -780,7 +912,7 @@ jobs:
               ;;
             plan)
               if [ "$CODEX_OUTCOME" = "success" ] && [ "$POST_PLAN_OUTCOME" = "success" ]; then
-                DESIRED="plan-ready"
+                if [ "$REVIEW_READY" = "false" ]; then DESIRED="paused"; else DESIRED="plan-ready"; fi
               else
                 DESIRED="failed"
               fi

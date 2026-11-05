@@ -1,4 +1,4 @@
-name: Daily data analysis
+name: 每日数据分析
 
 # 已暂停定时执行；保留 workflow_dispatch 供手动触发。
 
@@ -157,7 +157,7 @@ jobs:
           import os
           from pathlib import Path
 
-          rules = Path("docs/05-吴飞飞/01-关于/关于FEEI.CN/每日三省吾身.md").read_text(encoding="utf-8")
+          rules = Path("docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/每日三省吾身.md").read_text(encoding="utf-8")
           context = Path("/tmp/daily-analysis-context.json").read_text(encoding="utf-8")
           print(
               "# 每日三省吾身规则\n\n"

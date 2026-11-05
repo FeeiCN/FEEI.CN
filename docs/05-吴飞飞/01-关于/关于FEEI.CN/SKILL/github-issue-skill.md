@@ -3,9 +3,6 @@ slug: /github-issue-skill
 title: GitHub Issue 沉淀
 icon: code-icon
 description: 把 GitHub Issue 中的观点整理为站内文档的工作流：判断归属、补足逻辑、融入上下文、附 issue 编号。
-sidebar_badge:
-  text: SKILL
-  color: success
 ---
 
 把 GitHub Issue 中的观点沉淀到站内文档的流程。
@@ -33,7 +30,7 @@ sidebar_badge:
 
 ## 边界
 
-- **默认只处理用户本人创建的 issue**。若 issue 由其他人创建，应先向用户确认是否需要处理。
+- **默认只处理用户本人创建的 issue**。经验证的本仓库定时任务机器人 Issue 是例外：用户已授权在原 Issue 中审阅，由本人评论修改意见并明确批准具体版本后写入，操作见[自动任务与提示词](../定时任务/自动任务与提示词.md)。其他人创建的 Issue 仍须先向用户确认是否需要处理。
 - 不要简单把 issue 原文追加到文档中。要先理解其核心观点、适用边界和与现有内容的关系，再整理成更清晰、连贯、可沉淀的表达。
 - 用户已授权：能拿准的 issue 可以直接融合处理，不需要每个都先问；拿不准时必须先问，不要硬猜。
 - 已经判断为需要用户确认的 issue，在用户确认前不要修改文档、留言或关闭 issue。

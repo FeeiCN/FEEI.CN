@@ -25,16 +25,16 @@
 
 | 任务类型 | 读取 |
 |---|---|
-| 仓库结构、构建命令、提交规范、静态资源 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/仓库结构.md` |
-| UI 组件与交互效果、Chakra UI、TypeScript、命名、front matter | `docs/05-吴飞飞/01-关于/关于FEEI.CN/网站开发规范.md` |
-| Docusaurus、sidebars、入口页 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/docusaurus配置.md` |
-| 通用文档写作、证据与审校 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/我的写作原则.md` |
-| 散文、游记 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/散文写作.md` |
-| GitHub Issue 内容沉淀 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/github-issue-skill.md` |
-| 每日健康、阅读、财务、AI 数据分析 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/每日三省吾身.md` |
-| 健康数据导出、日记录结构、历史迁移、存储与缓存 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/健康数据存储规范.md` |
-| 音乐库维护 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/音乐库管理.md` |
-| 创建、移动、删除 SKILL | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL原则.md` |
+| 仓库结构、构建命令、提交规范、静态资源 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/仓库结构.md` |
+| UI 组件与交互效果、Chakra UI、TypeScript、命名、front matter | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/网站开发规范.md` |
+| Docusaurus、sidebars、入口页 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/docusaurus配置.md` |
+| 通用文档写作、证据与审校 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/我的写作原则.md` |
+| 散文、游记 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/散文写作.md` |
+| GitHub Issue 内容沉淀 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/github-issue-skill.md` |
+| 每日健康、阅读、财务、AI 数据分析 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/每日三省吾身.md` |
+| 健康数据导出、日记录结构、历史迁移、存储与缓存 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/健康数据存储规范.md` |
+| 音乐库维护 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/音乐库管理.md` |
+| 创建、移动、删除 SKILL | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/SKILL原则.md` |
 
 读取专项规则后，只把其中适用于当前任务的部分作为约束，不要把普通文章中的观点泛化为全仓库规则。
 
@@ -55,7 +55,7 @@
 ## 提交、验证与权限
 
 - 用户已明确要求：后续不使用独立分支。获准写入的内容直接提交 `main`，不再新建或续写研究/草稿分支，也不以创建 PR 作为默认交付环节；已有分支仅按需要只读核查，不擅自删除或整批合并其内容。
-- 研究文章仍须先在对话交付完整正文，用户明确确认具体版本写入后才提交；“不使用独立分支”不等于自动发布授权。直接写 `main` 前核对最新文件与必要验证，保留审批、并发保护和权限边界；遇到权限或验证阻塞如实报告，不以另建分支规避。
+- 研究文章仍须先在对话或已授权的公开 Issue 交付完整待审正文，用户明确确认具体版本写入网站后才提交；“不使用独立分支”不等于自动发布授权。直接写 `main` 前核对最新文件与必要验证，保留审批、并发保护和权限边界；遇到权限或验证阻塞如实报告，不以另建分支规避。
 - 用户明确要求 `commit push` 时，完成必要验证后直接执行；不预先进行无关的 stash、pull/rebase 或恢复流程。
 - `git push` 因 non-fast-forward 失败时，再执行 `git pull --rebase origin main` 并重试。
 - 修改文档后优先运行 `npm run check:docs`。

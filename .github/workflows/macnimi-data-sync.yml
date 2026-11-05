@@ -1,4 +1,4 @@
-name: Macnimi data sync
+name: Mac mini 数据同步
 
 # 使用本机 self-hosted runner（label: macnimi）替代原 crontab：
 # - 北京时间每天 06:00 更新账户资产数据（UTC 22:00）
@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   sync:
-    name: Sync data
+    name: 同步数据
     runs-on: [self-hosted, macnimi]
     timeout-minutes: 150
     env:

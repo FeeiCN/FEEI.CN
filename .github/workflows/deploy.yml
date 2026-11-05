@@ -1,9 +1,9 @@
-name: Deploy website
+name: 网站部署
 
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ['Save daily diary issue', 'Codex issue driver', 'Fetch issue content', 'Sync security engineering', 'Daily data analysis']
+    workflows: ['日记议题归档', 'Codex 议题驱动', '议题内容抓取与行车记录', '安全工程内容同步', '每日数据分析']
     types: [completed]
     branches: [main]
   push:

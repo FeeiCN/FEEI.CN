@@ -6,6 +6,17 @@ on:
       task_id:
         required: true
         type: string
+      prompt_source:
+        required: true
+        type: string
+      delivery:
+        required: true
+        type: string
+
+    outputs:
+      prompt_source:
+        description: Task prompt document
+        value: ${{ jobs.execute.outputs.prompt_source }}
 
 permissions:
   contents: read
@@ -15,40 +26,58 @@ jobs:
   execute:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: feei.cn
+    outputs:
+      prompt_source: ${{ inputs.prompt_source }}
     env:
       TASK_ID: ${{ inputs.task_id }}
-      AUTOMATION_PRIVATE_REPOSITORY: ${{ vars.AUTOMATION_PRIVATE_REPOSITORY }}
+      TASK_PROMPT_SOURCE: ${{ inputs.prompt_source }}
+      TASK_DELIVERY: ${{ inputs.delivery }}
       AUTOMATION_PERMISSION_CONFIG: '{extends=":read-only", filesystem={":workspace_roots"={output="write"}}, network={enabled=true}}'
     steps:
       - uses: actions/checkout@v4
         with:
+          path: feei.cn
           persist-credentials: false
           fetch-depth: 100
       - uses: actions/setup-node@v4
+        if: ${{ inputs.task_id != 'diary-prompt-sync' }}
         with:
           node-version: '22'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install task dependencies
+        run: python -m pip install PyYAML Pillow
       - name: Install executor
+        if: ${{ inputs.task_id != 'diary-prompt-sync' }}
         run: |
           npm install --global @openai/codex
           codex --version
-          python -m pip install PyYAML Pillow matplotlib
+
       - name: Install wallpaper fonts
         if: ${{ inputs.task_id == 'update-weight-wallpaper' }}
         run: |
+          python -m pip install matplotlib
           sudo apt-get update
           sudo apt-get install --yes fonts-noto-cjk
       - name: Check documented task configuration
+        if: ${{ inputs.task_id != 'diary-prompt-sync' }}
         run: python3 scripts/automation_tasks.py check
       - name: Verify research network and repository protection
+        if: ${{ inputs.task_id != 'diary-prompt-sync' }}
         run: python3 scripts/check_automation_permissions.py
       - name: Read documented prompt and previous results
         env:
-          GH_TOKEN: ${{ secrets.AUTOMATION_PRIVATE_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: python3 scripts/automation_tasks.py prepare --task "$TASK_ID"
+      - name: Verify prompt synchronization without a model
+        if: ${{ inputs.task_id == 'diary-prompt-sync' }}
+        run: python3 scripts/automation_tasks.py verify-sync --task "$TASK_ID"
       - name: Execute task
+        if: ${{ inputs.task_id != 'diary-prompt-sync' }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
@@ -56,11 +85,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$PWD" = "$GITHUB_WORKSPACE/feei.cn"
+          test "$(git rev-parse --show-toplevel)" = "$PWD"
           test -n "$OPENAI_API_KEY"
           test -n "$OPENAI_BASE_URL"
           test -n "$OPENAI_MODEL"
           set +e
-          codex exec --ephemeral \
+          codex exec --cd "$GITHUB_WORKSPACE/feei.cn" --ephemeral \
             --config 'default_permissions="automation"' \
             --config "permissions.automation=$AUTOMATION_PERMISSION_CONFIG" \
             --model "$OPENAI_MODEL" \
@@ -92,17 +123,33 @@ jobs:
               raise SystemExit('执行器在 output/ 外新增了文件')
           PY
           test -s output/result.json
+      - name: Render wallpaper with fixed template
+        if: ${{ inputs.task_id == 'update-weight-wallpaper' }}
+        run: python3 scripts/automation_tasks.py render-wallpaper --task "$TASK_ID"
       - name: Validate and deliver result
+        if: ${{ inputs.task_id != 'update-weight-wallpaper' }}
         env:
-          GH_TOKEN: ${{ secrets.AUTOMATION_PRIVATE_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: python3 scripts/automation_tasks.py deliver --task "$TASK_ID"
       - name: Save public research result
-        if: ${{ always() && !contains(fromJSON('["personal-health-trend-research","update-weight-wallpaper","daily-personal-record"]'), inputs.task_id) }}
+        if: ${{ always() && inputs.task_id != 'update-weight-wallpaper' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.task_id }}-${{ github.run_id }}
           path: |
-            output/report.md
-            output/metadata.json
+            feei.cn/output/report.md
+            feei.cn/output/metadata.json
           if-no-files-found: ignore
+          retention-days: 30
+      - name: Transfer wallpaper to publisher
+        if: ${{ inputs.task_id == 'update-weight-wallpaper' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallpaper-delivery-${{ github.run_id }}
+          path: |
+            feei.cn/output/result.json
+            feei.cn/output/metadata.json
+            feei.cn/output/wallpaper.png
+            feei.cn/output/wallpaper.svg
+          if-no-files-found: error
           retention-days: 30

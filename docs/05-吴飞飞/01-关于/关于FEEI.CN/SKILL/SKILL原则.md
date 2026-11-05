@@ -3,9 +3,6 @@ slug: /skill-principles
 title: SKILL 原则
 icon: code-icon
 description: 创建与维护 SKILL 文档的规范：统一位置、必要字段、AGENTS.md 路由登记和可执行的写作语气。
-sidebar_badge:
-  text: SKILL
-  color: success
 ---
 
 创建与维护 SKILL 文档的元规则。本身也是 SKILL 文档，是 bootstrap 例外。
@@ -66,9 +63,9 @@ SKILL 文档应该沉淀“做事方式”，而不是堆积案例原文。好�
 
 ## 位置
 
-所有 SKILL 文档统一放在 `docs/05-吴飞飞/01-关于/关于FEEI.CN/` 子目录下。
+所有 SKILL 文档统一放在 `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/` 目录下。
 
-理由：本仓库是 FEEI.CN 站点本身，所有针对仓库的工作规则（写作、配置、提交、工作流、元规则）都是关于这个仓库/站点的元信息，集中在 `关于FEEI.CN/` 下与目录语义一致。
+理由：本仓库是 FEEI.CN 站点本身，所有针对仓库的工作规则（写作、配置、提交、工作流、元规则）都是关于这个仓库/站点的元信息，集中在「网站幕后」的 `SKILL/` 子目录中，与 `定时任务/` 分开组织。
 
 ## front matter 必填字段
 
@@ -80,14 +77,11 @@ slug: /xxx-skill           # 英文路径
 title: ...                 # 中文标题
 icon: code-icon            # 开发配置规则使用 code-icon，其他主题按网站开发规范选择
 description: ...           # 必填，≤160 字
-sidebar_badge:
-  text: SKILL
-  color: success
 ---
 ```
 
 - `icon` 按 `网站开发规范` 的主题约定选择；开发配置规则使用 `code-icon`，写作规则可使用 `pen-icon` 或 `book-icon`，数据复盘规则可使用 `gauge-icon`
-- `sidebar_badge` 一律 `{ text: 'SKILL', color: success }`，让 SKILL 文档在 sidebar 中可识别
+- 侧栏通过 `SKILL/` 目录分组识别规则文档，不再为每篇规则重复添加 `SKILL` 徽标
 - 文件名用中文，`slug` 用英文短路径
 - `description` 必填，概括文档覆盖的规则或主题
 

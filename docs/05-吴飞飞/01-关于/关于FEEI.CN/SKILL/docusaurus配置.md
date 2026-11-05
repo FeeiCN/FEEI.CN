@@ -3,9 +3,6 @@ slug: /docusaurus-config
 title: Docusaurus 配置
 icon: code-icon
 description: 入口页放在目录内部、sidebars 自动生成、缓存异常时运行 npm run clear。
-sidebar_badge:
-  text: SKILL
-  color: success
 ---
 
 Docusaurus 配置相关规则。
@@ -35,7 +32,7 @@ Docusaurus 配置相关规则。
 
 `homeRecordsPlugin` 从公开文档生成 `/rss.xml`，收录填写 `published_at` 的 `article`、`tutorial`、`review`、`essay`，排除草稿、未列出页面及 SKILL。按首次发布日期倒序保留最近 100 篇，条目标识使用稳定原文地址；正文修改不会重复产生新条目。无效或未来日期不收录，未来日期不会自动发布，需在日期到达后重新构建部署。
 
-推送 `main` 的文档变更会触发网站构建与部署，RSS 随构建更新。自动内容工作流成功结束后通过 `workflow_run` 触发部署，避免 `GITHUB_TOKEN` 推送不触发其他工作流的问题；也可手动运行 Deploy website。阅读器按自身抓取周期发现新文章，不保证即时通知。工作流配置需先合入默认分支才生效。
+推送 `main` 的文档变更会触发网站构建与部署，RSS 随构建更新。自动内容工作流成功结束后通过 `workflow_run` 触发部署，避免 `GITHUB_TOKEN` 推送不触发其他工作流的问题；也可手动运行“网站部署”。阅读器按自身抓取周期发现新文章，不保证即时通知。工作流配置需先合入默认分支才生效。
 
 ## 近期更新与更新时间
 

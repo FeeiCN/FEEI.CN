@@ -20,11 +20,12 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKSTAGE = Path('docs/05-吴飞飞/01-关于/关于FEEI.CN')
-COMMON = BACKSTAGE / '自动任务执行约定.md'
+COMMON = BACKSTAGE / '定时任务/自动任务执行约定.md'
 START = '<!-- automation-prompt:start -->'
 END = '<!-- automation-prompt:end -->'
 RESEARCH = {'security-event-research', 'ai-security-frontier-research',
             'ai-coding-rd-efficiency', 'security-architecture-defense', 'hk-ipo-alerts'}
+PERSONAL = {'personal-health-trend-research', 'update-weight-wallpaper', 'daily-personal-record'}
 SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'properties': {
@@ -42,7 +43,23 @@ def gh(*args):
 
 
 def tasks():
-    return yaml.safe_load((ROOT / 'automation/registry.yml').read_text())['tasks']
+    entries = []
+    for path in sorted((ROOT / '.github/workflows').glob('*.yml')):
+        workflow = yaml.safe_load(path.read_text())
+        for job in workflow.get('jobs', {}).values():
+            if job.get('uses') != './.github/workflows/automation-task.yml':
+                continue
+            inputs = job.get('with', {})
+            trigger = workflow.get('on', workflow.get(True, {}))
+            entries.append({
+                'id': inputs.get('task_id'), 'title': workflow.get('name'),
+                'prompt_source': inputs.get('prompt_source'),
+                'delivery': inputs.get('delivery'),
+                'schedule': [item['cron'] for item in trigger.get('schedule', [])],
+                'workflow': str(path.relative_to(ROOT)), 'condition': job.get('if', ''),
+                'manual': 'workflow_dispatch' in trigger,
+            })
+    return entries
 
 
 def prompt(path):
@@ -60,45 +77,32 @@ def prompt(path):
 
 def check():
     entries = tasks()
-    manifest = json.loads((ROOT / '.github/chatgpt-tasks/tasks.json').read_text())['tasks']
-    if len(entries) != 10 or len({t['id'] for t in entries}) != 10:
-        raise ValueError('必须有十个唯一任务')
+    if not entries or len({t['id'] for t in entries}) != len(entries):
+        raise ValueError('任务 ID 为空或重复')
     prompt(COMMON)
     for t in entries:
-        mirrors = [m for m in manifest if m['task_id'] == t['id']]
-        if len(mirrors) != 1:
-            raise ValueError(f"{t['id']}: 清单不唯一")
-        mirror = mirrors[0]
-        if ('prompt' in mirror or mirror['id'] != t['source_task_id']
-                or mirror['prompt_source'] != t['prompt_source']):
-            raise ValueError(f"{t['id']}: 提示词源或原任务 ID 不一致")
-        prompt(t['prompt_source'])
-        workflow = yaml.safe_load((ROOT / t['workflow']).read_text())
-        trigger = workflow.get('on', workflow.get(True))
-        job = workflow['jobs']['run']
-        if (job['with']['task_id'] != t['id']
-                or t['variable'] not in job['if']
-                or job['uses'] != './.github/workflows/automation-task.yml'):
-            raise ValueError(f"{t['id']}: workflow 消费链不一致")
-        if trigger['schedule'][0]['cron'] != t['cron']:
-            raise ValueError(f"{t['id']}: 调度时间不一致")
-        if not t['enabled'] or t['writes_repository']:
-            raise ValueError(f"{t['id']}: 启用状态或写入权限不正确")
-        if not t['creates_issue_result'] or t['public_issue_result'] != (t['delivery'] == 'issue'):
-            raise ValueError(f"{t['id']}: Issue 交付可见性不一致")
-    print('通过：10 个任务、文档提示词、源 ID 与 workflow 消费链一致')
+        if not isinstance(t['id'], str) or not re.fullmatch(r'[a-z][a-z0-9-]*', t['id']):
+            raise ValueError('任务 ID 格式无效')
+        if not isinstance(t['prompt_source'], str) or not t['prompt_source']:
+            raise ValueError(f"{t['id']}: 缺少提示词路径")
+        try:
+            prompt(t['prompt_source'])
+        except (ValueError, OSError) as error:
+            raise ValueError(f"{t['workflow']}: {t['prompt_source']}: {error}") from error
+        variable = 'AUTOMATION_' + t['id'].upper().replace('-', '_')
+        if t['condition'] != "${{ vars." + variable + " == 'true' }}":
+            raise ValueError(f"{t['id']}: 缺少对应的启用开关")
+        if not t['schedule'] or not t['manual']:
+            raise ValueError(f"{t['id']}: 缺少定时或手动触发入口")
+        if t['delivery'] != 'issue':
+            raise ValueError(f"{t['id']}: 无效的交付类型")
+    print(f'通过：{len(entries)} 个 workflow 的任务配置、文档提示词与启用开关有效')
 
 
 def destination(t):
-    repo = os.environ['GITHUB_REPOSITORY']
-    if t['delivery'] == 'private_issue':
-        repo = os.environ.get('AUTOMATION_PRIVATE_REPOSITORY', '')
-        if not re.fullmatch(r'[\w.-]+/[\w.-]+', repo):
-            raise ValueError('私人任务缺少 AUTOMATION_PRIVATE_REPOSITORY，停止读取私人数据')
-        info = json.loads(gh('api', f'repos/{repo}'))
-        if not info.get('private'):
-            raise ValueError('私人交付目标必须是私有仓库')
-    return repo
+    if t['delivery'] != 'issue':
+        raise ValueError('任务仅支持当前仓库 Issue 交付')
+    return os.environ['GITHUB_REPOSITORY']
 
 
 def collect_personal_data(t, out):
@@ -194,6 +198,8 @@ def prepare(t, out):
     context = {
         'time_utc': datetime.now(timezone.utc).isoformat(),
         'timezone': 'Asia/Shanghai',
+        'repository_root': str(ROOT),
+        'schedule_timezone': 'UTC',
         'task_id': t['id'], 'schedule': t['schedule'],
         'history': [{'url': i['html_url'], 'title': i['title'], 'updated_at': i['updated_at']}
                     for i in previous],
@@ -202,7 +208,7 @@ def prepare(t, out):
     }
     context['repository_activity'] = subprocess.check_output(
         ['git', 'log', '-25', '--format=%h %aI %s'], cwd=ROOT, text=True)
-    if t['delivery'] == 'private_issue':
+    if t['id'] in PERSONAL:
         context['personal_data_index'] = 'output/personal-data-index.json'
     (out / 'context.md').write_text(json.dumps(context, ensure_ascii=False, indent=2))
     (out / 'history.json').write_text(json.dumps(previous, ensure_ascii=False))
@@ -216,9 +222,11 @@ def prepare(t, out):
         'run_url': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
         'delivery_repository': repo, 'prepared_at': context['time_utc'],
         'history_scope': history_scope, 'history_count': len(previous),
+        'report_fingerprints': [digest for issue in previous for digest in
+                                re.findall(r'<!-- report-sha256:([a-f0-9]{64}) -->', issue.get('body') or '')],
     }
     (out / 'metadata.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2))
-    if t['delivery'] == 'private_issue':
+    if t['id'] in PERSONAL:
         collect_personal_data(t, out)
     print(f"{t['id']}: 文档提示词已读取，历史结果 {len(previous)} 条")
 
@@ -253,8 +261,8 @@ def validate_result(t, result, out):
         files.append(target)
     if t['id'] == 'update-weight-wallpaper' and status == 'completed':
         from PIL import Image
-        image = out / 'wallpaper.png'
-        if image not in files or out / 'wallpaper.svg' not in files:
+        image = (out / 'wallpaper.png').resolve()
+        if image not in files or (out / 'wallpaper.svg').resolve() not in files:
             raise ValueError('壁纸交付必须包含 PNG 和 SVG')
         with Image.open(image) as img:
             if img.size != (1320, 2868):
@@ -273,25 +281,36 @@ def deliver(t, out):
     marker = f"<!-- automation-task:{t['id']} -->"
     digest = hashlib.sha256(report.encode()).hexdigest()
     fingerprint = f'<!-- report-sha256:{digest} -->'
-    history = json.loads((out / 'history.json').read_text())
-    duplicated = any(fingerprint in (i.get('body') or '') for i in history)
+    duplicated = digest in meta.get('report_fingerprints', [])
     body = (f"{marker}\n{fingerprint}\n<!-- status:{status} -->\n\n{report}\n\n---\n"
             f"运行：[Actions]({meta['run_url']}) · 提示词 `{meta['prompt_sha256'][:12]}` · "
             f"commit `{meta['commit'][:8]}`\n")
+    body += ('\n\n审阅与写入：本人可直接评论修改意见，或发送 `/review`、`/revise`；'
+             '助手会展示完整修订稿和目标文件。确认后单独评论 `/approve` 写入 main；'
+             '正文或意见变化后须重新审阅。`/reject` 暂停。\n')
     if len(body.encode('utf-8')) > 65000:
         raise ValueError('结果超过 Issue 正文限制，需整理完整交付方式后重试')
     (out / 'report.md').write_text(body)
     if status != 'no_update' and not duplicated:
-        if t['delivery'] == 'private_issue' and result['artifacts']:
+        attachments = []
+        if t['id'] == 'update-weight-wallpaper' and status == 'completed':
+            if '--attach' not in gh('issue', 'create', '--help'):
+                raise ValueError('壁纸正文预览需要支持 --attach 的 GitHub CLI（2.99.0 或更新版本）')
+            image = str(out / 'wallpaper.png')
+            body += f'\n![体重趋势壁纸]({image})\n'
+            attachments = ['--attach', image]
+        if t['id'] == 'update-weight-wallpaper' and result['artifacts']:
             tag = f"automation-{t['id']}-{os.environ['GITHUB_RUN_ID']}"
             files = [str(ROOT / name) for name in result['artifacts']]
             release = gh('release', 'create', tag, *files, '--repo', repo,
-                         '--title', f"{t['title']} · {tag}", '--notes-file', str(out / 'report.md')).strip()
-            body += f'\n交付附件：[私人版本]({release})\n'
+                         '--title', f"{t['title']} · {tag}", '--latest=false',
+                         '--notes-file', str(out / 'report.md')).strip()
+            body += f'\n交付附件：[PNG、SVG 原文件与历史版本]({release})\n'
             (out / 'report.md').write_text(body)
         date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
         url = gh('issue', 'create', '--repo', repo, '--title',
-                 f"[自动任务][{status}] {t['title']} · {date}", '--body-file', str(out / 'report.md')).strip()
+                 f"[自动任务][{status}] {t['title']} · {date}", '--body-file', str(out / 'report.md'),
+                 *attachments).strip()
         meta['issue_url'] = url
     meta['status'] = status
     meta['duplicate'] = duplicated
@@ -305,9 +324,40 @@ def deliver(t, out):
         raise ValueError('任务受阻，已记录到指定审阅渠道；不能标为成功')
 
 
+def verify_sync(t, out):
+    if t['id'] != 'diary-prompt-sync':
+        raise ValueError('同步检查仅供 diary-prompt-sync 使用')
+    try:
+        check()
+        status, report = 'no_update', '所有任务 workflow 与文档提示词一致，无需修改。'
+    except (ValueError, OSError, KeyError, yaml.YAMLError) as error:
+        status, report = 'blocked', (
+            f'任务配置与提示词同步检查失败：\n\n{error}\n\n'
+            '请修复上述任务的 workflow 输入、启用条件或对应文档标记，'
+            '再在仓库根目录运行 `python3 scripts/automation_tasks.py check`；本轮没有自动修改文件。')
+    (out / 'result.json').write_text(json.dumps({
+        'status': status, 'report_markdown': report, 'sources': [], 'artifacts': [],
+    }, ensure_ascii=False))
+
+
+def render_wallpaper(t, out):
+    if t['id'] != 'update-weight-wallpaper':
+        raise ValueError('固定壁纸渲染仅供 update-weight-wallpaper 使用')
+    result = json.loads((out / 'result.json').read_text())
+    if result['status'] != 'completed':
+        return
+    from render_weight_wallpaper import normalize, render
+    data = json.loads((out / 'wallpaper-data.json').read_text())
+    normalize(data, datetime.now(ZoneInfo('Asia/Shanghai')).date())
+    render(data, out)
+    result['artifacts'] = ['output/wallpaper.png', 'output/wallpaper.svg']
+    validate_result(t, result, out)
+    (out / 'result.json').write_text(json.dumps(result, ensure_ascii=False))
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['check', 'prepare', 'deliver'])
+    parser.add_argument('command', choices=['check', 'prepare', 'deliver', 'verify-sync', 'render-wallpaper'])
     parser.add_argument('--task')
     args = parser.parse_args()
     os.chdir(ROOT)
@@ -315,10 +365,14 @@ def main():
         check()
         return
     t = next((t for t in tasks() if t['id'] == args.task), None)
-    if t is None or not t['enabled']:
-        raise ValueError('任务不存在或尚未启用')
+    if t is None:
+        raise ValueError('任务不存在')
+    for key, env in [('prompt_source', 'TASK_PROMPT_SOURCE'), ('delivery', 'TASK_DELIVERY')]:
+        if os.environ.get(env) != t[key]:
+            raise ValueError(f'执行参数 {env} 与任务 workflow 不一致')
     out = ROOT / 'output'
-    {'prepare': prepare, 'deliver': deliver}[args.command](t, out)
+    {'prepare': prepare, 'deliver': deliver, 'verify-sync': verify_sync,
+     'render-wallpaper': render_wallpaper}[args.command](t, out)
 
 
 if __name__ == '__main__':

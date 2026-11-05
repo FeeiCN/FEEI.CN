@@ -1,4 +1,4 @@
-name: Renew iOS WebDriverAgent
+name: 苹果设备自动化签名续期
 
 # Personal Team 的真机 provisioning profile 有效期为七天。
 # 每六小时检查一次；到期后立即重签并验证新有效期。
@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   renew:
-    name: Check and renew WDA
+    name: 检查并续期设备自动化签名
     runs-on: [self-hosted, macnimi]
     timeout-minutes: 20
     env:

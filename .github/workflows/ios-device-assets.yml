@@ -1,4 +1,4 @@
-name: iOS device assets
+name: 苹果健康导出服务维护
 
 # 每天北京时间 12:00 在 Mac mini self-hosted runner 上运行。
 # GitHub Actions cron 使用 UTC，北京时间 12:00 = UTC 04:00。
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   capture:
-    name: Capture iOS assets
+    name: 维护苹果健康导出服务
     runs-on: [self-hosted, macnimi]
     timeout-minutes: 60
     env:

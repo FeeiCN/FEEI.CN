@@ -1,0 +1,48 @@
+name: automation-dispatcher
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: Optional task id to run
+        required: false
+        type: string
+      dry_run:
+        description: Do not execute side effects
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    - cron: '*/15 * * * *'
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: automation-dispatcher
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate registry
+        run: |
+          test -f automation/registry.yml
+          grep -q '^version:' automation/registry.yml
+          grep -q '^tasks:' automation/registry.yml
+      - name: Dry-run notice
+        if: github.event_name == 'schedule'
+        run: |
+          echo 'Dispatcher is installed in dry-run mode.'
+          echo 'Task execution adapters and credentials must be added per migration_status.'
+      - name: Manual task notice
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Requested task: \${{ inputs.task_id }}"
+          echo "Dry run: \${{ inputs.dry_run }}"
+          echo 'No external side effect is executed by this bootstrap workflow.'

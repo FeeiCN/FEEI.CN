@@ -122,6 +122,17 @@ class ScheduledReviewTests(unittest.TestCase):
         self.assertEqual(context['files'], [FILE])
         self.assertEqual(context['file_hashes'][FILE], hashlib.sha256((BODY + '\n').encode()).hexdigest())
 
+    def test_blank_line_between_filename_and_fence_preserves_approved_content(self):
+        body = BODY + '\n\n```mermaid\nflowchart LR\n A --> B\n```'
+        text = TEXT.replace(BODY, body).replace('### ' + FILE + '\n', '### ' + FILE + '\n\n')
+        issue = fixture()
+        sealed = review.seal(issue, OWNER, text, 'abc123')
+        issue['comments'].extend([
+            comment('plan', review.BOT, sealed, '2026-11-05T01:01:00Z'),
+            comment('approval', OWNER, '/approve', '2026-11-05T01:02:00Z')])
+        issue['labels'] = [{'name': 'codex:plan-ready'}]
+        self.assertEqual(decide(issue)['file_hashes'][FILE], hashlib.sha256((body + '\n').encode()).hexdigest())
+
     def test_plan_edited_after_approval_requires_fresh_confirmation(self):
         issue = ready()
         issue['comments'][1]['updatedAt'] = '2026-11-05T01:03:00Z'

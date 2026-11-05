@@ -90,7 +90,7 @@ def metadata(text, write=True):
 
 
 def draft_files(text, paths):
-    blocks = re.findall(r'^### ([^\n]+)\n````(?:markdown|md|mdx|svg|text)\n([\s\S]*?)\n````[ \t]*$', text, re.M)
+    blocks = re.findall(r'^### ([^\n]+?)[ \t]*\n(?:[ \t]*\n)*````(?:markdown|md|mdx|svg|text)\n([\s\S]*?)\n````[ \t]*$', text, re.M)
     if len(blocks) != len(paths) or {name for name, _ in blocks} != set(paths):
         raise ValueError('完整待审稿必须逐文件展示四反引号代码块，与 affected_files 一一对应')
     return {name: hashlib.sha256((body + '\n').encode()).hexdigest() for name, body in blocks}

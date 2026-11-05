@@ -1,11 +1,13 @@
-version: 3
-generated_at: 2026-11-05T11:36:00Z
-source: explicit_issue_designation
+version: 4
+generated_at: 2026-11-05T11:57:00Z
+source: .github/chatgpt-tasks/tasks.json
 repository: FeeiCN/FEEI.CN
 default_timezone: Asia/Shanghai
 
 execution_policy:
   default_migration: none
+  prompts_synced: true
+  only_explicitly_enabled_tasks_execute: true
   issue_commands: [/designate, /run, /approve, /reject, /pause, /resume, /change, /status]
   allowlist: repository_owner_and_maintainers
   external_side_effects_require_approval: true
@@ -13,14 +15,96 @@ execution_policy:
   secrets_in_repository: false
 
 tasks:
-  - id: security-event-research
+  - source_task_id: 6aeac5b9fd788191adc1cf248cc00a99
+    id: security-event-research
     title: 安全事件研究复盘
-    schedule: WEEKLY MO 09:00
-    designation: explicit_user_confirmation_2026-11-05
-    source_issue: 791
+    schedule: "WEEKLY MO 09:00"
+    prompt_source: .github/chatgpt-tasks/tasks.json
     migration_status: dry_run
+    enabled: true
     execution_mode: read_only_research
     writes_repository: false
     creates_issue_result: true
     external_side_effects: issue_result_only_authorized_2026-11-05
     required_secrets: [OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL]
+
+  - source_task_id: 6acf58cd3a988191b090a6bf3ae94470
+    id: diary-prompt-sync
+    title: 日记提示词同步检查
+    schedule: "MONTHLY day1 09:00"
+    prompt_source: .github/chatgpt-tasks/tasks.json
+    migration_status: synced_disabled
+    enabled: false
+    execution_mode: not_migrated
+
+  - source_task_id: 6adde30134b88191ac9bb08769fbcca1
+    id: knowledge-base-governance
+    title: FEEI.CN 知识库治理
+    schedule: "WEEKLY SA 10:00"
+    prompt_source: .github/chatgpt-tasks/tasks.json
+    migration_status: synced_disabled
+    enabled: false
+    execution_mode: not_migrated
+
+  - source_task_id: 6addbfb8e0448191b492ace706c26b34
+    id: ai-security-frontier-research
+    title: AI 安全前沿研究流水线
+    schedule: "DAILY 08:00"
+    prompt_source: .github/chatgpt-tasks/tasks.json
+    migration_status: synced_disabled
+    enabled: false
+    execution_mode: not_migrated
+
+  - source_task_id: 6adde2dd7eb081919990121c58761351
+    id: ai-coding-rd-efficiency
+    title: AI 编程与研发提效
+    schedule: "WEEKLY TH 09:00"
+    prompt_source: .github/chatgpt-tasks/tasks.json
+    migration_status: synced_disabled
+    enabled: false
+    execution_mode: not_migrated
+
+  - source_task_id: 6adde2ba4e0c81919120c35aca059a7e
+    id: security-architecture-defense
+    title: 安全架构与防御创新
+    schedule: "WEEKLY TU 09:00"
+    prompt_source: .github/chatgpt-tasks/tasks.json
+    migration_status: synced_disabled
+    enabled: false
+    execution_mode: not_migrated
+
+  - source_task_id: 6adde336d4a08191b944b363a451f27e
+    id: personal-health-trend-research
+    title: 个人健康趋势研究
+    schedule: "WEEKLY MO 10:00"
+    prompt_source: .github/chatgpt-tasks/tasks.json
+    migration_status: synced_disabled
+    enabled: false
+    execution_mode: not_migrated
+
+  - source_task_id: 6a9cd5698b088191a96b111d0983ccd8
+    id: update-weight-wallpaper
+    title: 更新体重壁纸
+    schedule: "WEEKLY SU 09:00"
+    prompt_source: .github/chatgpt-tasks/tasks.json
+    migration_status: synced_disabled
+    enabled: false
+    execution_mode: not_migrated
+
+  - source_task_id: 6abb4138d88c8191a1077c979a4d85d8
+    id: hk-ipo-alerts
+    title: 港股热门新股提醒
+    schedule: "DAILY 08:00,12:00,16:00,20:00"
+    prompt_source: .github/chatgpt-tasks/tasks.json
+    migration_status: synced_disabled
+    enabled: false
+    execution_mode: not_migrated
+
+  - source_task_id: 6a9cef0340ac81918785e0b6a09f264e
+    id: daily-personal-record
+    title: 每日个人记录
+    schedule: "DAILY 21:30"
+    prompt_source: .github/chatgpt-tasks/tasks.json
+    migration_status: synced_disabled
+    enabled: false
+    execution_mode: not_migrated

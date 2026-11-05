@@ -32,7 +32,7 @@ tasks:
   prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/安全事件研究复盘任务提示词.md
   workflow: .github/workflows/security-event-research.yml
   migration_status: enabled
-  lifecycle_status: enabled_pending_verification
+  lifecycle_status: verified
   enabled: true
   workflow_created: true
   original_task_preserved: true
@@ -49,6 +49,11 @@ tasks:
   variable: AUTOMATION_SECURITY_EVENT_RESEARCH
   cron: 0 1 * * 1
   public_issue_result: true
+  verification:
+    run_url: https://github.com/FeeiCN/FEEI.CN/actions/runs/42032064777
+    conclusion: success
+    result_status: completed
+    result_url: https://github.com/FeeiCN/FEEI.CN/issues/800
 - source_task_id: 6acf58cd3a988191b090a6bf3ae94470
   id: diary-prompt-sync
   title: 日记提示词同步检查
@@ -56,7 +61,7 @@ tasks:
   prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/日记提示词同步检查任务提示词.md
   workflow: .github/workflows/diary-prompt-sync.yml
   migration_status: enabled
-  lifecycle_status: enabled_pending_verification
+  lifecycle_status: verified
   enabled: true
   workflow_created: true
   original_task_preserved: true
@@ -73,6 +78,10 @@ tasks:
   - OPENAI_API_KEY
   - OPENAI_BASE_URL
   - OPENAI_MODEL
+  verification:
+    run_url: https://github.com/FeeiCN/FEEI.CN/actions/runs/42032257866
+    conclusion: success
+    result_status: no_update
 - source_task_id: 6adde30134b88191ac9bb08769fbcca1
   id: knowledge-base-governance
   title: FEEI.CN 知识库治理
@@ -80,7 +89,7 @@ tasks:
   prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN 知识库治理任务提示词.md
   workflow: .github/workflows/knowledge-base-governance.yml
   migration_status: enabled
-  lifecycle_status: enabled_pending_verification
+  lifecycle_status: verified
   enabled: true
   workflow_created: true
   original_task_preserved: true
@@ -97,6 +106,10 @@ tasks:
   - OPENAI_API_KEY
   - OPENAI_BASE_URL
   - OPENAI_MODEL
+  verification:
+    run_url: https://github.com/FeeiCN/FEEI.CN/actions/runs/42032235019
+    conclusion: success
+    result_status: no_update
 - source_task_id: 6addbfb8e0448191b492ace706c26b34
   id: ai-security-frontier-research
   title: AI 安全前沿研究流水线
@@ -104,7 +117,7 @@ tasks:
   prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/AI 安全前沿研究任务提示词.md
   workflow: .github/workflows/ai-security-frontier-research.yml
   migration_status: enabled
-  lifecycle_status: enabled_pending_verification
+  lifecycle_status: verified
   enabled: true
   workflow_created: true
   original_task_preserved: true
@@ -121,6 +134,11 @@ tasks:
   - OPENAI_API_KEY
   - OPENAI_BASE_URL
   - OPENAI_MODEL
+  verification:
+    run_url: https://github.com/FeeiCN/FEEI.CN/actions/runs/42032240761
+    conclusion: success
+    result_status: completed
+    result_url: https://github.com/FeeiCN/FEEI.CN/issues/799
 - source_task_id: 6adde2dd7eb081919990121c58761351
   id: ai-coding-rd-efficiency
   title: AI 编程与研发提效
@@ -128,7 +146,7 @@ tasks:
   prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/AI 编程与研发提效任务提示词.md
   workflow: .github/workflows/ai-coding-rd-efficiency.yml
   migration_status: enabled
-  lifecycle_status: enabled_pending_verification
+  lifecycle_status: verified
   enabled: true
   workflow_created: true
   original_task_preserved: true
@@ -145,6 +163,11 @@ tasks:
   - OPENAI_API_KEY
   - OPENAI_BASE_URL
   - OPENAI_MODEL
+  verification:
+    run_url: https://github.com/FeeiCN/FEEI.CN/actions/runs/42032246400
+    conclusion: success
+    result_status: completed
+    result_url: https://github.com/FeeiCN/FEEI.CN/issues/801
 - source_task_id: 6adde2ba4e0c81919120c35aca059a7e
   id: security-architecture-defense
   title: 安全架构与防御创新
@@ -152,7 +175,7 @@ tasks:
   prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/安全架构与防御创新任务提示词.md
   workflow: .github/workflows/security-architecture-defense.yml
   migration_status: enabled
-  lifecycle_status: enabled_pending_verification
+  lifecycle_status: verified
   enabled: true
   workflow_created: true
   original_task_preserved: true
@@ -169,6 +192,11 @@ tasks:
   - OPENAI_API_KEY
   - OPENAI_BASE_URL
   - OPENAI_MODEL
+  verification:
+    run_url: https://github.com/FeeiCN/FEEI.CN/actions/runs/42032252424
+    conclusion: success
+    result_status: completed
+    result_url: https://github.com/FeeiCN/FEEI.CN/issues/802
 - source_task_id: 6adde336d4a08191b944b363a451f27e
   id: personal-health-trend-research
   title: 个人健康趋势研究
@@ -176,7 +204,7 @@ tasks:
   prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/个人健康趋势研究任务提示词.md
   workflow: .github/workflows/personal-health-trend-research.yml
   migration_status: enabled
-  lifecycle_status: enabled_pending_verification
+  lifecycle_status: awaiting_private_destination
   enabled: true
   workflow_created: true
   original_task_preserved: true
@@ -195,6 +223,10 @@ tasks:
   - OPENAI_BASE_URL
   - OPENAI_MODEL
   - AUTOMATION_PRIVATE_TOKEN
+  verification:
+    conclusion: not_run
+    reason: Private destination and scoped token are not configured; personal data
+      has not been read.
 - source_task_id: 6a9cd5698b088191a96b111d0983ccd8
   id: update-weight-wallpaper
   title: 更新体重壁纸
@@ -202,7 +234,7 @@ tasks:
   prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/更新体重壁纸任务提示词.md
   workflow: .github/workflows/update-weight-wallpaper.yml
   migration_status: enabled
-  lifecycle_status: enabled_pending_verification
+  lifecycle_status: awaiting_private_destination
   enabled: true
   workflow_created: true
   original_task_preserved: true
@@ -221,6 +253,10 @@ tasks:
   - OPENAI_BASE_URL
   - OPENAI_MODEL
   - AUTOMATION_PRIVATE_TOKEN
+  verification:
+    conclusion: not_run
+    reason: Private destination and scoped token are not configured; personal data
+      has not been read.
 - source_task_id: 6abb4138d88c8191a1077c979a4d85d8
   id: hk-ipo-alerts
   title: 港股热门新股提醒
@@ -228,7 +264,7 @@ tasks:
   prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/港股热门新股提醒任务提示词.md
   workflow: .github/workflows/hk-ipo-alerts.yml
   migration_status: enabled
-  lifecycle_status: enabled_pending_verification
+  lifecycle_status: verified
   enabled: true
   workflow_created: true
   original_task_preserved: true
@@ -246,6 +282,11 @@ tasks:
   - OPENAI_API_KEY
   - OPENAI_BASE_URL
   - OPENAI_MODEL
+  verification:
+    run_url: https://github.com/FeeiCN/FEEI.CN/actions/runs/42032229117
+    conclusion: success
+    result_status: completed
+    result_url: https://github.com/FeeiCN/FEEI.CN/issues/803
 - source_task_id: 6a9cef0340ac81918785e0b6a09f264e
   id: daily-personal-record
   title: 每日个人记录
@@ -253,7 +294,7 @@ tasks:
   prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/每日个人记录任务提示词.md
   workflow: .github/workflows/daily-personal-record.yml
   migration_status: enabled
-  lifecycle_status: enabled_pending_verification
+  lifecycle_status: awaiting_private_destination
   enabled: true
   workflow_created: true
   original_task_preserved: true
@@ -271,3 +312,7 @@ tasks:
   - OPENAI_BASE_URL
   - OPENAI_MODEL
   - AUTOMATION_PRIVATE_TOKEN
+  verification:
+    conclusion: not_run
+    reason: Private destination and scoped token are not configured; personal data
+      has not been read.

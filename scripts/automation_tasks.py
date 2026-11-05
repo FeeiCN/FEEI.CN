@@ -115,7 +115,7 @@ def collect_personal_data(t, out):
 
     def fetch(date):
         relative = date.strftime('%Y/%m/%d.json')
-        url = 'https://feei.cn/static/data/health/' + relative
+        url = 'https://feei.cn/data/health/' + relative
         try:
             with urlopen(Request(url, headers={'User-Agent': 'FEEI-automation/1.0'}), timeout=30) as response:
                 data = response.read(2_000_001)
@@ -139,7 +139,7 @@ def collect_personal_data(t, out):
         records = list(pool.map(fetch, dates))
     missing_months = sorted({r['date'][:7] for r in records if 'error' in r})
     for month in missing_months:
-        url = f"https://feei.cn/static/data/health/{month.replace('-', '/')}.json"
+        url = f"https://feei.cn/data/health/{month.replace('-', '/')}.json"
         try:
             with urlopen(Request(url, headers={'User-Agent': 'FEEI-automation/1.0'}), timeout=30) as response:
                 raw = response.read(20_000_001)

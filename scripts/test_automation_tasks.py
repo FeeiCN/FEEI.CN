@@ -79,6 +79,29 @@ class AutomationResultTests(unittest.TestCase):
                     automation.prepare({'delivery': 'private_issue'}, self.out)
                 collect.assert_not_called()
 
+    def test_history_uses_task_reports_and_ignores_untrusted_authors(self):
+        marker = '<!-- automation-task:security-event-research -->'
+        def issue(author, body):
+            return {'user': {'login': author}, 'body': body, 'title': 'report',
+                    'html_url': 'https://github.com/owner/public/issues/1', 'updated_at': '2026-11-05'}
+        found = {'items': [issue('github-actions[bot]', marker + '\nverified report'),
+                           issue('stranger', marker + '\nfake history'),
+                           issue('owner', 'unrelated issue')]}
+        task = {'id': 'security-event-research', 'delivery': 'issue',
+                'schedule': 'WEEKLY MO 09:00', 'prompt_source': 'document.md'}
+        env = {'GITHUB_REPOSITORY': 'owner/public', 'GITHUB_ACTOR': 'owner',
+               'GITHUB_SHA': 'abc', 'GITHUB_RUN_ID': '123'}
+        with patch.dict('os.environ', env, clear=True), patch.object(automation, 'prompt', return_value='instructions'):
+            with patch.object(automation, 'gh', return_value=json.dumps(found)) as api:
+                with patch.object(automation.subprocess, 'check_output', return_value='abc date activity'):
+                    automation.prepare(task, self.out)
+        history = json.loads((self.out / 'history.json').read_text())
+        self.assertEqual(len(history), 1)
+        self.assertIn('verified report', history[0]['body'])
+        self.assertEqual(api.call_args.args[1], 'search/issues')
+        metadata = json.loads((self.out / 'metadata.json').read_text())
+        self.assertEqual(metadata['history_count'], 1)
+
     def collect_with_month_response(self, month):
         class FixedDateTime(datetime):
             @classmethod

@@ -59,9 +59,10 @@ export function attachDocFrontMatterToSidebar<
   Doc extends LoadedDocWithFrontMatter,
 >(items: Item[], docs: Doc[]): Item[] {
   const docsById = new Map(docs.map((doc) => [doc.id, doc]));
+  const hiddenSlugs = new Set(['/links', '/health-data', '/index-data', '/stock-data', '/hk-ipo-data']);
 
   function includeInSidebar(item: SidebarItemWithProps): boolean {
-    return item.type !== 'doc' || !item.id || docsById.get(item.id)?.frontMatter?.slug !== '/links';
+    return item.type !== 'doc' || !item.id || !hiddenSlugs.has(String(docsById.get(item.id)?.frontMatter?.slug));
   }
 
   function applyDocFields(

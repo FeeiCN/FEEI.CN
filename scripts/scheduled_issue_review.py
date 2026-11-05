@@ -128,7 +128,9 @@ def decide(issue, owner, actor, repo, runs, tasks=None):
         if tokens != ['approve'] or text != '/approve':
             raise ValueError('审批请单独评论 /approve；修改意见先单独发送并等待完整修订稿')
         if 'codex:plan-ready' not in labels or plan is None:
-            raise ValueError('请先审阅完整修订稿与写入计划，再评论 /approve')
+            context.update(mode='plan', source=snapshot(issue, owner), initial_approval=True,
+                           reason='尚无可批准的完整版本，本次先生成待审稿，展示后再确认写入')
+            return context
         match = re.match(r'<!-- codex-driver:plan:commit=([a-f0-9]+):review-source=([a-f0-9]{64}) -->', plan['body'])
         if match is None or match[2] != snapshot(issue, owner, request['id']):
             raise ValueError('正文或修改意见已变化，旧稿审批失效；请评论 /review 重新审阅')
@@ -144,15 +146,17 @@ def decide(issue, owner, actor, repo, runs, tasks=None):
     return context
 
 
-def seal(issue, owner, text, base):
+def seal(issue, owner, text, base, initial_approval=False):
     spec = metadata(text, write=False)
     if spec['task_type'] == 'analysis':
         return '<!-- codex-driver:review:needs-input -->\n\n' + text + '\n\n请补充缺少的事实或正文，本轮尚无可批准的写入版本。'
     if not re.search(r'^## 完整待审稿\s*$', text, re.M):
         raise ValueError('定时任务必须展示完整待审稿后才能等待审批')
     draft_files(text, spec['affected_files'])
+    notice = ('这次 `/approve` 已转为整理完整待写入稿，尚未写入仓库。'
+              '请审阅下方具体版本，确认后再单独评论 `/approve`。\n\n' if initial_approval else '')
     body = (f'{PLAN}commit={base}:review-source={snapshot(issue, owner)} -->\n\n'
-            + text + '\n\n---\n继续修改请直接评论或使用 `/revise`；确认本版完整正文及文件后，单独评论 `/approve` 写入 main；暂停使用 `/reject`。')
+            + notice + text + '\n\n---\n继续修改请直接评论或使用 `/revise`；确认本版完整正文及文件后，单独评论 `/approve` 写入 main；暂停使用 `/reject`。')
     if len(body.encode()) > 63000:
         raise ValueError('完整待审稿超出评论长度，不能截断后等待审批；请缩小本轮写入范围')
     return body
@@ -234,7 +238,8 @@ def main():
         context = json.loads(base64.b64decode(os.environ['REVIEW_CONTEXT']))
         if context['source'] != snapshot(issue, owner):
             raise ValueError('审阅期间正文或本人意见发生变化，请重新评论 /review')
-        (state_dir / 'comment.md').write_text(seal(issue, owner, text, os.environ['BASE']))
+        (state_dir / 'comment.md').write_text(seal(issue, owner, text, os.environ['BASE'],
+                                                initial_approval=context.get('initial_approval', False)))
     else:
         context = json.loads(base64.b64decode(os.environ['REVIEW_CONTEXT']))
         fresh = fresh_issue()

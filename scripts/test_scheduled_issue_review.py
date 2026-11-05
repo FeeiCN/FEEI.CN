@@ -158,11 +158,32 @@ class ScheduledReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '单独评论'):
             decide(issue)
 
-    def test_no_approval_without_plan_or_complete_files(self):
+    def test_initial_approval_produces_review_and_requires_fresh_confirmation(self):
         issue = fixture()
         issue['comments'][0]['body'] = '/approve'
-        with self.assertRaises(ValueError):
-            decide(issue)
+        context = decide(issue)
+        self.assertEqual(context['mode'], 'plan')
+        self.assertTrue(context['initial_approval'])
+        self.assertNotIn('approval_id', context)
+        sealed = review.seal(issue, OWNER, TEXT, 'abc123', initial_approval=True)
+        self.assertIn('尚未写入仓库', sealed)
+        issue['comments'].append(comment('plan', review.BOT, sealed, '2026-11-05T01:01:00Z'))
+        issue['labels'] = [{'name': 'codex:plan-ready'}]
+        self.assertEqual(decide(issue)['mode'], 'skip')
+        issue['comments'].append(comment('confirmation', OWNER, '/approve', '2026-11-05T01:02:00Z'))
+        confirmed = decide(issue)
+        self.assertEqual(confirmed['mode'], 'execute')
+        self.assertEqual(confirmed['approval_id'], 'confirmation')
+
+    def test_initial_approval_still_checks_owner_and_does_not_override_locks(self):
+        issue = fixture()
+        issue['comments'][0]['body'] = '/approve'
+        self.assertEqual(decide(issue, actor='outsider')['mode'], 'skip')
+        for label in ['codex:planning', 'codex:executing']:
+            issue['labels'] = [{'name': label}]
+            self.assertEqual(decide(issue)['mode'], 'skip')
+
+    def test_no_approval_without_complete_files(self):
         for text in [TEXT.replace('## 完整待审稿', '## 提纲'), TEXT.replace('````markdown', '```markdown')]:
             with self.assertRaises(ValueError):
                 review.seal(fixture(), OWNER, text, 'abc123')

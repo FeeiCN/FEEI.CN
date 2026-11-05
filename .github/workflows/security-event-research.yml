@@ -28,31 +28,31 @@ jobs:
 
       - name: Validate designated task
         run: |
-          python3 - <<'PY'
-          import yaml
-          data = yaml.safe_load(open("automation/registry.yml", encoding="utf-8"))
-          task = next(x for x in data["tasks"] if x["id"] == "security-event-research")
-          assert task["designation"].startswith("explicit_user_confirmation_")
-          assert task["execution_mode"] == "read_only_research"
-          assert task["writes_repository"] is False
-          print("designated read-only task validated")
-          PY
+          grep -q 'id: security-event-research' automation/registry.yml
+          grep -q 'designation: explicit_user_confirmation_' automation/registry.yml
+          grep -q 'migration_status: dry_run' automation/registry.yml
+          grep -q 'execution_mode: read_only_research' automation/registry.yml
+          grep -q 'writes_repository: false' automation/registry.yml
+          echo "designated read-only task validated"
 
-      - name: Prepare research prompt
+      - name: Prepare prompt from original Action configuration
         run: |
-          cat > /tmp/prompt.md <<'EOF'
-          你正在执行 FEEI.CN 的“安全事件研究复盘”只读 dry-run。
-
-          目标：研究一个公开披露的真实安全事件（优先 Binance、Bybit、TiDB 等高质量案例），形成可发布的中文复盘草稿，重点还原攻击流程、关键证据、根因、检测与防御改进。
-
-          要求：
-          1. 每次只选一个公开安全事件，至少使用两类独立来源，区分事实、推断和未知，并给出来源链接和证据质量。
-          2. 用一张简单易懂的 Mermaid 流程图还原攻击链路，不使用 SVG。
-          3. 去掉 AI 套话，写成适合 feei.cn 的自然中文文章，完整到可供人工审核。
-          4. 不提交代码、不修改仓库、不执行交易或生产操作。
-          5. 输出标题、摘要、正文、Mermaid 图、证据清单、待核验项，以及是否值得发布的建议。
-          6. 结果会写入 GitHub Issue，等待人工修改和批准。
-          EOF
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.load(open(".github/chatgpt-tasks/tasks.json", encoding="utf-8"))
+          task = next(x for x in data["tasks"] if x["id"] == "6aeac5b9fd788191adc1cf248cc00a99")
+          overlay = """
+          
+          GitHub Actions migration overlay:
+          Preserve the original research scope, evidence standards, writing rules, deduplication
+          rules, review gate, and explicit-write gate. GitHub Actions is only the scheduler and
+          execution adapter. Produce the complete draft in /tmp/result.md for a GitHub Issue.
+          Do not modify the repository, publish an article, send external communications, or
+          perform transactions. The Issue is the authorized review destination for this dry-run.
+          """
+          Path("/tmp/prompt.md").write_text(task["prompt"] + overlay, encoding="utf-8")
+          PY
 
       - name: Run read-only research
         uses: openai/codex-action@v1
@@ -82,4 +82,4 @@ jobs:
             echo
             cat /tmp/result.md
           } > /tmp/issue.md
-          gh issue create --repo "$REPO"             --title "[自动研究] 安全事件研究复盘 · $(date -u '+%Y-%m-%d %H:%M UTC')"             --body-file /tmp/issue.md
+          gh issue create --repo "$REPO" --title "[自动研究] 安全事件研究复盘 · $(date -u '+%Y-%m-%d %H:%M UTC')" --body-file /tmp/issue.md

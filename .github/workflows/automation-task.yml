@@ -59,10 +59,18 @@ jobs:
 
       - name: Install wallpaper fonts
         if: ${{ inputs.task_id == 'update-weight-wallpaper' }}
+        timeout-minutes: 5
         run: |
           python -m pip install matplotlib
-          sudo apt-get update
-          sudo apt-get install --yes fonts-noto-cjk
+          font_dir="$HOME/.local/share/fonts"
+          font_file="$font_dir/NotoSansCJKsc-Regular.otf"
+          mkdir -p "$font_dir"
+          curl --fail --location --retry 2 --retry-all-errors \
+            --connect-timeout 15 --max-time 90 \
+            'https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf' \
+            --output "$font_file"
+          test "$(git hash-object "$font_file")" = 'dc15562470b4f842321894787a0d066879ccff8b'
+          fc-cache --force "$font_dir"
       - name: Check documented task configuration
         if: ${{ inputs.task_id != 'diary-prompt-sync' }}
         run: python3 scripts/automation_tasks.py check

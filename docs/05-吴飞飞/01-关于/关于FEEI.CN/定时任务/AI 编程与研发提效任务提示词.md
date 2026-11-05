@@ -1,4 +1,6 @@
 ---
+sidebar_badge:
+  text: GitHub Action
 slug: /ai-coding-rd-efficiency-task-prompt
 title: AI 编程与研发提效任务提示词
 icon: pen-icon

@@ -1,4 +1,6 @@
 ---
+sidebar_badge:
+  text: GitHub Action
 slug: /knowledge-base-governance-task-prompt
 title: FEEI.CN 知识库治理任务提示词
 icon: pen-icon

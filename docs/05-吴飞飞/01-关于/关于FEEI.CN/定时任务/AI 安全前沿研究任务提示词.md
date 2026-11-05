@@ -1,4 +1,6 @@
 ---
+sidebar_badge:
+  text: GitHub Action
 slug: /ai-security-frontier-research-task-prompt
 title: AI 安全前沿研究流水线任务提示词
 icon: pen-icon

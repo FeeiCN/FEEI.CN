@@ -179,13 +179,26 @@ def prepare(t, out):
     out.mkdir(parents=True, exist_ok=True)
     repo = destination(t)
     marker = f"<!-- automation-task:{t['id']} -->"
-    raw = json.loads(gh('api', f'repos/{repo}/issues?state=all&sort=updated&per_page=100'))
-    previous = [i for i in raw if marker in (i.get('body') or '')][:5]
+    try:
+        found = json.loads(gh('api', 'search/issues', '--method', 'GET', '-f',
+                              f'q=repo:{repo} in:body "automation-task:{t["id"]}"',
+                              '-f', 'sort=updated', '-f', 'per_page=100'))
+        raw = found['items']
+        history_scope = 'task_search_latest_100'
+    except (subprocess.CalledProcessError, KeyError):
+        raw = json.loads(gh('api', f'repos/{repo}/issues?state=all&sort=updated&per_page=100'))
+        history_scope = 'repository_latest_100_fallback_incomplete'
+    trusted = {repo.split('/')[0].lower(), os.environ.get('GITHUB_ACTOR', '').lower(), 'github-actions[bot]'}
+    previous = [i for i in raw if marker in (i.get('body') or '')
+                and i.get('user', {}).get('login', '').lower() in trusted]
     context = {
         'time_utc': datetime.now(timezone.utc).isoformat(),
         'timezone': 'Asia/Shanghai',
         'task_id': t['id'], 'schedule': t['schedule'],
-        'history': [{'url': i['html_url'], 'body': i['body']} for i in previous],
+        'history': [{'url': i['html_url'], 'title': i['title'], 'updated_at': i['updated_at']}
+                    for i in previous],
+        'history_scope': history_scope,
+        'history_bodies': 'output/history.json',
     }
     context['repository_activity'] = subprocess.check_output(
         ['git', 'log', '-25', '--format=%h %aI %s'], cwd=ROOT, text=True)
@@ -202,6 +215,7 @@ def prepare(t, out):
         'commit': os.environ.get('GITHUB_SHA', ''),
         'run_url': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
         'delivery_repository': repo, 'prepared_at': context['time_utc'],
+        'history_scope': history_scope, 'history_count': len(previous),
     }
     (out / 'metadata.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2))
     if t['delivery'] == 'private_issue':

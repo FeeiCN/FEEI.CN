@@ -5,11 +5,14 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-PROBE = '''from pathlib import Path
+PROBE = '''import errno
+from pathlib import Path
 from urllib.request import urlopen
 try:
     Path('protected.txt').write_text('changed')
-except PermissionError:
+except OSError as error:
+    if error.errno not in {errno.EACCES, errno.EPERM, errno.EROFS}:
+        raise
     print('repository_write=denied')
 else:
     raise SystemExit('ERROR: protected write permitted')

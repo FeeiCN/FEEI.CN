@@ -1,5 +1,5 @@
 version: 3
-generated_at: 2026-11-05T11:10:00Z
+generated_at: 2026-11-05T11:36:00Z
 source: explicit_issue_designation
 repository: FeeiCN/FEEI.CN
 default_timezone: Asia/Shanghai
@@ -18,9 +18,9 @@ tasks:
     schedule: WEEKLY MO 09:00
     designation: explicit_user_confirmation_2026-11-05
     source_issue: 791
-    migration_status: blocked_pending_external_side_effect_approval
+    migration_status: dry_run
     execution_mode: read_only_research
     writes_repository: false
-    creates_issue_result: pending_explicit_approval
-    external_side_effects: pending_explicit_approval
+    creates_issue_result: true
+    external_side_effects: issue_result_only_authorized_2026-11-05
     required_secrets: [OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL]

@@ -18,10 +18,12 @@ jobs:
     env:
       TASK_ID: ${{ inputs.task_id }}
       AUTOMATION_PRIVATE_REPOSITORY: ${{ vars.AUTOMATION_PRIVATE_REPOSITORY }}
+      AUTOMATION_PERMISSION_CONFIG: '{extends=":read-only", filesystem={":workspace_roots"={output="write"}}, network={enabled=true}}'
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 100
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -31,6 +33,7 @@ jobs:
       - name: Install executor
         run: |
           npm install --global @openai/codex
+          codex --version
           python -m pip install PyYAML Pillow matplotlib
       - name: Install wallpaper fonts
         if: ${{ inputs.task_id == 'update-weight-wallpaper' }}
@@ -39,6 +42,8 @@ jobs:
           sudo apt-get install --yes fonts-noto-cjk
       - name: Check documented task configuration
         run: python3 scripts/automation_tasks.py check
+      - name: Verify research network and repository protection
+        run: python3 scripts/check_automation_permissions.py
       - name: Read documented prompt and previous results
         env:
           GH_TOKEN: ${{ secrets.AUTOMATION_PRIVATE_TOKEN || github.token }}
@@ -54,10 +59,10 @@ jobs:
           test -n "$OPENAI_API_KEY"
           test -n "$OPENAI_BASE_URL"
           test -n "$OPENAI_MODEL"
-          mode=read-only
-          if [ "$TASK_ID" = update-weight-wallpaper ]; then mode=workspace-write; fi
           set +e
-          codex exec --ephemeral --sandbox "$mode" \
+          codex exec --ephemeral \
+            --config 'default_permissions="automation"' \
+            --config "permissions.automation=$AUTOMATION_PERMISSION_CONFIG" \
             --model "$OPENAI_MODEL" \
             --config 'model_provider="custom"' \
             --config 'model_providers.custom.name="AI Proxy"' \

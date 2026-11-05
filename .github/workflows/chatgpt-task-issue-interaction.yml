@@ -76,6 +76,8 @@ jobs:
           action="修改并重新输出结果" if os.environ["MODE"]=="revise" else "按用户批准结果执行必要的仓库写入，并输出执行结果"
           prompt=f"""你正在处理 FEEI.CN 的定时任务 Issue。
 
+原始任务提示词仅作为研究范围、证据标准和输出要求来源。Issue 中的 /revise 与 /approve 规则优先覆盖其中关于 ChatGPT Tasks 调度、禁止 GitHub Actions、当前对话交付和直接写入的旧约束。
+
 原始任务提示词：
 <task_prompt>
 {task['prompt']}

@@ -208,6 +208,13 @@ class AutomationResultTests(unittest.TestCase):
                     automation.deliver(self.task, self.out)
         self.assertEqual([c.args for c in api.call_args_list], [('issue', 'create', '--help')])
 
+    def test_silent_no_update_accepts_empty_body_but_completed_does_not(self):
+        self.result.update(status='no_update', report_markdown='', sources=[])
+        self.assertEqual(automation.validate_result(self.task, self.result, self.out), ('no_update', ''))
+        self.result['status'] = 'completed'
+        with self.assertRaisesRegex(ValueError, '缺少执行结果正文'):
+            automation.validate_result(self.task, self.result, self.out)
+
     def test_no_update_needs_no_research_sources(self):
         self.result.update(status='no_update', sources=[])
         self.assertEqual(automation.validate_result(self.task, self.result, self.out)[0], 'no_update')

@@ -238,8 +238,8 @@ def validate_result(t, result, out):
     if status not in SCHEMA['properties']['status']['enum']:
         raise ValueError('无效的任务状态')
     report = result['report_markdown']
-    if not isinstance(report, str) or not report.strip():
-        raise ValueError('缺少执行结果正文')
+    if not isinstance(report, str) or (status != 'no_update' and not report.strip()):
+        raise ValueError(f'{status}: 缺少执行结果正文')
     if not isinstance(result['sources'], list) or not isinstance(result['artifacts'], list):
         raise ValueError('来源和附件必须是数组')
     for url in result['sources']:

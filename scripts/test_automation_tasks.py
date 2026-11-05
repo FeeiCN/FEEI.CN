@@ -163,7 +163,7 @@ class AutomationResultTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'PNG 和 SVG'):
             automation.validate_result(self.task, self.result, self.out)
 
-    def wallpaper_delivery(self, help_text):
+    def wallpaper_delivery(self):
         from PIL import Image
         Image.new('RGB', (1320, 2868)).save(self.out / 'wallpaper.png')
         (self.out / 'wallpaper.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg"/>')
@@ -177,36 +177,46 @@ class AutomationResultTests(unittest.TestCase):
         }))
 
         def cli(*args):
-            if args == ('issue', 'create', '--help'):
-                return help_text
+            if args[:2] == ('release', 'view'):
+                raise automation.subprocess.CalledProcessError(1, ['gh', *args])
             if args[:2] == ('release', 'create'):
                 return 'https://github.com/owner/public/releases/tag/wallpaper'
             return 'https://github.com/owner/public/issues/1'
 
         return cli
 
-    def test_wallpaper_is_attached_inline_and_original_files_are_preserved(self):
-        cli = self.wallpaper_delivery('--attach file')
+    def test_wallpaper_uses_public_inline_image_and_preserves_original_files(self):
+        cli = self.wallpaper_delivery()
         with patch.dict('os.environ', {'GITHUB_RUN_ID': '123'}, clear=True):
             with patch.object(automation, 'destination', return_value='owner/public'):
                 with patch.object(automation, 'gh', side_effect=cli) as api:
                     automation.deliver(self.task, self.out)
         issue = next(c.args for c in api.call_args_list if c.args[:2] == ('issue', 'create') and '--help' not in c.args)
-        self.assertEqual(issue[issue.index('--attach') + 1], str(self.out / 'wallpaper.png'))
+        self.assertNotIn('--attach', issue)
         body = (self.out / 'report.md').read_text()
-        self.assertIn(f'![体重趋势壁纸]({self.out / "wallpaper.png"})', body)
+        self.assertIn('![体重趋势壁纸](https://github.com/owner/public/releases/download/automation-update-weight-wallpaper-123/wallpaper.png)', body)
+        self.assertNotIn(str(self.out), body)
         self.assertIn('[PNG、SVG 原文件与历史版本](https://github.com/owner/public/releases/tag/wallpaper)', body)
         release = next(c.args for c in api.call_args_list if c.args[:2] == ('release', 'create'))
         self.assertIn(str(self.out / 'wallpaper.png'), release)
         self.assertIn(str(self.out / 'wallpaper.svg'), release)
 
-    def test_old_cli_fails_before_uploading_or_creating_issue(self):
-        cli = self.wallpaper_delivery('old CLI help')
-        with patch.object(automation, 'destination', return_value='owner/public'):
-            with patch.object(automation, 'gh', side_effect=cli) as api:
-                with self.assertRaisesRegex(ValueError, '--attach'):
+    def test_wallpaper_retry_reuses_release_after_issue_creation_failed(self):
+        cli = self.wallpaper_delivery()
+        calls = []
+        def retry(*args):
+            calls.append(args)
+            if args[:2] == ('release', 'view'):
+                return 'https://github.com/owner/public/releases/tag/wallpaper'
+            return cli(*args)
+        with patch.dict('os.environ', {'GITHUB_RUN_ID': '123'}, clear=True):
+            with patch.object(automation, 'destination', return_value='owner/public'):
+                with patch.object(automation, 'gh', side_effect=retry):
                     automation.deliver(self.task, self.out)
-        self.assertEqual([c.args for c in api.call_args_list], [('issue', 'create', '--help')])
+        self.assertFalse(any(c[:2] == ('release', 'create') for c in calls))
+        upload = next(c for c in calls if c[:2] == ('release', 'upload'))
+        self.assertIn('--clobber', upload)
+        self.assertTrue(any(c[:2] == ('issue', 'create') for c in calls))
 
     def test_silent_no_update_accepts_empty_body_but_completed_does_not(self):
         self.result.update(status='no_update', report_markdown='', sources=[])
@@ -243,7 +253,7 @@ class AutomationResultTests(unittest.TestCase):
 
     def test_wallpaper_delivery_deduplicates_without_transferring_history_bodies(self):
         import hashlib
-        cli = self.wallpaper_delivery('--attach file')
+        cli = self.wallpaper_delivery()
         metadata = json.loads((self.out / 'metadata.json').read_text())
         metadata['report_fingerprints'] = [hashlib.sha256(self.result['report_markdown'].encode()).hexdigest()]
         (self.out / 'metadata.json').write_text(json.dumps(metadata))

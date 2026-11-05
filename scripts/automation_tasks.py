@@ -292,25 +292,25 @@ def deliver(t, out):
         raise ValueError('结果超过 Issue 正文限制，需整理完整交付方式后重试')
     (out / 'report.md').write_text(body)
     if status != 'no_update' and not duplicated:
-        attachments = []
-        if t['id'] == 'update-weight-wallpaper' and status == 'completed':
-            if '--attach' not in gh('issue', 'create', '--help'):
-                raise ValueError('壁纸正文预览需要支持 --attach 的 GitHub CLI（2.99.0 或更新版本）')
-            image = str(out / 'wallpaper.png')
-            body += f'\n![体重趋势壁纸]({image})\n'
-            attachments = ['--attach', image]
         if t['id'] == 'update-weight-wallpaper' and result['artifacts']:
             tag = f"automation-{t['id']}-{os.environ['GITHUB_RUN_ID']}"
             files = [str(ROOT / name) for name in result['artifacts']]
-            release = gh('release', 'create', tag, *files, '--repo', repo,
-                         '--title', f"{t['title']} · {tag}", '--latest=false',
-                         '--notes-file', str(out / 'report.md')).strip()
+            try:
+                release = gh('release', 'view', tag, '--repo', repo, '--json', 'url', '--jq', '.url').strip()
+            except subprocess.CalledProcessError:
+                release = gh('release', 'create', tag, *files, '--repo', repo,
+                             '--title', f"{t['title']} · {tag}", '--latest=false',
+                             '--notes-file', str(out / 'report.md')).strip()
+            else:
+                gh('release', 'upload', tag, *files, '--repo', repo, '--clobber')
+            if status == 'completed':
+                image = f'https://github.com/{repo}/releases/download/{tag}/wallpaper.png'
+                body += f'\n![体重趋势壁纸]({image})\n'
             body += f'\n交付附件：[PNG、SVG 原文件与历史版本]({release})\n'
             (out / 'report.md').write_text(body)
         date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
         url = gh('issue', 'create', '--repo', repo, '--title',
-                 f"[自动任务][{status}] {t['title']} · {date}", '--body-file', str(out / 'report.md'),
-                 *attachments).strip()
+                 f"[自动任务][{status}] {t['title']} · {date}", '--body-file', str(out / 'report.md')).strip()
         meta['issue_url'] = url
     meta['status'] = status
     meta['duplicate'] = duplicated

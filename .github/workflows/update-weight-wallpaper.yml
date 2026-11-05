@@ -16,51 +16,7 @@ concurrency:
 jobs:
   run:
     if: ${{ vars.AUTOMATION_UPDATE_WEIGHT_WALLPAPER == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - name: Load original Action prompt
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          data=json.load(open(".github/chatgpt-tasks/tasks.json", encoding="utf-8"))
-          task=next(x for x in data["tasks"] if x["id"]=="6a9cd5698b088191a96b111d0983ccd8")
-          overlay = """
-          GitHub Actions migration overlay:
-          This workflow is the scheduler and execution adapter. Preserve the original
-          research/task requirements, but do not modify the repository, perform transactions,
-          send external communications, or access unavailable connectors. Output the complete
-          result to /tmp/result.md for Issue review. Any write or publication requires a later
-          explicit approval in the Issue.
-          """
-          Path("/tmp/prompt.md").write_text(task["prompt"] + overlay, encoding="utf-8")
-          PY
-      - name: Run task
-        uses: openai/codex-action@v1
-        with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          responses-api-endpoint: ${{ secrets.OPENAI_BASE_URL }}/responses
-          prompt-file: /tmp/prompt.md
-          output-file: /tmp/result.md
-          sandbox: read-only
-          model: ${{ secrets.OPENAI_MODEL }}
-          effort: high
-      - name: Publish result to Issue
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          {
-            echo "<!-- automation-task:update-weight-wallpaper -->"
-            echo "<!-- status:awaiting-review -->"
-            echo
-            echo "# 更新体重壁纸"
-            echo
-            echo "- 任务：update-weight-wallpaper"
-            echo "- 运行时间：$(date -u +%FT%TZ)"
-            echo
-            cat /tmp/result.md
-          } > /tmp/issue.md
-          gh issue create --repo "$REPO" --title "[自动任务] 更新体重壁纸 · $(date -u '+%Y-%m-%d %H:%M UTC')" --body-file /tmp/issue.md
+    uses: ./.github/workflows/automation-task.yml
+    with:
+      task_id: update-weight-wallpaper
+    secrets: inherit

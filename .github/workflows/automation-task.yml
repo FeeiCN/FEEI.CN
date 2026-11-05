@@ -1,0 +1,92 @@
+name: 自动任务执行器
+
+on:
+  workflow_call:
+    inputs:
+      task_id:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TASK_ID: ${{ inputs.task_id }}
+      AUTOMATION_PRIVATE_REPOSITORY: ${{ vars.AUTOMATION_PRIVATE_REPOSITORY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install executor
+        run: |
+          npm install --global @openai/codex
+          python -m pip install PyYAML Pillow matplotlib
+      - name: Check documented task configuration
+        run: python3 scripts/automation_tasks.py check
+      - name: Read documented prompt and previous results
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMATION_PRIVATE_TOKEN || github.token }}
+        run: python3 scripts/automation_tasks.py prepare --task "$TASK_ID"
+      - name: Execute task
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$OPENAI_API_KEY"
+          test -n "$OPENAI_BASE_URL"
+          test -n "$OPENAI_MODEL"
+          mode=read-only
+          if [ "$TASK_ID" = update-weight-wallpaper ]; then mode=workspace-write; fi
+          set +e
+          codex exec --ephemeral --sandbox "$mode" \
+            --model "$OPENAI_MODEL" \
+            --config 'model_provider="custom"' \
+            --config 'model_providers.custom.name="AI Proxy"' \
+            --config "model_providers.custom.base_url=\"${OPENAI_BASE_URL%/}\"" \
+            --config 'model_providers.custom.wire_api="responses"' \
+            --config 'model_providers.custom.env_key="OPENAI_API_KEY"' \
+            --config 'model_reasoning_effort="high"' \
+            --config 'web_search="live"' \
+            --config 'shell_environment_policy.exclude=["OPENAI_*","GH_*","GITHUB_*","ACTIONS_*","AUTOMATION_*"]' \
+            --output-schema output/schema.json \
+            --output-last-message output/result.json \
+            - < output/prompt.md > "$RUNNER_TEMP/automation.log" 2> "$RUNNER_TEMP/automation.err"
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            echo "Codex 执行失败，退出码 $status"
+            if [[ ! "$TASK_ID" =~ ^(personal-health-trend-research|update-weight-wallpaper|daily-personal-record)$ ]]; then
+              tail -c 2500 "$RUNNER_TEMP/automation.err"
+            fi
+            exit "$status"
+          fi
+          git diff --quiet || { echo '执行器修改了受保护的仓库文件'; exit 1; }
+          test -s output/result.json
+      - name: Validate and deliver result
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMATION_PRIVATE_TOKEN || github.token }}
+        run: python3 scripts/automation_tasks.py deliver --task "$TASK_ID"
+      - name: Save public research result
+        if: ${{ always() && !contains(fromJSON('["personal-health-trend-research","update-weight-wallpaper","daily-personal-record"]'), inputs.task_id) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.task_id }}-${{ github.run_id }}
+          path: |
+            output/report.md
+            output/metadata.json
+          if-no-files-found: ignore
+          retention-days: 30

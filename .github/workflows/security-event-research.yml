@@ -2,12 +2,6 @@ name: 安全事件研究复盘
 
 on:
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 仅生成研究结果并写入 Issue，不修改仓库
-        required: false
-        default: true
-        type: boolean
   schedule:
     - cron: "0 1 * * 1"
 
@@ -16,70 +10,13 @@ permissions:
   issues: write
 
 concurrency:
-  group: security-event-research
+  group: automation-security-event-research
   cancel-in-progress: false
 
 jobs:
-  research:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate designated task
-        run: |
-          grep -q 'id: security-event-research' automation/registry.yml
-          grep -q 'designation: explicit_user_confirmation_' automation/registry.yml
-          grep -q 'migration_status: dry_run' automation/registry.yml
-          grep -q 'execution_mode: read_only_research' automation/registry.yml
-          grep -q 'writes_repository: false' automation/registry.yml
-          echo "designated read-only task validated"
-
-      - name: Prepare prompt from original Action configuration
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          data = json.load(open(".github/chatgpt-tasks/tasks.json", encoding="utf-8"))
-          task = next(x for x in data["tasks"] if x["id"] == "6aeac5b9fd788191adc1cf248cc00a99")
-          overlay = """
-          
-          GitHub Actions migration overlay:
-          Preserve the original research scope, evidence standards, writing rules, deduplication
-          rules, review gate, and explicit-write gate. GitHub Actions is only the scheduler and
-          execution adapter. Produce the complete draft in /tmp/result.md for a GitHub Issue.
-          Do not modify the repository, publish an article, send external communications, or
-          perform transactions. The Issue is the authorized review destination for this dry-run.
-          """
-          Path("/tmp/prompt.md").write_text(task["prompt"] + overlay, encoding="utf-8")
-          PY
-
-      - name: Run read-only research
-        uses: openai/codex-action@v1
-        with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          responses-api-endpoint: ${{ secrets.OPENAI_BASE_URL }}/responses
-          prompt-file: /tmp/prompt.md
-          output-file: /tmp/result.md
-          sandbox: read-only
-          model: ${{ secrets.OPENAI_MODEL }}
-          effort: high
-
-      - name: Publish dry-run result to Issue
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          {
-            echo "<!-- automation-task:security-event-research -->"
-            echo "<!-- status:awaiting-review -->"
-            echo
-            echo "# 安全事件研究复盘 · dry-run"
-            echo
-            echo "- 任务：security-event-research"
-            echo "- 运行时间：$(date -u +%FT%TZ)"
-            echo "- 模式：只读研究，不修改仓库"
-            echo
-            cat /tmp/result.md
-          } > /tmp/issue.md
-          gh issue create --repo "$REPO" --title "[自动研究] 安全事件研究复盘 · $(date -u '+%Y-%m-%d %H:%M UTC')" --body-file /tmp/issue.md
+  run:
+    if: ${{ vars.AUTOMATION_SECURITY_EVENT_RESEARCH == 'true' }}
+    uses: ./.github/workflows/automation-task.yml
+    with:
+      task_id: security-event-research
+    secrets: inherit

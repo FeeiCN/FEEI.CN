@@ -1,167 +1,224 @@
-version: 5
-generated_at: 2026-11-05T12:10:00Z
-source: .github/chatgpt-tasks/tasks.json
-source_sha: c6a83055410fd6f995e2eb9dcc895942e3a6d72a
+version: 6
+generated_at: '2026-11-05T12:33:16.519741+00:00'
+source: 网站幕后任务提示词
 repository: FeeiCN/FEEI.CN
 default_timezone: Asia/Shanghai
-inventory_note: observed 10 tasks in tasks.json; Issue #791 historically mentioned 31, remaining inventory requires separate verification
-
+inventory_note: observed 10 tasks in tasks.json; Issue
 execution_policy:
   default_migration: none
-  prompts_synced: true
+  prompts_synced: false
   only_explicitly_enabled_tasks_execute: true
-  issue_commands: [/designate, /run, /approve, /reject, /pause, /resume, /change, /status]
+  issue_commands:
+  - /designate
+  - /run
+  - /approve
+  - /reject
+  - /pause
+  - /resume
+  - /change
+  - /status
   allowlist: repository_owner_and_maintainers
   external_side_effects_require_approval: true
   stop_existing_chatgpt_tasks_automatically: false
   secrets_in_repository: false
-
+  prompt_authority: website_backstage_documents
 tasks:
-  - source_task_id: 6aeac5b9fd788191adc1cf248cc00a99
-    id: security-event-research
-    title: 安全事件研究复盘
-    designation: explicit_user_confirmation_2026-11-05
-    source_issue: 791
-    schedule: "WEEKLY MO 09:00"
-    prompt_source: .github/chatgpt-tasks/tasks.json
-    workflow: .github/workflows/security-event-research.yml
-    migration_status: dry_run
-    lifecycle_status: migrated_dry_run
-    enabled: true
-    workflow_created: true
-    original_task_preserved: true
-    source_task_status: unknown
-    execution_mode: read_only_research
-    writes_repository: false
-    creates_issue_result: true
-    external_side_effects: issue_result_only_authorized_2026-11-05
-    required_secrets: [OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL]
-
-  - source_task_id: 6acf58cd3a988191b090a6bf3ae94470
-    id: diary-prompt-sync
-    title: 日记提示词同步检查
-    schedule: "MONTHLY day1 09:00"
-    prompt_source: .github/chatgpt-tasks/tasks.json
-    workflow: .github/workflows/diary-prompt-sync.yml
-    migration_status: pending_designation
-    lifecycle_status: mirrored_disabled
-    enabled: false
-    workflow_created: true
-    original_task_preserved: true
-    source_task_status: unknown
-    execution_mode: gated_by_repository_variable
-
-  - source_task_id: 6adde30134b88191ac9bb08769fbcca1
-    id: knowledge-base-governance
-    title: FEEI.CN 知识库治理
-    schedule: "WEEKLY SA 10:00"
-    prompt_source: .github/chatgpt-tasks/tasks.json
-    workflow: .github/workflows/knowledge-base-governance.yml
-    migration_status: pending_designation
-    lifecycle_status: mirrored_disabled
-    enabled: false
-    workflow_created: true
-    original_task_preserved: true
-    source_task_status: unknown
-    execution_mode: gated_by_repository_variable
-
-  - source_task_id: 6addbfb8e0448191b492ace706c26b34
-    id: ai-security-frontier-research
-    title: AI 安全前沿研究流水线
-    schedule: "DAILY 08:00"
-    prompt_source: .github/chatgpt-tasks/tasks.json
-    workflow: .github/workflows/ai-security-frontier-research.yml
-    migration_status: pending_designation
-    lifecycle_status: mirrored_disabled
-    enabled: false
-    workflow_created: true
-    original_task_preserved: true
-    source_task_status: unknown
-    execution_mode: gated_by_repository_variable
-
-  - source_task_id: 6adde2dd7eb081919990121c58761351
-    id: ai-coding-rd-efficiency
-    title: AI 编程与研发提效
-    schedule: "WEEKLY TH 09:00"
-    prompt_source: .github/chatgpt-tasks/tasks.json
-    workflow: .github/workflows/ai-coding-rd-efficiency.yml
-    migration_status: pending_designation
-    lifecycle_status: mirrored_disabled
-    enabled: false
-    workflow_created: true
-    original_task_preserved: true
-    source_task_status: unknown
-    execution_mode: gated_by_repository_variable
-
-  - source_task_id: 6adde2ba4e0c8191a1077c979a4d85d8
-    id: security-architecture-defense
-    title: 安全架构与防御创新
-    schedule: "WEEKLY TU 09:00"
-    prompt_source: .github/chatgpt-tasks/tasks.json
-    workflow: .github/workflows/security-architecture-defense.yml
-    migration_status: pending_designation
-    lifecycle_status: mirrored_disabled
-    enabled: false
-    workflow_created: true
-    original_task_preserved: true
-    source_task_status: unknown
-    execution_mode: gated_by_repository_variable
-
-  - source_task_id: 6adde336d4a08191b944b363a451f27e
-    id: personal-health-trend-research
-    title: 个人健康趋势研究
-    schedule: "WEEKLY MO 10:00"
-    prompt_source: .github/chatgpt-tasks/tasks.json
-    workflow: .github/workflows/personal-health-trend-research.yml
-    migration_status: pending_designation
-    lifecycle_status: mirrored_disabled
-    enabled: false
-    workflow_created: true
-    original_task_preserved: true
-    source_task_status: unknown
-    execution_mode: gated_by_repository_variable
-    sensitive_data: health
-
-  - source_task_id: 6a9cd5698b088191a96b111d0983ccd8
-    id: update-weight-wallpaper
-    title: 更新体重壁纸
-    schedule: "WEEKLY SU 09:00"
-    prompt_source: .github/chatgpt-tasks/tasks.json
-    workflow: .github/workflows/update-weight-wallpaper.yml
-    migration_status: pending_designation
-    lifecycle_status: mirrored_disabled
-    enabled: false
-    workflow_created: true
-    original_task_preserved: true
-    source_task_status: unknown
-    execution_mode: gated_by_repository_variable
-    sensitive_data: health
-
-  - source_task_id: 6abb4138d88c8191a1077c979a4d85d8
-    id: hk-ipo-alerts
-    title: 港股热门新股提醒
-    schedule: "DAILY 08:00,12:00,16:00,20:00"
-    prompt_source: .github/chatgpt-tasks/tasks.json
-    workflow: .github/workflows/hk-ipo-alerts.yml
-    migration_status: pending_designation
-    lifecycle_status: mirrored_disabled
-    enabled: false
-    workflow_created: true
-    original_task_preserved: true
-    source_task_status: unknown
-    execution_mode: gated_by_repository_variable
-    sensitive_data: financial_market_data
-
-  - source_task_id: 6a9cef0340ac81918785e0b6a09f264e
-    id: daily-personal-record
-    title: 每日个人记录
-    schedule: "DAILY 21:30"
-    prompt_source: .github/chatgpt-tasks/tasks.json
-    workflow: .github/workflows/daily-personal-record.yml
-    migration_status: pending_designation
-    lifecycle_status: mirrored_disabled
-    enabled: false
-    workflow_created: true
-    original_task_preserved: true
-    source_task_status: unknown
-    execution_mode: gated_by_repository_variable
+- source_task_id: 6aeac5b9fd788191adc1cf248cc00a99
+  id: security-event-research
+  title: 安全事件研究复盘
+  designation: explicit_user_confirmation_2026-11-05_all_tasks
+  source_issue: 791
+  schedule: WEEKLY MO 09:00
+  prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/安全事件研究复盘任务提示词.md
+  workflow: .github/workflows/security-event-research.yml
+  migration_status: enabled
+  lifecycle_status: enabled_pending_verification
+  enabled: true
+  workflow_created: true
+  original_task_preserved: true
+  source_task_status: unknown
+  execution_mode: review_before_publish
+  writes_repository: false
+  creates_issue_result: true
+  external_side_effects: issue_result_only_authorized_2026-11-05_all_tasks
+  required_secrets:
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL
+  - OPENAI_MODEL
+  delivery: issue
+  variable: AUTOMATION_SECURITY_EVENT_RESEARCH
+  cron: 0 1 * * 1
+- source_task_id: 6acf58cd3a988191b090a6bf3ae94470
+  id: diary-prompt-sync
+  title: 日记提示词同步检查
+  schedule: MONTHLY day1 09:00
+  prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/日记提示词同步检查任务提示词.md
+  workflow: .github/workflows/diary-prompt-sync.yml
+  migration_status: enabled
+  lifecycle_status: enabled_pending_verification
+  enabled: true
+  workflow_created: true
+  original_task_preserved: true
+  source_task_status: unknown
+  execution_mode: review_before_publish
+  designation: explicit_user_confirmation_2026-11-05_all_tasks
+  writes_repository: false
+  creates_issue_result: true
+  delivery: issue
+  variable: AUTOMATION_DIARY_PROMPT_SYNC
+  cron: 0 1 1 * *
+- source_task_id: 6adde30134b88191ac9bb08769fbcca1
+  id: knowledge-base-governance
+  title: FEEI.CN 知识库治理
+  schedule: WEEKLY SA 10:00
+  prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/FEEI.CN 知识库治理任务提示词.md
+  workflow: .github/workflows/knowledge-base-governance.yml
+  migration_status: enabled
+  lifecycle_status: enabled_pending_verification
+  enabled: true
+  workflow_created: true
+  original_task_preserved: true
+  source_task_status: unknown
+  execution_mode: review_before_publish
+  designation: explicit_user_confirmation_2026-11-05_all_tasks
+  writes_repository: false
+  creates_issue_result: true
+  delivery: issue
+  variable: AUTOMATION_KNOWLEDGE_BASE_GOVERNANCE
+  cron: 0 2 * * 6
+- source_task_id: 6addbfb8e0448191b492ace706c26b34
+  id: ai-security-frontier-research
+  title: AI 安全前沿研究流水线
+  schedule: DAILY 08:00
+  prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/AI 安全前沿研究任务提示词.md
+  workflow: .github/workflows/ai-security-frontier-research.yml
+  migration_status: enabled
+  lifecycle_status: enabled_pending_verification
+  enabled: true
+  workflow_created: true
+  original_task_preserved: true
+  source_task_status: unknown
+  execution_mode: review_before_publish
+  designation: explicit_user_confirmation_2026-11-05_all_tasks
+  writes_repository: false
+  creates_issue_result: true
+  delivery: issue
+  variable: AUTOMATION_AI_SECURITY_FRONTIER_RESEARCH
+  cron: 0 0 * * *
+- source_task_id: 6adde2dd7eb081919990121c58761351
+  id: ai-coding-rd-efficiency
+  title: AI 编程与研发提效
+  schedule: WEEKLY TH 09:00
+  prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/AI 编程与研发提效任务提示词.md
+  workflow: .github/workflows/ai-coding-rd-efficiency.yml
+  migration_status: enabled
+  lifecycle_status: enabled_pending_verification
+  enabled: true
+  workflow_created: true
+  original_task_preserved: true
+  source_task_status: unknown
+  execution_mode: review_before_publish
+  designation: explicit_user_confirmation_2026-11-05_all_tasks
+  writes_repository: false
+  creates_issue_result: true
+  delivery: issue
+  variable: AUTOMATION_AI_CODING_RD_EFFICIENCY
+  cron: 0 1 * * 4
+- source_task_id: 6adde2ba4e0c81919120c35aca059a7e
+  id: security-architecture-defense
+  title: 安全架构与防御创新
+  schedule: WEEKLY TU 09:00
+  prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/安全架构与防御创新任务提示词.md
+  workflow: .github/workflows/security-architecture-defense.yml
+  migration_status: enabled
+  lifecycle_status: enabled_pending_verification
+  enabled: true
+  workflow_created: true
+  original_task_preserved: true
+  source_task_status: unknown
+  execution_mode: review_before_publish
+  designation: explicit_user_confirmation_2026-11-05_all_tasks
+  writes_repository: false
+  creates_issue_result: true
+  delivery: issue
+  variable: AUTOMATION_SECURITY_ARCHITECTURE_DEFENSE
+  cron: 0 1 * * 2
+- source_task_id: 6adde336d4a08191b944b363a451f27e
+  id: personal-health-trend-research
+  title: 个人健康趋势研究
+  schedule: WEEKLY MO 10:00
+  prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/个人健康趋势研究任务提示词.md
+  workflow: .github/workflows/personal-health-trend-research.yml
+  migration_status: enabled
+  lifecycle_status: enabled_pending_verification
+  enabled: true
+  workflow_created: true
+  original_task_preserved: true
+  source_task_status: unknown
+  execution_mode: review_before_publish
+  sensitive_data: health
+  designation: explicit_user_confirmation_2026-11-05_all_tasks
+  writes_repository: false
+  creates_issue_result: false
+  delivery: private_issue
+  variable: AUTOMATION_PERSONAL_HEALTH_TREND_RESEARCH
+  cron: 0 2 * * 1
+- source_task_id: 6a9cd5698b088191a96b111d0983ccd8
+  id: update-weight-wallpaper
+  title: 更新体重壁纸
+  schedule: WEEKLY SU 09:00
+  prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/更新体重壁纸任务提示词.md
+  workflow: .github/workflows/update-weight-wallpaper.yml
+  migration_status: enabled
+  lifecycle_status: enabled_pending_verification
+  enabled: true
+  workflow_created: true
+  original_task_preserved: true
+  source_task_status: unknown
+  execution_mode: review_before_publish
+  sensitive_data: health
+  designation: explicit_user_confirmation_2026-11-05_all_tasks
+  writes_repository: false
+  creates_issue_result: false
+  delivery: private_issue
+  variable: AUTOMATION_UPDATE_WEIGHT_WALLPAPER
+  cron: 0 1 * * 0
+- source_task_id: 6abb4138d88c8191a1077c979a4d85d8
+  id: hk-ipo-alerts
+  title: 港股热门新股提醒
+  schedule: DAILY 08:00,12:00,16:00,20:00
+  prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/港股热门新股提醒任务提示词.md
+  workflow: .github/workflows/hk-ipo-alerts.yml
+  migration_status: enabled
+  lifecycle_status: enabled_pending_verification
+  enabled: true
+  workflow_created: true
+  original_task_preserved: true
+  source_task_status: unknown
+  execution_mode: review_before_publish
+  sensitive_data: financial_market_data
+  designation: explicit_user_confirmation_2026-11-05_all_tasks
+  writes_repository: false
+  creates_issue_result: true
+  delivery: issue
+  variable: AUTOMATION_HK_IPO_ALERTS
+  cron: 0 0,4,8,12 * * *
+- source_task_id: 6a9cef0340ac81918785e0b6a09f264e
+  id: daily-personal-record
+  title: 每日个人记录
+  schedule: DAILY 21:30
+  prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/每日个人记录任务提示词.md
+  workflow: .github/workflows/daily-personal-record.yml
+  migration_status: enabled
+  lifecycle_status: enabled_pending_verification
+  enabled: true
+  workflow_created: true
+  original_task_preserved: true
+  source_task_status: unknown
+  execution_mode: review_before_publish
+  designation: explicit_user_confirmation_2026-11-05_all_tasks
+  writes_repository: false
+  creates_issue_result: false
+  delivery: private_issue
+  variable: AUTOMATION_DAILY_PERSONAL_RECORD
+  cron: 30 13 * * *

@@ -6,6 +6,8 @@ from pathlib import Path
 import re
 import tempfile
 import unittest
+
+import scheduled_issue_review as review
 from unittest.mock import patch
 from urllib.error import HTTPError
 
@@ -176,47 +178,75 @@ class AutomationResultTests(unittest.TestCase):
             'prompt_sha256': 'abc', 'commit': 'def',
         }))
 
-        def cli(*args):
-            if args[:2] == ('release', 'view'):
-                raise automation.subprocess.CalledProcessError(1, ['gh', *args])
-            if args[:2] == ('release', 'create'):
-                return 'https://github.com/owner/public/releases/tag/wallpaper'
-            return 'https://github.com/owner/public/issues/1'
+        return lambda *args: 'https://github.com/owner/public/issues/1'
 
-        return cli
-
-    def test_wallpaper_uses_public_inline_image_and_preserves_original_files(self):
+    def test_wallpaper_uses_only_temporary_actions_download(self):
         cli = self.wallpaper_delivery()
-        with patch.dict('os.environ', {'GITHUB_RUN_ID': '123'}, clear=True):
+        with patch.dict('os.environ', {'GITHUB_RUN_ID': '123', 'WALLPAPER_ARTIFACT_ID': '456'}, clear=True):
             with patch.object(automation, 'destination', return_value='owner/public'):
                 with patch.object(automation, 'gh', side_effect=cli) as api:
                     automation.deliver(self.task, self.out)
-        issue = next(c.args for c in api.call_args_list if c.args[:2] == ('issue', 'create') and '--help' not in c.args)
-        self.assertNotIn('--attach', issue)
+        issue = next(c.args for c in api.call_args_list if c.args[:2] == ('issue', 'create'))
+        self.assertEqual(issue[issue.index('--title') + 1], '更新体重壁纸')
+        self.assertIn('已交付', issue)
+        self.assertIn('任务：更新体重壁纸', issue)
         body = (self.out / 'report.md').read_text()
-        self.assertIn('![体重趋势壁纸](https://github.com/owner/public/releases/download/automation-update-weight-wallpaper-123/wallpaper.png)', body)
-        self.assertNotIn(str(self.out), body)
-        self.assertIn('[PNG、SVG 原文件与历史版本](https://github.com/owner/public/releases/tag/wallpaper)', body)
-        release = next(c.args for c in api.call_args_list if c.args[:2] == ('release', 'create'))
-        self.assertIn(str(self.out / 'wallpaper.png'), release)
-        self.assertIn(str(self.out / 'wallpaper.svg'), release)
+        self.assertIn('https://github.com/owner/public/actions/runs/123/artifacts/456', body)
+        self.assertIn('保留 30 天', body)
+        self.assertNotIn('![', body)
+        self.assertNotIn('releases/', body)
+        self.assertFalse(any(c.args[0] == 'release' for c in api.call_args_list))
 
-    def test_wallpaper_retry_reuses_release_after_issue_creation_failed(self):
-        cli = self.wallpaper_delivery()
-        calls = []
-        def retry(*args):
-            calls.append(args)
-            if args[:2] == ('release', 'view'):
-                return 'https://github.com/owner/public/releases/tag/wallpaper'
-            return cli(*args)
+    def test_missing_wallpaper_artifact_does_not_create_issue(self):
+        self.wallpaper_delivery()
         with patch.dict('os.environ', {'GITHUB_RUN_ID': '123'}, clear=True):
             with patch.object(automation, 'destination', return_value='owner/public'):
-                with patch.object(automation, 'gh', side_effect=retry):
+                with patch.object(automation, 'gh') as api, self.assertRaisesRegex(ValueError, '附件 ID'):
                     automation.deliver(self.task, self.out)
-        self.assertFalse(any(c[:2] == ('release', 'create') for c in calls))
-        upload = next(c for c in calls if c[:2] == ('release', 'upload'))
-        self.assertIn('--clobber', upload)
-        self.assertTrue(any(c[:2] == ('issue', 'create') for c in calls))
+                api.assert_not_called()
+
+    def test_report_topic_becomes_title_without_execution_metadata(self):
+        self.assertEqual(automation.issue_title('# DNS 故障如何跨越隔离边界\n正文', '安全事件研究复盘'), 'DNS 故障如何跨越隔离边界')
+        self.assertEqual(automation.issue_title('# [自动任务][completed] 体重变化 · 2026-11-07 10:00 UTC', '壁纸'), '体重变化')
+        self.assertEqual(automation.issue_title('无标题正文', '任务名称'), '任务名称')
+
+    def test_wallpaper_regeneration_replies_to_original_issue_even_when_report_is_unchanged(self):
+        import hashlib
+        cli = self.wallpaper_delivery()
+        meta = json.loads((self.out / 'metadata.json').read_text())
+        request = {'issue': '809', 'comment_id': '987', 'request_digest': 'a' * 64, 'source': 'b' * 64}
+        meta.update(reply_to=request, report_fingerprints=[hashlib.sha256(self.result['report_markdown'].encode()).hexdigest()])
+        (self.out / 'metadata.json').write_text(json.dumps(meta))
+        with patch.dict('os.environ', {'GITHUB_RUN_ID': '123', 'WALLPAPER_ARTIFACT_ID': '456'}, clear=True):
+            with patch.object(automation, 'destination', return_value='owner/public'):
+                with patch.object(review, 'wallpaper_request', return_value=request):
+                    with patch.object(automation, 'gh', side_effect=cli) as api:
+                        automation.deliver(self.task, self.out)
+        api.assert_called_once()
+        self.assertEqual(api.call_args.args[:3], ('issue', 'comment', '809'))
+        self.assertTrue((self.out / 'report.md').read_text().startswith('<!-- automation-wallpaper:request:987 -->'))
+
+    def test_explicit_wallpaper_request_cannot_silently_return_no_update(self):
+        self.wallpaper_delivery()
+        result = json.loads((self.out / 'result.json').read_text())
+        result['status'] = 'no_update'
+        (self.out / 'result.json').write_text(json.dumps(result))
+        meta = json.loads((self.out / 'metadata.json').read_text())
+        meta['reply_to'] = {'issue': '809'}
+        (self.out / 'metadata.json').write_text(json.dumps(meta))
+        with self.assertRaisesRegex(ValueError, '不能用 no_update'):
+            automation.render_wallpaper(self.task, self.out)
+
+    def test_changed_wallpaper_request_stops_delivery(self):
+        self.wallpaper_delivery()
+        meta = json.loads((self.out / 'metadata.json').read_text())
+        meta['reply_to'] = {'issue': '809', 'comment_id': '987', 'request_digest': 'a' * 64, 'source': 'b' * 64}
+        (self.out / 'metadata.json').write_text(json.dumps(meta))
+        with patch.object(automation, 'destination', return_value='owner/public'):
+            with patch.object(review, 'wallpaper_request', return_value={}), patch.object(automation, 'gh') as api:
+                with self.assertRaisesRegex(ValueError, '已变化'):
+                    automation.deliver(self.task, self.out)
+                api.assert_not_called()
 
     def test_silent_no_update_accepts_empty_body_but_completed_does_not(self):
         self.result.update(status='no_update', report_markdown='', sources=[])
@@ -242,7 +272,7 @@ class AutomationResultTests(unittest.TestCase):
         env = {'GITHUB_REPOSITORY': 'owner/public', 'GITHUB_ACTOR': 'owner',
                'GITHUB_SHA': 'abc', 'GITHUB_RUN_ID': '123'}
         with patch.dict('os.environ', env, clear=True), patch.object(automation, 'prompt', return_value='instructions'):
-            with patch.object(automation, 'gh', return_value='{"items":[]}'):
+            with patch.object(review, 'read_task_history', return_value={'issues': [], 'scope': 'task_search_latest_100', 'comments_scope': 'latest_10', 'errors': []}):
                 with patch.object(automation.subprocess, 'check_output', return_value='activity'):
                     with patch.object(automation, 'collect_personal_data') as collect:
                         automation.prepare(task, self.out)
@@ -264,28 +294,24 @@ class AutomationResultTests(unittest.TestCase):
                 api.assert_not_called()
         self.assertTrue(json.loads((self.out / 'metadata.json').read_text())['duplicate'])
 
-    def test_history_uses_task_reports_and_ignores_untrusted_authors(self):
-        marker = '<!-- automation-task:security-event-research -->'
-        def issue(author, body):
-            return {'user': {'login': author}, 'body': body, 'title': 'report',
-                    'html_url': 'https://github.com/owner/public/issues/1', 'updated_at': '2026-11-05'}
-        found = {'items': [issue('github-actions[bot]', marker + '\nverified report'),
-                           issue('stranger', marker + '\nfake history'),
-                           issue('owner', 'unrelated issue')]}
+    def test_prepare_includes_historical_owner_feedback_and_coverage(self):
+        previous = [{'body': '<!-- automation-task:security-event-research -->\nverified report',
+                     'title': 'report', 'html_url': 'https://github.com/owner/public/issues/1', 'updated_at': '2026-11-05',
+                     'comments': [{'author': {'login': 'owner'}, 'body': '之前的口径需要修正'}]}]
+        history = {'issues': previous, 'scope': 'task_search_latest_100', 'comments_scope': 'latest_10', 'errors': []}
         task = {'id': 'security-event-research', 'delivery': 'issue',
-                'schedule': 'WEEKLY MO 09:00', 'prompt_source': 'document.md'}
-        env = {'GITHUB_REPOSITORY': 'owner/public', 'GITHUB_ACTOR': 'owner',
-               'GITHUB_SHA': 'abc', 'GITHUB_RUN_ID': '123'}
+                'schedule': ['0 1 * * 1'], 'prompt_source': 'document.md'}
+        env = {'GITHUB_REPOSITORY': 'owner/public', 'GITHUB_SHA': 'abc', 'GITHUB_RUN_ID': '123'}
         with patch.dict('os.environ', env, clear=True), patch.object(automation, 'prompt', return_value='instructions'):
-            with patch.object(automation, 'gh', return_value=json.dumps(found)) as api:
+            with patch.object(review, 'read_task_history', return_value=history):
                 with patch.object(automation.subprocess, 'check_output', return_value='abc date activity'):
                     automation.prepare(task, self.out)
-        history = json.loads((self.out / 'history.json').read_text())
-        self.assertEqual(len(history), 1)
-        self.assertIn('verified report', history[0]['body'])
-        self.assertEqual(api.call_args.args[1], 'search/issues')
-        metadata = json.loads((self.out / 'metadata.json').read_text())
-        self.assertEqual(metadata['history_count'], 1)
+        stored = json.loads((self.out / 'history.json').read_text())
+        self.assertEqual(stored[0]['comments'][0]['body'], '之前的口径需要修正')
+        context = json.loads((self.out / 'context.md').read_text())
+        self.assertEqual(context['history_comments_scope'], 'latest_10')
+        self.assertEqual(context['history_errors'], [])
+        self.assertEqual(json.loads((self.out / 'metadata.json').read_text())['history_count'], 1)
 
     def collect_with_month_response(self, month):
         class FixedDateTime(datetime):

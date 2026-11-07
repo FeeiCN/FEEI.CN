@@ -3,7 +3,7 @@ name: 网站严格检查
 on:
   push:
     branches:
-      - 'refactor/ai-*'
+      - main
   pull_request:
   workflow_dispatch:
   schedule:
@@ -49,7 +49,7 @@ jobs:
       - name: Changed document check
         if: github.event_name == 'pull_request' || github.event_name == 'push'
         env:
-          DOCS_BASE: ${{ github.event.pull_request.base.sha }}
+          DOCS_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           if [ -z "$DOCS_BASE" ]; then
             DOCS_BASE="$(git rev-parse origin/main)"

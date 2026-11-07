@@ -2,12 +2,29 @@ name: 更新体重壁纸
 
 on:
   workflow_dispatch:
+    inputs:
+      review_issue:
+        description: 原壁纸 Issue 编号（由议题驱动器传入）
+        required: false
+        default: ''
+        type: string
+      review_comment:
+        description: 本人重做请求的评论 ID
+        required: false
+        default: ''
+        type: string
+      review_request_digest:
+        description: 本人请求的校验摘要
+        required: false
+        default: ''
+        type: string
   schedule:
     - cron: "0 1 * * 0"
 
 permissions:
   contents: read
   issues: write
+  actions: read
 
 concurrency:
   group: automation-update-weight-wallpaper
@@ -21,6 +38,9 @@ jobs:
       task_id: update-weight-wallpaper
       prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/定时任务/更新体重壁纸任务提示词.md
       delivery: issue
+      review_issue: ${{ inputs.review_issue || '' }}
+      review_comment: ${{ inputs.review_comment || '' }}
+      review_request_digest: ${{ inputs.review_request_digest || '' }}
     secrets: inherit
 
   publish:
@@ -31,8 +51,9 @@ jobs:
       run:
         working-directory: feei.cn
     permissions:
-      contents: write
+      contents: read
       issues: write
+      actions: read
     env:
       TASK_ID: update-weight-wallpaper
       TASK_PROMPT_SOURCE: ${{ needs.run.outputs.prompt_source }}
@@ -52,5 +73,59 @@ jobs:
         with:
           name: wallpaper-delivery-${{ github.run_id }}
           path: feei.cn/output
-      - name: Validate and publish wallpaper
+      - name: 保存壁纸下载附件
+        id: wallpaper
+        if: ${{ hashFiles('feei.cn/output/wallpaper.png') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: weight-wallpaper-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            feei.cn/output/wallpaper.png
+            feei.cn/output/wallpaper.svg
+          if-no-files-found: error
+          retention-days: 30
+      - name: 校验并交付壁纸
+        env:
+          WALLPAPER_ARTIFACT_ID: ${{ steps.wallpaper.outputs.artifact-id }}
         run: python3 scripts/automation_tasks.py deliver --task "$TASK_ID"
+
+  notify-failure:
+    needs: [run, publish]
+    if: >-
+      always() && inputs.review_issue != '' &&
+      (needs.run.result != 'success' || needs.publish.result != 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: feei.cn
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: feei.cn
+          persist-credentials: false
+      - name: 回复壁纸重做未完成
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVIEW_ISSUE: ${{ inputs.review_issue }}
+          REVIEW_COMMENT: ${{ inputs.review_comment }}
+          REVIEW_REQUEST_DIGEST: ${{ inputs.review_request_digest }}
+        run: |
+          python3 - <<'PYFAILURE'
+          import os, subprocess, sys
+          from pathlib import Path
+          sys.path.insert(0, 'scripts')
+          from scheduled_issue_review import wallpaper_request
+          repo = os.environ['GITHUB_REPOSITORY']
+          try:
+              wallpaper_request(repo, os.environ['REVIEW_ISSUE'], os.environ['REVIEW_COMMENT'], os.environ['REVIEW_REQUEST_DIGEST'])
+          except ValueError:
+              # 请求已变化或已有结果时，不回复过期的失败通知。
+              raise SystemExit(0)
+          run = f"https://github.com/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          Path('/tmp/wallpaper-failure.md').write_text(
+              '<!-- codex-driver:wallpaper-failed -->\n\n'
+              f'本次壁纸重做未完成，请查看[运行记录]({run})。排除原因后，可再次单独评论“重新制作”。\n')
+          subprocess.check_call(['gh', 'issue', 'comment', os.environ['REVIEW_ISSUE'], '--repo', repo,
+                                 '--body-file', '/tmp/wallpaper-failure.md'])
+          PYFAILURE

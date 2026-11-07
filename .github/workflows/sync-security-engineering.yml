@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'docs/02-事业有成/01-安全工程/**'
-      - 'docs/02-事业有成/04-AI安全/**'
+      - 'docs/01-网络安全/01-网络空间安全/**'
+      - 'docs/01-网络安全/02-人工智能安全/**'
   workflow_dispatch:
 
 concurrency:
@@ -49,11 +49,11 @@ jobs:
         run: |
           rsync -a --delete \
             --exclude='.git/' \
-            "source/docs/02-事业有成/01-安全工程/" \
+            "source/docs/01-网络安全/01-网络空间安全/" \
             "target/"
           mkdir -p "target/03-安全体系/AI安全"
           rsync -a --delete \
-            "source/docs/02-事业有成/04-AI安全/" \
+            "source/docs/01-网络安全/02-人工智能安全/" \
             "target/03-安全体系/AI安全/"
 
       - name: Commit and push

@@ -182,19 +182,16 @@ def collect_personal_data(t, out):
 def prepare(t, out):
     out.mkdir(parents=True, exist_ok=True)
     repo = destination(t)
-    marker = f"<!-- automation-task:{t['id']} -->"
-    try:
-        found = json.loads(gh('api', 'search/issues', '--method', 'GET', '-f',
-                              f'q=repo:{repo} in:body "automation-task:{t["id"]}"',
-                              '-f', 'sort=updated', '-f', 'per_page=100'))
-        raw = found['items']
-        history_scope = 'task_search_latest_100'
-    except (subprocess.CalledProcessError, KeyError):
-        raw = json.loads(gh('api', f'repos/{repo}/issues?state=all&sort=updated&per_page=100'))
-        history_scope = 'repository_latest_100_fallback_incomplete'
-    trusted = {repo.split('/')[0].lower(), os.environ.get('GITHUB_ACTOR', '').lower(), 'github-actions[bot]'}
-    previous = [i for i in raw if marker in (i.get('body') or '')
-                and i.get('user', {}).get('login', '').lower() in trusted]
+    from scheduled_issue_review import read_task_history, wallpaper_request
+    reply_to = None
+    request = [os.environ.get(key, '') for key in ['REVIEW_ISSUE', 'REVIEW_COMMENT', 'REVIEW_REQUEST_DIGEST']]
+    if any(request):
+        if t['id'] != 'update-weight-wallpaper':
+            raise ValueError('只有壁纸任务支持原 Issue 重做')
+        reply_to = wallpaper_request(repo, *request)
+    history = read_task_history(repo, t['id'])
+    previous = history['issues']
+    history_scope = history['scope']
     context = {
         'time_utc': datetime.now(timezone.utc).isoformat(),
         'timezone': 'Asia/Shanghai',
@@ -205,6 +202,9 @@ def prepare(t, out):
                     for i in previous],
         'history_scope': history_scope,
         'history_bodies': 'output/history.json',
+        'history_comments_scope': history['comments_scope'],
+        'history_errors': history['errors'],
+        'reply_to': reply_to,
     }
     context['repository_activity'] = subprocess.check_output(
         ['git', 'log', '-25', '--format=%h %aI %s'], cwd=ROOT, text=True)
@@ -221,6 +221,7 @@ def prepare(t, out):
         'commit': os.environ.get('GITHUB_SHA', ''),
         'run_url': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
         'delivery_repository': repo, 'prepared_at': context['time_utc'],
+        'reply_to': reply_to,
         'history_scope': history_scope, 'history_count': len(previous),
         'report_fingerprints': [digest for issue in previous for digest in
                                 re.findall(r'<!-- report-sha256:([a-f0-9]{64}) -->', issue.get('body') or '')],
@@ -270,6 +271,14 @@ def validate_result(t, result, out):
     return status, report
 
 
+def issue_title(report, fallback):
+    heading = re.search(r'^# ([^\n]+)', report, re.M)
+    title = heading[1].strip() if heading else fallback
+    title = re.sub(r'^(?:\[(?:自动任务|completed|blocked|no_update)\]\s*)+', '', title, flags=re.I)
+    title = re.sub(r'\s*[·｜|]\s*\d{4}-\d{2}-\d{2}(?:[ T].*)?$', '', title)
+    return title[:200].strip() or fallback
+
+
 def deliver(t, out):
     result = json.loads((out / 'result.json').read_text())
     status, report = validate_result(t, result, out)
@@ -281,37 +290,48 @@ def deliver(t, out):
     marker = f"<!-- automation-task:{t['id']} -->"
     digest = hashlib.sha256(report.encode()).hexdigest()
     fingerprint = f'<!-- report-sha256:{digest} -->'
-    duplicated = digest in meta.get('report_fingerprints', [])
+    reply_to = meta.get('reply_to')
+    if reply_to:
+        from scheduled_issue_review import wallpaper_request
+        if t['id'] != 'update-weight-wallpaper' or wallpaper_request(
+                repo, reply_to['issue'], reply_to['comment_id'], reply_to['request_digest']) != reply_to:
+            raise ValueError('壁纸原 Issue 或本人意见已变化，停止交付')
+    duplicated = not reply_to and digest in meta.get('report_fingerprints', [])
     body = (f"{marker}\n{fingerprint}\n<!-- status:{status} -->\n\n{report}\n\n---\n"
             f"运行：[Actions]({meta['run_url']}) · 提示词 `{meta['prompt_sha256'][:12]}` · "
             f"commit `{meta['commit'][:8]}`\n")
-    body += ('\n\n审阅与写入：本人可直接评论修改意见，或发送 `/review`、`/revise`；'
-             '助手会展示完整修订稿和目标文件。确认后单独评论 `/approve` 写入 main；'
-             '正文或意见变化后须重新审阅。`/reject` 暂停。\n')
-    if len(body.encode('utf-8')) > 65000:
-        raise ValueError('结果超过 Issue 正文限制，需整理完整交付方式后重试')
-    (out / 'report.md').write_text(body)
+    if t['id'] == 'update-weight-wallpaper':
+        body += '\n可直接提问，或说明“数据同步了，再做一次”，使用当前固定模板重做壁纸。\n'
+    else:
+        body += ('\n可直接提问或评论修改意见；需要写入网站时，助手会先展示完整稿件和目标文件。'
+                 '确认具体版本后，可直接说“这版可以，写入网站吧”；修改、提问或暂停都可自然说明。\n')
     if status != 'no_update' and not duplicated:
-        if t['id'] == 'update-weight-wallpaper' and result['artifacts']:
-            tag = f"automation-{t['id']}-{os.environ['GITHUB_RUN_ID']}"
-            files = [str(ROOT / name) for name in result['artifacts']]
-            try:
-                release = gh('release', 'view', tag, '--repo', repo, '--json', 'url', '--jq', '.url').strip()
-            except subprocess.CalledProcessError:
-                release = gh('release', 'create', tag, *files, '--repo', repo,
-                             '--title', f"{t['title']} · {tag}", '--latest=false',
-                             '--notes-file', str(out / 'report.md')).strip()
-            else:
-                gh('release', 'upload', tag, *files, '--repo', repo, '--clobber')
-            if status == 'completed':
-                image = f'https://github.com/{repo}/releases/download/{tag}/wallpaper.png'
-                body += f'\n![体重趋势壁纸]({image})\n'
-            body += f'\n交付附件：[PNG、SVG 原文件与历史版本]({release})\n'
+        if t['id'] == 'update-weight-wallpaper' and status == 'completed':
+            artifact_id = os.environ.get('WALLPAPER_ARTIFACT_ID', '')
+            run_id = os.environ.get('GITHUB_RUN_ID', '')
+            if not re.fullmatch(r'[1-9][0-9]*', artifact_id) or not re.fullmatch(r'[1-9][0-9]*', run_id):
+                raise ValueError('缺少已上传的 Actions 壁纸附件 ID 或运行 ID')
+            download = f'https://github.com/{repo}/actions/runs/{run_id}/artifacts/{artifact_id}'
+            body += (f'\n[下载壁纸 PNG、SVG]({download})（需登录 GitHub，保留 30 天；'
+                     '过期或运行被删除后请重新生成）。不长期存图。\n')
+        if len(body.encode('utf-8')) > 65000:
+            raise ValueError('结果超过 Issue 正文限制，需整理完整交付方式后重试')
+        (out / 'report.md').write_text(body)
+        if reply_to:
+            body = f"<!-- automation-wallpaper:request:{reply_to['comment_id']} -->\n\n" + body
             (out / 'report.md').write_text(body)
-        date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
-        url = gh('issue', 'create', '--repo', repo, '--title',
-                 f"[自动任务][{status}] {t['title']} · {date}", '--body-file', str(out / 'report.md')).strip()
+            gh('issue', 'comment', reply_to['issue'], '--repo', repo, '--body-file', str(out / 'report.md'))
+            url = f"https://github.com/{repo}/issues/{reply_to['issue']}"
+        else:
+            task_label = f"任务：{t['title']}"
+            state_label = '待补充' if status == 'blocked' else ('待审阅' if t['id'] in RESEARCH else '已交付')
+            for name, color in [(task_label, 'd4c5f9'), (state_label, 'fbca04' if status == 'blocked' else 'c2e0c6')]:
+                gh('label', 'create', name, '--repo', repo, '--color', color, '--force')
+            url = gh('issue', 'create', '--repo', repo, '--title', issue_title(report, t['title']),
+                     '--label', task_label, '--label', state_label, '--body-file', str(out / 'report.md')).strip()
         meta['issue_url'] = url
+    else:
+        (out / 'report.md').write_text(body)
     meta['status'] = status
     meta['duplicate'] = duplicated
     (out / 'metadata.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2))
@@ -345,6 +365,9 @@ def render_wallpaper(t, out):
         raise ValueError('固定壁纸渲染仅供 update-weight-wallpaper 使用')
     result = json.loads((out / 'result.json').read_text())
     if result['status'] != 'completed':
+        meta = json.loads((out / 'metadata.json').read_text())
+        if result['status'] == 'no_update' and meta.get('reply_to'):
+            raise ValueError('本人明确要求重做壁纸，不能用 no_update 跳过交付')
         return
     from render_weight_wallpaper import normalize, render
     data = json.loads((out / 'wallpaper-data.json').read_text())

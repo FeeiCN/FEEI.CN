@@ -13,14 +13,26 @@ on:
         required: true
         type: string
 
+      review_issue:
+        description: 原壁纸 Issue 编号（由议题驱动器传入）
+        required: false
+        default: ''
+        type: string
+      review_comment:
+        description: 本人重做请求的评论 ID
+        required: false
+        default: ''
+        type: string
+      review_request_digest:
+        description: 本人请求的校验摘要
+        required: false
+        default: ''
+        type: string
+
     outputs:
       prompt_source:
         description: Task prompt document
         value: ${{ jobs.execute.outputs.prompt_source }}
-
-permissions:
-  contents: read
-  issues: write
 
 jobs:
   execute:
@@ -35,6 +47,9 @@ jobs:
       TASK_ID: ${{ inputs.task_id }}
       TASK_PROMPT_SOURCE: ${{ inputs.prompt_source }}
       TASK_DELIVERY: ${{ inputs.delivery }}
+      REVIEW_ISSUE: ${{ inputs.review_issue }}
+      REVIEW_COMMENT: ${{ inputs.review_comment }}
+      REVIEW_REQUEST_DIGEST: ${{ inputs.review_request_digest }}
       AUTOMATION_PERMISSION_CONFIG: '{extends=":read-only", filesystem={":workspace_roots"={output="write"}}, network={enabled=true}}'
     steps:
       - uses: actions/checkout@v4
@@ -160,4 +175,4 @@ jobs:
             feei.cn/output/wallpaper.png
             feei.cn/output/wallpaper.svg
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 1

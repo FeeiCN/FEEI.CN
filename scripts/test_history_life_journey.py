@@ -1,10 +1,12 @@
 from copy import deepcopy
+import io
 import json
 import os
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
+from contextlib import redirect_stdout
 
 import history_life_journey as journey
 
@@ -346,6 +348,52 @@ class HistoryJourneyTests(unittest.TestCase):
         with patch.object(journey, 'labels'), patch.object(journey, 'api', return_value=[issue]):
             with self.assertRaisesRegex(ValueError, '重新打开'):
                 journey.create_or_find(REPO, '朱元璋', 30, True, run)
+
+    def test_processing_receipt_acknowledges_all_pending_comments(self):
+        issue = fixture()
+        issue['comments'] = [comment(1, '先补背景'), comment(2, '尤其是各方实力')]
+        issue['labels'].append({'name': '保留我的标签'})
+        prepared = context(issue)
+        with patch.object(journey, 'api', return_value=[]) as calls:
+            journey.processing_receipt(REPO, issue, prepared, True)
+        posts = [(c.args[1], c.args[3]) for c in calls.call_args_list if c.args[2:3] == ('POST',)]
+        self.assertIn(('issues/comments/1/reactions', {'content': 'eyes'}), posts)
+        self.assertIn(('issues/comments/2/reactions', {'content': 'eyes'}), posts)
+        label_put = [c.args[3]['labels'] for c in calls.call_args_list if c.args[2:3] == ('PUT',)][0]
+        self.assertIn('保留我的标签', label_put)
+        self.assertIn('旅程:处理中', label_put)
+        self.assertEqual(issue['comments'][0]['body'], '先补背景')
+
+    def test_receipt_cleanup_preserves_human_reactions(self):
+        issue = fixture()
+        issue['comments'] = [comment(1, '继续')]
+        reactions = [{'id': 10, 'content': 'eyes', 'user': {'login': OWNER}},
+                     {'id': 11, 'content': '+1', 'user': {'login': journey.BOT}},
+                     {'id': 12, 'content': 'eyes', 'user': {'login': journey.BOT}}]
+        with patch.object(journey, 'api', return_value=reactions) as calls:
+            journey.processing_receipt(REPO, issue, context(issue), False)
+        deletes = [c.args[1] for c in calls.call_args_list if c.args[2:3] == ('DELETE',)]
+        self.assertEqual(deletes, ['issues/comments/1/reactions/12'])
+
+    def test_rerun_can_clean_receipt_after_answer_was_delivered(self):
+        issue = fixture()
+        issue['comments'] = [comment(1, '当前各方实力怎么样')]
+        deliver(issue)
+        prepared = context(issue)
+        self.assertTrue(prepared['skip'])
+        self.assertEqual(prepared['pending_comments'], [])
+        with patch.object(journey, 'api', return_value=[]) as calls:
+            journey.processing_receipt(REPO, issue, prepared, False)
+        self.assertEqual(calls.call_args.args[1], 'issues/comments/1/reactions?per_page=100&page=1')
+
+    def test_receipt_api_failure_does_not_block_research(self):
+        issue = fixture()
+        issue['comments'] = [comment(1, '各方实力怎么样')]
+        prepared = context(issue)
+        with patch.object(journey, 'api', side_effect=RuntimeError('临时不可用')), redirect_stdout(io.StringIO()):
+            journey.processing_receipt(REPO, issue, prepared, True)
+        self.assertFalse(prepared['skip'])
+        self.assertEqual(prepared['pending_comments'][0]['body'], '各方实力怎么样')
 
 
 if __name__ == '__main__':

@@ -8,7 +8,7 @@ import subprocess
 import sys
 import time
 
-from automation_tasks import COMMON, ROOT, SCHEMA, validate_result
+from automation_tasks import COMMON, ROOT, SCHEMA, reading_review_preflight, validate_result
 
 
 WRITING_TASKS = {
@@ -159,6 +159,12 @@ def review_ready(review, candidate):
 
 def execute(task_id, out, executor):
     base = output_path(out, 'prompt.md').read_text(encoding='utf-8')
+    if task_id == 'weekly-reading-review':
+        result = reading_review_preflight(out)
+        if result is not None:
+            validate_result({'id': task_id}, result, out)
+            save(out, 'result.json', result)
+            return result
     if task_id not in WRITING_TASKS:
         result = executor('task', base, SCHEMA)
         validate_shape(result, SCHEMA)

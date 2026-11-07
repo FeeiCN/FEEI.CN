@@ -244,7 +244,7 @@ class ScheduledReviewTests(unittest.TestCase):
 
     def test_every_registered_task_accepts_its_own_verified_issue(self):
         tasks = review.registered_tasks()
-        self.assertEqual(len(tasks), 10)
+        self.assertTrue({'daily-reading-selection', 'weekly-reading-review'} <= tasks.keys())
         for task, workflow in tasks.items():
             issue = fixture()
             issue['body'] = issue['body'].replace('security-event-research', task)

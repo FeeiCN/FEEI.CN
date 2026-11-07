@@ -1,0 +1,24 @@
+name: 每周阅读回访
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 12 * * 0"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: automation-weekly-reading-review
+  cancel-in-progress: false
+
+jobs:
+  run:
+    if: ${{ vars.AUTOMATION_WEEKLY_READING_REVIEW == 'true' }}
+    uses: ./.github/workflows/automation-task.yml
+    with:
+      task_id: weekly-reading-review
+      prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/定时任务/每周阅读回访任务提示词.md
+      delivery: issue
+    secrets: inherit

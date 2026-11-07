@@ -60,6 +60,44 @@ class WritingLoopTests(unittest.TestCase):
             return copy.deepcopy(result)
         return call
 
+    def reading_history(self, comments=None, errors=None):
+        (self.out / 'context.md').write_text(json.dumps({
+            'history_errors': [], 'history_scope': 'task_search_latest_100',
+            'history_search_urls': {'weekly-reading-review': 'https://github.com/owner/repo/issues?q=weekly',
+                                    'daily-reading-selection': 'https://github.com/owner/repo/issues?q=daily'},
+            'time_utc': '2026-11-07T12:00:00Z',
+        }))
+        (self.out / 'history.json').write_text('[]')
+        (self.out / 'related-history.json').write_text(json.dumps({'daily-reading-selection': {
+            'issues': [{'body': '已为你推荐文章', 'comments': comments or [],
+                        'comments_scope': 'all_owner_and_bot_comments'}],
+            'scope': 'task_search_latest_100', 'errors': errors or [],
+        }}))
+
+    def test_reading_review_without_owner_feedback_skips_model(self):
+        self.reading_history([{'author': {'login': 'github-actions[bot]'}, 'body': '你已掌握这个知识'},
+                              {'author': {'login': 'outsider'}, 'body': '我读完了'}])
+        with patch.dict('os.environ', {'GITHUB_REPOSITORY': 'owner/repo'}):
+            result = writing.execute('weekly-reading-review', self.out, self.executor())
+        self.assertEqual(result['status'], 'no_update')
+        self.assertEqual(self.calls, [])
+        self.assertEqual(json.loads((self.out / 'result.json').read_text()), result)
+
+    def test_reading_review_missing_history_is_blocked_instead_of_assuming_no_feedback(self):
+        self.reading_history(errors=['评论读取失败'])
+        with patch.dict('os.environ', {'GITHUB_REPOSITORY': 'owner/repo'}):
+            result = writing.execute('weekly-reading-review', self.out, self.executor())
+        self.assertEqual(result['status'], 'blocked')
+        self.assertEqual(self.calls, [])
+
+    def test_reading_review_with_owner_comment_lets_model_interpret_actual_meaning(self):
+        self.reading_history([{'author': {'login': 'owner'}, 'body': '我没读完，这段不太懂'}])
+        result = {**self.result, 'status': 'no_update'}
+        with patch.dict('os.environ', {'GITHUB_REPOSITORY': 'owner/repo'}):
+            actual = writing.execute('weekly-reading-review', self.out, self.executor(result))
+        self.assertEqual(actual, result)
+        self.assertEqual(len(self.calls), 1)
+
     def execute(self, *responses):
         return writing.execute('security-event-research', self.out, self.executor(*responses))
 

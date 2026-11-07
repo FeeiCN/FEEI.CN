@@ -441,6 +441,13 @@ def read_task_history(repo, task, comment_limit=10):
             'errors': errors}
 
 
+def related_task_history(repo, task):
+    peers = {'daily-reading-selection': 'weekly-reading-review',
+             'weekly-reading-review': 'daily-reading-selection'}
+    peer = peers.get(task)
+    return {peer: read_task_history(repo, peer)} if peer else {}
+
+
 def wallpaper_request(repo, number, comment_id, request_digest):
     if (not re.fullmatch(r'[1-9][0-9]*', str(number)) or not re.fullmatch(r'[1-9][0-9]*', str(comment_id))
             or not re.fullmatch(r'[a-f0-9]{64}', request_digest)):
@@ -599,6 +606,7 @@ def main():
             source_path = None
         else:
             history = read_task_history(repo, context['task'])
+            history['related_tasks'] = related_task_history(repo, context['task'])
             workflow = (ROOT / registered_tasks()[context['task']]).read_text()
             source = re.search(r'^\s+prompt_source: (.+?)\s*$', workflow, re.M)
             source_path = source[1] if source else None

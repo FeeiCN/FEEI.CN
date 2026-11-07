@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
 import gzip
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
@@ -27,6 +27,7 @@ RESEARCH = {'security-event-research', 'ai-security-frontier-research',
             'ai-coding-rd-efficiency', 'security-architecture-defense', 'hk-ipo-alerts'}
 REVIEW = RESEARCH | {'knowledge-base-governance'}
 PERSONAL = {'personal-health-trend-research', 'update-weight-wallpaper', 'daily-personal-record'}
+READING = {'daily-reading-selection', 'weekly-reading-review'}
 SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'properties': {
@@ -188,7 +189,7 @@ def collect_personal_data(t, out):
 def prepare(t, out):
     out.mkdir(parents=True, exist_ok=True)
     repo = destination(t)
-    from scheduled_issue_review import read_task_history, wallpaper_request
+    from scheduled_issue_review import read_task_history, related_task_history, wallpaper_request
     reply_to = None
     request = [os.environ.get(key, '') for key in ['REVIEW_ISSUE', 'REVIEW_COMMENT', 'REVIEW_REQUEST_DIGEST']]
     if any(request):
@@ -196,6 +197,7 @@ def prepare(t, out):
             raise ValueError('只有壁纸任务支持原 Issue 重做')
         reply_to = wallpaper_request(repo, *request)
     history = read_task_history(repo, t['id'])
+    related = related_task_history(repo, t['id'])
     previous = history['issues']
     history_scope = history['scope']
     context = {
@@ -217,6 +219,14 @@ def prepare(t, out):
         ['git', 'log', '-25', '--format=%h %aI %s'], cwd=ROOT, text=True)
     if t['id'] in PERSONAL:
         context['personal_data_index'] = 'output/personal-data-index.json'
+    if t['id'] in READING:
+        context['related_task_history'] = 'output/related-history.json'
+        context['history_search_urls'] = {
+            task_id: f'https://github.com/{repo}/issues?q=' + quote(f'is:issue in:body "automation-task:{task_id}"')
+            for task_id in [t['id'], *related]
+        }
+        context['reading_evidence_boundary'] = '推荐不等于读过；仅本人原话或明确证据支持理解与应用，机器人文字不能作为本人事实。'
+        (out / 'related-history.json').write_text(json.dumps(related, ensure_ascii=False, indent=2))
     (out / 'context.md').write_text(json.dumps(context, ensure_ascii=False, indent=2))
     (out / 'history.json').write_text(json.dumps(previous, ensure_ascii=False))
     text = prompt(COMMON) + '\n\n' + prompt(t['prompt_source'])
@@ -241,6 +251,29 @@ def prepare(t, out):
     print(f"{t['id']}: 文档提示词已读取，历史结果 {len(previous)} 条")
 
 
+def reading_review_preflight(out):
+    context = json.loads((out / 'context.md').read_text())
+    own = json.loads((out / 'history.json').read_text())
+    related = json.loads((out / 'related-history.json').read_text())
+    owner = os.environ['GITHUB_REPOSITORY'].split('/')[0]
+    histories = [{'issues': own, 'errors': context['history_errors'],
+                  'scope': context['history_scope']}, *related.values()]
+    if any(comment.get('author', {}).get('login') == owner and comment.get('body', '').strip()
+           for history in histories for issue in history['issues'] for comment in issue.get('comments', [])):
+        return None
+    incomplete = any(history.get('errors') or 'incomplete' in history.get('scope', '')
+                     or any(issue.get('comments_scope') == 'unavailable' for issue in history['issues'])
+                     for history in histories)
+    note = ('历史或评论读取不完整，无法确认是否有新的阅读反馈。' if incomplete else
+            '在本轮已读取的阅读精选和回访历史中没有本人反馈，本周不生成阅读收获或催读报告。')
+    return {
+        'status': 'blocked' if incomplete else 'no_update', 'report_markdown': note,
+        'sources': list(context['history_search_urls'].values()), 'artifacts': [],
+        'audit': {'summary': note, 'data_cutoff': '历史检索截止：' + context['time_utc'],
+                  'deduplication_reason': '没有可据以推进回访的本人反馈；机器人推荐不代表本人已读。'},
+    }
+
+
 def validate_result(t, result, out):
     if set(result) != set(SCHEMA['required']):
         raise ValueError('结果字段不符合 schema')
@@ -261,6 +294,9 @@ def validate_result(t, result, out):
             raise ValueError('无效的来源 URL')
     if status == 'completed' and t['id'] in RESEARCH and len(set(result['sources'])) < 2:
         raise ValueError('研究结果缺少至少两个本轮核验来源')
+    if status == 'completed' and t['id'] == 'daily-reading-selection':
+        if not result['sources'] or not any(url in report for url in result['sources']):
+            raise ValueError('阅读精选必须给出本轮核验的原文来源及正文链接')
     if status == 'no_update' and t['id'] != 'diary-prompt-sync' and not result['sources']:
         raise ValueError('无更新结果必须记录实际检查的来源')
     files = []
@@ -323,6 +359,8 @@ def deliver(t, out):
             f"commit `{meta['commit'][:8]}`\n")
     if t['id'] == 'update-weight-wallpaper':
         body += '\n可直接提问，或说明“数据同步了，再做一次”，使用当前固定模板重做壁纸。\n'
+    elif t['id'] in READING:
+        body += '\n可直接聊原文、说哪里没懂或不同意，也可以告诉我读后的想法；推荐不会记为已读，阅读反馈不代表批准写入网站。\n'
     else:
         body += ('\n可直接提问或说明修改意见。已展示目标文件与完整稿时，可直接说“这版可以，写入网站吧”；'
                  '尚未展示具体版本时，会先整理待审稿。\n')

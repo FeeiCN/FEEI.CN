@@ -134,6 +134,16 @@ class AutomationResultTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '来源'):
             automation.validate_result(self.task, self.result, self.out)
 
+    def test_reading_selection_requires_verified_source_link_in_body(self):
+        self.task['id'] = 'daily-reading-selection'
+        for sources, report in [([], '只有推荐理由'), (['https://example.com/original'], '没有原文链接')]:
+            self.result.update(sources=sources, report_markdown=report)
+            with self.assertRaisesRegex(ValueError, '原文来源及正文链接'):
+                automation.validate_result(self.task, self.result, self.out)
+        self.result.update(sources=['https://example.com/original'],
+                           report_markdown='# 一个阅读问题\n[原文](https://example.com/original)')
+        self.assertEqual(automation.validate_result(self.task, self.result, self.out)[0], 'completed')
+
     def test_blocked_is_not_reclassified_as_completed(self):
         self.result.update(status='blocked', sources=[])
         self.assertEqual(automation.validate_result(self.task, self.result, self.out)[0], 'blocked')
@@ -409,6 +419,42 @@ class AutomationResultTests(unittest.TestCase):
         self.assertEqual(context['history_comments_scope'], 'latest_10')
         self.assertEqual(context['history_errors'], [])
         self.assertEqual(json.loads((self.out / 'metadata.json').read_text())['history_count'], 1)
+
+    def test_reading_prepare_includes_peer_feedback_and_retrieval_limits(self):
+        own = {'issues': [], 'scope': 'task_search_latest_100', 'comments_scope': 'latest_10', 'errors': []}
+        peer = {'issues': [{'html_url': 'https://github.com/owner/public/issues/8', 'title': '回访',
+                            'updated_at': '2026-11-07', 'body': '机器人建议',
+                            'comments': [{'author': {'login': 'owner'}, 'body': '原文这里我不同意'}]}],
+                'scope': 'task_search_latest_100_incomplete', 'comments_scope': 'latest_10',
+                'errors': ['早期评论未读到']}
+        task = {'id': 'daily-reading-selection', 'delivery': 'issue',
+                'schedule': ['40 23 * * *'], 'prompt_source': 'document.md'}
+        env = {'GITHUB_REPOSITORY': 'owner/public', 'GITHUB_SHA': 'abc', 'GITHUB_RUN_ID': '123'}
+        with patch.dict('os.environ', env, clear=True), patch.object(automation, 'prompt', return_value='instructions'), \
+             patch.object(review, 'read_task_history', side_effect=[own, peer]) as histories, \
+             patch.object(automation.subprocess, 'check_output', return_value='activity'), \
+             patch.object(automation, 'collect_personal_data') as health:
+            automation.prepare(task, self.out)
+        self.assertEqual([call.args[1] for call in histories.call_args_list],
+                         ['daily-reading-selection', 'weekly-reading-review'])
+        health.assert_not_called()
+        related = json.loads((self.out / 'related-history.json').read_text())
+        self.assertEqual(related['weekly-reading-review'], peer)
+        context = json.loads((self.out / 'context.md').read_text())
+        self.assertEqual(context['related_task_history'], 'output/related-history.json')
+        self.assertIn('weekly-reading-review', context['history_search_urls'])
+        self.assertIn('推荐不等于读过', context['reading_evidence_boundary'])
+
+    def test_reading_delivery_invites_feedback_without_requesting_article_approval(self):
+        self.task.update(id='daily-reading-selection', title='每日阅读精选')
+        self.result['report_markdown'] = '# 一个具体问题\n[原文](https://example.com/a)'
+        self.write_delivery_metadata()
+        with patch.object(automation, 'destination', return_value='owner/public'), \
+             patch.object(automation, 'gh', return_value='https://github.com/owner/public/issues/1'):
+            automation.deliver(self.task, self.out)
+        body = (self.out / 'report.md').read_text()
+        self.assertIn('阅读反馈不代表批准写入网站', body)
+        self.assertNotIn('这版可以，写入网站吧', body)
 
     def collect_with_month_response(self, month):
         class FixedDateTime(datetime):

@@ -72,3 +72,13 @@ jobs:
           git push "https://x-access-token:${SECURITY_ENGINEERING_SYNC_TOKEN}@github.com/${TARGET_REPOSITORY}.git" HEAD:master
         env:
           SECURITY_ENGINEERING_SYNC_TOKEN: ${{ secrets.SECURITY_ENGINEERING_SYNC_TOKEN }}
+
+      - name: 记录同步结果
+        if: always() && hashFiles('source/scripts/workflow_delivery.py') != ''
+        env:
+          RESULT: ${{ job.status }}
+        run: |
+          python3 source/scripts/workflow_delivery.py --operation sync --state "$RESULT" \
+            --title '安全工程内容同步完成。' \
+            --link "https://github.com/${TARGET_REPOSITORY}/tree/master" \
+            --output /tmp/security-sync-delivery.md

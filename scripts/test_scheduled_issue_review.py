@@ -571,6 +571,39 @@ class ScheduledReviewTests(unittest.TestCase):
         self.assertNotIn('构建通过', failed)
         self.assertIn('build 失败', failed)
 
+    def test_execution_report_links_built_articles_without_claiming_deployment(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(review, 'ROOT', Path(folder)):
+            root = Path(folder)
+            metadata = root / '.docusaurus/docusaurus-plugin-content-docs/default'
+            metadata.mkdir(parents=True)
+            (root / 'build').mkdir()
+            (root / 'build/sitemap.xml').write_text(
+                '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+                '<url><loc>https://feei.cn/devsec-checklist/</loc></url>'
+                '<url><loc>https://feei.cn/中文文章</loc></url></urlset>')
+            for source, route, title in [('docs/security.md', '/devsec-checklist', '研发安全清单'),
+                                         ('docs/other.mdx', '/中文文章', '另一篇[文章]'),
+                                         ('docs/draft.md', '/not-published', '草稿'),
+                                         ('docs/unrelated.md', '/devsec-checklist', '无关页')]:
+                (metadata / (Path(source).stem + '.json')).write_text(json.dumps(
+                    {'source': '@site/' + source, 'permalink': route, 'title': title}))
+            context = {'files': ['docs/security.md', 'docs/other.mdx', 'docs/draft.md', 'static/media/chart.svg']}
+            report = review.execution_report(context, REPO, 'done', 'a' * 40, '', 'https://example.com/run')
+            self.assertIn('[研发安全清单](https://feei.cn/devsec-checklist/)', report)
+            self.assertIn('[另一篇\\[文章\\]](https://feei.cn/中文文章)', report)
+            self.assertNotIn('https://feei.cn/not-published', report)
+            self.assertNotIn('无关页', report)
+            self.assertIn('未核验线上更新', report)
+            self.assertNotIn('已上线', report)
+            failed = review.execution_report(context, REPO, 'failed', '', '未提交', 'https://example.com/run')
+            self.assertNotIn('访问地址', failed)
+
+    def test_missing_build_metadata_does_not_invent_article_urls(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(review, 'ROOT', Path(folder)):
+            report = review.execution_report({'files': ['docs/example.md']}, REPO, 'done', 'a' * 40, '', 'https://example.com/run')
+            self.assertNotIn('https://feei.cn', report)
+            self.assertIn('/blob/', report)
+
     def test_semantic_decision_expires_on_comment_draft_or_issue_change(self):
         for changed in ['comment', 'draft', 'title', 'body', 'previous_feedback']:
             issue = ready()

@@ -922,34 +922,29 @@ jobs:
           SCHEDULED_REVIEW: ${{ steps.decide.outputs.scheduled-review }}
           REVIEW_CONTEXT: ${{ steps.decide.outputs.review-context }}
         run: |
-          if [ "$SCHEDULED_REVIEW" = "true" ]; then
-            python3 - <<'PYRESULT'
-          import base64, json, os, sys
+          python3 - <<'PYRESULT'
+          import base64, json, os, re, subprocess, sys
           from pathlib import Path
           sys.path.insert(0, 'scripts')
           from scheduled_issue_review import execution_report
-          context = json.loads(base64.b64decode(os.environ['REVIEW_CONTEXT']))
+          scheduled = os.environ['SCHEDULED_REVIEW'] == 'true'
+          if scheduled:
+              context = json.loads(base64.b64decode(os.environ['REVIEW_CONTEXT']))
+          else:
+              commit = os.environ['MERGE_COMMIT']
+              paths = subprocess.check_output(['git', 'diff-tree', '--root', '--no-commit-id', '--name-only', '-z', '-r', commit]).decode().strip('\0').split('\0') if re.fullmatch(r'[a-f0-9]{40}', commit) else []
+              context = {'files': [path for path in paths if path]}
           report = execution_report(context, os.environ['REPO'], os.environ['STATE'],
                                     os.environ['MERGE_COMMIT'], os.environ['REASON'],
-                                    f"https://github.com/{os.environ['REPO']}/actions/runs/{os.environ['GITHUB_RUN_ID']}")
+                                    f"https://github.com/{os.environ['REPO']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+                                    content_review=scheduled)
           Path('/tmp/execution-delivery.md').write_text(report)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as handle:
+              handle.write(report)
           PYRESULT
-          else
-            cp /tmp/result.txt /tmp/execution-delivery.md
-          fi
           {
             echo "<!-- codex-driver:result:commit=${BASE}:merge=${MERGE_COMMIT:-none}:cost=${COST}:turns=${TURNS} -->"
             echo
-            if [ "$SCHEDULED_REVIEW" != "true" ]; then
-              echo "## 执行结果"
-              echo
-              [ -n "${MERGE_COMMIT:-}" ] && echo "- 提交到 main: \`${MERGE_COMMIT}\`"
-              [ -n "${REASON:-}" ] && echo "- 原因: ${REASON}"
-              if [[ "${COST:-}" =~ ^[0-9]+([.][0-9]+)?$ ]] && [[ "${TURNS:-}" =~ ^[0-9]+$ ]]; then
-                echo "- 成本: \$${COST} / ${TURNS} 轮"
-              fi
-              echo
-            fi
             cat /tmp/execution-delivery.md
           } | head -c 64000 > /tmp/result.md
           if [ "$(wc -c < /tmp/result.md)" -ge 64000 ]; then

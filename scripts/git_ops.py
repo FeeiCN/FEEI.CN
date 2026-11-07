@@ -8,6 +8,7 @@ the calling shell's git config.
 from __future__ import annotations
 
 import subprocess
+import os
 import sys
 import time
 from datetime import datetime
@@ -216,3 +217,13 @@ def git_commit_and_push_target_repo(
     print("[info] git push ...", file=sys.stderr)
     git_push_with_retry(repo_root)
     print("[info] git push 完成", file=sys.stderr)
+    summary = os.environ.get('GITHUB_STEP_SUMMARY')
+    repo, run_id = os.environ.get('GITHUB_REPOSITORY'), os.environ.get('GITHUB_RUN_ID')
+    if summary and repo and run_id:
+        from workflow_delivery import delivery_report
+        commit = run_git_command(['rev-parse', 'HEAD'], repo_root).stdout.strip()
+        report = delivery_report(relative_paths, repo, 'done', commit, '',
+                                 f'https://github.com/{repo}/actions/runs/{run_id}',
+                                 root=repo_root, title='已提交并推送同步数据。')
+        with open(summary, 'a', encoding='utf-8') as handle:
+            handle.write(report)

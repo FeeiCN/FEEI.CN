@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -198,6 +199,19 @@ class GitOpsTests(unittest.TestCase):
         self.assertEqual(self.remote_file(APP), 'base app\n')
         self.assertEqual(self.git(self.worker, 'diff', '--cached', '--name-only').stdout.strip(), APP)
         self.assertEqual((self.worker / APP).read_text(), 'staged draft\n')
+
+    def test_actions_receipt_uses_successfully_pushed_commit(self) -> None:
+        summary = self.root / 'summary.md'
+        self.write_data(self.worker, 'local')
+        with patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': str(summary),
+                                     'GITHUB_REPOSITORY': 'owner/repo', 'GITHUB_RUN_ID': '123'}):
+            git_ops.git_commit_and_push_target_repo([DATA], repo_root=self.worker, description='test data')
+        pushed = self.git(self.remote, 'rev-parse', 'main').stdout.strip()
+        report = summary.read_text()
+        self.assertIn('/commit/' + pushed, report)
+        self.assertIn('/owner/repo/actions/runs/123', report)
+        self.assertIn('未核验线上更新', report)
+        self.assertNotIn('已上线', report)
 
     def test_rebase_does_not_move_other_local_branches(self) -> None:
         local_head = self.local_update()

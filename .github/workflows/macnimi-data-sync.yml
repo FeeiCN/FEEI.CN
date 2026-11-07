@@ -270,11 +270,6 @@ jobs:
           TASK: ${{ matrix.task }}
           RESULT: ${{ steps.task.outcome }}
         run: |
-          {
-            echo "### $TASK"
-            if [ "$RESULT" = "success" ]; then
-              echo "同步成功。"
-            else
-              echo "同步未完成，请查看本任务的设备、服务或导出步骤。其他同步任务独立执行。"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          python3 scripts/workflow_delivery.py "static/data/$TASK" \
+            --operation sync --state "${RESULT:-skipped}" \
+            --title "已完成 $TASK 同步。" --output /tmp/sync-delivery.md

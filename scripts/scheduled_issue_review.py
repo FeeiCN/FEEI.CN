@@ -8,6 +8,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
+from workflow_delivery import article_links as delivery_links, delivery_report
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAN = '<!-- codex-driver:plan:'
@@ -473,16 +474,14 @@ def api_run(repo, run_id):
     return json.loads(subprocess.check_output(['gh', 'api', f'repos/{repo}/actions/runs/{run_id}'], text=True))
 
 
-def execution_report(context, repo, state, commit, reason, run_url):
-    from urllib.parse import quote
-    if state == 'done' and re.fullmatch(r'[a-f0-9]{40}', commit or ''):
-        lines = ['已将你确认的完整版本写入 main。',
-                 f"[提交 {commit[:8]}](https://github.com/{repo}/commit/{commit})", '',
-                 '文档检查及无警告构建通过，审批与文件内容核对通过。部署结果请继续查看部署任务。', '', '写入文件：', '']
-        lines += [f'- [{name}](https://github.com/{repo}/blob/{commit}/{quote(name)})' for name in context['files']]
-    else:
-        lines = ['本次写入流程未完成。', reason or '请查看运行记录中的失败步骤，并核对提交记录后再决定是否重试。']
-    return '\n'.join(lines) + f'\n\n[运行记录]({run_url})\n'
+def article_links(paths):
+    return delivery_links(paths, ROOT)
+
+
+def execution_report(context, repo, state, commit, reason, run_url, content_review=True):
+    checks = ('文档检查及无警告构建通过，审批与文件内容核对通过。' if content_review else '构建通过。')
+    return delivery_report(context['files'], repo, state, commit, reason, run_url,
+                           root=ROOT, checks=checks)
 
 
 def verify_files(context):

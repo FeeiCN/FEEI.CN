@@ -200,5 +200,6 @@ jobs:
           REPO: ${{ github.repository }}
           TARGET: ${{ steps.diary.outputs.target }}
         run: |
-          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "已保存日记到 \`$TARGET\`。"
-          gh issue close "$ISSUE_NUMBER" --repo "$REPO" --comment "日记已处理完成。"
+          python3 scripts/workflow_delivery.py "$TARGET" --output /tmp/diary-delivery.md --title '已核对并保存日记。'
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body-file /tmp/diary-delivery.md
+          gh issue close "$ISSUE_NUMBER" --repo "$REPO"

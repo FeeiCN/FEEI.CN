@@ -130,8 +130,9 @@ jobs:
           DRIVE_PATH: ${{ steps.drive.outputs.path }}
           DRIVE_STATUS: ${{ steps.drive.outputs.status }}
         run: |
-          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "已核对行车数据到 \`$DRIVE_PATH\`，处理状态：\`$DRIVE_STATUS\`。"
-          gh issue close "$ISSUE_NUMBER" --repo "$REPO" --comment "行车数据已处理完成。"
+          python3 scripts/workflow_delivery.py "$DRIVE_PATH" --output /tmp/drive-delivery.md --title "已核对并保存行车记录（$DRIVE_STATUS）。"
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body-file /tmp/drive-delivery.md
+          gh issue close "$ISSUE_NUMBER" --repo "$REPO"
 
       # fetch_url_content.py 默认会调 translate_text.py → Codex CLI 做翻译。
       # 凭证缺失时让 fetch 以 --no-translate 模式跑,只抓原文不发翻译请求。

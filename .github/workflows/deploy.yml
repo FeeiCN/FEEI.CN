@@ -52,6 +52,11 @@ jobs:
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout delivery formatter
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -335,3 +340,12 @@ jobs:
           find "$site_root" -maxdepth 1 -type f -name 'search-index-*.log' -mtime +7 -delete || true
           group_end "Clean old releases"
           EOF
+
+      - name: 记录部署结果
+        if: always() && hashFiles('scripts/workflow_delivery.py') != ''
+        env:
+          RESULT: ${{ job.status }}
+        run: |
+          python3 scripts/workflow_delivery.py --operation deploy --state "$RESULT" \
+            --title '网站部署步骤已完成。' --link https://feei.cn \
+            --output /tmp/deploy-delivery.md

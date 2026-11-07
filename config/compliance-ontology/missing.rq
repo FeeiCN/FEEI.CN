@@ -1,0 +1,10 @@
+PREFIX c: <https://feei.cn/ontology/compliance#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?standard ?label (COUNT(DISTINCT ?referrer) AS ?referrers) WHERE {
+  ?standard a c:StandardVersion ; rdfs:label ?label .
+  ?referrer (c:cites|c:normativelyReferences) ?standard .
+  FILTER NOT EXISTS { ?source c:transcribes ?standard }
+}
+GROUP BY ?standard ?label
+ORDER BY DESC(?referrers) ?standard

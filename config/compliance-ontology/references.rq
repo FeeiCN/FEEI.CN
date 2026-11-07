@@ -1,0 +1,13 @@
+PREFIX c: <https://feei.cn/ontology/compliance#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?reference ?label ?document ?line ?quote WHERE {
+  VALUES ?standard { <https://feei.cn/knowledge/compliance/standard:gb-t-20986-2023> }
+  ?standard c:normativelyReferences ?reference .
+  ?reference rdfs:label ?label .
+  ?assertion rdf:subject ?standard ; rdf:predicate c:normativelyReferences ;
+             rdf:object ?reference ; c:evidence ?evidence .
+  ?evidence c:document ?document ; c:line ?line ; c:quote ?quote .
+}
+ORDER BY ?reference ?line

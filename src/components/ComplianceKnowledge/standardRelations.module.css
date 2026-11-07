@@ -1,0 +1,125 @@
+.panel {
+  --relation-muted: var(--ifm-color-emphasis-700);
+  --relation-subtle: color-mix(in srgb, var(--relation-muted) 95%, var(--ifm-background-color));
+  --relation-line: color-mix(in srgb, var(--ifm-color-emphasis-300) 65%, transparent);
+  --relation-wash: color-mix(in srgb, var(--ifm-color-emphasis-100) 65%, transparent);
+  container: standard-relations / inline-size;
+  margin: -.85rem 0 1rem;
+  font-family: var(--ifm-font-family-base);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ifm-font-color-base);
+}
+.panel .summary { display: flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 0 3px; border-bottom: 1px solid var(--relation-line); }
+.relationIcon { flex: none; color: var(--relation-muted); opacity: .75; }
+.summaryLabel { font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+.counts { display: inline-flex; align-items: baseline; gap: 3px; margin-left: 5px; color: var(--relation-muted); font-size: 11px; white-space: nowrap; }
+.counts b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.separator { padding: 0 5px; color: var(--ifm-color-emphasis-500); font-weight: 400; }
+.panel button { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 24px; height: auto; padding: 2px 5px; border: 0; border-radius: 3px; background: transparent; box-shadow: none; color: var(--relation-muted); font-family: inherit; font-size: 11px; font-weight: 400; line-height: 1.5; white-space: nowrap; cursor: pointer; transition: color 120ms, background-color 120ms; }
+.panel button:hover:not(:disabled) { background: var(--relation-wash); color: var(--ifm-font-color-base); }
+.panel button:disabled { opacity: .3; cursor: default; }
+.panel button:focus-visible, .panel a:focus-visible, .evidence:focus-visible, .relationList:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 2px; border-radius: 2px; }
+.panel .summaryToggle { margin-left: auto; padding-right: 0; }
+.chevron { flex: none; transition: transform 160ms ease; }
+.chevron[data-open='true'] { transform: rotate(180deg); }
+.panel .loading, .panel .error { margin: 4px 0; font-size: 11.5px; line-height: 1.6; color: var(--relation-muted); }
+.panel .versionNote { display: flex; align-items: center; flex-wrap: wrap; column-gap: 5px; min-height: 26px; padding: 1px 0 2px 20px; color: var(--relation-muted); font-size: 11px; line-height: 1.5; }
+.versionDot { width: 4px; height: 4px; margin-right: 2px; border-radius: 50%; background: #b5955b; }
+.panel .versionNote > a { color: inherit; text-decoration: none; font-variant-numeric: tabular-nums; }
+.panel .versionNote > a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.panel .versionNote > button { font-size: 10.5px; }
+.details { padding-top: 4px; border-bottom: 1px solid var(--relation-line); }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 31px; border-bottom: 1px solid var(--relation-line); }
+.panel .tabs { display: inline-flex; align-items: center; gap: 19px; min-width: 0; border: 0; }
+.panel .tabs > button { position: relative; gap: 4px; min-height: 30px; padding: 5px 0; border-radius: 0; font-size: 11.5px; background: transparent; }
+.panel .tabs > button::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 1px; background: transparent; content: ''; }
+.panel .tabs > button[aria-selected='true'] { color: var(--ifm-font-color-base); font-weight: 500; }
+.panel .tabs > button[aria-selected='true']::after { background: currentColor; }
+.countBadge { color: var(--relation-subtle); font-size: 10px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.panel .fullGraph { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 5px 0 5px 5px; color: var(--relation-muted); font-size: 10.5px; line-height: 1.5; text-decoration: none; }
+.panel .fullGraph:hover { color: var(--ifm-font-color-base); }
+.panel .content { padding: 0; outline-offset: 2px; }
+:global(.theme-doc-markdown) .panel[data-standard] a[href] { text-decoration-line: none; }
+.relationList { max-height: 300px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--ifm-color-emphasis-300) transparent; }
+.row { padding: 5px 0; border-bottom: 1px solid var(--relation-line); }
+.row:last-child { border-bottom: 0; }
+.relationship { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; min-height: 26px; }
+.panel .nameBlock { display: grid; grid-template-columns: 128px minmax(0, 1fr); align-items: baseline; gap: 8px; min-width: 0; color: inherit; text-decoration: none; }
+.identifier { font-size: 12px; font-weight: 500; line-height: 1.6; font-variant-numeric: tabular-nums; letter-spacing: -.015em; white-space: nowrap; }
+.standardTitle { min-width: 0; color: var(--relation-muted); font-size: 12px; font-weight: 400; line-height: 1.6; overflow-wrap: anywhere; }
+.panel .nameBlock:hover .identifier, .panel .graphCard > a:hover .identifier { text-decoration: underline; text-decoration-color: var(--ifm-color-emphasis-400); text-underline-offset: 3px; }
+.rowMeta { display: inline-flex; align-items: center; gap: 8px; color: var(--relation-muted); font-size: 10px; white-space: nowrap; }
+.relation { display: inline-flex; align-items: center; gap: 4px; }
+.relation::before { width: 3px; height: 3px; border-radius: 50%; background: var(--ifm-color-emphasis-500); content: ''; }
+.relation[data-relation='normativelyReferences']::before { background: #6c9a8b; }
+.relation[data-relation='supersedes']::before { background: #b5955b; }
+.missing { color: var(--relation-subtle); font-size: 10px; }
+.panel .evidenceToggle { padding-right: 0; font-size: 10.5px; }
+.panel .more { gap: 3px; padding-left: 0; margin: 2px 0 0; font-size: 10.5px; }
+.panel .empty { margin: 10px 0; color: var(--relation-muted); font-size: 11.5px; line-height: 1.7; }
+.evidence { margin: 3px 0 4px; padding: 7px 10px; border-left: 1px solid var(--ifm-color-emphasis-300); background: var(--relation-wash); font-size: 11.5px; overflow-wrap: anywhere; }
+.panel .direction { margin: 0 0 4px; color: var(--relation-muted); font-size: 10px; line-height: 1.7; }
+.direction > span { color: var(--relation-subtle); }
+.panel blockquote { margin: 0 0 3px; padding: 0; border: 0; color: inherit; font-family: inherit; font-size: 11.5px; line-height: 1.8; white-space: pre-wrap; }
+.panel .source { display: inline-flex; align-items: center; gap: 4px; color: var(--relation-muted); font-size: 10px; text-decoration: none; }
+.panel .source:hover { text-decoration: underline; text-underline-offset: 2px; }
+.evidence > div + div { margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--relation-line); }
+.explanation { padding: 1px 0 3px; }
+.panel .explanation > button { gap: 4px; min-height: 22px; padding-left: 0; color: var(--relation-subtle); font-size: 10px; }
+.infoMark { display: inline-flex; align-items: center; justify-content: center; width: 10px; height: 10px; border: 1px solid currentColor; border-radius: 50%; font-family: Georgia, serif; font-size: 8px; line-height: 1; }
+.panel .explanation p { margin: 3px 0 6px; max-width: 640px; color: var(--relation-muted); font-size: 10.5px; line-height: 1.8; }
+.graphBoard { position: relative; display: grid; grid-template-columns: minmax(135px, .85fr) minmax(0, 2fr); column-gap: 114px; row-gap: 7px; padding: 10px 0 6px; }
+.graphCanvas { position: absolute; inset: 0; pointer-events: none; }
+.graphRoot, .graphCard { position: relative; min-width: 0; padding: 6px 8px; background: var(--ifm-background-color); border: 1px solid var(--relation-line); border-radius: 4px; }
+.graphRoot { grid-column: 1; align-self: center; border-left-color: var(--ifm-color-emphasis-500); background: var(--ifm-background-surface-color); }
+.graphRoot > .identifier, .graphRoot > .standardTitle { display: block; }
+.graphRoot .identifier { font-size: 11.5px; }
+.graphRoot .standardTitle { font-size: 11px; }
+.graphCurrent { display: block; margin-bottom: 3px; color: var(--relation-subtle); font-size: 9.5px; }
+.graphBranch { position: relative; grid-column: 2; min-width: 0; align-self: center; }
+.graphEdgeLabel { position: absolute; top: 50%; right: calc(100% + 12px); z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; width: 79px; padding: 1px 2px; transform: translateY(-50%); color: var(--relation-muted); background: var(--ifm-background-color); font-size: 10px; line-height: 1.5; white-space: nowrap; }
+.graphEdgeLabel small { color: var(--relation-subtle); font-size: 9px; }
+.panel .graphCard > a { display: block; color: inherit; text-decoration: none; }
+.graphCard .identifier { display: block; padding-right: 31px; font-size: 11.5px; }
+.graphCard .standardTitle { display: block; font-size: 11.5px; }
+.panel .graphCard > button { position: absolute; top: 3px; right: 3px; font-size: 10px; }
+.graphFooter { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 26px; color: var(--relation-subtle); font-size: 10px; }
+.graphPaging { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-variant-numeric: tabular-nums; }
+.panel .graphPaging > button { width: 23px; min-height: 23px; padding: 2px; }
+@container standard-relations (max-width: 620px) {
+  .panel .nameBlock { grid-template-columns: 1fr; gap: 0; }
+  .relationship { align-items: start; }
+  .rowMeta { padding-top: 3px; gap: 5px; }
+}
+@container standard-relations (max-width: 519px) {
+  .relationship { position: relative; display: block; }
+  .panel .nameBlock { display: block; }
+  .nameBlock > .identifier { display: block; min-height: 24px; padding-right: 160px; white-space: normal; overflow-wrap: anywhere; }
+  .nameBlock > .standardTitle { display: block; margin-top: -2px; }
+  .rowMeta { position: absolute; top: 1px; right: 50px; max-width: 105px; font-size: 9.5px; }
+  .panel .evidenceToggle { position: absolute; top: 0; right: 0; }
+  .identifier { font-size: 11.5px; }
+  .standardTitle { font-size: 11.5px; }
+  .panel .tabs { gap: 14px; }
+  .panel .tabs > button { font-size: 11px; }
+  .graphBoard { display: flex; flex-direction: column; gap: 6px; }
+  .graphRoot { align-self: stretch; padding: 5px 7px; }
+  .graphBranch { align-self: stretch; margin-left: 23px; }
+  .graphEdgeLabel { position: static; flex-direction: row; justify-content: space-between; width: auto; margin: 0 0 2px; padding: 0; transform: none; background: transparent; }
+  .graphCard { padding: 4px 7px; }
+  .graphCard .identifier, .graphCard .standardTitle { font-size: 11px; }
+  .graphFootnote { display: none; }
+}
+@media (max-width: 600px) {
+  .panel button { min-height: 28px; }
+  .panel .summary { min-height: 29px; padding-bottom: 1px; }
+  .panel .evidenceToggle { margin-top: -3px; }
+  .relationList { max-height: 310px; }
+  .panel .explanation > button { min-height: 26px; }
+  .panel .graphCard > button { top: 0; }
+  .panel .graphPaging > button { width: 28px; min-height: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel button, .chevron { transition: none; }
+}

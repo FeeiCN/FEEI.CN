@@ -27,9 +27,12 @@
     "sync-assets": "bash scripts/sync-static-assets.sh",
     "typecheck": "tsc",
     "test": "npm run test:unit",
-    "test:unit": "node scripts/test_docs_quality.mjs && node scripts/test_fast_search_plugin.mjs && node scripts/test_location_resolver.mjs && node --test scripts/test_build_dependencies.mjs scripts/test_health_timeline.mjs scripts/test_health_collection_transform.mjs scripts/test_health_month_storage.mjs && python3 -m unittest scripts.test_upsert_drive_event && node --test scripts/test_compliance_docs.mjs scripts/test_compliance_references.mjs scripts/test_sidebar_icons.mjs scripts/test_static_media.mjs scripts/test_markdown_math.mjs scripts/test_deploy_change_detection.mjs scripts/test_mermaid_rendering.mjs",
+    "test:unit": "node scripts/test_docs_quality.mjs && node scripts/test_fast_search_plugin.mjs && node scripts/test_location_resolver.mjs && node --test scripts/test_build_dependencies.mjs scripts/test_health_timeline.mjs scripts/test_health_collection_transform.mjs scripts/test_health_month_storage.mjs && python3 -m unittest scripts.test_upsert_drive_event && node --test scripts/test_compliance_docs.mjs scripts/test_compliance_references.mjs scripts/test_compliance_knowledge.mjs scripts/test_sidebar_icons.mjs scripts/test_static_media.mjs scripts/test_markdown_math.mjs scripts/test_deploy_change_detection.mjs scripts/test_mermaid_rendering.mjs",
     "check:docs": "node scripts/check_docs_quality_gate.mjs --changed",
     "audit:docs": "node scripts/check_docs_quality.mjs --all",
+    "ontology:build": "${ONTOLOGY_PYTHON:-python3} scripts/build_compliance_ontology.py",
+    "ontology:check": "${ONTOLOGY_PYTHON:-python3} scripts/build_compliance_ontology.py --check",
+    "ontology:test": "${ONTOLOGY_PYTHON:-python3} -m unittest discover -s scripts -p test_compliance_ontology.py && node --test scripts/test_compliance_knowledge.mjs",
     "check:compliance": "node scripts/maintain_compliance_docs.mjs --check"
   },
   "dependencies": {
@@ -45,6 +48,7 @@
     "aplayer": "^1.10.1",
     "beautiful-mermaid": "1.1.3",
     "clsx": "^2.0.0",
+    "cytoscape": "3.34.4",
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
     "justified-layout": "^4.1.0",

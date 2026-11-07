@@ -1,0 +1,57 @@
+@prefix c: <https://feei.cn/ontology/compliance#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://feei.cn/ontology/compliance> a owl:Ontology ;
+    dct:title "FEEI.CN 合规知识本体"@zh ;
+    owl:versionInfo "1" ;
+    rdfs:comment "以站内文档及原文转写为证据。引用、替代和收录情况不自动构成适用性或现行效力判断。"@zh .
+
+c:Document a owl:Class ; rdfs:label "文档"@zh .
+c:StandardSeries a owl:Class ; rdfs:label "标准系列"@zh .
+c:StandardVersion a owl:Class ; rdfs:label "标准版本"@zh .
+c:Clause a owl:Class ; rdfs:label "条款或编号章节"@zh .
+c:Assertion a owl:Class ; rdfs:label "有证据的关系"@zh .
+c:Evidence a owl:Class ; rdfs:label "证据定位"@zh .
+
+c:cites a owl:ObjectProperty ; rdfs:subPropertyOf dct:references ; rdfs:label "提及"@zh ;
+    rdfs:comment "原文中出现该标准标识或文件名称；不推断强制性、符合性或适用性。"@zh .
+c:enactedUnder a owl:ObjectProperty ; rdfs:subPropertyOf dct:references ; rdfs:label "依据制定"@zh ;
+    rdfs:domain c:Document ; rdfs:range c:Document ;
+    rdfs:comment "由已核对的原文制定声明建立，方向为被制定文件指向其明确列明的依据文件。不推断现行效力。"@zh .
+c:implements a owl:ObjectProperty ; rdfs:subPropertyOf dct:references ; rdfs:label "落实要求"@zh ;
+    rdfs:domain c:StandardVersion ; rdfs:range c:Document ;
+    rdfs:comment "标准原文明示为配合实施、落实或依据所列法律规定的要求而制定；不表示法律强制采用该标准。"@zh .
+c:normativelyReferences a owl:ObjectProperty ; rdfs:subPropertyOf c:cites ; rdfs:label "规范性引用"@zh ;
+    rdfs:comment "仅提取标准原文的“规范性引用文件”章节；注日期和不注日期分别指向版本与系列。"@zh .
+c:supersedes a owl:ObjectProperty ; rdfs:subPropertyOf dct:replaces ; rdfs:label "明确代替"@zh ;
+    rdfs:domain c:StandardVersion ; rdfs:range c:StandardVersion ;
+    rdfs:comment "仅提取原文明确以本文件／本标准代替开头的陈述，不以年份或相同编号推定。"@zh .
+c:hasVersion a owl:ObjectProperty ; rdfs:subPropertyOf dct:hasVersion ; rdfs:label "包含版本"@zh ;
+    rdfs:domain c:StandardSeries ; rdfs:range c:StandardVersion .
+c:presents a owl:ObjectProperty ; rdfs:label "提供阅读页"@zh ;
+    rdfs:domain c:Document ; rdfs:range c:StandardVersion .
+c:transcribes a owl:ObjectProperty ; rdfs:label "转写原文"@zh ;
+    rdfs:domain c:Document ; rdfs:range c:StandardVersion .
+c:discusses a owl:ObjectProperty ; rdfs:label "解读主题"@zh ;
+    rdfs:domain c:Document .
+c:includes a owl:ObjectProperty ; rdfs:label "包含原文"@zh ;
+    rdfs:domain c:Document ; rdfs:range c:Document .
+c:isPartOf a owl:ObjectProperty ; rdfs:subPropertyOf dct:isPartOf ; rdfs:label "属于版本"@zh ;
+    rdfs:domain c:Clause ; rdfs:range c:StandardVersion .
+
+c:evidence a owl:ObjectProperty ; rdfs:label "关系依据"@zh ;
+    rdfs:domain c:Assertion ; rdfs:range c:Evidence .
+c:document a owl:ObjectProperty ; rdfs:label "证据文档"@zh ;
+    rdfs:domain c:Evidence ; rdfs:range c:Document .
+c:path a owl:DatatypeProperty ; rdfs:label "仓库路径"@zh ; rdfs:range xsd:string .
+c:sha256 a owl:DatatypeProperty ; rdfs:label "文档内容指纹"@zh ; rdfs:range xsd:string .
+c:identifier a owl:DatatypeProperty ; rdfs:subPropertyOf dct:identifier ; rdfs:label "标准标识"@zh .
+c:role a owl:DatatypeProperty ; rdfs:label "文档职责"@zh ; rdfs:range xsd:string .
+c:line a owl:DatatypeProperty ; rdfs:label "证据行号"@zh ; rdfs:range xsd:integer .
+c:quote a owl:DatatypeProperty ; rdfs:label "原文摘录"@zh ; rdfs:range xsd:string .
+c:number a owl:DatatypeProperty ; rdfs:label "章节编号"@zh ; rdfs:range xsd:string .
+c:sourceForm a owl:DatatypeProperty ; rdfs:label "原文材料完整性"@zh ; rdfs:range xsd:string .
+c:sectionKind a owl:DatatypeProperty ; rdfs:label "正文、附录或模板"@zh ; rdfs:range xsd:string .

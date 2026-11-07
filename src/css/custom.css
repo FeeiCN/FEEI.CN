@@ -1525,11 +1525,13 @@
   content: counter(toc-h2) '.' counter(toc-h3) '.';
 }
 
-.table-of-contents__link--manual-number {
+.table-of-contents .table-of-contents__link.table-of-contents__link--manual-number,
+.table-of-contents.toc--original-numbering .table-of-contents__link {
   padding-left: 0.85rem;
 }
 
-.table-of-contents__link--manual-number::before {
+.table-of-contents .table-of-contents__link.table-of-contents__link--manual-number::before,
+.table-of-contents.toc--original-numbering .table-of-contents__link::before {
   content: none;
 }
 

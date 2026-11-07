@@ -42,7 +42,6 @@ def planned_changes():
                 'title: ' + json.dumps(source['title'], ensure_ascii=False),
                 f'description: {number}的站内原文转写，保留条款编号、表格和来源信息；正式引用请核对官方文本。',
                 'standard_source: true', '---', '', '# ' + source['title'], '',
-                '[返回主题目录](./index.md) · [官方来源](' + source['source_url'] + ')', '',
                 '<!-- @include ./原文/' + Path(source['path']).name + ' -->', '',
             ]
             destination = ROOT / relative

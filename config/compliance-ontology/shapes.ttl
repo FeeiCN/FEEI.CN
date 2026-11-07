@@ -1,0 +1,63 @@
+@prefix c: <https://feei.cn/ontology/compliance#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+c:EntityShape a sh:NodeShape ;
+    sh:targetClass c:Document, c:StandardSeries, c:StandardVersion, c:Clause ;
+    sh:nodeKind sh:IRI ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+c:DocumentShape a sh:NodeShape ; sh:targetClass c:Document ;
+    sh:property [ sh:path c:path ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path c:sha256 ; sh:minCount 1 ; sh:maxCount 1 ; sh:pattern "^[a-f0-9]{64}$" ] ;
+    sh:property [ sh:path c:role ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ("source-text" "source-reader" "analysis" "topic-guide") ] ;
+    sh:property [ sh:path c:sourceForm ; sh:maxCount 1 ; sh:in ("transcription" "outline" "excerpt") ] .
+
+c:VersionShape a sh:NodeShape ; sh:targetClass c:StandardVersion ;
+    sh:property [ sh:path c:identifier ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path [ sh:inversePath c:hasVersion ] ; sh:minCount 1 ; sh:maxCount 1 ; sh:class c:StandardSeries ] .
+
+c:ClauseShape a sh:NodeShape ; sh:targetClass c:Clause ;
+    sh:property [ sh:path c:isPartOf ; sh:minCount 1 ; sh:maxCount 1 ; sh:class c:StandardVersion ] ;
+    sh:property [ sh:path c:number ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+c:TranscriptionShape a sh:NodeShape ; sh:targetSubjectsOf c:transcribes ; sh:class c:Document ;
+    sh:property [ sh:path c:role ; sh:hasValue "source-text" ] ;
+    sh:property [ sh:path c:transcribes ; sh:class c:StandardVersion ] .
+
+c:ReaderShape a sh:NodeShape ; sh:targetSubjectsOf c:presents ; sh:class c:Document ;
+    sh:property [ sh:path c:role ; sh:hasValue "source-reader" ] ;
+    sh:property [ sh:path c:presents ; sh:class c:StandardVersion ] .
+
+c:NormativeReferenceShape a sh:NodeShape ; sh:targetSubjectsOf c:normativelyReferences ;
+    sh:class c:StandardVersion ;
+    sh:property [ sh:path c:normativelyReferences ; sh:or ([ sh:class c:StandardVersion ] [ sh:class c:StandardSeries ]) ] .
+
+c:AssertionShape a sh:NodeShape ; sh:targetClass c:Assertion ;
+    sh:property [ sh:path rdf:subject ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path rdf:predicate ; sh:minCount 1 ; sh:maxCount 1 ; sh:in (c:cites c:normativelyReferences c:supersedes c:hasVersion c:presents c:transcribes c:discusses c:includes c:isPartOf c:enactedUnder c:implements) ] ;
+    sh:property [ sh:path rdf:object ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path c:evidence ; sh:minCount 1 ; sh:class c:Evidence ] .
+
+c:EnactmentShape a sh:NodeShape ; sh:targetSubjectsOf c:enactedUnder ;
+    sh:class c:Document ;
+    sh:property [ sh:path c:enactedUnder ; sh:class c:Document ] .
+
+c:ImplementationShape a sh:NodeShape ; sh:targetSubjectsOf c:implements ;
+    sh:class c:StandardVersion ;
+    sh:property [ sh:path c:implements ; sh:class c:Document ] .
+
+c:EvidenceShape a sh:NodeShape ; sh:targetClass c:Evidence ;
+    sh:property [ sh:path c:document ; sh:minCount 1 ; sh:maxCount 1 ; sh:class c:Document ] ;
+    sh:property [ sh:path c:line ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
+    sh:property [ sh:path c:quote ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:minLength 1 ] .
+
+c:ReplacementShape a sh:NodeShape ; sh:targetSubjectsOf c:supersedes ;
+    sh:class c:StandardVersion ;
+    sh:property [ sh:path c:supersedes ; sh:class c:StandardVersion ] ;
+    sh:sparql [
+        sh:message "替代关系不能形成环或指向自身"@zh ;
+        sh:select "PREFIX c: <https://feei.cn/ontology/compliance#> SELECT $this WHERE { $this c:supersedes+ $this }"
+    ] .

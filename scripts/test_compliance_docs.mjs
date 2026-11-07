@@ -142,16 +142,31 @@ test('published standard text preserves body and resolves every included image f
     const file = path.resolve(ROOT, page.path);
     const expanded = expandMarkdownIncludes(fs.readFileSync(file, 'utf8'), file);
     assert.ok(!expanded.includes('@include'), `${page.path}: unexpanded include`);
+    assert.doesNotMatch(expanded.slice(0, expanded.search(/^## /m)), /\[返回主题目录\]|^>.*(?:来源|原文：|SHA-256|转写说明)/m, `${page.path}: editorial source information is visible`);
     for (const [, target] of expanded.matchAll(/!\[[^\]]*\]\(([^\s)]+)(?:\s+"[^"]*")?\)/g)) {
       if (/^(?:[a-z][\w+.-]*:|\/|#)/i.test(target)) continue;
       assert.ok(fs.existsSync(path.resolve(path.dirname(file), decodeURIComponent(target))), `${page.path}: missing included image ${target}`);
     }
-    const originalBody = fs.readFileSync(path.join(ROOT, original.path), 'utf8').replace(/^# [^\n]+\n*/, '').trim();
-    if (!originalBody.includes('](')) assert.ok(expanded.includes(originalBody), `${page.path}: source text changed`);
+    const rawSource = fs.readFileSync(path.join(ROOT, original.path), 'utf8');
+    const originalBody = rawSource.slice(rawSource.search(/^## /m)).trim();
+    if (!rawSource.includes('](')) assert.ok(expanded.includes(originalBody), `${page.path}: source text changed`);
+    assert.deepEqual([...expanded.matchAll(/^#{2,6} .+$/gm)].map(([heading]) => heading),
+      [...rawSource.matchAll(/^#{2,6} .+$/gm)].map(([heading]) => heading), `${page.path}: original headings changed`);
   }
   const law = index.documents.find((entry) => entry.path.endsWith('/数据安全法.md'));
   const file = path.resolve(ROOT, law.path);
   assert.match(expandMarkdownIncludes(fs.readFileSync(file, 'utf8'), file), /<summary>查看法规原文<\/summary>/);
+});
+
+test('standard presentation removes only provenance before the first section', () => {
+  const original = originals.find((entry) => entry.standard === 'GB/T 20984-2022');
+  const file = path.resolve(ROOT, original.topic, 'test.md');
+  const reference = `<!-- @include ./原文/${path.basename(original.path)} -->`;
+  const body = expandMarkdownIncludes(doc('/test', `${reference}\n\n> 来源：正文中的引用。`), file);
+  assert.doesNotMatch(body, /PDF SHA-256|转写说明：逐页/);
+  assert.match(body, /> 来源：正文中的引用。/);
+  assert.match(body, /^## 1 范围$/m);
+  assert.match(body, /^### 3\.1 术语和定义$/m);
 });
 
 test('standard presentation separates publisher URLs and keeps shell dollars literal', () => {

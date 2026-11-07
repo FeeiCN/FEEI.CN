@@ -1,4 +1,5 @@
 import React, {type ReactNode} from 'react';
+import StandardRelations from '@site/src/components/ComplianceKnowledge/StandardRelations';
 import styles from './styles.module.css';
 
 export default function DocArticleHeader({
@@ -9,8 +10,9 @@ export default function DocArticleHeader({
   as?: 'header' | 'div';
 }): ReactNode {
   return (
-    <Element className={styles.header}>
-      {children}
-    </Element>
+    <>
+      <Element className={styles.header}>{children}</Element>
+      <StandardRelations />
+    </>
   );
 }

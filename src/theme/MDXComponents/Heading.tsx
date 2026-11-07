@@ -31,15 +31,17 @@ function hasManualNumber(children: ReactNode): boolean {
 export default function MDXHeading(props: Props): ReactNode {
   let icon: string | undefined;
   let hasExplicitTitle = false;
+  let isStandard = false;
   try {
     const {frontMatter, contentTitle} = useDoc();
     icon = getDocIcon(frontMatter as Record<string, unknown>);
     hasExplicitTitle = typeof contentTitle !== 'undefined';
+    isStandard = (frontMatter as Record<string, unknown>).standard_source === true;
   } catch {
     icon = undefined;
   }
   const shouldDecorate = props.as === 'h1' && !!icon;
-  const manualNumber = (props.as === 'h2' || props.as === 'h3') && hasManualNumber(props.children);
+  const manualNumber = (props.as === 'h2' || props.as === 'h3') && (isStandard || hasManualNumber(props.children));
 
   const heading = (
     <Heading

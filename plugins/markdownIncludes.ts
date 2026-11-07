@@ -9,6 +9,15 @@ function stripFrontMatter(markdown: string): string {
   return match ? markdown.slice(match[0].length) : markdown;
 }
 
+function standardBody(markdown: string): string {
+  const body = markdown.replace(/^# [^\n]+\n*/, '');
+  const firstSection = body.search(/^## /m);
+  if (firstSection < 0) return body;
+  const introduction = body.slice(0, firstSection)
+    .replace(/^>[^\n]*(?:\r?\n|$)/gm, '').trim();
+  return [introduction, body.slice(firstSection)].filter(Boolean).join('\n\n');
+}
+
 function assertInsideDocs(includePath: string): void {
   const docsRoot = path.resolve(process.cwd(), 'docs');
   const relative = path.relative(docsRoot, includePath);
@@ -57,6 +66,11 @@ function rebaseStandardLinks(markdown: string, includePath: string, sourcePath: 
 export function expandMarkdownIncludes(markdown: string, sourcePath?: string): string {
   if (!sourcePath || !markdown.includes('@include')) return markdown;
 
+  const frontMatter = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (frontMatter && /^standard_source:\s*true\s*$/m.test(frontMatter[1])) {
+    markdown = markdown.replace(/^\[返回主题目录\]\([^\n]+\) · \[官方来源\]\([^\n]+\)\s*$/gm, '');
+  }
+
   return markdown.replace(includePattern, (_match, rawReference: string) => {
     const reference = rawReference.trim().replace(/^['"]|['"]$/g, '');
     const includePath = path.resolve(path.dirname(sourcePath), reference);
@@ -69,7 +83,7 @@ export function expandMarkdownIncludes(markdown: string, sourcePath?: string): s
     const filename = path.basename(reference);
 
     if (/^_(?:GB(?:-[TZ])?|G[MA]-T)-[\d.]+-\d{4}(?:-|\.)/.test(filename)) {
-      return rebaseStandardLinks(included.replace(/^# [^\n]+\n*/, ''), includePath, sourcePath);
+      return rebaseStandardLinks(standardBody(included), includePath, sourcePath);
     }
 
     // Reference material is useful for verification but should not dominate the

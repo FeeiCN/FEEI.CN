@@ -1,0 +1,53 @@
+.explorer { margin: .5rem 0 2rem; }
+.heading h2 { font-size: 1.25rem; margin: 0 0 .6rem; }
+.heading p { color: var(--ifm-color-emphasis-700); font-size: .9rem; line-height: 1.8; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(290px, 1fr); gap: 1rem; align-items: start; }
+.board { position: relative; min-width: 0; border: 1px solid var(--ifm-color-emphasis-300); border-radius: 12px; overflow: hidden; background: var(--ifm-background-color); scroll-margin-top: calc(var(--ifm-navbar-height) + 1rem); }
+.toolbar { display: flex; flex-wrap: wrap; gap: .5rem; padding: .8rem; border-bottom: 1px solid var(--ifm-color-emphasis-200); }
+.canvas { height: 570px; width: 100%; outline-offset: -3px; }
+.renderStatus { padding: 1rem; color: var(--ifm-color-emphasis-700); font-size: .85rem; }
+.legend { display: flex; flex-wrap: wrap; gap: .6rem 1rem; padding: .7rem 1rem; font-size: .75rem; border-top: 1px solid var(--ifm-color-emphasis-200); }
+.legend span { display: inline-flex; align-items: center; gap: .35rem; }
+.legend span::before { content: ''; width: .7rem; height: .7rem; border-radius: 3px; border: 1px solid #64748b; background: #edf0f5; }
+.legend [data-kind='document']::before { background: #dff4e9; }
+.legend [data-kind='version']::before { background: #e1edff; }
+.legend [data-kind='clause']::before { background: #f0e5ff; }
+:global([data-theme='dark']) .legend [data-kind='document']::before { background: #103d32; }
+:global([data-theme='dark']) .legend [data-kind='version']::before { background: #17375b; }
+:global([data-theme='dark']) .legend [data-kind='series']::before { background: #313744; }
+:global([data-theme='dark']) .legend [data-kind='clause']::before { background: #422e5d; }
+.scope { padding: 0 1rem; margin: .4rem 0 1rem; color: var(--ifm-color-emphasis-700); font-size: .75rem; line-height: 1.8; }
+.textView { border-top: 1px solid var(--ifm-color-emphasis-200); padding: .8rem 1rem; font-size: .8rem; }
+.textView summary { cursor: pointer; }
+.textView h3 { font-size: .85rem; margin: 1rem 0 .6rem; }
+.nodeList { display: flex; flex-direction: column; align-items: stretch; gap: .45rem; }
+.nodeList button[aria-pressed='true'] { border-color: var(--ifm-color-primary); background: var(--ifm-color-emphasis-100); }
+.inspector { min-width: 0; max-height: 850px; overflow-y: auto; scrollbar-width: thin; border-radius: 12px; scroll-margin-top: calc(var(--ifm-navbar-height) + 1rem); }
+.explorer .returnGraph { display: none; }
+.selection { padding: 1rem; border: 1px solid var(--ifm-color-emphasis-300); border-radius: 12px; margin-bottom: .8rem; }
+.selection > span { display: block; color: var(--ifm-color-emphasis-700); font-size: .75rem; margin-bottom: .4rem; }
+.selection strong { display: block; font-size: .9rem; line-height: 1.8; overflow-wrap: anywhere; }
+.selection > div { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .8rem; }
+.selection p { font-size: .8rem; margin: .8rem 0 0; }
+.edgeDetail { border: 1px solid var(--ifm-color-emphasis-300); border-radius: 12px; padding: 1.2rem; }
+.edgeDetail h3 { font-size: 1.1rem; margin: 1.5rem 0 1rem; }
+.edgeDetail > button:not(:first-child) { color: var(--ifm-color-primary); font-weight: 600; text-align: left; }
+.edgeDetail p { font-size: .8rem; line-height: 1.8; }
+.predicate { color: var(--ifm-color-emphasis-700); margin: .8rem 0; }
+.quote { border-top: 1px solid var(--ifm-color-emphasis-200); padding-top: 1rem; margin-top: 1rem; font-size: .75rem; overflow-wrap: anywhere; }
+.quote blockquote { color: var(--ifm-font-color-base); font-size: .85rem; line-height: 1.9; white-space: pre-wrap; }
+.quote p { margin: .6rem 0; }
+.explorer button { padding: .45rem .7rem; border: 1px solid var(--ifm-color-emphasis-300); background: var(--ifm-background-color); color: inherit; font: inherit; font-size: .78rem; white-space: normal; height: auto; line-height: 1.7; overflow-wrap: anywhere; }
+.explorer button:hover:not(:disabled) { background: var(--ifm-color-emphasis-100); }
+.explorer button:focus-visible, .explorer a:focus-visible, .explorer summary:focus-visible, .canvas:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 3px; }
+@media (max-width: 1000px) {
+  .workspace { grid-template-columns: 1fr; }
+  .inspector { max-height: none; overflow: visible; }
+  .canvas { height: 500px; }
+  .explorer .returnGraph { display: inline-flex; margin-bottom: .8rem; }
+}
+@media (max-width: 480px) {
+  .canvas { height: 430px; }
+  .heading h2 { font-size: 1.1rem; }
+  .toolbar { gap: .4rem; padding: .6rem; }
+}

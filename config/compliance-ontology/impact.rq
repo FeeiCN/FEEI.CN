@@ -1,0 +1,12 @@
+PREFIX c: <https://feei.cn/ontology/compliance#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT DISTINCT ?old ?new ?referrer ?label ?line ?quote WHERE {
+  ?new c:supersedes+ ?old .
+  ?assertion rdf:subject ?referrer ; rdf:object ?old ; rdf:predicate ?predicate ; c:evidence ?evidence .
+  FILTER (?predicate IN (c:cites, c:normativelyReferences))
+  ?referrer rdfs:label ?label .
+  ?evidence c:line ?line ; c:quote ?quote .
+}
+ORDER BY ?old ?referrer ?line

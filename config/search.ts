@@ -3,7 +3,7 @@ export const searchOptions = {
   indexBlog: false,
   indexPages: false,
   hashed: true,
-  language: ['zh'],
+  language: ['en', 'zh'],
   zhUserDictPath: './config/search-zh-dict.txt',
   searchResultLimits: 500,
 };

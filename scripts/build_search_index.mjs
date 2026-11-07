@@ -34,7 +34,7 @@ async function writeStatus(status, extra = {}) {
 }
 
 const config = {
-  language: ['zh'],
+  language: ['en', 'zh'],
   ignoreCssSelectors: [],
   forceIgnoreNoIndex: false,
   removeDefaultStopWordFilter: [],

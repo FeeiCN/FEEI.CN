@@ -83,3 +83,17 @@ test('worker adapter matches installed plugin and preserves contextual URL', asy
   assert.match(adapted, /searchContext\.replace/);
   assert.throws(() => adapter('upstream changed'), /接口已变化/);
 });
+
+test('production language configuration indexes both English terms and Chinese', async () => {
+  const entry = require.resolve('@easyops-cn/docusaurus-search-local');
+  const {buildIndex} = require(path.join(path.dirname(entry), 'utils/buildIndex'));
+  const searchConfig = await fs.readFile(new URL('../config/search.ts', import.meta.url), 'utf8');
+  const builder = await fs.readFile(new URL('./build_search_index.mjs', import.meta.url), 'utf8');
+  for (const config of [searchConfig, builder]) assert.match(config, /language: \['en', 'zh'\]/);
+  const generated = buildIndex([[{i: 1, t: 'SSRF 工资 workflow'}], [], [], [], []], {
+    language: ['en', 'zh'], removeDefaultStopWordFilter: [], removeDefaultStemmer: false,
+  });
+  for (const term of ['ssrf', '工资', 'workflow']) {
+    assert.equal(generated[0].index.search(term)[0]?.ref, '1', term);
+  }
+});

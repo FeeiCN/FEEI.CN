@@ -107,6 +107,7 @@ jobs:
           fi
 
       - name: Ensure Health Auto Export server
+        id: health_service
         if: matrix.task == 'health'
         env:
           HAE_HOST: ${{ vars.HAE_HOST }}
@@ -137,6 +138,7 @@ jobs:
             --udid "$IOS_DEVICE_UDID" \
             --xcode-org-id "$XCODE_ORG_ID" \
             --updated-wda-bundle-id "$UPDATED_WDA_BUNDLE_ID" \
+            --show-xcode-log \
             --restart-health-server \
             --new-command-timeout 600
 
@@ -148,6 +150,22 @@ jobs:
           done
           echo "::error::Health Auto Export 在 30 秒内未就绪"
           exit 1
+
+      - name: 收集健康自动化构建错误
+        if: failure() && steps.health_service.outcome == 'failure'
+        run: |
+          shopt -s nullglob
+          logs=("$HOME/Library/Logs/"*appium*.log /tmp/*appium*.log)
+          appium_pid="$(lsof -nP -iTCP:"$APPIUM_PORT" -sTCP:LISTEN -t | head -n 1)"
+          if [ -n "$appium_pid" ]; then
+            while IFS= read -r line; do
+              if [[ "$line" == n/* ]] && [ -f "${line#n}" ]; then logs+=("${line#n}"); fi
+            done < <(lsof -a -p "$appium_pid" -d 1,2 -Fn)
+          fi
+          for log in "${logs[@]}"; do
+            echo "Xcode/Appium 构建错误：$(basename "$log")"
+            tail -n 600 "$log" | grep -Ei 'error:|code 65|provisioning profile|device.*locked|signing.*failed|certificate.*expired' | tail -n 30 || true
+          done
 
       - name: 同步当前任务
         id: task
@@ -235,6 +253,7 @@ jobs:
                           "--udid", os.environ["IOS_DEVICE_UDID"],
                           "--xcode-org-id", os.environ["XCODE_ORG_ID"],
                           "--updated-wda-bundle-id", os.environ["UPDATED_WDA_BUNDLE_ID"],
+                          "--show-xcode-log",
                           "--restart-health-server", "--new-command-timeout", "600",
                       ]
                       if run_logged(recovery, log_path) == 0:

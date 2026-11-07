@@ -98,6 +98,9 @@ def fetch_summary(vendor: str) -> dict[str, Any]:
 
     auth_template = cfg.get("auth_header") or "Cookie: {}"
     header_name, _, header_value = auth_template.partition(":")
+    prefix = header_name.strip() + ":"
+    if auth.lower().startswith(prefix.lower()):
+        auth = auth[len(prefix):].strip()
     headers: dict[str, str] = {
         header_name.strip(): header_value.strip().format(auth),
         "User-Agent": USER_AGENT,

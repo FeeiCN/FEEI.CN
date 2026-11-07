@@ -30,6 +30,13 @@ class UsageSyncTests(unittest.TestCase):
                 self.assertIn('401', reason)
                 self.assertNotIn('private', reason)
 
+    def test_cookie_copied_with_header_name_is_normalized(self):
+        with patch.dict(os.environ, {'MINIMAX_COOKIE': 'Cookie: session=fake'}, clear=True):
+            with patch.object(sync, 'urlopen') as request:
+                request.return_value.__enter__.return_value.read.return_value = b'{}'
+                sync.fetch_summary('minimax')
+                self.assertEqual(request.call_args.args[0].get_header('Cookie'), 'session=fake')
+
     def test_partial_success_is_committed_but_run_fails(self):
         with tempfile.TemporaryDirectory() as directory:
             env = {'MINIMAX_COOKIE': 'fake', 'OPENAI_ADMIN_KEY': 'fake', 'RUNNER_TEMP': directory}

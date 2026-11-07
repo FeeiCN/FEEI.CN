@@ -65,6 +65,7 @@ jobs:
             !contains(github.event.issue.title, '天气') &&
             !contains(github.event.issue.title, '上车') &&
             !contains(github.event.issue.title, '下车') &&
+            github.event.issue.title != '睡眠评分' &&
             !contains(github.event.issue.title, '日记')
           )
         )
@@ -109,6 +110,15 @@ jobs:
               f.write(j)
           d = json.loads(j)
           author_login = d["author"]["login"]
+
+          if d['title'].strip() == '睡眠评分':
+              print('scheduled-review=false')
+              print('mode=skip')
+              print('reason=睡眠评分由专用数据归档流程处理')
+              print(f'number={n}')
+              print(f'author={author_login}')
+              print(f"state={d['state']}")
+              sys.exit(0)
 
           if d["body"].startswith('<!-- history-life-journey:session:'):
               print('scheduled-review=false')

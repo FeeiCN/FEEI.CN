@@ -96,6 +96,8 @@ type SleepScoreDay = {
   score?: number;
   classification?: string;
   source?: string;
+  observations?: {durationDisplay?: string; durationPrecision?: string};
+  quality?: {warnings?: Array<{code: string; message: string; time?: string}>};
   components?: Record<'duration' | 'bedtime' | 'interruptions', {
     score?: number;
     maximum?: number;
@@ -369,7 +371,7 @@ async function loadSleepScore(date: string, signal: AbortSignal): Promise<SleepS
   const dates = Array.from({length: 7}, (_, index) => shiftDate(trendStart, index));
   const days = await Promise.all(dates.map(async (trendDate) => {
     const [year, month, day] = trendDate.split('-');
-    const response = await fetch(`/data/sleep-score/${year}/${month}/${day}.json`, {signal});
+    const response = await fetch(staticAssetUrl(`/data/sleep-score/${year}/${month}/${day}.json`), {signal, cache: 'no-store'});
     if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) return null;
     const data = await response.json() as SleepScoreDay;
     return typeof data.score === 'number' && Number.isFinite(data.score) ? {date: trendDate, data} : null;
@@ -814,6 +816,10 @@ function SleepScoreDetails({data: summary}: {data: SleepScoreSummary}) {
             );
           })}
         </div>
+        {data.observations?.durationPrecision === 'display_hours' && data.observations.durationDisplay && (
+          <p>健康 App 显示时长：{data.observations.durationDisplay}</p>
+        )}
+        {data.quality?.warnings?.map((warning) => <p key={warning.code} role="note">{warning.message}</p>)}
         <SleepTrend data={summary} selectedDate={data.date} onSelect={setSelectedDate} />
         {data.source && <footer>来源：{data.source}</footer>}
       </SleepStageChart>

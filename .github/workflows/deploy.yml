@@ -174,7 +174,8 @@ jobs:
           # Weather is generated data: keep its authoritative cache in the
           # persistent shared data root instead of the Git working tree.
           node scripts/build_weather_cache.mjs "$data_root/weather"
-          rsync -a --delete --exclude 'weather/' --exclude 'health/' static/data/ "$data_root/"
+          python3 scripts/sleep_score_storage.py seed --root "$data_root/sleep-score" --legacy-root static/data/sleep-score
+          rsync -a --delete --exclude 'weather/' --exclude 'health/' --exclude 'sleep-score/' static/data/ "$data_root/"
           group_end "Prepare shared assets"
 
           scope="$(node scripts/deployment_scope.mjs "$deployed_head" "$new_head")"

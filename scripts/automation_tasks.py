@@ -167,9 +167,31 @@ def collect_personal_data(t, out):
                             'local': str(local.relative_to(ROOT)), 'sha256': hashlib.sha256(raw).hexdigest()})
         except (HTTPError, URLError, OSError, ValueError, AttributeError):
             continue
+    if t['id'] in {'daily-personal-record', 'personal-health-trend-research'}:
+        from sleep_score_storage import validate_record
+
+        def fetch_score(day):
+            url = 'https://feei.cn/data/sleep-score/' + day.strftime('%Y/%m/%d.json')
+            try:
+                with urlopen(Request(url, headers={'User-Agent': 'FEEI-automation/1.0'}), timeout=30) as response:
+                    raw = response.read(250_001)
+                if len(raw) > 250_000:
+                    raise ValueError('sleep_score_too_large')
+                value = json.loads(raw)
+                validate_record(value)
+                if value['date'] != day.isoformat():
+                    raise ValueError('sleep_score_date_mismatch')
+                local = out / ('sleep-score-' + day.isoformat() + '.json')
+                local.write_text(json.dumps(value, ensure_ascii=False))
+                return {'date': day.isoformat(), 'kind': 'sleep_score', 'source': url,
+                        'local': str(local.relative_to(ROOT)), 'sha256': hashlib.sha256(raw).hexdigest()}
+            except (HTTPError, URLError, OSError, ValueError, KeyError, TypeError):
+                return {'date': day.isoformat(), 'kind': 'sleep_score', 'source': url, 'error': 'network_or_invalid_sleep_score'}
+
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            records.extend(pool.map(fetch_score, dates))
     if t['id'] == 'daily-personal-record':
-        for relative in [today.strftime('sleep-score/%Y/%m/%d.json'),
-                         f'reading/{today.year}.json', f'reading/weeks/{today.year}.json']:
+        for relative in [f'reading/{today.year}.json', f'reading/weeks/{today.year}.json']:
             url = 'https://feei.cn/data/' + relative
             try:
                 with urlopen(url, timeout=30) as response:

@@ -40,7 +40,7 @@ export type HealthData = {
   stand_time: [string, number][];
   stand_hour: [string, number][];
   sleep: [string, number, number, number, number, number][];
-  sleep_score: [string, number, number, number, number][];
+  sleep_score: [string, number, number | null, number | null, number | null][];
   wrist_temp: [string, number][];
   rhr: [string, number][];
   hrv: [string, number][];

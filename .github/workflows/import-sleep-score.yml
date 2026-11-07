@@ -1,0 +1,76 @@
+name: 睡眠评分议题归档
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: '指定 Issue 编号；留空则补处理所有待归档睡眠评分'
+        required: false
+        default: ''
+  schedule:
+    - cron: '20 * * * *'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sleep-score-import
+  cancel-in-progress: false
+
+jobs:
+  import:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (
+        github.event_name == 'schedule' ||
+        (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
+        (github.event_name == 'issues' &&
+         github.event.sender.login == github.repository_owner &&
+         github.event.issue.user.login == github.repository_owner &&
+         github.event.issue.title == '睡眠评分' && !github.event.issue.pull_request)
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 验证解析、合并与交付规则
+        run: python3 -m unittest discover -s scripts -p test_import_sleep_score_issue.py
+      - name: 准备服务器连接
+        env:
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/sleep-score-ssh" "$HOME/.ssh"
+          printf '%s\n' "$SERVER_SSH_KEY" > "$RUNNER_TEMP/sleep-score-ssh/key"
+          chmod 600 "$RUNNER_TEMP/sleep-score-ssh/key"
+          ssh-keyscan -p "$SERVER_PORT" "$SERVER_HOST" >> "$HOME/.ssh/known_hosts"
+      - name: 解析、持久化、线上核验及原议题回执
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMPORT_ACTOR: ${{ github.event_name == 'schedule' && github.repository_owner || github.event.sender.login || github.actor }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+          SLEEP_SCORE_SSH_TARGET: ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}
+          SLEEP_SCORE_SSH_PORT: ${{ secrets.SERVER_PORT }}
+          SLEEP_SCORE_SSH_KEY: ${{ runner.temp }}/sleep-score-ssh/key
+        run: |
+          set -euo pipefail
+          args=(--seed)
+          if [ -n "$ISSUE_NUMBER" ]; then
+            [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo '无效 Issue 编号'; exit 1; }
+            args+=(--issue "$ISSUE_NUMBER")
+          fi
+          python3 scripts/import_sleep_score_issue.py "${args[@]}"
+      - name: 清理临时连接文件
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sleep-score-ssh/key"

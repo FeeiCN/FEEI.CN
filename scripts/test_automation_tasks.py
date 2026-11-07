@@ -538,6 +538,65 @@ class AutomationResultTests(unittest.TestCase):
         records = self.collect_with_month_response({'version': 5, 'days': [{'weight': 70}]})
         self.assertFalse(any(r.get('format') == 'legacy_original' for r in records))
 
+    def collect_sleep_scores(self, task_id, mutate=None):
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime(2026, 2, 21, 12, tzinfo=timezone.utc)
+
+        urls = []
+
+        def fetch(request, **kwargs):
+            url = request if isinstance(request, str) else request.full_url
+            urls.append(url)
+            match = re.search(r'/(\d{4})/(\d{2})/(\d{2})\.json$', url)
+            if not match:
+                return io.BytesIO(b'{}')
+            day = '-'.join(match.groups())
+            value = {'version': 5, 'date': day}
+            if '/sleep-score/' in url:
+                value = {'date': day, 'dataType': 'HKDataTypeAppleSleepScore', 'score': 83,
+                         'components': {'duration': {'score': 40, 'maximum': 50},
+                                        'bedtime': {'score': 25, 'maximum': 30},
+                                        'interruptions': {'score': 18, 'maximum': 20}},
+                         'observations': {'durationDisplay': '7小时', 'durationPrecision': 'display_hours'},
+                         'quality': {'warnings': [{'code': 'watch_shutdown', 'message': '关机可能影响评分'}]}}
+                if mutate:
+                    value = mutate(value)
+            return io.BytesIO(json.dumps(value).encode())
+
+        with patch.object(automation, 'datetime', FixedDateTime), patch.object(automation, 'urlopen', side_effect=fetch):
+            automation.collect_personal_data({'id': task_id}, self.out)
+        return json.loads((self.out / 'personal-data-index.json').read_text()), urls
+
+    def test_daily_record_collects_score_history_with_precision_and_warnings(self):
+        records, _ = self.collect_sleep_scores('daily-personal-record')
+        scores = [r for r in records if r.get('kind') == 'sleep_score']
+        self.assertEqual(len(scores), 8)
+        self.assertEqual([r['date'] for r in scores], sorted(r['date'] for r in scores))
+        value = json.loads((self.root / scores[-1]['local']).read_text())
+        self.assertEqual(value['observations']['durationPrecision'], 'display_hours')
+        self.assertEqual(value['quality']['warnings'][0]['code'], 'watch_shutdown')
+        self.assertNotIn('detail', value['components']['duration'])
+
+    def test_health_research_collects_scores_for_whole_health_window(self):
+        records, _ = self.collect_sleep_scores('personal-health-trend-research')
+        health_dates = {r['date'] for r in records if not r.get('kind')}
+        scores = [r for r in records if r.get('kind') == 'sleep_score']
+        self.assertEqual(len(scores), 91)
+        self.assertEqual({r['date'] for r in scores}, health_dates)
+
+    def test_invalid_or_wrong_date_score_is_reported_without_local_fact(self):
+        records, _ = self.collect_sleep_scores('daily-personal-record', lambda value: {**value, 'date': '2020-01-01'})
+        scores = [r for r in records if r.get('kind') == 'sleep_score']
+        self.assertTrue(all(r.get('error') for r in scores))
+        self.assertFalse(list(self.out.glob('sleep-score-*.json')))
+
+    def test_weight_wallpaper_does_not_fetch_unrelated_scores(self):
+        records, urls = self.collect_sleep_scores('update-weight-wallpaper')
+        self.assertFalse(any('/sleep-score/' in url for url in urls))
+        self.assertFalse(any(r.get('kind') == 'sleep_score' for r in records))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -18,6 +18,12 @@
 !/static/data/health/example/
 !/static/data/health/example/**
 
+# New sleep-score captures live in persistent server storage; tracked legacy
+# records remain available only as an initial seed.
+/static/data/sleep-score/**
+!/static/data/sleep-score/example/
+!/static/data/sleep-score/example/**
+
 # Local rsync configuration
 /config/media-rsync.env
 

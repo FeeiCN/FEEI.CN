@@ -58,6 +58,8 @@ export type SleepScoreHistoryPayload = {
 export type SleepScoreDetailPayload = {
   score?: number;
   classification?: string;
+  observations?: {durationDisplay?: string; durationPrecision?: string};
+  quality?: {warnings?: Array<{message: string}>};
   components?: {
     duration?: {score?: number; maximum?: number; detail?: string};
     bedtime?: {score?: number; maximum?: number; detail?: string};
@@ -71,7 +73,7 @@ export function loadSleepScoreDetail(date: string): Promise<SleepScoreDetailPayl
   const pending = sleepScoreDetailRequests.get(date);
   if (pending) return pending;
   const [year, month, day] = date.split('-');
-  const request = fetch(`/data/sleep-score/${year}/${month}/${day}.json`, {cache: 'force-cache'})
+  const request = fetch(staticAssetUrl(`/data/sleep-score/${year}/${month}/${day}.json`), {cache: 'no-store'})
     .then(async (response) => {
       if (!response.ok) return null;
       const payload = await response.json() as SleepScoreDetailPayload;
@@ -87,13 +89,22 @@ export function loadSleepScoreDetail(date: string): Promise<SleepScoreDetailPayl
 export function sleepScoreTooltip(date: string, total: number, values: Map<string, number>, detail?: SleepScoreDetailPayload | null): string {
   const classification = detail?.classification || (total >= 90 ? '非常高' : total >= 80 ? '高' : total >= 60 ? '一般' : '偏低');
   const components = detail?.components;
-  return `${date}<br/>睡眠评分：${total} · ${classification}<br/>时长：${values.get('睡眠时长') ?? 0}/50${components?.duration?.detail ? ` · ${components.duration.detail}` : ''}<br/>入睡时间：${values.get('入睡时间') ?? 0}/30${components?.bedtime?.detail ? ` · ${components.bedtime.detail}` : ''}<br/>睡眠中断：${values.get('睡眠中断') ?? 0}/20${components?.interruptions?.detail ? ` · ${components.interruptions.detail}` : ''}`;
+  const escape = (text: string) => text.replace(/[&<>"']/g, (character) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]!));
+  const score = (name: string, key: 'duration' | 'bedtime' | 'interruptions') => {
+    if (components && !components[key]) return '缺失';
+    return components?.[key]?.score ?? values.get(name) ?? '缺失';
+  };
+  const detailText = (key: 'duration' | 'bedtime' | 'interruptions') => components?.[key]?.detail ? ` · ${escape(components[key]!.detail!)}` : '';
+  const duration = detail?.observations?.durationPrecision === 'display_hours' && detail.observations.durationDisplay
+    ? `<br/>健康 App 显示时长：${escape(detail.observations.durationDisplay)}` : '';
+  const warnings = detail?.quality?.warnings?.map((warning) => `<br/>${escape(warning.message)}`).join('') || '';
+  return `${date}<br/>睡眠评分：${total} · ${escape(classification)}<br/>时长：${score('睡眠时长', 'duration')}/50${detailText('duration')}<br/>入睡时间：${score('入睡时间', 'bedtime')}/30${detailText('bedtime')}<br/>睡眠中断：${score('睡眠中断', 'interruptions')}/20${detailText('interruptions')}${duration}${warnings}`;
 }
 
 export function loadSleepScoreHistory(): Promise<HealthData['sleep_score']> {
   if (sleepScoreCache) return Promise.resolve(sleepScoreCache);
   if (sleepScoreRequestCache) return sleepScoreRequestCache;
-  sleepScoreRequestCache = fetch('/data/sleep-score/index.json', {cache: 'no-store'})
+  sleepScoreRequestCache = fetch(staticAssetUrl('/data/sleep-score/index.json'), {cache: 'no-store'})
     .then(async (response) => {
       if (!response.ok) return [];
       const payload = await response.json() as SleepScoreHistoryPayload;
@@ -604,7 +615,8 @@ export function sleepScoreOpt(isDark: boolean, D: HealthData) {
       axisPointer: {type: 'shadow'},
       formatter: (params: Array<{axisValue?: string; seriesName: string; value: number}>, ticket: string, callback: (ticket: string, html: string) => void) => {
         const date = params[0]?.axisValue || '';
-        const byName = new Map(params.map((item) => [item.seriesName, Number(item.value)]));
+        const byName = new Map(params.filter((item) => typeof item.value === 'number' && Number.isFinite(item.value))
+          .map((item) => [item.seriesName, item.value]));
         const total = byName.get('睡眠评分') ?? 0;
         const cached = sleepScoreDetailCache.get(date);
         if (cached) return sleepScoreTooltip(date, total, byName, cached);

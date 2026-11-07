@@ -90,6 +90,17 @@ jobs:
           WALLPAPER_ARTIFACT_ID: ${{ steps.wallpaper.outputs.artifact-id }}
         run: python3 scripts/automation_tasks.py deliver --task "$TASK_ID"
 
+      - name: 保存壁纸交付核验记录
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallpaper-result-${{ github.run_id }}
+          path: |
+            feei.cn/output/report.md
+            feei.cn/output/metadata.json
+          if-no-files-found: ignore
+          retention-days: 30
+
   notify-failure:
     needs: [run, publish]
     if: >-

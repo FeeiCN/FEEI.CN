@@ -25,8 +25,7 @@ import useIsBrowser from '@docusaurus/useIsBrowser';
 import DocSidebarItems from '@theme/DocSidebarItems';
 import DocSidebarItemLink from '@theme/DocSidebarItem/Link';
 import type {Props} from '@theme/DocSidebarItem/Category';
-import SidebarIcon from '@site/src/components/SidebarIcon';
-import type {AnimatedIconHandle} from '@site/src/components/ItsHoverIcon';
+import SidebarItemLabel, {SidebarLabelTooltip} from '@site/src/components/SidebarItemLabel';
 import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useControlledIconAnimation';
 import {hideRepeatedSidebarIcons} from '@site/src/utils/docIcons';
 
@@ -125,36 +124,6 @@ function CollapseButton({
   );
 }
 
-function CategoryLinkLabel({
-  label,
-  icon,
-  iconRef,
-  disableHover,
-  onMouseEnter,
-  onMouseLeave,
-}: {
-  label: string;
-  icon?: string;
-  iconRef: React.RefObject<AnimatedIconHandle | null>;
-  disableHover: boolean;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-}) {
-  return (
-    <span
-      className={styles.categoryLinkLabelTrigger}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}>
-      <span className="sidebarIconSlot" aria-hidden="true">
-        <SidebarIcon icon={icon} iconRef={iconRef} disableHover={disableHover} />
-      </span>
-      <span title={label} className={styles.categoryLinkLabel}>
-        {label}
-      </span>
-    </span>
-  );
-}
-
 export default function DocSidebarItemCategory(props: Props): ReactNode {
   const visibleChildren = useVisibleSidebarItems(
     props.item.items,
@@ -217,7 +186,7 @@ function DocSidebarItemCategoryCollapsible({
       ? {...child, label: `${label}概览`}
       : child
   )), [visibleItems, label]);
-  const icon = typeof customProps?.icon === 'string' ? customProps.icon : undefined;
+  const icon = level === 1 && typeof customProps?.icon === 'string' ? customProps.icon : undefined;
   const iconAnimation = useControlledIconAnimation(Boolean(icon));
 
   const {collapsed, setCollapsed} = useCollapsible({
@@ -275,7 +244,7 @@ function DocSidebarItemCategoryCollapsible({
     'menu__link--active-parent': isActive && !isCurrentPage,
   });
   const linkLabel = (
-    <CategoryLinkLabel
+    <SidebarItemLabel
       label={label}
       icon={icon}
       iconRef={iconAnimation.iconRef}
@@ -300,7 +269,7 @@ function DocSidebarItemCategoryCollapsible({
         className={clsx('menu__list-item-collapsible', {
           'menu__list-item-collapsible--active': isCurrentPage,
         })}>
-        {collapsible && !href ? (
+        <SidebarLabelTooltip label={label}>{collapsible && !href ? (
           <button type="button" className={clsx(linkClassName, styles.categoryToggle)}
             onClick={() => updateCollapsed()} aria-expanded={!collapsed} {...props}>
             {linkLabel}
@@ -312,7 +281,7 @@ function DocSidebarItemCategoryCollapsible({
           href={collapsible ? hrefWithSSRFallback ?? '#' : hrefWithSSRFallback}
           {...props}>
           {linkLabel}
-        </Link>}
+        </Link>}</SidebarLabelTooltip>
         {collapsible && (
           <CollapseButton
             collapsed={collapsed}

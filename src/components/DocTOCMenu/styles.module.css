@@ -1,0 +1,75 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--feei-text-secondary);
+  font-family: var(--ifm-font-family-base);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color var(--feei-nav-transition), background-color var(--feei-nav-transition);
+}
+
+.trigger:hover,
+.trigger[aria-expanded='true'] {
+  color: var(--ifm-font-color-base);
+  background: var(--feei-nav-hover);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 1px;
+}
+
+.content {
+  width: min(340px, calc(100vw - 24px));
+  max-height: min(480px, calc(100dvh - 150px));
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border: 1px solid var(--feei-border);
+  border-radius: 6px;
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-font-color-base);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 10%);
+  font-family: var(--ifm-font-family-base);
+  z-index: 2000;
+}
+
+.title {
+  margin: 0 0 6px;
+  color: var(--feei-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.links {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ifm-font-color-base) 18%, transparent) transparent;
+}
+
+.links :global(.table-of-contents__link) {
+  min-height: 40px;
+  padding-block: 9px;
+}
+
+@media (min-width: 1280px) {
+  .trigger,
+  .content {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+}

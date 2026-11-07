@@ -6,7 +6,7 @@
   max-width: 1040px;
   min-width: 0;
   min-height: 30px;
-  margin: 0 auto 0.4rem;
+  margin: 0 auto 0.25rem;
 }
 
 .breadcrumbsContainer {
@@ -29,7 +29,8 @@
   align-items: center;
   flex: 0 0 auto;
   margin-left: auto;
-  padding-left: 0.5rem;
+  gap: 2px;
+  padding-left: 0.25rem;
 }
 
 .breadcrumbsContainer :global(.breadcrumbs) {
@@ -53,7 +54,7 @@
   max-width: 15rem;
   padding: 0;
   color: var(--feei-text-secondary);
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
@@ -102,7 +103,7 @@
 
 @media (max-width: 996px) {
   .breadcrumbsRow {
-    align-items: flex-start;
+    align-items: center;
     gap: 0.5rem;
   }
 
@@ -134,7 +135,12 @@
   }
 
   .mobileBreadcrumbs :global(.breadcrumbs__item:last-child .breadcrumbs__link) {
-    max-width: 10rem;
+    display: block;
+    max-width: min(10rem, 100%);
+  }
+
+  .mobileBreadcrumbs :global(.breadcrumbs__item:last-child) {
+    flex: 0 1 auto;
   }
 }
 

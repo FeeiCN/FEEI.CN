@@ -6,41 +6,10 @@ import Link from '@docusaurus/Link';
 import isInternalUrl from '@docusaurus/isInternalUrl';
 import IconExternalLink from '@theme/Icon/ExternalLink';
 import type {Props} from '@theme/DocSidebarItem/Link';
-import SidebarIcon from '@site/src/components/SidebarIcon';
-import type {AnimatedIconHandle} from '@site/src/components/ItsHoverIcon';
+import SidebarItemLabel, {SidebarLabelTooltip} from '@site/src/components/SidebarItemLabel';
 import useControlledIconAnimation from '@site/src/components/ItsHoverIcon/useControlledIconAnimation';
 
 import styles from './styles.module.css';
-
-function LinkLabel({
-  label,
-  icon,
-  iconRef,
-  disableHover,
-  onMouseEnter,
-  onMouseLeave,
-}: {
-  label: string;
-  icon?: string;
-  iconRef: React.RefObject<AnimatedIconHandle | null>;
-  disableHover: boolean;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-}) {
-  return (
-    <span
-      className={styles.linkLabelTrigger}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}>
-      <span className="sidebarIconSlot" aria-hidden="true">
-        <SidebarIcon icon={icon} iconRef={iconRef} disableHover={disableHover} />
-      </span>
-      <span title={label} className={styles.linkLabel}>
-        {label}
-      </span>
-    </span>
-  );
-}
 
 export default function DocSidebarItemLink({
   item,
@@ -53,7 +22,7 @@ export default function DocSidebarItemLink({
   const {href, label, className, autoAddBaseUrl, customProps} = item;
   const isActive = isActiveSidebarItem(item, activePath);
   const isInternalLink = isInternalUrl(href);
-  const icon = customProps?.hideSidebarIcon !== true && typeof customProps?.icon === 'string'
+  const icon = level === 1 && customProps?.hideSidebarIcon !== true && typeof customProps?.icon === 'string'
     ? customProps.icon
     : undefined;
   const iconAnimation = useControlledIconAnimation(Boolean(icon));
@@ -72,7 +41,7 @@ export default function DocSidebarItemLink({
         className,
       )}
       key={label}>
-      <Link
+      <SidebarLabelTooltip label={label}><Link
         className={clsx(
           'menu__link',
           styles.menuLinkWithIcon,
@@ -88,7 +57,7 @@ export default function DocSidebarItemLink({
           onClick: onItemClick ? () => onItemClick(item) : undefined,
         })}
         {...props}>
-        <LinkLabel
+        <SidebarItemLabel
           label={label}
           icon={icon}
           iconRef={iconAnimation.iconRef}
@@ -102,7 +71,7 @@ export default function DocSidebarItemLink({
           </span>
         )}
         {!isInternalLink && <IconExternalLink />}
-      </Link>
+      </Link></SidebarLabelTooltip>
     </li>
   );
 }

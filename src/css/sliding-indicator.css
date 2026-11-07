@@ -6,10 +6,10 @@
   opacity: 0;
   pointer-events: none;
   transition:
-    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-    height 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-    width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.15s ease;
+    transform var(--feei-nav-transition),
+    height var(--feei-nav-transition),
+    width var(--feei-nav-transition),
+    opacity var(--feei-nav-transition);
   z-index: 2;
 }
 
@@ -42,4 +42,10 @@
 /* The animated navbar indicator replaces the static underline when ready. */
 .navbar__items:has(> #sliding-line-navbar) .navbar__link--active {
   box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sliding-line-indicator {
+    transition: none;
+  }
 }

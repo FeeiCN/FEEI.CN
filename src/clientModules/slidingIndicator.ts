@@ -1,3 +1,5 @@
+import {revealSidebarItem} from '../utils/sidebarScroll';
+
 type IndicatorConfig = {
   container: string;
   links: string;
@@ -136,6 +138,7 @@ function setup({container, links, id, axis}: IndicatorConfig) {
 
 function init() {
   markManualNumberedTocLinks();
+  revealSidebarItem(document.querySelector('.theme-doc-sidebar-container .theme-doc-sidebar-menu'));
   CONFIGS.forEach(setup);
 }
 

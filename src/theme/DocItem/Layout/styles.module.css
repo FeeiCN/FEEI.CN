@@ -19,12 +19,6 @@
   min-width: 0;
 }
 
-.mobileTOC :global(.theme-doc-toc-mobile) {
-  display: block;
-  margin-bottom: 1rem;
-  font-size: 0.85rem;
-}
-
 @media (max-width: 1279px) {
   .diaryRail { display: block; width: 100%; max-width: 864px; margin-inline: auto; padding: 24px 16px; border-top: 1px solid var(--ifm-toc-border-color); }
   .diaryRail .tocCollapseButton, .diaryRail :global(.theme-doc-toc-desktop) { display: none; }
@@ -138,9 +132,6 @@
     left: 0;
   }
 
-  .mobileTOC {
-    display: none;
-  }
 }
 
 @media print {
@@ -148,8 +139,7 @@
     display: block;
   }
 
-  .desktopTOC,
-  .mobileTOC {
+  .desktopTOC {
     display: none;
   }
 }

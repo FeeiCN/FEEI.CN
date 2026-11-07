@@ -5,7 +5,6 @@ import DocItemPaginator from '@theme/DocItem/Paginator';
 import DocVersionBanner from '@theme/DocVersionBanner';
 import DocVersionBadge from '@theme/DocVersionBadge';
 import DocItemFooter from '@theme/DocItem/Footer';
-import DocItemTOCMobile from '@theme/DocItem/TOC/Mobile';
 import DocItemTOCDesktop from '@theme/DocItem/TOC/Desktop';
 import DocItemContent from '@theme/DocItem/Content';
 import DocBreadcrumbs from '@theme/DocBreadcrumbs';
@@ -29,7 +28,6 @@ export default function DocItemLayout({children}: Props): ReactNode {
         <article>
           <DocBreadcrumbs />
           <DocVersionBadge />
-          {hasTOC && <div className={styles.mobileTOC}><DocItemTOCMobile /></div>}
           <DocItemContent>{children}</DocItemContent>
           <DocItemFooter />
         </article>

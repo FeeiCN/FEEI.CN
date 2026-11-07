@@ -7,6 +7,19 @@ const jiti = createJiti(import.meta.url);
 const siteDir = path.resolve(import.meta.dirname, '..');
 const {getDocIcon, hideRepeatedSidebarIcons} = jiti(path.join(siteDir, 'src/utils/docIcons.ts'));
 const {attachDocFrontMatterToSidebar} = jiti(path.join(siteDir, 'config/docusaurusSidebar.ts'));
+const {sidebarLabel} = jiti(path.join(siteDir, 'src/utils/sidebarLabel.ts'));
+
+test('navigation labels preserve ordinary titles and separate only leading standard identifiers', () => {
+  for (const title of ['软件工程', '如何阅读 GB/T 20984-2022', '2026 年度总结', '个人信息保护法']) {
+    assert.deepEqual(sidebarLabel(title), {name: title});
+  }
+  assert.deepEqual(sidebarLabel('GB/T 20984-2022 信息安全技术 信息安全风险评估方法'),
+    {number: 'GB/T 20984-2022', name: '信息安全风险评估方法'});
+  assert.deepEqual(sidebarLabel('GM/T 0133-2024 关键信息基础设施密码应用要求'),
+    {number: 'GM/T 0133-2024', name: '关键信息基础设施密码应用要求'});
+  assert.deepEqual(sidebarLabel('GB 17859-1999 计算机信息系统 安全保护等级划分准则'),
+    {number: 'GB 17859-1999', name: '计算机信息系统 安全保护等级划分准则'});
+});
 
 test('configured document icons take precedence over historical defaults', () => {
   assert.equal(getDocIcon({slug: '/2026-10-23', icon: ' book-icon '}), 'book-icon');

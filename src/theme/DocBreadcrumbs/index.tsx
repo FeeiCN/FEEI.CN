@@ -7,6 +7,7 @@ import Link from '@docusaurus/Link';
 import HomeBreadcrumbItem from '@theme/DocBreadcrumbs/Items/Home';
 import DocBreadcrumbsStructuredData from '@theme/DocBreadcrumbs/StructuredData';
 import DocActionsMenu from '@site/src/components/DocActionsMenu';
+import DocTOCMenu from '@site/src/components/DocTOCMenu';
 import styles from './styles.module.css';
 
 type BreadcrumbItem = {
@@ -84,9 +85,10 @@ export default function DocBreadcrumbs(): ReactNode {
   const sidebar = useDocsSidebar();
   const themeConfig = useThemeConfig();
   const homePageRoute = useHomePageRoute();
-  const {frontMatter, metadata} = useDoc();
+  const {frontMatter, metadata, toc} = useDoc();
   const [mobileExpanded, setMobileExpanded] = useState(false);
   const [mobileTailCount, setMobileTailCount] = useState(1);
+  const [mobileShowRoot, setMobileShowRoot] = useState(true);
   const mobileNavRef = useRef<HTMLElement>(null);
   const measureRef = useRef<HTMLUListElement>(null);
 
@@ -102,9 +104,9 @@ export default function DocBreadcrumbs(): ReactNode {
     index === 0 || item.label !== all[index - 1].label
   ));
   const maxTailCount = Math.max(0, visibleParents.length - 1);
-  const compactMobileParents = mobileTailCount >= maxTailCount
+  const compactMobileParents = mobileShowRoot && mobileTailCount >= maxTailCount
     ? visibleParents
-    : [visibleParents[0], ...visibleParents.slice(-mobileTailCount)];
+    : [...(mobileShowRoot ? [visibleParents[0]] : []), ...visibleParents.slice(-mobileTailCount)];
   const shouldCollapseMobile = compactMobileParents.length < visibleParents.length;
 
   const renderItems = (items: typeof visibleParents, measure = false) => items.map((item, index) => {
@@ -141,11 +143,18 @@ export default function DocBreadcrumbs(): ReactNode {
       const fullWidth = homeWidth + parentWidths.reduce((sum, width) => sum + width, 0);
 
       if (fullWidth <= available) {
+        setMobileShowRoot(true);
         setMobileTailCount(maxTailCount);
         return;
       }
 
       const firstWidth = parentWidths[0] ?? 0;
+      if (homeWidth + firstWidth + ellipsisWidth + (parentWidths.at(-1) ?? 0) > available) {
+        setMobileShowRoot(false);
+        setMobileTailCount(1);
+        return;
+      }
+      setMobileShowRoot(true);
       let bestTailCount = 1;
       for (let tailCount = 1; tailCount <= maxTailCount; tailCount += 1) {
         const tailWidth = parentWidths.slice(-tailCount).reduce((sum, width) => sum + width, 0);
@@ -164,9 +173,7 @@ export default function DocBreadcrumbs(): ReactNode {
     return () => observer.disconnect();
   }, [maxTailCount, visibleParents.map((item) => item.label).join('|')]);
 
-  if (!breadcrumbs) return null;
-
-  const structuredBreadcrumbs = [...contextParents, ...breadcrumbs].filter((item, index, all) => (
+  const structuredBreadcrumbs = [...contextParents, ...(breadcrumbs ?? [])].filter((item, index, all) => (
     index === 0 || item.label !== all[index - 1].label
   ));
 
@@ -198,7 +205,7 @@ export default function DocBreadcrumbs(): ReactNode {
               {homePageRoute && <HomeBreadcrumbItem />}
               {mobileExpanded || !shouldCollapseMobile ? renderItems(mobileExpanded ? visibleParents : compactMobileParents) : (
                 <>
-                  {renderItems([compactMobileParents[0]])}
+                  {mobileShowRoot && renderItems([visibleParents[0]])}
                   <li className="breadcrumbs__item">
                     <button
                       type="button"
@@ -209,7 +216,7 @@ export default function DocBreadcrumbs(): ReactNode {
                       …
                     </button>
                   </li>
-                  {renderItems([compactMobileParents[1]])}
+                  {renderItems(visibleParents.slice(-mobileTailCount))}
                 </>
               )}
               {shouldCollapseMobile && mobileExpanded && (
@@ -227,9 +234,10 @@ export default function DocBreadcrumbs(): ReactNode {
             </ul>
           </nav>
         )}
-        {!frontMatter.hide_title && (
+        {(!frontMatter.hide_title || (!frontMatter.hide_table_of_contents && toc.length > 0)) && (
           <div className={styles.actions} aria-label="文章操作">
-            <DocActionsMenu />
+            {!frontMatter.hide_table_of_contents && toc.length > 0 && <DocTOCMenu key={metadata.permalink} />}
+            {!frontMatter.hide_title && <DocActionsMenu />}
           </div>
         )}
       </div>

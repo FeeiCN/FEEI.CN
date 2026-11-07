@@ -3,6 +3,7 @@
 import argparse
 import base64
 import hashlib
+from html import unescape
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -14,6 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 PLAN = '<!-- codex-driver:plan:'
 REPORT_PLAN = '<!-- codex-driver:report-plan:'
 BOT = 'github-actions[bot]'
+WEREAD_TASK = 'weread-highlight'
+WEREAD_WORKFLOW = '.github/workflows/sync-weread-highlights.yml'
 INTENT_SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'properties': {
@@ -35,7 +38,7 @@ def bot(author):
 
 
 def registered_tasks():
-    result = {}
+    result = {WEREAD_TASK: WEREAD_WORKFLOW}
     for path in (ROOT / '.github/workflows').glob('*.yml'):
         text = path.read_text()
         if 'uses: ./.github/workflows/automation-task.yml' not in text:
@@ -46,15 +49,55 @@ def registered_tasks():
     return result
 
 
+def legacy_weread_source(issue):
+    body = issue.get('body', '')
+    if not body.startswith('来源：'):
+        return False
+    fields = {}
+    for name in ['bookmarkId', 'bookId', 'range']:
+        matches = re.findall(r'^' + name + r'：`([^`\n]+)`\s*$', body, re.M)
+        if len(matches) != 1:
+            return False
+        fields[name] = matches[0]
+    if not re.fullmatch(r'\d+', fields['bookId']):
+        return False
+    bookmark = re.fullmatch(r'(\d+)_(\d+)_(\d+-\d+)', fields['bookmarkId'])
+    if not bookmark or bookmark[1] != fields['bookId'] or bookmark[3] != fields['range']:
+        return False
+    jump = (f"weread://bestbookmark?bookId={fields['bookId']}&chapterUid={bookmark[2]}"
+            f"&rangeStart={fields['range'].split('-')[0]}&rangeEnd={fields['range'].split('-')[1]}")
+    if f'`{jump}`' not in body:
+        return False
+    quotes = re.findall(r'^最新划线：\s*\n\s*\n> ([^\n]+)', body, re.M)
+    if len(quotes) != 1:
+        return False
+    try:
+        data = json.loads((ROOT / 'static/data/reading/books' / fields['bookId'] / 'bookmarks.json').read_text())
+    except (OSError, ValueError):
+        return False
+    if not isinstance(data, dict) or not isinstance(data.get('updated'), list):
+        return False
+    return any(
+        str(item.get('bookId')) == fields['bookId']
+        and item.get('bookmarkId') == fields['bookmarkId']
+        and str(item.get('chapterUid')) == bookmark[2]
+        and item.get('range') == fields['range']
+        and re.sub(r'\s+', ' ', unescape(str(item.get('markText', '')))).strip() == quotes[0]
+        for item in data.get('updated', []) if isinstance(item, dict)
+    )
+
+
 def task_source(issue, repo, runs, tasks=None):
     if not bot(issue.get('author', {})):
         raise ValueError('不是受支持的自动任务机器人 Issue')
     body = issue.get('body', '')
     match = re.match(r'<!-- automation-task:([a-z][a-z0-9-]*) -->', body)
+    if not match and legacy_weread_source(issue):
+        return WEREAD_TASK
     task = match[1] if match else None
     known = registered_tasks() if tasks is None else tasks
     if task not in known:
-        raise ValueError('缺少已登记的定时任务标记')
+        raise ValueError('Issue 来源未通过核验：缺少已登记的任务标记，且无法匹配仓库已同步的历史微信读书划线')
     links = re.findall(r'https://github\.com/' + re.escape(repo) + r'/actions/runs/(\d+)(?!\d)', body)
     if len(set(links)) != 1:
         raise ValueError('缺少唯一的当前仓库任务运行链接')
@@ -69,6 +112,19 @@ def task_source(issue, repo, runs, tasks=None):
 def trusted_comments(issue, owner):
     return [c for c in issue.get('comments', [])
             if c.get('author', {}).get('login') == owner or bot(c.get('author', {}))]
+
+
+def skip_feedback_required(issue, owner, actor, reason):
+    if not reason or actor != owner:
+        return False
+    comments = trusted_comments(issue, owner)
+    requests = [c for c in comments if c.get('author', {}).get('login') == owner and c.get('body', '').strip()]
+    if not requests:
+        return False
+    request = max(requests, key=lambda c: c.get('updatedAt', c['createdAt']))
+    return not any(bot(c.get('author', {})) and c.get('body', '').startswith('<!-- codex-driver:')
+                   and c.get('updatedAt', c['createdAt']) >= request.get('updatedAt', request['createdAt'])
+                   for c in comments)
 
 
 def snapshot(issue, owner, exclude=None):
@@ -300,8 +356,11 @@ def interpret_message(issue, owner, task, state_dir):
 def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
     task = 'owner-issue' if issue.get('author', {}).get('login') == owner else task_source(issue, repo, runs, tasks)
     context = {'task': task, 'scheduled': True, 'mode': 'skip', 'reason': ''}
-    if actor != owner or issue.get('state') != 'OPEN':
-        context['reason'] = '仅仓库本人可操作打开的任务 Issue'
+    if actor != owner:
+        context['reason'] = '仅仓库本人可请求处理任务 Issue'
+        return context
+    if issue.get('state') != 'OPEN':
+        context['reason'] = 'Issue 已关闭；请重新打开后继续请求，本次未执行'
         return context
     comments = trusted_comments(issue, owner)
     own = [c for c in comments if c.get('author', {}).get('login') == owner]
@@ -571,6 +630,10 @@ def main():
         print('scheduled-review=true')
         print('mode=' + context['mode'])
         print('reason=' + context.get('reason', '').replace('\n', ' '))
+        print('skip-diagnostic=' + str(skip_feedback_required(
+            issue, owner, os.environ['COMMAND_ACTOR'], context.get('reason', ''))).lower())
+        print('feedback-request=' + str(skip_feedback_required(
+            issue, owner, os.environ['COMMAND_ACTOR'], '待处理请求')).lower())
     elif args.command == 'interpret':
         original = json.loads(base64.b64decode(os.environ['REVIEW_CONTEXT']))
         try:
@@ -588,6 +651,8 @@ def main():
         print('review-context=' + base64.b64encode(json.dumps(context).encode()).decode())
         print('mode=' + context['mode'])
         print('reason=' + context.get('reason', '').replace('\n', ' '))
+        print('skip-diagnostic=' + str(skip_feedback_required(
+            issue, owner, os.environ['COMMAND_ACTOR'], context.get('reason', ''))).lower())
     elif args.command == 'regenerate':
         context = json.loads(base64.b64decode(os.environ['REVIEW_CONTEXT']))
         current = decide(fresh_issue(), owner, os.environ['COMMAND_ACTOR'], repo,
@@ -601,8 +666,9 @@ def main():
         subprocess.check_call(['gh', 'issue', 'comment', os.environ['N'], '--repo', repo, '--body', message])
     elif args.command == 'context':
         context = json.loads(base64.b64decode(os.environ['REVIEW_CONTEXT']))
-        if context['task'] == 'owner-issue':
-            history = {'issues': [], 'scope': 'current_owner_issue', 'comments_scope': 'all_owner_and_bot_comments', 'errors': []}
+        if context['task'] in {'owner-issue', WEREAD_TASK}:
+            scope = 'current_owner_issue' if context['task'] == 'owner-issue' else 'current_verified_highlight'
+            history = {'issues': [], 'scope': scope, 'comments_scope': 'all_owner_and_bot_comments', 'errors': []}
             source_path = None
         else:
             history = read_task_history(repo, context['task'])

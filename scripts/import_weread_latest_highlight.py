@@ -369,6 +369,11 @@ def build_issue_body(highlight: dict[str, Any]) -> str:
         "",
         f"`{highlight['bookmark_url']}`",
     ]
+    run_id = os.environ.get("GITHUB_RUN_ID", "")
+    repository = os.environ.get("GITHUB_REPOSITORY", "")
+    if re.fullmatch(r"[1-9][0-9]*", run_id) and re.fullmatch(r"[\w.-]+/[\w.-]+", repository):
+        lines = ["<!-- automation-task:weread-highlight -->", "", *lines, "",
+                 f"任务运行：https://github.com/{repository}/actions/runs/{run_id}"]
     return "\n".join(lines).strip() + "\n"
 
 

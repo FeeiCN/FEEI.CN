@@ -14,6 +14,7 @@ import unittest
 from unittest.mock import patch
 
 import scheduled_issue_review as review
+import import_weread_latest_highlight as highlights
 
 REPO, OWNER = 'FeeiCN/FEEI.CN', 'FeeiCN'
 TASKS = {'security-event-research': '.github/workflows/security-event-research.yml'}
@@ -75,6 +76,107 @@ def report_ready(base='a' * 40):
 
 
 class ScheduledReviewTests(unittest.TestCase):
+    def weread_fixture(self):
+        data = {'book_title': '测试书', 'book_author': '作者', 'create_time_text': '2026-10-16 21:30:52',
+                'bookmark_id': '3300231591_42_5143-5154', 'book_id': '3300231591',
+                'chapter_title': '第十一章', 'chapter_uid': 42, 'range': '5143-5154',
+                'mark_text': '《代李敬业传檄天下文》',
+                'bookmark_url': 'weread://bestbookmark?bookId=3300231591&chapterUid=42&rangeStart=5143&rangeEnd=5154'}
+        issue = fixture()
+        with patch.dict(os.environ, {'GITHUB_RUN_ID': '', 'GITHUB_REPOSITORY': ''}):
+            issue['body'] = highlights.build_issue_body(data)
+        issue['comments'][0]['body'] = '找下这个原文以及解释'
+        return issue, data
+
+    def test_legacy_weread_requires_matching_synced_highlight(self):
+        issue, data = self.weread_fixture()
+        stored = {'updated': [{'bookId': data['book_id'], 'bookmarkId': data['bookmark_id'],
+                              'chapterUid': 42, 'range': data['range'], 'markText': data['mark_text']}]}
+        with tempfile.TemporaryDirectory() as directory, patch.object(review, 'ROOT', Path(directory)):
+            target = Path(directory) / 'static/data/reading/books/3300231591/bookmarks.json'
+            target.parent.mkdir(parents=True)
+            target.write_text(json.dumps(stored))
+            context = decide(issue)
+            self.assertEqual((context['task'], context['mode']), (review.WEREAD_TASK, 'interpret'))
+            for old, new in [('《代李敬业传檄天下文》', '伪造内容'), ('5143-5154', '5143-9999'),
+                             ('bookId：`3300231591`', 'bookId：`../outside`'),
+                             ('chapterUid=42', 'chapterUid=43')]:
+                changed = deepcopy(issue)
+                changed['body'] = changed['body'].replace(old, new)
+                with self.subTest(change=new), self.assertRaisesRegex(ValueError, '来源'):
+                    decide(changed)
+            external = deepcopy(issue)
+            external['author']['login'] = 'outsider'
+            with self.assertRaises(ValueError):
+                decide(external)
+            stored['updated'][0]['markText'] = '不同的原始划线'
+            target.write_text(json.dumps(stored))
+            with self.assertRaisesRegex(ValueError, '来源'):
+                decide(issue)
+            target.unlink()
+            with self.assertRaisesRegex(ValueError, '来源'):
+                decide(issue)
+
+    def test_new_weread_issue_binds_registered_workflow_run(self):
+        issue, data = self.weread_fixture()
+        with patch.dict(os.environ, {'GITHUB_RUN_ID': '123', 'GITHUB_REPOSITORY': REPO}):
+            issue['body'] = highlights.build_issue_body(data)
+        self.assertTrue(issue['body'].startswith('<!-- automation-task:weread-highlight -->'))
+        tasks = {review.WEREAD_TASK: review.WEREAD_WORKFLOW}
+        source = {**run('123'), 'path': review.WEREAD_WORKFLOW}
+        context = review.decide(issue, OWNER, OWNER, REPO, lambda _: source, tasks)
+        self.assertEqual(context['mode'], 'interpret')
+        for change in [{'event': 'pull_request'}, {'path': '.github/workflows/other.yml'},
+                       {'head_repository': {'full_name': 'outsider/repo'}}]:
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, '来源'):
+                review.task_source(issue, REPO, lambda _: {**source, **change}, tasks)
+
+    def test_skip_feedback_is_structured_and_does_not_repeat_answered_requests(self):
+        issue = fixture()
+        self.assertTrue(review.skip_feedback_required(issue, OWNER, OWNER, '任何未预料的阻塞原因'))
+        self.assertFalse(review.skip_feedback_required(issue, OWNER, 'outsider', '阻塞'))
+        self.assertFalse(review.skip_feedback_required(issue, OWNER, OWNER, ''))
+        issue['comments'].append(comment('diagnostic', review.BOT, '<!-- codex-driver:diagnostic:skip -->原因', '2026-11-05T01:01:00Z'))
+        self.assertFalse(review.skip_feedback_required(issue, OWNER, OWNER, '阻塞'))
+        issue['comments'].append(comment('next', OWNER, '再试一次', '2026-11-05T01:02:00Z'))
+        self.assertTrue(review.skip_feedback_required(issue, OWNER, OWNER, '阻塞'))
+        issue['comments'] = []
+        self.assertFalse(review.skip_feedback_required(issue, OWNER, OWNER, '阻塞'))
+
+    def test_closed_issue_explains_reopening_without_running_the_request(self):
+        issue = fixture()
+        issue['state'] = 'CLOSED'
+        context = decide(issue)
+        self.assertEqual(context['mode'], 'skip')
+        self.assertIn('重新打开', context['reason'])
+        self.assertTrue(review.skip_feedback_required(issue, OWNER, OWNER, context['reason']))
+
+    def test_workflow_posts_unexpected_skip_reason_and_surfaces_comment_failure(self):
+        workflow = (review.ROOT / '.github/workflows/codex-issue-driver.yml').read_text()
+        block = workflow.split('case "${SKIP_DIAGNOSTIC}:${REASON}" in', 1)[1].split('esac', 1)[0]
+        script = 'set -e\ncase "${SKIP_DIAGNOSTIC}:${REASON}" in' + block + 'esac\n'
+        with tempfile.TemporaryDirectory() as folder:
+            # Keep the workflow's temporary body inside the isolated test directory.
+            script = script.replace('/tmp/diag.md', str(Path(folder) / 'diagnostic.md'))
+            env = {**os.environ, 'N': '777', 'AUTHOR': review.BOT, 'STATE': 'OPEN',
+                   'REPO': REPO, 'REASON': '任何没有关键字的阻塞'}
+            for flag, expected in [('true', True), ('false', False)]:
+                result = subprocess.run(['bash', '-c', 'gh() { echo called; };\n' + script],
+                                        env={**env, 'SKIP_DIAGNOSTIC': flag}, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual('called' in result.stdout, expected)
+            result = subprocess.run(['bash', '-c', 'gh() { return 1; };\n' + script],
+                                    env={**env, 'SKIP_DIAGNOSTIC': 'true'}, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+
+    def test_failed_interpreter_setup_replies_only_to_pending_owner_requests(self):
+        for pending in ['true', 'false']:
+            env = {'INSPECT_OUTPUTS': json.dumps({'mode': 'interpret', 'feedback-request': pending}),
+                   'DRY_RUN': 'false', 'INTENT_EXECUTOR': 'failure'}
+            with patch.dict(os.environ, env), patch('sys.stdout', io.StringIO()) as output:
+                exec(self.workflow_resolver(), {})
+            self.assertIn('skip-diagnostic=' + pending, output.getvalue())
+
     def test_first_report_accepts_natural_approval_without_reposting_or_label(self):
         issue = report_ready()
         context = decide(issue, intent=interpretation(issue, 'approve'))

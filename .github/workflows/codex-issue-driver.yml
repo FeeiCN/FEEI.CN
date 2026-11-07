@@ -240,6 +240,7 @@ jobs:
                   values.update(mode='skip', reason='只核验来源；自然语言意图尚未判断，未调用模型或执行任务')
               elif os.environ.get('INTENT_EXECUTOR') != 'success':
                   values.update(mode='skip', reason='自然语言审阅解释器未就绪；本次未执行，请稍后直接重试')
+                  values['skip-diagnostic'] = values.get('feedback-request', 'false')
               else:
                   result = subprocess.check_output(['python3', 'scripts/scheduled_issue_review.py', 'interpret'], text=True)
                   values.update(dict(line.split('=', 1) for line in result.splitlines() if '=' in line))
@@ -258,6 +259,7 @@ jobs:
           AUTHOR: ${{ steps.decide.outputs.author }}
           STATE: ${{ steps.decide.outputs.state }}
           REASON: ${{ steps.decide.outputs.reason }}
+          SKIP_DIAGNOSTIC: ${{ steps.decide.outputs.skip-diagnostic }}
         run: |
           # 1) step summary:mode=skip 且 reason 非空时,让 owner 一眼看到 decide 结果
           {
@@ -272,10 +274,9 @@ jobs:
             echo "| reason | ${REASON} |"
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
-          # 2) 仅在「明显是 owner 主动 /plan 但被外部因素拦截」时落评论,避免噪音
-          # 触发条件:non-owner author / 非 OPEN 状态 / 锁定 label 残留
-          case "${REASON}" in
-            *"author is not owner"*|*"state is"*|*"driver locked by"*|*"审批"*|*"审阅"*|*"来源"*|*"运行链接"*)
+          # 已核对本人的未答复请求时统一回执；旧命令入口保留原有诊断。
+          case "${SKIP_DIAGNOSTIC}:${REASON}" in
+            true:*|:*"author is not owner"*|:*"state is"*|:*"driver locked by"*|:*"审批"*|:*"审阅"*|:*"来源"*|:*"运行链接"*)
               {
                 echo "<!-- codex-driver:diagnostic:skip -->"
                 echo
@@ -295,7 +296,7 @@ jobs:
                 echo
                 echo "<!-- 本条评论由 driver 自动生成,无 Codex 调用 -->"
               } > /tmp/diag.md
-              gh issue comment "$N" --repo "$REPO" --body-file /tmp/diag.md 2>/dev/null || true
+              gh issue comment "$N" --repo "$REPO" --body-file /tmp/diag.md
               ;;
           esac
 

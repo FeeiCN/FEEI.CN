@@ -138,6 +138,24 @@ def snapshot(issue, owner, exclude=None):
     })
 
 
+def approval_source(issue, owner, request, plan, expected):
+    candidate = {**issue, 'comments': [c for c in issue.get('comments', []) if c['id'] != request['id']]}
+    if snapshot(candidate, owner) == expected:
+        return expected
+    # Only standalone retries after this draft may be omitted from its content snapshot.
+    for c in reversed(candidate['comments'][:]):
+        if c['author']['login'] != owner or c['createdAt'] <= plan['createdAt']:
+            continue
+        text = c['body'].strip()
+        if not (re.fullmatch(r'(?:/approve|写入|确认写入|可以，写入|这版可以，写入网站吧|发布|发布吧)[。！!\s]*', text)
+                or (text == request['body'].strip() and explicit_action(text, 'approve'))):
+            break
+        candidate['comments'] = [item for item in candidate['comments'] if item['id'] != c['id']]
+        if snapshot(candidate, owner) == expected:
+            return expected
+    raise ValueError('正文或修改意见已变化，旧稿审批失效；请评论“重新整理完整待审稿”，审阅新稿后再确认写入')
+
+
 def content_paths(paths):
     if (not isinstance(paths, list) or not paths or not all(isinstance(name, str) for name in paths)
             or len(set(paths)) != len(paths)):
@@ -359,8 +377,8 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
     if actor != owner:
         context['reason'] = '仅仓库本人可请求处理任务 Issue'
         return context
-    if issue.get('state') != 'OPEN':
-        context['reason'] = 'Issue 已关闭；请重新打开后继续请求，本次未执行'
+    if issue.get('state') not in {'OPEN', 'CLOSED'}:
+        context['reason'] = 'Issue 状态无效，本次未执行'
         return context
     comments = trusted_comments(issue, owner)
     own = [c for c in comments if c.get('author', {}).get('login') == owner]
@@ -411,8 +429,9 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
             paths, hashes = list(plan['file_hashes']), plan['file_hashes']
         else:
             match = re.match(r'<!-- codex-driver:plan:commit=([a-f0-9]+):review-source=([a-f0-9]{64}) -->', plan['body'])
-            if match is None or match[2] != snapshot(issue, owner, request['id']):
-                raise ValueError('正文或修改意见已变化，旧稿审批失效；请重新说明要求以审阅最新完整版本')
+            if match is None:
+                raise ValueError('完整待审稿元信息无效，请重新整理完整待审稿')
+            approval_source(issue, owner, request, plan, match[2])
             if plan.get('updatedAt', plan['createdAt']) >= request['createdAt']:
                 raise ValueError('完整待审稿在审批后被编辑，请重新审阅并确认新版本')
             source, base = match[2], match[1]
@@ -515,8 +534,8 @@ def wallpaper_request(repo, number, comment_id, request_digest):
         ['gh', 'issue', 'view', str(number), '--repo', repo, '--json', 'body,labels,author,state,title'], text=True))
     issue['comments'] = read_comments(repo, number)
     owner = repo.split('/')[0]
-    if task_source(issue, repo, lambda run_id: api_run(repo, run_id)) != 'update-weight-wallpaper' or issue['state'] != 'OPEN':
-        raise ValueError('仅支持打开的体重壁纸任务原 Issue')
+    if task_source(issue, repo, lambda run_id: api_run(repo, run_id)) != 'update-weight-wallpaper':
+        raise ValueError('仅支持体重壁纸任务原 Issue')
     own = [c for c in issue['comments'] if c['author']['login'] == owner]
     if (not own or own[-1]['id'] != str(comment_id) or not explicit_action(own[-1]['body'].strip(), 'regenerate')
             or digest(own[-1]) != request_digest):
@@ -646,8 +665,15 @@ def main():
             context = decide(issue, owner, os.environ['COMMAND_ACTOR'], repo,
                              lambda run_id: api_run(repo, run_id), intent=intent)
             (state_dir / 'issue.json').write_text(json.dumps(issue, ensure_ascii=False))
-        except (ValueError, KeyError, OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
-            context = {'scheduled': True, 'mode': 'skip', 'reason': '自然语言审阅未完成或请求已变化；未执行写入或重做，请稍后直接重新说明要求。'}
+        except ValueError as error:
+            reason = ('模型返回的 JSON 无效，请稍后重试' if isinstance(error, json.JSONDecodeError)
+                      else str(error).replace('\n', ' ').replace('\r', ' '))
+            context = {'scheduled': True, 'mode': 'skip', 'reason': reason + '；本次未执行写入或重做。'}
+        except (KeyError, OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+            reason = ('自然语言判断超时' if isinstance(error, subprocess.TimeoutExpired)
+                      else '自然语言解释器执行失败' if isinstance(error, subprocess.CalledProcessError)
+                      else '审阅数据或运行环境不完整')
+            context = {'scheduled': True, 'mode': 'skip', 'reason': reason + '；本次未执行，请检查运行记录后重试。'}
         print('review-context=' + base64.b64encode(json.dumps(context).encode()).decode())
         print('mode=' + context['mode'])
         print('reason=' + context.get('reason', '').replace('\n', ' '))

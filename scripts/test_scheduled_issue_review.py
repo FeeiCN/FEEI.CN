@@ -143,13 +143,32 @@ class ScheduledReviewTests(unittest.TestCase):
         issue['comments'] = []
         self.assertFalse(review.skip_feedback_required(issue, OWNER, OWNER, '阻塞'))
 
-    def test_closed_issue_explains_reopening_without_running_the_request(self):
+    def test_closed_issue_accepts_owner_comments_and_approval(self):
         issue = fixture()
         issue['state'] = 'CLOSED'
-        context = decide(issue)
-        self.assertEqual(context['mode'], 'skip')
-        self.assertIn('重新打开', context['reason'])
-        self.assertTrue(review.skip_feedback_required(issue, OWNER, OWNER, context['reason']))
+        self.assertEqual(decide(issue)['mode'], 'plan')
+        issue = ready()
+        issue['state'] = 'CLOSED'
+        self.assertEqual(decide(issue)['mode'], 'execute')
+        issue['comments'][-1]['body'] = '写入'
+        self.assertEqual(decide(issue, intent=interpretation(issue, 'approve'))['mode'], 'execute')
+        self.assertEqual(decide(issue, actor='outsider')['mode'], 'skip')
+
+    def test_repeated_approvals_preserve_draft_but_content_changes_invalidate_it(self):
+        for first in ['/approve', '写入', '这版可以，写入网站吧']:
+            issue = ready()
+            issue['comments'][-1]['body'] = first
+            issue['comments'].extend([
+                comment('diagnostic', review.BOT, '<!-- codex-driver:diagnostic:skip -->失败', '2026-11-05T01:03:00Z'),
+                comment('retry', OWNER, '写入', '2026-11-05T01:04:00Z'),
+                comment('retry-again', OWNER, '写入', '2026-11-05T01:05:00Z')])
+            with self.subTest(first=first):
+                self.assertEqual(decide(issue, intent=interpretation(issue, 'approve'))['mode'], 'execute')
+                for changed in ['写入，顺便补一段', '不要写入', '写入吗？', '先暂停', '不错']:
+                    edited = deepcopy(issue)
+                    edited['comments'][2]['body'] = changed
+                    with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, '审批失效'):
+                        decide(edited, intent=interpretation(edited, 'approve'))
 
     def test_workflow_posts_unexpected_skip_reason_and_surfaces_comment_failure(self):
         workflow = (review.ROOT / '.github/workflows/codex-issue-driver.yml').read_text()
@@ -853,6 +872,7 @@ class ScheduledReviewTests(unittest.TestCase):
             values = dict(line.split('=', 1) for line in captured.getvalue().splitlines())
             self.assertEqual(values['mode'], 'skip')
             self.assertIn('未执行', values['reason'])
+            self.assertIn('invalid json', values['reason'])
 
     def test_owner_issue_accepts_natural_discussion_and_exact_content_approval(self):
         issue = ready()

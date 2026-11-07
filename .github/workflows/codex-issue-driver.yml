@@ -143,11 +143,8 @@ jobs:
               print('issue-json-path=/tmp/issue.json')
               sys.exit(0)
 
-          if author_login != OWNER or d["state"] != "OPEN":
-              if author_login != OWNER:
-                  reason = f"issue author is not owner (author={author_login}, owner={OWNER}); /plan 等命令已被忽略"
-              else:
-                  reason = f"issue state is {d['state']}, not OPEN; /plan 等命令已被忽略"
+          if author_login != OWNER:
+              reason = f"issue author is not owner (author={author_login}, owner={OWNER}); /plan 等命令已被忽略"
               print("mode=skip"); print(f"number={n}"); print(f"reason={reason}")
               print(f"author={author_login}"); print(f"state={d['state']}")
               sys.exit(0)
@@ -310,7 +307,7 @@ jobs:
                 echo "如需重新触发:"
                 echo
                 echo "- 定时任务 Issue 可直接说明需要回答、修改或确认写入的内容；本人其他 Issue 仍可使用兼容命令"
-                echo "- 若 issue 已关闭,重新打开后重发"
+                echo "- Issue 关闭后仍可评论提问、修改或确认写入，无需重新打开"
                 echo "- 若 driver 被锁(\`codex:executing\` 等),等待上一次 \`/approve\` 流程结束后再发"
                 echo
                 echo "<!-- 本条评论由 driver 自动生成,无 Codex 调用 -->"
@@ -1022,7 +1019,7 @@ jobs:
           REVIEW_STATE: ${{ steps.post_plan.outputs.review-state }}
           BUILD_STATE: ${{ steps.build.outputs.state }}
         run: |
-          # skip 模式不碰 label(reason 可能是「非 owner / 已关闭」,留原状)
+          # skip 模式不碰 label。
           [ "$MODE" = "skip" ] && { echo "mode=skip, 跳过 reconciliation"; exit 0; }
 
           # 决定期望终态

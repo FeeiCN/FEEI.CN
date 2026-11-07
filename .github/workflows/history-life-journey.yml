@@ -1,0 +1,145 @@
+name: 历史人物一生决策
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: '继续已有旅程的 Issue 编号；留空则创建或寻找同人物旅程'
+        required: false
+        default: ''
+      person:
+        description: '人物姓名，仅在未指定 Issue 时使用'
+        required: false
+        default: '朱元璋'
+      carry_discussion:
+        description: '朱元璋开场承接已批准的避乱选择与已知历史'
+        required: false
+        type: boolean
+        default: true
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: history-life-event-${{ github.event.issue.number || inputs.issue_number || 'start' }}
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (
+        (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
+        (github.event_name == 'issue_comment' &&
+         github.event.sender.login == github.repository_owner &&
+         !github.event.issue.pull_request &&
+         startsWith(github.event.issue.body, '<!-- history-life-journey:session:'))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      number: ${{ steps.resolve.outputs.number }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          path: feei.cn
+          persist-credentials: false
+          fetch-depth: 1
+      - name: 定位或创建唯一人物旅程
+        id: resolve
+        working-directory: feei.cn
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          COMMAND_ACTOR: ${{ github.event.sender.login || github.actor }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+          PERSON: ${{ inputs.person || '朱元璋' }}
+          CARRY_DISCUSSION: ${{ inputs.carry_discussion }}
+        run: python3 scripts/history_life_journey.py resolve
+  journey:
+    needs: resolve
+    concurrency:
+      group: history-life-issue-${{ needs.resolve.outputs.number }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: feei.cn
+    env:
+      REPO: ${{ github.repository }}
+      AUTOMATION_PERMISSION_CONFIG: '{extends=":read-only", filesystem={":workspace_roots"={output="write"}}, network={enabled=true}}'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          path: feei.cn
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 验证会话与交付规则
+        run: python3 -m unittest discover -s scripts -p test_history_life_journey.py
+      - name: 读取旅程与本人未答复评论
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMAND_ACTOR: ${{ github.event.sender.login || github.actor }}
+          ISSUE_NUMBER: ${{ needs.resolve.outputs.number }}
+          PERSON: ${{ inputs.person || '朱元璋' }}
+          CARRY_DISCUSSION: ${{ inputs.carry_discussion }}
+        run: python3 scripts/history_life_journey.py prepare
+      - uses: actions/setup-node@v5
+        if: steps.prepare.outputs.skip == 'false'
+        with:
+          node-version: '22'
+      - name: 安装执行器依赖
+        if: steps.prepare.outputs.skip == 'false'
+        run: npm install --global @openai/codex
+      - name: 验证仓库只读与研究网络
+        if: steps.prepare.outputs.skip == 'false'
+        run: python3 scripts/check_automation_permissions.py
+      - name: 生成本轮历史叙述与分析
+        if: steps.prepare.outputs.skip == 'false'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+        run: |
+          python3 scripts/history_life_journey.py execute
+          git diff --exit-code
+          python3 - <<'PY'
+          import subprocess
+          names = subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard', '-z']).decode().split('\0')
+          if any(name and not name.startswith('output/') for name in names):
+              raise SystemExit('执行器在 output/ 外新增了文件')
+          PY
+      - name: 核对最新请求并原子交付回复与进度
+        if: steps.prepare.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMAND_ACTOR: ${{ github.event.sender.login || github.actor }}
+        run: python3 scripts/history_life_journey.py publish
+      - name: 失败时保留进度并通知原 Issue
+        if: failure() && steps.prepare.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMAND_ACTOR: ${{ github.event.sender.login || github.actor }}
+        run: python3 scripts/history_life_journey.py fail
+      - name: 保存排查附件
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: history-life-${{ steps.prepare.outputs.number || github.run_id }}-${{ github.run_attempt }}
+          path: |
+            feei.cn/output/history/prepared.json
+            feei.cn/output/history/result.json
+            feei.cn/output/history/reply.md
+          if-no-files-found: ignore
+          retention-days: 30

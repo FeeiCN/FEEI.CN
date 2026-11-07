@@ -110,6 +110,15 @@ jobs:
           d = json.loads(j)
           author_login = d["author"]["login"]
 
+          if d["body"].startswith('<!-- history-life-journey:session:'):
+              print('scheduled-review=false')
+              print('mode=skip')
+              print('reason=历史人物旅程由独立工作流处理')
+              print(f'number={n}')
+              print(f'author={author_login}')
+              print(f"state={d['state']}")
+              sys.exit(0)
+
           routed = subprocess.check_output(['python3', 'scripts/scheduled_issue_review.py', 'route'], text=True)
           values = dict(line.split('=', 1) for line in routed.splitlines() if '=' in line)
           print('scheduled-review=' + values['scheduled-review'])

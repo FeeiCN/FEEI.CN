@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import git_ops
@@ -94,6 +95,34 @@ class GitOpsTests(unittest.TestCase):
         self.git(self.remote, 'merge-base', '--is-ancestor', remote_head, 'main')
         self.assertEqual(self.git(self.worker, 'diff', 'HEAD^', 'HEAD', '--name-only').stdout.strip(), DATA)
         self.assertEqual(self.git(self.worker, 'status', '--porcelain').stdout, '')
+
+    def test_weread_export_push_race_includes_updated_state(self) -> None:
+        import export_weread_data as exporter
+
+        state_path = 'scripts/cache/weread_data/state.json'
+        self.write(self.writer, state_path, '{"monthly_ym": ["2026-10"]}')
+        self.commit(self.writer, 'upstream reading state')
+        self.git(self.writer, 'push')
+
+        def export(args, state):
+            self.assertEqual(state['monthly_ym'], ['2026-10'])
+            state['monthly_ym'].append('2026-11')
+            exporter.save_state(state)
+            self.write_data(self.worker, 'exported')
+            self.remote_update()
+            return 0
+
+        with patch.object(exporter, 'FEEICN_REPO_ROOT', self.worker), \
+             patch.object(exporter, 'OUT_DIR', self.worker / 'static/data/reading'), \
+             patch.object(exporter, 'STATE_PATH', self.worker / state_path), \
+             patch.object(exporter, 'parse_args', return_value=SimpleNamespace(aggregate_only=False, full=False)), \
+             patch.object(exporter, 'run_daily', side_effect=export):
+            self.assertEqual(exporter.main(), 0)
+
+        self.assertEqual(json.loads(self.remote_file(state_path))['monthly_ym'], ['2026-10', '2026-11'])
+        self.assertEqual(json.loads(self.remote_file(DATA))['fetchedAt'], 'exported')
+        self.assertEqual(self.git(self.worker, 'status', '--porcelain').stdout, '')
+        self.assert_remote_code_preserved()
 
     def test_identical_data_already_upstream_is_safe(self) -> None:
         self.local_update('same')

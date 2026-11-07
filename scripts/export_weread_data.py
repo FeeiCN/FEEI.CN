@@ -1246,8 +1246,8 @@ def run_full(args: argparse.Namespace, state: dict[str, Any]) -> int:
 
 def main() -> int:
     args = parse_args()
-    state = load_state()
     git_pull_target_repo(FEEICN_REPO_ROOT)
+    state = load_state()
 
     if args.aggregate_only:
         today = datetime.now(tz=timezone.utc).astimezone(BEIJING_TZ)
@@ -1275,7 +1275,7 @@ def main() -> int:
     else:
         rc = run_daily(args, state)
     git_commit_and_push_target_repo(
-        [OUT_DIR],
+        [OUT_DIR, STATE_PATH],
         repo_root=FEEICN_REPO_ROOT,
         description="更新微信读书数据",
     )

@@ -274,6 +274,36 @@ def reading_review_preflight(out):
     }
 
 
+def reading_full_text(result, report, out, files):
+    path = out / 'reading-content.json'
+    if path.resolve() not in files:
+        raise ValueError('阅读精选必须交付 reading-content.json 全文文件，不能只有简介或链接')
+    if path.stat().st_size > 2_000_000:
+        raise ValueError('阅读全文文件超过大小限制')
+    content = json.loads(path.read_text())
+    required = {'title', 'author', 'source_url', 'rights_url', 'license', 'rights_evidence',
+                'source_language', 'presentation', 'full_text_markdown', 'question'}
+    if (not isinstance(content, dict) or set(content) != required
+            or any(not isinstance(value, str) or not value.strip() for value in content.values())):
+        raise ValueError('阅读全文缺少正文、作者、来源、授权依据或阅读问题')
+    if content['license'] not in {'CC0-1.0', 'CC-BY-4.0', 'CC-BY-SA-4.0', 'public-domain'}:
+        raise ValueError('阅读全文仅接收已核验允许转载和翻译的开放授权或公版作品')
+    if content['presentation'] not in {'original', 'full_translation'}:
+        raise ValueError('阅读内容必须是完整原文或完整译文')
+    full_text = content['full_text_markdown'].strip()
+    if re.fullmatch(r'(?:https?://\S+|\[[^\n]*\]\(https?://[^\n]+\))', full_text) or full_text == report.strip():
+        raise ValueError('阅读全文不能由链接或重复的推荐简介代替')
+    for key in ['source_url', 'rights_url']:
+        if content[key] not in result['sources']:
+            raise ValueError('阅读全文来源和授权依据必须列入本轮核验来源')
+    label = '完整中文译文（AI 翻译）' if content['presentation'] == 'full_translation' else '完整原文'
+    return (f"{report.rstrip()}\n\n## {label}\n\n{full_text}\n\n"
+            f"## 读后想一想\n\n{content['question'].strip()}\n\n"
+            f"原作：{content['title']}。作者：{content['author']}。原文语言：{content['source_language']}。"
+            f"[原文]({content['source_url']}) · [授权依据]({content['rights_url']})。\n\n"
+            f"授权：{content['license']}。{content['rights_evidence'].strip()}\n")
+
+
 def validate_result(t, result, out):
     if set(result) != set(SCHEMA['required']):
         raise ValueError('结果字段不符合 schema')
@@ -294,9 +324,6 @@ def validate_result(t, result, out):
             raise ValueError('无效的来源 URL')
     if status == 'completed' and t['id'] in RESEARCH and len(set(result['sources'])) < 2:
         raise ValueError('研究结果缺少至少两个本轮核验来源')
-    if status == 'completed' and t['id'] == 'daily-reading-selection':
-        if not result['sources'] or not any(url in report for url in result['sources']):
-            raise ValueError('阅读精选必须给出本轮核验的原文来源及正文链接')
     if status == 'no_update' and t['id'] != 'diary-prompt-sync' and not result['sources']:
         raise ValueError('无更新结果必须记录实际检查的来源')
     files = []
@@ -311,6 +338,8 @@ def validate_result(t, result, out):
         if not target.is_file() or target.stat().st_size == 0 or (ROOT / path).is_symlink():
             raise ValueError('交付附件不存在、为空或是链接')
         files.append(target)
+    if t['id'] == 'daily-reading-selection' and status == 'completed':
+        report = reading_full_text(result, report, out, files)
     if t['id'] == 'update-weight-wallpaper' and status == 'completed':
         from PIL import Image
         image = (out / 'wallpaper.png').resolve()

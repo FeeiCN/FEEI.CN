@@ -134,15 +134,70 @@ class AutomationResultTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '来源'):
             automation.validate_result(self.task, self.result, self.out)
 
-    def test_reading_selection_requires_verified_source_link_in_body(self):
+    def reading_content(self, **changes):
+        self.task.update(id='daily-reading-selection', title='每日阅读精选')
+        content = {
+            'title': '一篇作品', 'author': '作者', 'source_url': 'https://example.com/original',
+            'rights_url': 'https://example.com/license', 'license': 'CC-BY-4.0',
+            'rights_evidence': '作者明确按 CC BY 4.0 许可发布；保留署名并标注译文。',
+            'source_language': '中文', 'presentation': 'original',
+            'full_text_markdown': '正文第一段。\n\n## 第二节\n\n正文结尾。', 'question': '你如何判断？',
+        }
+        content.update(changes)
+        (self.out / 'reading-content.json').write_text(json.dumps(content, ensure_ascii=False))
+        self.result.update(sources=['https://example.com/original', 'https://example.com/license'],
+                           artifacts=['output/reading-content.json'], report_markdown='# 一个阅读问题\n简短推荐理由。')
+        return content
+
+    def test_reading_selection_rejects_link_only_delivery(self):
         self.task['id'] = 'daily-reading-selection'
-        for sources, report in [([], '只有推荐理由'), (['https://example.com/original'], '没有原文链接')]:
-            self.result.update(sources=sources, report_markdown=report)
-            with self.assertRaisesRegex(ValueError, '原文来源及正文链接'):
-                automation.validate_result(self.task, self.result, self.out)
         self.result.update(sources=['https://example.com/original'],
                            report_markdown='# 一个阅读问题\n[原文](https://example.com/original)')
-        self.assertEqual(automation.validate_result(self.task, self.result, self.out)[0], 'completed')
+        with self.assertRaisesRegex(ValueError, '全文文件'):
+            automation.validate_result(self.task, self.result, self.out)
+
+    def test_reading_selection_renders_entire_text_and_attribution_in_body(self):
+        content = self.reading_content()
+        state, report = automation.validate_result(self.task, self.result, self.out)
+        self.assertEqual(state, 'completed')
+        self.assertIn(content['full_text_markdown'], report)
+        self.assertIn('## 完整原文', report)
+        self.assertIn('作者：作者', report)
+        self.assertIn('https://example.com/license', report)
+        self.assertGreater(report.index('你如何判断？'), report.index('正文结尾。'))
+
+    def test_full_translation_is_labelled_and_keeps_license(self):
+        self.reading_content(presentation='full_translation', source_language='English',
+                             license='CC-BY-SA-4.0', rights_evidence='中文译文沿用 CC BY-SA 4.0 许可。')
+        report = automation.validate_result(self.task, self.result, self.out)[1]
+        self.assertIn('完整中文译文（AI 翻译）', report)
+        self.assertIn('中文译文沿用 CC BY-SA 4.0', report)
+
+    def test_reading_rejects_missing_text_or_unsupported_rights(self):
+        for changes in [{'full_text_markdown': ''}, {'rights_evidence': ''},
+                        {'full_text_markdown': 'https://example.com/original'},
+                        {'full_text_markdown': '[阅读全文](https://example.com/original)'},
+                        {'license': 'all-rights-reserved'}, {'license': 'free-to-read'},
+                        {'presentation': 'summary'}]:
+            with self.subTest(changes=changes):
+                self.reading_content(**changes)
+                with self.assertRaises(ValueError):
+                    automation.validate_result(self.task, self.result, self.out)
+
+    def test_reading_requires_both_original_and_rights_sources(self):
+        for source in ['https://example.com/original', 'https://example.com/license']:
+            self.reading_content()
+            self.result['sources'].remove(source)
+            with self.assertRaisesRegex(ValueError, '本轮核验来源'):
+                automation.validate_result(self.task, self.result, self.out)
+
+    def test_oversized_reading_is_not_truncated_or_posted(self):
+        self.reading_content(full_text_markdown='全文段落。' * 5000)
+        self.write_delivery_metadata()
+        with patch.object(automation, 'destination', return_value='owner/public'), patch.object(automation, 'gh') as api:
+            with self.assertRaisesRegex(ValueError, '超过 Issue 正文限制'):
+                automation.deliver(self.task, self.out)
+        api.assert_not_called()
 
     def test_blocked_is_not_reclassified_as_completed(self):
         self.result.update(status='blocked', sources=[])
@@ -446,13 +501,13 @@ class AutomationResultTests(unittest.TestCase):
         self.assertIn('推荐不等于读过', context['reading_evidence_boundary'])
 
     def test_reading_delivery_invites_feedback_without_requesting_article_approval(self):
-        self.task.update(id='daily-reading-selection', title='每日阅读精选')
-        self.result['report_markdown'] = '# 一个具体问题\n[原文](https://example.com/a)'
+        content = self.reading_content()
         self.write_delivery_metadata()
         with patch.object(automation, 'destination', return_value='owner/public'), \
              patch.object(automation, 'gh', return_value='https://github.com/owner/public/issues/1'):
             automation.deliver(self.task, self.out)
         body = (self.out / 'report.md').read_text()
+        self.assertIn(content['full_text_markdown'], body)
         self.assertIn('阅读反馈不代表批准写入网站', body)
         self.assertNotIn('这版可以，写入网站吧', body)
 

@@ -11,6 +11,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAN = '<!-- codex-driver:plan:'
+REPORT_PLAN = '<!-- codex-driver:report-plan:'
 BOT = 'github-actions[bot]'
 INTENT_SCHEMA = {
     'type': 'object', 'additionalProperties': False,
@@ -80,6 +81,18 @@ def snapshot(issue, owner, exclude=None):
     })
 
 
+def content_paths(paths):
+    if (not isinstance(paths, list) or not paths or not all(isinstance(name, str) for name in paths)
+            or len(set(paths)) != len(paths)):
+        raise ValueError('写入计划必须列出不重复的具体内容文件')
+    for name in paths:
+        if (not isinstance(name, str) or '\\' in name or name.startswith('/')
+                or '..' in PurePosixPath(name).parts or str(PurePosixPath(name)) != name
+                or not name.startswith(('docs/', 'blog/', 'static/media/'))):
+            raise ValueError('定时任务写入仅支持 docs/、blog/ 和 static/media/ 内的已审阅文件')
+    return paths
+
+
 def metadata(text, write=True):
     matches = re.findall(r'^## Plan metadata\s*\n```json\s*\n([\s\S]*?)\n```\s*$', text.strip(), re.M)
     if len(matches) != 1:
@@ -90,26 +103,67 @@ def metadata(text, write=True):
         return value
     if value.get('task_type') != 'implementation' or not paths:
         raise ValueError('写入计划必须列出具体内容文件')
-    for name in paths:
-        if (not isinstance(name, str) or '\\' in name or name.startswith('/')
-                or '..' in PurePosixPath(name).parts
-                or not name.startswith(('docs/', 'blog/', 'static/media/'))):
-            raise ValueError('定时任务写入仅支持 docs/、blog/ 和 static/media/ 内的已审阅文件')
+    content_paths(paths)
     return value
 
 
-def draft_files(text, paths):
+def draft_contents(text):
     blocks = re.findall(r'^### ([^\n]+?)[ \t]*\n(?:[ \t]*\n)*````(?:markdown|md|mdx|svg|text)\n([\s\S]*?)\n````[ \t]*$', text, re.M)
-    if len(blocks) != len(paths) or {name for name, _ in blocks} != set(paths):
+    if not blocks:
+        return {}
+    content_paths([name for name, _ in blocks])
+    return {name: body + '\n' for name, body in blocks}
+
+
+def draft_files(text, paths):
+    blocks = draft_contents(text)
+    if not blocks or set(blocks) != set(paths):
         raise ValueError('完整待审稿必须逐文件展示四反引号代码块，与 affected_files 一一对应')
-    return {name: hashlib.sha256((body + '\n').encode()).hexdigest() for name, body in blocks}
+    return {name: hashlib.sha256(body.encode()).hexdigest() for name, body in blocks.items()}
+
+
+def seal_report(body, title, base):
+    if not re.search(r'^## 完整待审稿\s*$', body, re.M):
+        return body
+    contents = draft_contents(body)
+    if not contents or not re.fullmatch(r'[a-f0-9]{40}', base):
+        raise ValueError('首次待审稿缺少完整文件或有效的 main 基线')
+    if REPORT_PLAN in body:
+        raise ValueError('首次待审稿不能自带审批封存标记')
+    value = {'version': 1, 'base': base, 'title': title,
+             'body_sha256': hashlib.sha256(body.encode()).hexdigest(),
+             'file_hashes': draft_files(body, list(contents))}
+    encoded = base64.b64encode(json.dumps(value, ensure_ascii=False, sort_keys=True).encode()).decode()
+    return body + REPORT_PLAN + encoded + ' -->\n'
+
+
+def report_draft(issue):
+    if not bot(issue.get('author', {})):
+        return None
+    body = issue.get('body', '')
+    matches = list(re.finditer(re.escape(REPORT_PLAN) + r'([A-Za-z0-9+/=]+) -->\n?$', body, re.M))
+    if len(matches) != 1 or body[matches[0].end():].strip():
+        return None
+    match = matches[0]
+    try:
+        value = json.loads(base64.b64decode(match[1], validate=True))
+        if (set(value) != {'version', 'base', 'title', 'body_sha256', 'file_hashes'}
+                or value['version'] != 1 or not re.fullmatch(r'[a-f0-9]{40}', value['base'])
+                or value['title'] != issue['title']
+                or hashlib.sha256(body[:match.start()].encode()).hexdigest() != value['body_sha256']
+                or draft_files(body[:match.start()], list(value['file_hashes'])) != value['file_hashes']):
+            return None
+    except (ValueError, TypeError, KeyError):
+        return None
+    return {'id': 'report:' + value['body_sha256'], 'body': body, 'origin': 'report',
+            'base': value['base'], 'file_hashes': value['file_hashes']}
 
 
 def latest_request_and_plan(issue, owner):
     comments = trusted_comments(issue, owner)
     own = [c for c in comments if c['author']['login'] == owner]
     plans = [c for c in comments if bot(c['author']) and c['body'].startswith(PLAN)]
-    return (own[-1] if own else None, plans[-1] if plans else None)
+    return (own[-1] if own else None, plans[-1] if plans else report_draft(issue))
 
 
 def explicit_action(text, action):
@@ -175,7 +229,8 @@ def intent_prompt(issue, owner, task):
               if c['id'] not in {request['id'], plan['id'] if plan else None}][-12:]
     discussion = [{**c, 'body': excerpt(c['body'], 4000),
                    'body_truncated': len(c['body'].encode()) > 4000} for c in recent]
-    data = {'task': task, 'title': issue['title'], 'original_report': excerpt(issue['body'], 12000),
+    original = '原报告即 current_draft 中的完整版本。' if plan and plan.get('origin') == 'report' else excerpt(issue['body'], 12000)
+    data = {'task': task, 'title': issue['title'], 'original_report': original,
             'current_draft': plan_context, 'latest_request': request, 'discussion': discussion,
             'context_scope': '原报告节选、最近12条讨论节选、最新完整稿、本人最新完整评论；旧指代不明确时澄清'}
     instructions = (
@@ -188,7 +243,7 @@ def intent_prompt(issue, owner, task):
         '“不错”“可以”“同意观点”单独出现只是 discuss，不构成网站发布授权。'
         '否定、询问、假设、未来安排、引用示例、较旧版本、尚未展示的新稿都不能批准当前稿。'
         '“按这个改完就发布”属于 revise 且 has_changes=true，须先展示新稿，不得同时批准。'
-        '“这版可以，发布吧”“就按当前稿提交到网站”可以是 approve；没有现成稿时 plan_id 空，程序会先准备待审稿。'
+        '“这版可以，发布吧”“可以，写入”“就按当前稿提交到网站”可以是 approve；current_draft 也可以来自首次报告正文，已展示的同一版本不需要再贴全文或再次确认；没有现成稿时 plan_id 空，程序会先准备待审稿。'
         'has_changes 表示最新评论还要求修改稿件、图、文件或壁纸模板；有修改就不能 approve/regenerate。'
         'request_id 必须为 latest_request.id；approve 的 plan_id 必须为 current_draft.id，其余为空。'
         'approve/regenerate 的 quote 必须逐字等于本人最新完整评论去除首尾空白，不得截取有利片段；其余可为空。'
@@ -256,8 +311,7 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
     tokens = re.findall(r'^/(approve|review|revise|plan|replan|reject)(?:\s|$)', text, re.M)
     if not text:
         return context
-    plans = [c for c in comments if bot(c.get('author', {})) and c['body'].startswith(PLAN)]
-    plan = plans[-1] if plans else None
+    _, plan = latest_request_and_plan(issue, owner)
     # Ignore old commands when an Issue edit/manual rerun follows a delivered response.
     responses = [c for c in comments if bot(c.get('author', {})) and c['body'].startswith('<!-- codex-driver:')]
     if responses and max(c['createdAt'] for c in responses) >= request.get('updatedAt', request['createdAt']):
@@ -288,20 +342,25 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
     if 'approve' in tokens or action == 'approve':
         if action != 'approve' and (tokens != ['approve'] or text != '/approve'):
             raise ValueError('确认写入时请单独说明，不夹带新修改要求；先审阅修改后的完整稿')
-        if 'codex:plan-ready' not in labels or plan is None:
+        if plan is None or ('codex:plan-ready' not in labels and plan.get('origin') != 'report'):
             context.update(mode='plan', source=snapshot(issue, owner), initial_approval=True,
                            reason='尚无可批准的完整版本，本次先生成待审稿，展示后再确认写入')
             return context
-        match = re.match(r'<!-- codex-driver:plan:commit=([a-f0-9]+):review-source=([a-f0-9]{64}) -->', plan['body'])
-        if match is None or match[2] != snapshot(issue, owner, request['id']):
-            raise ValueError('正文或修改意见已变化，旧稿审批失效；请重新说明要求以审阅最新完整版本')
-        if plan.get('updatedAt', plan['createdAt']) >= request['createdAt']:
-            raise ValueError('完整待审稿在审批后被编辑，请重新审阅并确认新版本')
-        spec = metadata(plan['body'])
-        context.update(mode='execute', source=match[2], base=match[1],
+        if plan.get('origin') == 'report':
+            source, base = snapshot(issue, owner, request['id']), plan['base']
+            paths, hashes = list(plan['file_hashes']), plan['file_hashes']
+        else:
+            match = re.match(r'<!-- codex-driver:plan:commit=([a-f0-9]+):review-source=([a-f0-9]{64}) -->', plan['body'])
+            if match is None or match[2] != snapshot(issue, owner, request['id']):
+                raise ValueError('正文或修改意见已变化，旧稿审批失效；请重新说明要求以审阅最新完整版本')
+            if plan.get('updatedAt', plan['createdAt']) >= request['createdAt']:
+                raise ValueError('完整待审稿在审批后被编辑，请重新审阅并确认新版本')
+            source, base = match[2], match[1]
+            paths = metadata(plan['body'])['affected_files']
+            hashes = draft_files(plan['body'], paths)
+        context.update(mode='execute', source=source, base=base,
                        approval_id=request['id'], approval_digest=digest(request),
-                       plan_id=plan['id'], plan_digest=digest(plan), files=spec['affected_files'],
-                       file_hashes=draft_files(plan['body'], spec['affected_files']))
+                       plan_id=plan['id'], plan_digest=digest(plan), files=paths, file_hashes=hashes)
     else:
         context.update(mode='plan', source=snapshot(issue, owner))
     return context
@@ -455,9 +514,28 @@ def verify_content(context):
             raise ValueError(f'文件与已批准的完整版本不一致：{name}')
 
 
+def apply_draft(issue, owner, context):
+    _, plan = latest_request_and_plan(issue, owner)
+    if plan is None or plan['id'] != context['plan_id'] or digest(plan) != context['plan_digest']:
+        raise ValueError('已批准稿件发生变化，停止写入')
+    contents = draft_contents(plan['body'])
+    if draft_files(plan['body'], context['files']) != context['file_hashes']:
+        raise ValueError('已批准文件内容发生变化，停止写入')
+    for name in context['files']:
+        path = ROOT / name
+        if (path.is_symlink() or any((ROOT / parent).is_symlink() for parent in Path(name).parents)
+                or not path.resolve().is_relative_to(ROOT.resolve()) or (path.exists() and not path.is_file())):
+            raise ValueError(f'写入目标不是允许的内容文件：{name}')
+    for name, body in contents.items():
+        path = ROOT / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(body.encode())
+    verify_files(context)
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['route', 'interpret', 'regenerate', 'context', 'seal', 'verify', 'verify-approval', 'verify-consent'])
+    parser.add_argument('command', choices=['route', 'interpret', 'regenerate', 'context', 'seal', 'apply', 'verify', 'verify-approval', 'verify-consent'])
     args = parser.parse_args()
     state_dir = Path(os.environ.get('ISSUE_REVIEW_STATE_DIR', '/tmp'))
     issue = json.loads((state_dir / 'issue.json').read_text())
@@ -553,7 +631,10 @@ def main():
             raise ValueError('批准的 Issue、修订稿或审批已变化，停止写入')
         if args.command != 'verify-consent' and subprocess.run(['git', 'diff', '--quiet', context['base'], 'HEAD', '--', *context['files']], cwd=ROOT).returncode:
             raise ValueError('计划涉及文件已被 main 更新，请重新审阅')
-        if args.command == 'verify':
+        if args.command == 'apply':
+            apply_draft(fresh, owner, context)
+            (state_dir / 'result.txt').write_text('已逐字写入批准的完整版本；等待文档检查、构建和提交。\n')
+        elif args.command == 'verify':
             verify_files(context)
         elif args.command == 'verify-consent':
             verify_content(context)

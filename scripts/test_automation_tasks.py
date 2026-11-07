@@ -328,6 +328,34 @@ class AutomationResultTests(unittest.TestCase):
         self.assertIn('待审阅', issue)
         self.assertNotIn('已交付', issue)
 
+    def test_governance_delivery_seals_initial_draft_for_one_step_approval(self):
+        self.task.update(id='knowledge-base-governance', title='知识库治理')
+        self.result['report_markdown'] = ('# 修正 TLS 建议\n\n简短理由。\n\n<details>\n<summary>完整待审稿</summary>\n\n'
+                                          '## 完整待审稿\n### docs/example.md\n````markdown\n完整正文\n````\n\n</details>')
+        self.write_delivery_metadata()
+        meta = json.loads((self.out / 'metadata.json').read_text())
+        meta['commit'] = 'a' * 40
+        (self.out / 'metadata.json').write_text(json.dumps(meta))
+        with patch.object(automation, 'destination', return_value='owner/public'), patch.object(automation, 'gh', return_value='https://example.com/issue') as api:
+            automation.deliver(self.task, self.out)
+        body = (self.out / 'report.md').read_text()
+        issue = {'title': '修正 TLS 建议', 'body': body, 'author': {'login': review.BOT}}
+        draft = review.report_draft(issue)
+        self.assertIsNotNone(draft)
+        self.assertEqual(list(draft['file_hashes']), ['docs/example.md'])
+        self.assertEqual(body.count('完整正文'), 1)
+        self.assertEqual(sum(c.args[:2] == ('issue', 'create') for c in api.call_args_list), 1)
+        self.assertFalse(any(c.args[:2] == ('issue', 'comment') for c in api.call_args_list))
+
+    def test_incomplete_initial_draft_cannot_be_delivered_as_ready(self):
+        self.task.update(id='knowledge-base-governance', title='知识库治理')
+        self.result['report_markdown'] = '## 完整待审稿\n只有提纲，没有完整文件。'
+        self.write_delivery_metadata()
+        with patch.object(automation, 'destination', return_value='owner/public'), patch.object(automation, 'gh') as api:
+            with self.assertRaisesRegex(ValueError, '完整文件'):
+                automation.deliver(self.task, self.out)
+        api.assert_not_called()
+
     def test_prepare_does_not_fetch_data_for_invalid_delivery(self):
         with patch.dict('os.environ', {'GITHUB_REPOSITORY': 'owner/public'}, clear=True):
             with patch.object(automation, 'collect_personal_data') as collect:

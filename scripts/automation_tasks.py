@@ -324,8 +324,11 @@ def deliver(t, out):
     if t['id'] == 'update-weight-wallpaper':
         body += '\n可直接提问，或说明“数据同步了，再做一次”，使用当前固定模板重做壁纸。\n'
     else:
-        body += ('\n可直接提问或评论修改意见；需要写入网站时，助手会先展示完整稿件和目标文件。'
-                 '确认具体版本后，可直接说“这版可以，写入网站吧”；修改、提问或暂停都可自然说明。\n')
+        body += ('\n可直接提问或说明修改意见。已展示目标文件与完整稿时，可直接说“这版可以，写入网站吧”；'
+                 '尚未展示具体版本时，会先整理待审稿。\n')
+    if status == 'completed' and t['id'] in REVIEW:
+        from scheduled_issue_review import seal_report
+        body = seal_report(body, issue_title(report, t['title']), meta['commit'])
     if status != 'no_update' and not duplicated and not expired:
         if t['id'] == 'update-weight-wallpaper' and status == 'completed':
             artifact_id = os.environ.get('WALLPAPER_ARTIFACT_ID', '')

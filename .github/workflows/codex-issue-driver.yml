@@ -2,7 +2,7 @@ name: Codex 议题驱动
 
 # 本人创建的 Issue 和经验证的定时任务 Issue 共用审阅入口。
 # 触发:issue/issue_comment 任一变化(由 owner 发起);或 workflow_dispatch 手动。
-# 完整待审稿与计划 → 本人 /approve → 验证 → 提交 main。
+# 完整待审稿 → 本人明确确认 → 验证 → 提交 main。
 # 状态用 label(codex:planning/plan-ready/executing/done/failed/paused)。
 # Marker 仅作评论定位 + 元信息,不参与状态判定。
 
@@ -405,7 +405,7 @@ jobs:
       # ─────────────────────────────────────
       # 3. 构造 prompt + 跑 Codex
       # ─────────────────────────────────────
-      - name: Build prompt and run Codex
+      - name: 审阅讨论或写入已批准稿
         id: codex
         if: (steps.decide.outputs.mode == 'plan' || steps.decide.outputs.mode == 'execute') && steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
         env:
@@ -439,7 +439,13 @@ jobs:
           fi
 
           if [ "$SCHEDULED_REVIEW" = "true" ] && [ "$MODE" = "execute" ]; then
+            test "$(sha256sum scripts/scheduled_issue_review.py | cut -d ' ' -f1)" = "$REVIEW_SCRIPT_SHA256"
             python3 scripts/scheduled_issue_review.py verify-approval
+            python3 scripts/scheduled_issue_review.py apply
+            echo 'cost=0' >> "$GITHUB_OUTPUT"
+            echo 'turns=0' >> "$GITHUB_OUTPUT"
+            echo "result_len=$(wc -c < /tmp/result.txt)" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           if [ "$SCHEDULED_REVIEW" = "true" ] && [ "$MODE" = "plan" ]; then
@@ -541,6 +547,8 @@ jobs:
                       "不得修改组件、脚本、workflow、AGENTS 或原始健康数据，不触发其他工作流。"
                       "日记只能使用本人确认的真实经历，不能把自动线索写成本人经历。壁纸只通过 Actions 临时下载，不能当作网站长期图片。"
                       "本轮不写仓库，不进行提交、构建或发布；回复小于60000个UTF-8字节，过长则缩小写入范围，不能截断稿件。"
+                      "完整稿只展示一次，放在折叠区；主要回复简述改动与依据，不重复贴原稿、diff和全文。"
+                      "不要生成要求使用 /approve 或其他命令的操作提示，审批引导由程序统一添加。"
                       "最终末尾必须有唯一 `## Plan metadata`，其下是三反引号 json 代码块，且只含四个字段："
                       ' {"task_type":"discussion","affected_files":[],"risk":"low","verification":["已核对讨论上下文"]}。'
                       "普通问答使用 discussion、affected_files=[]；确实缺少完成请求必需的事实、需要本人补充时使用 analysis、affected_files=[]；"
@@ -797,6 +805,11 @@ jobs:
           fi
           gh issue edit "$N" --repo "$REPO" --add-label "codex:$REVIEW_STATE"
           echo "review-state=$REVIEW_STATE" >> "$GITHUB_OUTPUT"
+          if [ "$REVIEW_STATE" = "plan-ready" ]; then
+            echo '已生成完整待审稿，等待本人确认；本次尚未写入、提交或部署。' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '已回复讨论或说明缺失信息；本次未写入网站。' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       # ─────────────────────────────────────
       # 5. execute 分支:build → commit → ff-merge main → push main

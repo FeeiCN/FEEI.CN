@@ -66,7 +66,132 @@ def ready():
     return issue
 
 
+def report_ready(base='a' * 40):
+    issue = fixture()
+    body = issue['body'] + '\n\n<details>\n<summary>完整待审稿</summary>\n\n' + TEXT + '\n</details>\n'
+    issue['body'] = review.seal_report(body, issue['title'], base)
+    issue['comments'][0]['body'] = '可以，写入'
+    return issue
+
+
 class ScheduledReviewTests(unittest.TestCase):
+    def test_first_report_accepts_natural_approval_without_reposting_or_label(self):
+        issue = report_ready()
+        context = decide(issue, intent=interpretation(issue, 'approve'))
+        self.assertEqual(context['mode'], 'execute')
+        self.assertTrue(context['plan_id'].startswith('report:'))
+        self.assertEqual(context['files'], [FILE])
+        self.assertEqual(context['file_hashes'][FILE], hashlib.sha256((BODY + '\n').encode()).hexdigest())
+        self.assertNotIn('initial_approval', context)
+        self.assertEqual(len(issue['comments']), 1)
+        prompt = review.intent_prompt(issue, OWNER, 'security-event-research')
+        data = json.loads(prompt.split('<input_data>\n')[1].split('\n</input_data>')[0])
+        self.assertEqual(data['current_draft']['id'], context['plan_id'])
+        self.assertIn(BODY, data['current_draft']['body'])
+
+    def test_first_report_respects_owner_locks_pause_and_praise(self):
+        issue = report_ready()
+        self.assertEqual(decide(issue, actor='outsider')['mode'], 'skip')
+        for label in ['codex:planning', 'codex:executing']:
+            issue['labels'] = [{'name': label}]
+            self.assertEqual(decide(issue)['mode'], 'skip')
+        issue['labels'] = []
+        self.assertEqual(decide(issue, intent=interpretation(issue, 'pause'))['mode'], 'paused')
+        issue['comments'][0]['body'] = '可以'
+        self.assertNotEqual(decide(issue, intent=interpretation(issue, 'approve'))['mode'], 'execute')
+
+    def test_first_report_tampering_and_mixed_edits_cannot_execute(self):
+        for field, suffix in [('body', '另加内容'), ('title', '改名')]:
+            issue = report_ready()
+            issue[field] += suffix
+            self.assertIsNone(review.report_draft(issue))
+            self.assertEqual(decide(issue, intent=interpretation(issue, 'approve'))['mode'], 'plan')
+        issue = report_ready()
+        issue['comments'][0]['body'] = '可以写入，另外补个例子'
+        self.assertNotEqual(decide(issue, intent=interpretation(issue, 'approve', has_changes=True))['mode'], 'execute')
+        issue = report_ready()
+        intent = interpretation(issue, 'approve')
+        issue['body'] = issue['body'].replace('确认后的正文', '被改写的正文')
+        with self.assertRaisesRegex(ValueError, '已变化'):
+            decide(issue, intent=intent)
+
+    def test_report_manifest_rejects_bad_paths_duplicates_and_incomplete_drafts(self):
+        for name in ['docs/../secret', '.github/workflows/check.yml', 'static/data/health/raw.json', 'docs//a.md']:
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                review.seal_report(TEXT.replace(FILE, name), '标题', 'a' * 40)
+        for text in [TEXT.replace('````markdown', '```markdown'), TEXT.replace('### ' + FILE, '### 完整修订稿：' + FILE),
+                     TEXT + '\n### ' + FILE + '\n````markdown\n重复文件\n````']:
+            with self.assertRaises(ValueError):
+                review.seal_report(text, '标题', 'a' * 40)
+
+    def test_later_comment_draft_supersedes_initial_report(self):
+        issue = report_ready()
+        issue['comments'][0]['body'] = '/revise 补充例子'
+        sealed = review.seal(issue, OWNER, TEXT.replace(BODY, BODY + '\n\n新增例子'), 'abc123')
+        issue['comments'].extend([
+            comment('plan', review.BOT, sealed, '2026-11-05T01:01:00Z'),
+            comment('approval', OWNER, '这版可以，写入网站吧', '2026-11-05T01:02:00Z')])
+        issue['labels'] = [{'name': 'codex:plan-ready'}]
+        context = decide(issue, intent=interpretation(issue, 'approve'))
+        self.assertEqual(context['plan_id'], 'plan')
+        self.assertEqual(context['file_hashes'][FILE], hashlib.sha256((BODY + '\n\n新增例子\n').encode()).hexdigest())
+
+    def test_approved_report_is_applied_exactly_and_stale_main_is_blocked(self):
+        with tempfile.TemporaryDirectory() as folder, tempfile.TemporaryDirectory() as state_folder, patch.object(review, 'ROOT', Path(folder)):
+            root = Path(folder)
+            state = Path(state_folder)
+            subprocess.run(['git', 'init', '-q', folder], check=True)
+            target = root / FILE
+            target.parent.mkdir()
+            target.write_text('原文\n')
+            subprocess.run(['git', '-C', folder, 'add', FILE], check=True)
+            def commit():
+                subprocess.run(['git', '-C', folder, '-c', 'user.name=test', '-c', 'user.email=test@example.com',
+                                'commit', '-qam', 'baseline'], check=True)
+            commit()
+            base = subprocess.check_output(['git', '-C', folder, 'rev-parse', 'HEAD'], text=True).strip()
+            issue = report_ready(base)
+            context = decide(issue, intent=interpretation(issue, 'approve'))
+            env = {'OWNER': OWNER, 'REPO': REPO, 'COMMAND_ACTOR': OWNER, 'N': '1',
+                   'ISSUE_REVIEW_STATE_DIR': state_folder,
+                   'REVIEW_CONTEXT': base64.b64encode(json.dumps(context).encode()).decode()}
+            (state / 'issue.json').write_text(json.dumps(issue))
+            check_output = subprocess.check_output
+            def api(*args, **kwargs):
+                if args[0][1] == 'issue':
+                    return json.dumps(issue)
+                return check_output(*args, **kwargs)
+            def apply():
+                with patch.dict(os.environ, env), patch('sys.argv', ['scheduled_issue_review.py', 'apply']):
+                    with patch.object(review, 'read_comments', return_value=issue['comments']), patch.object(review, 'api_run', side_effect=lambda repo, run_id: run(run_id)):
+                        with patch.object(review, 'registered_tasks', return_value=TASKS):
+                            with patch.object(review.subprocess, 'check_output', side_effect=api):
+                                review.main()
+            apply()
+            self.assertEqual(target.read_bytes(), (BODY + '\n').encode())
+            target.write_text('main 上的新正文\n')
+            commit()
+            with self.assertRaisesRegex(ValueError, 'main 更新'):
+                apply()
+            self.assertEqual(target.read_text(), 'main 上的新正文\n')
+
+    def test_apply_validates_all_targets_before_writing_and_rejects_symlink_parent(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(review, 'ROOT', Path(folder)):
+            root = Path(folder)
+            (root / 'docs').mkdir()
+            target = root / FILE
+            target.write_text('保留原文')
+            (root / 'docs/link').symlink_to(root / 'docs', target_is_directory=True)
+            second = 'docs/link/other.md'
+            extra = '\n### ' + second + '\n````markdown\n第二个文件\n````'
+            issue = report_ready()
+            unsealed = fixture()['body'] + '\n\n' + TEXT + extra + '\n'
+            issue['body'] = review.seal_report(unsealed, issue['title'], 'a' * 40)
+            context = decide(issue, intent=interpretation(issue, 'approve'))
+            with self.assertRaisesRegex(ValueError, '写入目标'):
+                review.apply_draft(issue, OWNER, context)
+            self.assertEqual(target.read_text(), '保留原文')
+
     def test_cli_review_seal_and_approval_with_simulated_github(self):
         with tempfile.TemporaryDirectory() as folder:
             state = Path(folder)

@@ -39,7 +39,7 @@ jobs:
         with:
           ref: main
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: 验证解析、合并与交付规则

@@ -388,6 +388,14 @@ test('build gate accepts current exports and rejects changed, added, removed, or
     inputs: {[indexFile]: sha(indexText), [root + '/a.md']: sha(doc)}, exports}));
   try {
     verifyComplianceOntology(temp);
+    const hidden = path.join(temp, 'static/.data.deploy-hidden');
+    fs.renameSync(path.join(temp, 'static/data'), hidden);
+    assert.throws(() => verifyComplianceOntology(temp), /校验报告缺失/);
+    verifyComplianceOntology(temp, path.join(hidden, 'compliance'));
+    fs.writeFileSync(path.join(hidden, 'compliance/graph.ttl'), 'corrupted');
+    assert.throws(() => verifyComplianceOntology(temp, path.join(hidden, 'compliance')), /导出内容不匹配/);
+    fs.renameSync(hidden, path.join(temp, 'static/data'));
+    write(output + 'graph.ttl', '@prefix c: <https://example.org/> .\n');
     write(root + '/a.md', '# Changed');
     assert.throws(() => verifyComplianceOntology(temp), /已过期/);
     write(root + '/a.md', doc); write(root + '/new.md', '# New');

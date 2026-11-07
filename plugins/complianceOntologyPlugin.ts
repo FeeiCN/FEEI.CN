@@ -5,8 +5,7 @@ import type {LoadContext, Plugin} from '@docusaurus/types';
 
 type ValidationReport = {conforms: boolean; sourceDigest: string; inputs: Record<string, string>; exports: Record<string, string>};
 
-export function verifyComplianceOntology(siteDir: string): void {
-  const data = path.join(siteDir, 'static/data/compliance');
+export function verifyComplianceOntology(siteDir: string, data = path.join(siteDir, 'static/data/compliance')): void {
   const fail = (message: string): never => {
     throw new Error(`${message}。请安装 scripts/requirements-ontology.txt 中的依赖，并运行 npm run ontology:build。`);
   };
@@ -53,7 +52,7 @@ export function verifyComplianceOntology(siteDir: string): void {
 export default function complianceOntologyPlugin(context: LoadContext): Plugin {
   return {
     name: 'compliance-ontology',
-    loadContent() {verifyComplianceOntology(context.siteDir);},
+    loadContent() {verifyComplianceOntology(context.siteDir, process.env.COMPLIANCE_ONTOLOGY_DATA_DIR);},
     getPathsToWatch() {
       return ['config/compliance-ontology/*', 'static/data/compliance/*.json',
         'scripts/build_compliance_ontology.py', 'scripts/index_compliance_documents.py',

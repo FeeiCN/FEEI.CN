@@ -7,7 +7,7 @@ function manifestUrl(url) {
 function manifestFor(url) {
   const key = url.toString();
   if (!manifests.has(key)) {
-    const promise = fetch(manifestUrl(url)).then(async (response) => {
+    const promise = fetch(manifestUrl(url), {cache: 'no-cache'}).then(async (response) => {
       if (response.status === 404) return null;
       if (!response.ok) throw new Error('搜索索引清单暂不可用');
       const manifest = await response.json();

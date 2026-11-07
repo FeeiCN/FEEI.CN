@@ -1,4 +1,5 @@
 import type {LoadContext, OptionValidationContext, Plugin} from '@docusaurus/types';
+import path from 'node:path';
 
 // Docusaurus validates the wrapper, not the delegated plugin. Forward its
 // schema so generated client constants retain all upstream defaults.
@@ -22,5 +23,18 @@ export default function fastSearchPlugin(context: LoadContext, options: unknown)
     ...plugin,
     name: 'fast-local-search',
     postBuild: undefined,
+    configureWebpack(config, isServer, utils, content) {
+      const upstream = plugin.configureWebpack?.(config, isServer, utils, content) ?? {};
+      return {
+        ...upstream,
+        module: {
+          ...upstream.module,
+          rules: [...(upstream.module?.rules ?? []), {
+            test: /[\\/]docusaurus-search-local[\\/]dist[\\/]client[\\/]client[\\/]theme[\\/]worker\.js$/,
+            use: [path.join(context.siteDir, 'scripts/search_worker_loader.cjs')],
+          }],
+        },
+      };
+    },
   } as Plugin;
 }

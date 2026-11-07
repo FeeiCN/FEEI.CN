@@ -27,8 +27,40 @@ permissions:
   contents: write
 
 jobs:
+  resolve:
+    name: 选择同步任务
+    runs-on: ubuntu-latest
+    outputs:
+      tasks: ${{ steps.select.outputs.tasks }}
+    steps:
+      - id: select
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          INPUT_TASK: ${{ inputs.task }}
+        run: |
+          python3 - <<'PYTASKS'
+          import json, os
+          schedules = {'0 22 * * *': 'account-assets', '10 22 * * *': 'hk-ipo', '30 * * * *': 'health'}
+          if os.environ['EVENT_NAME'] == 'schedule':
+              task = schedules[os.environ['EVENT_SCHEDULE']]
+          else:
+              task = os.environ.get('INPUT_TASK') or 'all'
+          tasks = ['account-assets', 'hk-ipo', 'health'] if task == 'all' else [task]
+          if any(task not in schedules.values() for task in tasks):
+              raise SystemExit('未知同步任务')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as handle:
+              handle.write('tasks=' + json.dumps(tasks) + '\n')
+          PYTASKS
+
   sync:
-    name: 同步数据
+    name: 同步 ${{ matrix.task }}
+    needs: resolve
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        task: ${{ fromJSON(needs.resolve.outputs.tasks) }}
     runs-on: [self-hosted, macnimi]
     timeout-minutes: 150
     env:
@@ -59,7 +91,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           token: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
-          ref: ${{ github.ref_name }}
+          ref: main
           fetch-depth: 0
           persist-credentials: true
 
@@ -71,52 +103,21 @@ jobs:
           git config user.email "feei@feei.cn"
           git config --global http.version HTTP/1.1
           if git rev-parse --verify "origin/${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            git checkout -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}"
+            git checkout -B main origin/main
           fi
-
-      - name: Resolve tasks
-        id: tasks
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          EVENT_SCHEDULE: ${{ github.event.schedule }}
-          INPUT_TASK: ${{ github.event.inputs.task }}
-        run: |
-          if [ "${EVENT_NAME}" = "schedule" ]; then
-            case "${EVENT_SCHEDULE}" in
-              "0 22 * * *") tasks="account-assets" ;;
-              "10 22 * * *") tasks="hk-ipo" ;;
-              "30 * * * *") tasks="health" ;;
-              *)
-                echo "::error::未知 schedule: ${EVENT_SCHEDULE}"
-                exit 1
-                ;;
-            esac
-          else
-            case "${INPUT_TASK:-all}" in
-              all) tasks="account-assets hk-ipo health" ;;
-              account-assets|hk-ipo|health) tasks="${INPUT_TASK}" ;;
-              *)
-                echo "::error::未知 task: ${INPUT_TASK}"
-                exit 1
-                ;;
-            esac
-          fi
-
-          echo "tasks=${tasks}" >> "$GITHUB_OUTPUT"
-          echo "Resolved tasks: ${tasks}"
 
       - name: Ensure Health Auto Export server
-        if: contains(steps.tasks.outputs.tasks, 'health')
+        if: matrix.task == 'health'
         env:
           HAE_HOST: ${{ vars.HAE_HOST }}
           HAE_PORT: ${{ vars.HAE_PORT }}
         run: |
-          python3 scripts/check_ios_automation_device.py --udid "$IOS_DEVICE_UDID"
-
+          test -n "$HAE_HOST" && test -n "$HAE_PORT" || { echo "::error::请配置 HAE_HOST 和 HAE_PORT"; exit 1; }
           if /opt/homebrew/bin/node scripts/health_auto_export_mcp_server.mjs --check; then
             exit 0
           fi
-          echo "Health Auto Export 无响应，正在通过 Appium 重启服务器"
+          echo "Health Auto Export 无响应，正在检查设备并恢复服务"
+          python3 scripts/check_ios_automation_device.py --udid "$IOS_DEVICE_UDID"
 
           if ! curl -fsS "${APPIUM_URL%/}/status" >/dev/null 2>&1; then
             mkdir -p "$HOME/Library/Logs"
@@ -148,9 +149,10 @@ jobs:
           echo "::error::Health Auto Export 在 30 秒内未就绪"
           exit 1
 
-      - name: Run selected tasks
+      - name: 同步当前任务
+        id: task
         env:
-          TASKS: ${{ steps.tasks.outputs.tasks }}
+          TASKS: ${{ matrix.task }}
           HAE_HOST: ${{ vars.HAE_HOST }}
           HAE_PORT: ${{ vars.HAE_PORT }}
           HAE_TIMEOUT: '180000'
@@ -240,3 +242,18 @@ jobs:
                   if status != 0:
                       sys.exit(status)
           PY
+
+      - name: 记录本任务结果
+        if: always()
+        env:
+          TASK: ${{ matrix.task }}
+          RESULT: ${{ steps.task.outcome }}
+        run: |
+          {
+            echo "### $TASK"
+            if [ "$RESULT" = "success" ]; then
+              echo "同步成功。"
+            else
+              echo "同步未完成，请查看本任务的设备、服务或导出步骤。其他同步任务独立执行。"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

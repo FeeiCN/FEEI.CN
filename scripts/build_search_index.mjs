@@ -3,6 +3,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createRequire} from 'node:module';
+import {compactIndex, writeSearchIndex} from './search_index_storage.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -11,7 +12,7 @@ function loadInternal(relativePath) {
   return require(path.join(path.dirname(entry), 'utils', relativePath));
 }
 
-const {scanDocuments} = loadInternal('scanDocuments');
+const {parse} = loadInternal('parse');
 const {buildIndex} = loadInternal('buildIndex');
 
 const outDir = path.resolve(process.argv[2] ?? 'build');
@@ -71,32 +72,43 @@ try {
   }));
 
   console.log(`[search-index] parsing ${paths.length} generated pages`);
-  const originals = await Promise.all(paths.map(async ({filePath}) => ({
-    filePath,
-    content: await fs.readFile(filePath, 'utf8'),
-  })));
-  let allDocuments;
-  try {
-    // Keep numeric date prefixes from merging with Chinese body terms (for example
-    // “9月工资”), so an exact search for “工资” remains discoverable.
-    await Promise.all(originals.map(({filePath, content}) => fs.writeFile(
-      filePath,
-      content.replace(/(\\d+月)工资/g, '$1 工资 工资 工资'),
-      'utf8',
-    )));
-    allDocuments = await scanDocuments(paths, config);
-  } finally {
-    await Promise.all(originals.map(({filePath, content}) => fs.writeFile(filePath, content, 'utf8')));
-  }
+  const parsed = new Array(paths.length);
+  let cursor = 0;
+  await Promise.all(Array.from({length: Math.min(8, paths.length)}, async () => {
+    while (cursor < paths.length) {
+      const position = cursor++;
+      const item = paths[position];
+      const html = await fs.readFile(item.filePath, 'utf8');
+      parsed[position] = parse(html.replace(/(\d+月)工资/g, '$1 工资'), item.type, item.url, config);
+    }
+  }));
+  const allDocuments = [[], [], [], [], []];
+  let nextId = 0;
+  parsed.forEach((document, position) => {
+    if (!document) return;
+    const {pageTitle, description, keywords, sections, breadcrumb} = document;
+    const url = paths[position].url;
+    const titleId = ++nextId;
+    allDocuments[0].push({i: titleId, t: pageTitle, u: url, b: breadcrumb});
+    if (description) allDocuments[2].push({i: titleId, t: description, s: pageTitle, u: url, p: titleId});
+    if (keywords) allDocuments[3].push({i: titleId, t: keywords, s: pageTitle, u: url, p: titleId});
+    for (const section of sections) {
+      let hash = section.hash;
+      if (hash && !hash.startsWith('#') && hash.includes('#')) {
+        if (!hash.startsWith(url + '#')) continue;
+        hash = hash.slice(url.length);
+      }
+      if (section.title !== pageTitle) allDocuments[1].push({i: ++nextId, t: section.title, u: url, h: hash, p: titleId});
+      if (section.content) allDocuments[4].push({i: ++nextId, t: section.content, s: section.title || pageTitle, u: url, h: hash, p: titleId});
+    }
+  });
   console.log('[search-index] building index');
-  const searchIndex = buildIndex(allDocuments, config);
-
-  const tempFile = path.join(outDir, '.search-index.json.tmp');
-  const targetFile = path.join(outDir, 'search-index.json');
-  await fs.writeFile(tempFile, JSON.stringify(searchIndex), 'utf8');
-  await fs.rename(tempFile, targetFile);
-
-  await writeStatus('success', {pages: paths.length, indexFile: 'search-index.json'});
+  const searchIndex = compactIndex(buildIndex(allDocuments, config));
+  const manifest = await writeSearchIndex(outDir, searchIndex);
+  await writeStatus('success', {pages: paths.length, indexFile: 'search-index-manifest.json',
+    documents: allDocuments.map((documents) => documents.length),
+    uncompressedBytes: manifest.uncompressedBytes, compressedBytes: manifest.compressedBytes});
+  const targetFile = path.join(outDir, 'search-index-manifest.json');
   console.log(`[search-index] updated ${targetFile} in ${((Date.now() - startedAt) / 1000).toFixed(2)}s`);
 } catch (error) {
   const message = error instanceof Error ? error.stack ?? error.message : String(error);

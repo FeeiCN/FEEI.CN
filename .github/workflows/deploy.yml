@@ -15,10 +15,14 @@ on:
       - 'plugins/**'
       - 'scripts/check_docs_quality.mjs'
       - 'scripts/build_search_index.mjs'
+      - 'scripts/search_index_*.mjs'
+      - 'scripts/search_worker_loader.cjs'
+      - 'scripts/deployment_scope.mjs'
       - 'scripts/build_weather_cache.mjs'
       - 'scripts/prepare_build_dependencies.mjs'
       - 'docusaurus.config.ts'
       - 'config/search.ts'
+      - 'config/search-zh-dict.txt'
       - 'sidebars.ts'
       - 'package.json'
       - 'package-lock.json'
@@ -150,7 +154,7 @@ jobs:
           fi
           echo "old_head=$old_head"
           echo "new_head=$new_head"
-          echo "deployed_head=\${deployed_head:-none}"
+          echo "deployed_head=${deployed_head:-none}"
           group_end "Prepare repository"
 
           group_start "Check docs quality"
@@ -166,23 +170,23 @@ jobs:
           rsync -a --delete --exclude 'weather/' --exclude 'health/' static/data/ "$data_root/"
           group_end "Prepare shared assets"
 
-          # Workflow-run triggers can target a commit that is already published.
-          # Shared data has been synchronized above; avoid rebuilding unchanged pages.
-          if [ -n "$deployed_head" ] && [ "$deployed_head" = "$new_head" ]; then
-            echo "Already deployed $new_head; shared assets refreshed. Skipping build."
-            exit 0
-          fi
-
-          data_only=false
-          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
-            changed_files="$(git -c core.quotePath=false diff --name-only "$deployed_head" "$new_head")"
-            if [ -n "$changed_files" ] && ! printf '%s\n' "$changed_files" | grep -v '^static/data/' > /dev/null; then data_only=true; fi
-          fi
-          if [ "$data_only" = true ]; then
-            current_release="$(readlink -f "$current_link")"
-            rm -rf "$current_release/data"
-            ln -s "$data_root" "$current_release/data"
-            echo "Only static/data changed; skipped Docusaurus build."
+          scope="$(node scripts/deployment_scope.mjs "$deployed_head" "$new_head")"
+          echo "[deploy-scope] $scope"
+          pages_changed="$(node -e 'console.log(JSON.parse(process.argv[1]).pages)' "$scope")"
+          search_changed="$(node -e 'console.log(JSON.parse(process.argv[1]).search)' "$scope")"
+          if [ "$pages_changed" = false ] && [ -n "$previous_release" ]; then
+            exec 8>"$site_root/.search-index.lock"
+            flock --wait 1200 8 || { echo "ERROR: search index is still running after 20 minutes"; exit 1; }
+            index_ready=false
+            if [ -s "$previous_release/search-index-status.json" ]; then
+              index_ready="$(node -e 'try { console.log(JSON.parse(require("fs").readFileSync(process.argv[1])).status === "success") } catch { console.log(false) }' "$previous_release/search-index-status.json")"
+            fi
+            if [ "$search_changed" = true ] || [ "$index_ready" != true ] || [ ! -s "$previous_release/search-index-manifest.json" ]; then
+              group_start "Refresh search index without rebuilding pages"
+              node scripts/build_search_index.mjs "$previous_release"
+              group_end "Refresh search index without rebuilding pages"
+            fi
+            echo "No page build inputs changed; shared data refreshed, Docusaurus build skipped."
             exit 0
           fi
 
@@ -292,6 +296,10 @@ jobs:
           # search remains available while the new index is rebuilt in background.
           if [ -n "$previous_release" ] && [ -s "$previous_release/search-index.json" ]; then
             cp "$previous_release/search-index.json" "$staging_dir/search-index.json"
+            if [ -s "$previous_release/search-index-manifest.json" ]; then
+              cp "$previous_release/search-index-manifest.json" "$staging_dir/search-index-manifest.json"
+              cp -a "$previous_release/search-index-assets" "$staging_dir/search-index-assets"
+            fi
           fi
           rm -rf "$release_dir"
           mv "$staging_dir" "$release_dir"
@@ -309,12 +317,15 @@ jobs:
             repo_dir="$2"
             search_log="$3"
             release_name="$4"
+            site_root="$5"
+            exec 8>"$site_root/.search-index.lock"
+            flock --wait 1200 8 || { echo "[search-index] lock timeout" >>"$search_log"; exit 1; }
             if node "$repo_dir/scripts/build_search_index.mjs" "$release_dir" >"$search_log" 2>&1; then
               echo "[search-index] background rebuild completed for $release_name" >>"$search_log"
             else
               echo "[search-index] background rebuild failed for $release_name" >>"$search_log"
             fi
-          ' _ "$release_dir" "$repo_dir" "$search_log" "$release_name" </dev/null >/dev/null 2>&1 9>&- &
+          ' _ "$release_dir" "$repo_dir" "$search_log" "$release_name" "$site_root" </dev/null >/dev/null 2>&1 9>&- &
           echo "[search-index] background rebuild started pid=$! release=$release_name"
 
           group_start "Clean old releases"

@@ -125,7 +125,9 @@ class AutomationResultTests(unittest.TestCase):
         self.addCleanup(self.root_patch.stop)
         self.task = {'id': 'security-event-research'}
         self.result = {'status': 'completed', 'report_markdown': '完整研究正文',
-                       'sources': ['https://example.com/a', 'https://example.com/b'], 'artifacts': []}
+                       'sources': ['https://example.com/a', 'https://example.com/b'], 'artifacts': [],
+                       'audit': {'summary': '已核验两份原始来源', 'data_cutoff': '2026-11-07',
+                                 'deduplication_reason': '与已读取历史相比有新增事实'}}
 
     def test_research_requires_actual_source_list(self):
         self.result['sources'] = []
@@ -205,6 +207,27 @@ class AutomationResultTests(unittest.TestCase):
                     automation.deliver(self.task, self.out)
                 api.assert_not_called()
 
+    def test_wallpaper_text_uses_rendered_observations(self):
+        from datetime import timedelta
+        from zoneinfo import ZoneInfo
+        self.wallpaper_delivery()
+        today = datetime.now(ZoneInfo('Asia/Shanghai')).date()
+        source = 'https://feei.cn/data/health/example.json'
+        data = {'as_of': today.isoformat(), 'weights': [
+            {'date': (today - timedelta(days=1)).isoformat(), 'weight_jin': 160, 'source': source},
+            {'date': today.isoformat(), 'weight_jin': 159, 'source': source},
+        ], 'exercise': []}
+        self.result['report_markdown'] = '尚待生成图片'
+        (self.out / 'result.json').write_text(json.dumps(self.result))
+        (self.out / 'wallpaper-data.json').write_text(json.dumps(data))
+        with patch('render_weight_wallpaper.render'):
+            automation.render_wallpaper(self.task, self.out)
+        result = json.loads((self.out / 'result.json').read_text())
+        self.assertIn('159.0 市斤', result['report_markdown'])
+        self.assertIn('-1.0 市斤', result['report_markdown'])
+        self.assertNotIn('尚待', result['report_markdown'])
+        self.assertEqual(result['audit']['data_cutoff'], today.isoformat())
+
     def test_report_topic_becomes_title_without_execution_metadata(self):
         self.assertEqual(automation.issue_title('# DNS 故障如何跨越隔离边界\n正文', '安全事件研究复盘'), 'DNS 故障如何跨越隔离边界')
         self.assertEqual(automation.issue_title('# [自动任务][completed] 体重变化 · 2026-11-07 10:00 UTC', '壁纸'), '体重变化')
@@ -248,16 +271,62 @@ class AutomationResultTests(unittest.TestCase):
                     automation.deliver(self.task, self.out)
                 api.assert_not_called()
 
-    def test_silent_no_update_accepts_empty_body_but_completed_does_not(self):
+    def test_no_update_requires_check_body(self):
         self.result.update(status='no_update', report_markdown='', sources=[])
-        self.assertEqual(automation.validate_result(self.task, self.result, self.out), ('no_update', ''))
-        self.result['status'] = 'completed'
         with self.assertRaisesRegex(ValueError, '缺少执行结果正文'):
             automation.validate_result(self.task, self.result, self.out)
 
-    def test_no_update_needs_no_research_sources(self):
+    def test_no_update_requires_checked_sources_except_deterministic_sync(self):
         self.result.update(status='no_update', sources=[])
+        with self.assertRaisesRegex(ValueError, '实际检查的来源'):
+            automation.validate_result(self.task, self.result, self.out)
+        self.task['id'] = 'diary-prompt-sync'
         self.assertEqual(automation.validate_result(self.task, self.result, self.out)[0], 'no_update')
+
+    def test_audit_fields_cannot_be_empty_or_missing(self):
+        for key in ['summary', 'data_cutoff', 'deduplication_reason']:
+            with self.subTest(key=key):
+                audit = self.result['audit'].copy()
+                self.result['audit'][key] = ''
+                with self.assertRaisesRegex(ValueError, '检查摘要'):
+                    automation.validate_result(self.task, self.result, self.out)
+                self.result['audit'] = audit
+
+    def test_no_update_keeps_evidence_without_posting_issue(self):
+        self.result['status'] = 'no_update'
+        self.write_delivery_metadata()
+        with patch.object(automation, 'destination', return_value='owner/public'), patch.object(automation, 'gh') as api:
+            automation.deliver(self.task, self.out)
+        api.assert_not_called()
+        metadata = json.loads((self.out / 'metadata.json').read_text())
+        self.assertEqual(metadata['audit'], self.result['audit'])
+        self.assertEqual(metadata['source_count'], 2)
+
+    def write_delivery_metadata(self, schedule=None):
+        (self.out / 'result.json').write_text(json.dumps(self.result))
+        (self.out / 'metadata.json').write_text(json.dumps({
+            'delivery_repository': 'owner/public', 'run_url': 'https://example.com/run',
+            'prompt_sha256': 'abc', 'commit': 'def', 'schedule_check': schedule,
+        }))
+
+    def test_expired_candidate_is_saved_without_posting_stale_alert(self):
+        self.task.update(id='hk-ipo-alerts', title='港股提醒')
+        self.write_delivery_metadata({'expires_at': '2020-01-01T00:45:00+00:00'})
+        with patch.object(automation, 'destination', return_value='owner/public'), patch.object(automation, 'gh') as api:
+            automation.deliver(self.task, self.out)
+        api.assert_not_called()
+        metadata = json.loads((self.out / 'metadata.json').read_text())
+        self.assertEqual(metadata['delivery_status'], 'expired')
+        self.assertIn(self.result['report_markdown'], (self.out / 'report.md').read_text())
+
+    def test_governance_draft_is_pending_review(self):
+        self.task.update(id='knowledge-base-governance', title='知识库治理')
+        self.write_delivery_metadata()
+        with patch.object(automation, 'destination', return_value='owner/public'), patch.object(automation, 'gh', return_value='https://example.com/issue') as api:
+            automation.deliver(self.task, self.out)
+        issue = next(c.args for c in api.call_args_list if c.args[:2] == ('issue', 'create'))
+        self.assertIn('待审阅', issue)
+        self.assertNotIn('已交付', issue)
 
     def test_prepare_does_not_fetch_data_for_invalid_delivery(self):
         with patch.dict('os.environ', {'GITHUB_REPOSITORY': 'owner/public'}, clear=True):

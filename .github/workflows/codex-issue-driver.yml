@@ -927,13 +927,16 @@ jobs:
           {
             echo "<!-- codex-driver:result:commit=${BASE}:merge=${MERGE_COMMIT:-none}:cost=${COST}:turns=${TURNS} -->"
             echo
-            echo "## Codex 执行结果"
-            echo
-            echo "- 合并到 main: \`${MERGE_COMMIT:-none}\`"
-            echo "- 状态: ${STATE}"
-            [ -n "${REASON:-}" ] && echo "- 原因: ${REASON}"
-            echo "- 成本: \$${COST} / ${TURNS} 轮"
-            echo
+            if [ "$SCHEDULED_REVIEW" != "true" ]; then
+              echo "## 执行结果"
+              echo
+              [ -n "${MERGE_COMMIT:-}" ] && echo "- 提交到 main: \`${MERGE_COMMIT}\`"
+              [ -n "${REASON:-}" ] && echo "- 原因: ${REASON}"
+              if [[ "${COST:-}" =~ ^[0-9]+([.][0-9]+)?$ ]] && [[ "${TURNS:-}" =~ ^[0-9]+$ ]]; then
+                echo "- 成本: \$${COST} / ${TURNS} 轮"
+              fi
+              echo
+            fi
             cat /tmp/execution-delivery.md
           } | head -c 64000 > /tmp/result.md
           if [ "$(wc -c < /tmp/result.md)" -ge 64000 ]; then

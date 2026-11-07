@@ -25,6 +25,7 @@ START = '<!-- automation-prompt:start -->'
 END = '<!-- automation-prompt:end -->'
 RESEARCH = {'security-event-research', 'ai-security-frontier-research',
             'ai-coding-rd-efficiency', 'security-architecture-defense', 'hk-ipo-alerts'}
+REVIEW = RESEARCH | {'knowledge-base-governance'}
 PERSONAL = {'personal-health-trend-research', 'update-weight-wallpaper', 'daily-personal-record'}
 SCHEMA = {
     'type': 'object', 'additionalProperties': False,
@@ -33,8 +34,13 @@ SCHEMA = {
         'report_markdown': {'type': 'string'},
         'sources': {'type': 'array', 'items': {'type': 'string'}},
         'artifacts': {'type': 'array', 'items': {'type': 'string'}},
+        'audit': {
+            'type': 'object', 'additionalProperties': False,
+            'properties': {key: {'type': 'string'} for key in ['summary', 'data_cutoff', 'deduplication_reason']},
+            'required': ['summary', 'data_cutoff', 'deduplication_reason'],
+        },
     },
-    'required': ['status', 'report_markdown', 'sources', 'artifacts'],
+    'required': ['status', 'report_markdown', 'sources', 'artifacts', 'audit'],
 }
 
 
@@ -205,6 +211,7 @@ def prepare(t, out):
         'history_comments_scope': history['comments_scope'],
         'history_errors': history['errors'],
         'reply_to': reply_to,
+        'schedule_check': json.loads((out / 'schedule-check.json').read_text()) if (out / 'schedule-check.json').exists() else None,
     }
     context['repository_activity'] = subprocess.check_output(
         ['git', 'log', '-25', '--format=%h %aI %s'], cwd=ROOT, text=True)
@@ -218,10 +225,12 @@ def prepare(t, out):
     meta = {
         'task_id': t['id'], 'prompt_source': t['prompt_source'],
         'prompt_sha256': hashlib.sha256(text.encode()).hexdigest(),
-        'commit': os.environ.get('GITHUB_SHA', ''),
+        'commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+        'trigger_commit': os.environ.get('GITHUB_SHA', ''),
         'run_url': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
         'delivery_repository': repo, 'prepared_at': context['time_utc'],
         'reply_to': reply_to,
+        'schedule_check': json.loads((out / 'schedule-check.json').read_text()) if (out / 'schedule-check.json').exists() else None,
         'history_scope': history_scope, 'history_count': len(previous),
         'report_fingerprints': [digest for issue in previous for digest in
                                 re.findall(r'<!-- report-sha256:([a-f0-9]{64}) -->', issue.get('body') or '')],
@@ -239,8 +248,12 @@ def validate_result(t, result, out):
     if status not in SCHEMA['properties']['status']['enum']:
         raise ValueError('无效的任务状态')
     report = result['report_markdown']
-    if not isinstance(report, str) or (status != 'no_update' and not report.strip()):
+    if not isinstance(report, str) or not report.strip():
         raise ValueError(f'{status}: 缺少执行结果正文')
+    audit = result['audit']
+    if (not isinstance(audit, dict) or set(audit) != {'summary', 'data_cutoff', 'deduplication_reason'}
+            or any(not isinstance(value, str) or not value.strip() for value in audit.values())):
+        raise ValueError('缺少检查摘要、数据截止时间或去重说明')
     if not isinstance(result['sources'], list) or not isinstance(result['artifacts'], list):
         raise ValueError('来源和附件必须是数组')
     for url in result['sources']:
@@ -248,6 +261,8 @@ def validate_result(t, result, out):
             raise ValueError('无效的来源 URL')
     if status == 'completed' and t['id'] in RESEARCH and len(set(result['sources'])) < 2:
         raise ValueError('研究结果缺少至少两个本轮核验来源')
+    if status == 'no_update' and t['id'] != 'diary-prompt-sync' and not result['sources']:
+        raise ValueError('无更新结果必须记录实际检查的来源')
     files = []
     for name in result['artifacts']:
         if not isinstance(name, str):
@@ -297,6 +312,12 @@ def deliver(t, out):
                 repo, reply_to['issue'], reply_to['comment_id'], reply_to['request_digest']) != reply_to:
             raise ValueError('壁纸原 Issue 或本人意见已变化，停止交付')
     duplicated = not reply_to and digest in meta.get('report_fingerprints', [])
+    schedule = meta.get('schedule_check') or {}
+    expired = bool(schedule.get('expires_at') and datetime.now(timezone.utc) > datetime.fromisoformat(schedule['expires_at']))
+    if expired:
+        status = 'no_update'
+        result['audit']['summary'] = '研究完成时已超过提醒窗口，未发送过期提醒；本轮成果仅保存在附件。'
+        meta['delivery_status'] = 'expired'
     body = (f"{marker}\n{fingerprint}\n<!-- status:{status} -->\n\n{report}\n\n---\n"
             f"运行：[Actions]({meta['run_url']}) · 提示词 `{meta['prompt_sha256'][:12]}` · "
             f"commit `{meta['commit'][:8]}`\n")
@@ -305,7 +326,7 @@ def deliver(t, out):
     else:
         body += ('\n可直接提问或评论修改意见；需要写入网站时，助手会先展示完整稿件和目标文件。'
                  '确认具体版本后，可直接说“这版可以，写入网站吧”；修改、提问或暂停都可自然说明。\n')
-    if status != 'no_update' and not duplicated:
+    if status != 'no_update' and not duplicated and not expired:
         if t['id'] == 'update-weight-wallpaper' and status == 'completed':
             artifact_id = os.environ.get('WALLPAPER_ARTIFACT_ID', '')
             run_id = os.environ.get('GITHUB_RUN_ID', '')
@@ -324,7 +345,7 @@ def deliver(t, out):
             url = f"https://github.com/{repo}/issues/{reply_to['issue']}"
         else:
             task_label = f"任务：{t['title']}"
-            state_label = '待补充' if status == 'blocked' else ('待审阅' if t['id'] in RESEARCH else '已交付')
+            state_label = '待补充' if status == 'blocked' else ('待审阅' if t['id'] in REVIEW else '已交付')
             for name, color in [(task_label, 'd4c5f9'), (state_label, 'fbca04' if status == 'blocked' else 'c2e0c6')]:
                 gh('label', 'create', name, '--repo', repo, '--color', color, '--force')
             url = gh('issue', 'create', '--repo', repo, '--title', issue_title(report, t['title']),
@@ -334,11 +355,17 @@ def deliver(t, out):
         (out / 'report.md').write_text(body)
     meta['status'] = status
     meta['duplicate'] = duplicated
+    meta['audit'] = result['audit']
+    meta['sources'] = result['sources']
+    meta['source_count'] = len(set(result['sources']))
     (out / 'metadata.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2))
     summary = os.environ.get('GITHUB_STEP_SUMMARY')
     if summary:
         with open(summary, 'a') as f:
             f.write(f"任务 `{t['id']}`：`{status}`。提示词摘要 `{meta['prompt_sha256'][:12]}`。\n")
+            f.write(f"\n{result['audit']['summary']}\n\n数据截止：{result['audit']['data_cutoff']}。"
+                    f"核验来源：{meta['source_count']} 个。历史：{meta.get('history_count', 0)} 条。\n\n"
+                    f"去重说明：{result['audit']['deduplication_reason']}\n")
     print(f"{t['id']}: {status}")
     if status == 'blocked':
         raise ValueError('任务受阻，已记录到指定审阅渠道；不能标为成功')
@@ -357,6 +384,8 @@ def verify_sync(t, out):
             '再在仓库根目录运行 `python3 scripts/automation_tasks.py check`；本轮没有自动修改文件。')
     (out / 'result.json').write_text(json.dumps({
         'status': status, 'report_markdown': report, 'sources': [], 'artifacts': [],
+        'audit': {'summary': report, 'data_cutoff': datetime.now(timezone.utc).isoformat(),
+                  'deduplication_reason': '本轮确定性检查配置与提示词；无差异时不创建 Issue。'},
     }, ensure_ascii=False))
 
 
@@ -371,8 +400,25 @@ def render_wallpaper(t, out):
         return
     from render_weight_wallpaper import normalize, render
     data = json.loads((out / 'wallpaper-data.json').read_text())
-    normalize(data, datetime.now(ZoneInfo('Asia/Shanghai')).date())
+    state = normalize(data, datetime.now(ZoneInfo('Asia/Shanghai')).date())
     render(data, out)
+    recent = [(day, weight) for day, weight in state['weights'].items()
+              if day >= state['as_of'] - timedelta(days=6)]
+    target = state['target'] or 140
+    report = (f"壁纸已生成：PNG 1320×2868，SVG 使用相同固定版式。\n\n"
+              f"最新称重为 **{state['latest']:%Y-%m-%d} 的 {state['current']:.1f} 市斤**，"
+              f"阶段目标 **{target} 市斤**，当前高于目标 **{max(0, state['current'] - target):.1f} 市斤**。")
+    if len(recent) > 1:
+        report += f"近七个自然日有 {len(recent)} 天称重，首末变化 **{recent[-1][1] - recent[0][1]:+.1f} 市斤**。"
+    else:
+        report += f"近七个自然日有 {len(recent)} 天称重，不足以判断趋势。"
+    report += (f"\n\n本周一至昨天已记录 {state['exercise_days']} 天运动，"
+               f"其中达到30分钟的有 {state['exercise_successes']} 天；缺测保留间隔，不补零。")
+    if state['latest'] < state['as_of']:
+        report += '今天暂无称重，请称量并同步。'
+    result['report_markdown'] = report
+    result['audit']['summary'] = report
+    result['audit']['data_cutoff'] = state['latest'].isoformat()
     result['artifacts'] = ['output/wallpaper.png', 'output/wallpaper.svg']
     validate_result(t, result, out)
     (out / 'result.json').write_text(json.dumps(result, ensure_ascii=False))

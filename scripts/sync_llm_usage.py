@@ -97,9 +97,9 @@ def fetch_summary(vendor: str) -> dict[str, Any]:
         return fetch_feeiai_usage_stats(vendor, cfg, auth)
 
     auth_template = cfg.get("auth_header") or "Cookie: {}"
-    header_name, _, _ = auth_template.partition(":")
+    header_name, _, header_value = auth_template.partition(":")
     headers: dict[str, str] = {
-        header_name.strip(): auth_template.replace("{}", auth, 1),
+        header_name.strip(): header_value.strip().format(auth),
         "User-Agent": USER_AGENT,
         "Accept": cfg.get("accept", JSON_ACCEPT),
     }
@@ -115,11 +115,13 @@ def fetch_summary(vendor: str) -> dict[str, Any]:
             return payload
         except (HTTPError, URLError, json.JSONDecodeError) as error:
             last_error = error
+            if isinstance(error, HTTPError) and error.code in (401, 403):
+                break
             if attempt < RETRIES:
                 time.sleep(2 ** (attempt - 1))
                 continue
             break
-    raise RuntimeError(f"[{vendor}] 接口请求失败: {last_error}")
+    raise RuntimeError(f"[{vendor}] 接口请求失败: {last_error}") from last_error
 
 
 def _request_json(url: str, headers: dict[str, str]) -> dict[str, Any]:
@@ -134,11 +136,13 @@ def _request_json(url: str, headers: dict[str, str]) -> dict[str, Any]:
             return payload
         except (HTTPError, URLError, json.JSONDecodeError, RuntimeError) as error:
             last_error = error
+            if isinstance(error, HTTPError) and error.code in (401, 403):
+                break
             if attempt < RETRIES:
                 time.sleep(2 ** (attempt - 1))
                 continue
             break
-    raise RuntimeError(f"接口请求失败: {last_error}")
+    raise RuntimeError(f"接口请求失败: {last_error}") from last_error
 
 
 def fetch_feeiai_usage_stats(vendor: str, cfg: dict[str, Any], auth: str) -> dict[str, Any]:
@@ -426,6 +430,32 @@ def collect_outputs() -> list[dict[str, str]]:
     ]
 
 
+def failure_reason(error: Exception, credential: str) -> str:
+    cause = error
+    while cause.__cause__ is not None:
+        cause = cause.__cause__
+    if isinstance(cause, HTTPError):
+        if cause.code in (401, 403):
+            return f"认证失败（HTTP {cause.code}），请更新 GitHub Secret {credential}"
+        return f"接口返回 HTTP {cause.code}"
+    return f"请求或数据校验失败（{type(cause).__name__}）"
+
+
+def report_vendors(results: list[dict[str, str]]) -> None:
+    labels = {'success': '成功', 'skipped': '跳过', 'failed': '失败'}
+    summary = os.environ.get('GITHUB_STEP_SUMMARY')
+    if summary:
+        with open(summary, 'a', encoding='utf-8') as handle:
+            handle.write('### 用量同步结果\n\n| 来源 | 状态 | 说明 |\n|---|---|---|\n')
+            for result in results:
+                handle.write(f"| {result['vendor']} | {labels[result['status']]} | {result['reason']} |\n")
+    temporary = os.environ.get('RUNNER_TEMP')
+    if temporary:
+        (Path(temporary) / 'llm-sync-status.json').write_text(json.dumps({
+            'checked_at': now_str(), 'vendors': results,
+        }, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="拉取 LLM token 使用摘要并落盘到 static/data/llm-usage/，更新状态页"
@@ -434,6 +464,7 @@ def main() -> int:
         "--vendor",
         action="append",
         default=[],
+        choices=list(VENDOR_CONFIG),
         help="仅刷新指定 vendor（可多次指定），默认刷新所有配置了凭证的 vendor",
     )
     args = parser.parse_args()
@@ -443,21 +474,28 @@ def main() -> int:
     refreshed: list[str] = []
     written_paths: list[Path] = []
     failed: list[tuple[str, Exception]] = []
+    results: list[dict[str, str]] = []
     for vendor in VENDOR_CONFIG:
         if requested and vendor not in requested:
             continue
         cfg = VENDOR_CONFIG[vendor]
         if not os.environ.get(cfg["auth_env"]):
             print(f"[skip] {vendor} 未设置 {cfg['auth_env']}", file=sys.stderr)
+            status = 'failed' if requested else 'skipped'
+            results.append({'vendor': vendor, 'status': status, 'reason': '未配置 ' + cfg['auth_env']})
             continue
         try:
             written_paths.append(refresh_vendor(vendor))
             refreshed.append(vendor)
+            results.append({'vendor': vendor, 'status': 'success', 'reason': '导出成功'})
         except Exception as error:
             failed.append((vendor, error))
-            print(f"[error] {vendor} 刷新失败: {error}", file=sys.stderr)
+            reason = failure_reason(error, cfg['auth_env'])
+            results.append({'vendor': vendor, 'status': 'failed', 'reason': reason})
+            print(f"::error::{vendor}：{reason}", file=sys.stderr)
             continue
 
+    report_vendors(results)
     if not refreshed:
         print("[warn] 没有 vendor 被刷新", file=sys.stderr)
         if failed:
@@ -466,7 +504,7 @@ def main() -> int:
                 + ", ".join(vendor for vendor, _ in failed),
                 file=sys.stderr,
             )
-        return 1
+        return 1 if any(result['status'] == 'failed' for result in results) else 0
 
     print(f"[info] refreshed vendors: {', '.join(refreshed)}", file=sys.stderr)
     if failed:
@@ -480,7 +518,7 @@ def main() -> int:
         repo_root=REPO_ROOT,
         description="更新 LLM 使用数据",
     )
-    return 0
+    return 1 if any(result['status'] == 'failed' for result in results) else 0
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 name: 大模型用量同步
 
 # 每天北京时间 07:10（UTC 23:10）抓取 LLM token 消耗摘要并提交。
-# 凭证缺失或脚本失败不阻塞后续步骤，便于 credentials 还在补齐时静默重试。
+# 未配置的可选来源跳过；已配置来源失败时保留其他成功数据并明确报错。
 
 on:
   schedule:
@@ -24,25 +24,9 @@ jobs:
         uses: actions/checkout@v6
         with:
           token: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
-
-      - name: Check credentials
-        run: |
-          if [ -z "${MINIMAX_COOKIE:-}" ] \
-              && [ -z "${ANTHROPIC_ADMIN_KEY:-}" ] \
-              && [ -z "${OPENAI_ADMIN_KEY:-}" ]; then
-            echo "所有 vendor 凭证都未配置，跳过本次抓取"
-            echo "skip=no_credentials" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=no" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          MINIMAX_COOKIE: ${{ secrets.MINIMAX_COOKIE }}
-          ANTHROPIC_ADMIN_KEY: ${{ secrets.ANTHROPIC_ADMIN_KEY }}
-          OPENAI_ADMIN_KEY: ${{ secrets.OPENAI_ADMIN_KEY }}
-        id: creds
+          ref: main
 
       - name: Run sync script
-        if: steps.creds.outputs.skip == 'no'
         env:
           MINIMAX_COOKIE: ${{ secrets.MINIMAX_COOKIE }}
           MINIMAX_GROUP_ID: ${{ secrets.MINIMAX_GROUP_ID }}
@@ -50,3 +34,12 @@ jobs:
           OPENAI_ADMIN_KEY: ${{ secrets.OPENAI_ADMIN_KEY }}
         run: |
           python3 scripts/sync_llm_usage.py
+
+      - name: 保存逐来源同步状态
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-sync-status-${{ github.run_id }}
+          path: ${{ runner.temp }}/llm-sync-status.json
+          if-no-files-found: ignore
+          retention-days: 30

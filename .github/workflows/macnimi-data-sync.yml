@@ -139,6 +139,7 @@ jobs:
             --xcode-org-id "$XCODE_ORG_ID" \
             --updated-wda-bundle-id "$UPDATED_WDA_BUNDLE_ID" \
             --show-xcode-log \
+            --allow-provisioning-updates \
             --restart-health-server \
             --new-command-timeout 600
 
@@ -254,6 +255,7 @@ jobs:
                           "--xcode-org-id", os.environ["XCODE_ORG_ID"],
                           "--updated-wda-bundle-id", os.environ["UPDATED_WDA_BUNDLE_ID"],
                           "--show-xcode-log",
+                          "--allow-provisioning-updates",
                           "--restart-health-server", "--new-command-timeout", "600",
                       ]
                       if run_logged(recovery, log_path) == 0:

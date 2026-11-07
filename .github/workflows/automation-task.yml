@@ -94,7 +94,9 @@ jobs:
           fc-cache --force "$font_dir"
       - name: Check documented task configuration
         if: ${{ inputs.task_id != 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
-        run: python3 scripts/automation_tasks.py check
+        run: |
+          python3 scripts/automation_tasks.py check
+          python3 -m unittest discover -s scripts -p test_run_automation_task.py
       - name: Verify research network and repository protection
         if: ${{ inputs.task_id != 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
         run: python3 scripts/check_automation_permissions.py
@@ -120,31 +122,7 @@ jobs:
           test -n "$OPENAI_API_KEY"
           test -n "$OPENAI_BASE_URL"
           test -n "$OPENAI_MODEL"
-          set +e
-          codex exec --cd "$GITHUB_WORKSPACE/feei.cn" --ephemeral \
-            --config 'default_permissions="automation"' \
-            --config "permissions.automation=$AUTOMATION_PERMISSION_CONFIG" \
-            --model "$OPENAI_MODEL" \
-            --config 'model_provider="custom"' \
-            --config 'model_providers.custom.name="AI Proxy"' \
-            --config "model_providers.custom.base_url=\"${OPENAI_BASE_URL%/}\"" \
-            --config 'model_providers.custom.wire_api="responses"' \
-            --config 'model_providers.custom.env_key="OPENAI_API_KEY"' \
-            --config 'model_reasoning_effort="high"' \
-            --config 'web_search="live"' \
-            --config 'shell_environment_policy.exclude=["OPENAI_*","GH_*","GITHUB_*","ACTIONS_*","AUTOMATION_*"]' \
-            --output-schema output/schema.json \
-            --output-last-message output/result.json \
-            - < output/prompt.md > "$RUNNER_TEMP/automation.log" 2> "$RUNNER_TEMP/automation.err"
-          status=$?
-          set -e
-          if [ "$status" -ne 0 ]; then
-            echo "Codex 执行失败，退出码 $status"
-            if [[ ! "$TASK_ID" =~ ^(personal-health-trend-research|update-weight-wallpaper|daily-personal-record)$ ]]; then
-              tail -c 2500 "$RUNNER_TEMP/automation.err"
-            fi
-            exit "$status"
-          fi
+          python3 scripts/run_automation_task.py
           git diff --quiet || { echo '执行器修改了受保护的仓库文件'; exit 1; }
           python3 - <<'PY'
           import subprocess
@@ -170,6 +148,17 @@ jobs:
             feei.cn/output/report.md
             feei.cn/output/metadata.json
             feei.cn/output/schedule-check.json
+            feei.cn/output/writing/goal.json
+            feei.cn/output/writing/brief.json
+            feei.cn/output/writing/draft-0.json
+            feei.cn/output/writing/draft-0.md
+            feei.cn/output/writing/draft-1.json
+            feei.cn/output/writing/draft-1.md
+            feei.cn/output/writing/draft-2.json
+            feei.cn/output/writing/draft-2.md
+            feei.cn/output/writing/review-0.json
+            feei.cn/output/writing/review-1.json
+            feei.cn/output/writing/review-2.json
           if-no-files-found: ignore
           retention-days: 30
       - name: Transfer wallpaper to publisher

@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'blog/**'
       - 'src/**'
       - 'static/**'
       - 'plugins/**'
@@ -21,12 +22,13 @@ on:
       - 'scripts/build_weather_cache.mjs'
       - 'scripts/prepare_build_dependencies.mjs'
       - 'docusaurus.config.ts'
-      - 'config/search.ts'
-      - 'config/search-zh-dict.txt'
+      - 'config/**'
       - 'sidebars.ts'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig.json'
+      - 'babel.config.*'
+      - 'postcss.config.*'
       - '.github/workflows/deploy.yml'
 
 concurrency:

@@ -202,8 +202,14 @@ def verify_online(record):
     raise RuntimeError('数据已存储，但线上读取尚未核对成功；保留 Issue 供重试')
 
 
-def receipt(record, url, run_url):
-    lines = [f"已保存 {record['date']} 睡眠评分：**{record['score']} 分**。", '',
+def receipt(record, url, run_url, older=False):
+    heading = f"已保存 {record['date']} 睡眠评分：**{record['score']} 分**。"
+    if older:
+        source = record.get('provenance', {})
+        reference = (f"[Issue #{source['issueNumber']}]({source['issueUrl']})"
+                     if source.get('issueUrl') else '采集记录')
+        heading = f"本次输入已留档。{record['date']} 采用较新的{reference}：**{record['score']} 分**。"
+    lines = [heading, '',
              '时长 {}/50，就寝 {}/30，中断 {}/20。'.format(*[
                  record['components'][key]['score'] if record['components'].get(key) else '缺失' for key in COMPONENTS])]
     lines += [item['message'] for item in record.get('quality', {}).get('warnings', [])]
@@ -224,14 +230,14 @@ def process_issue(repo, number, run_url, local_root=None, verifier=verify_online
         if source_snapshot(fresh) != initial:
             return {'number': number, 'status': 'superseded'}
         result = storage_request({'operation': 'upsert', 'submission': submission}, local_root)
-        if result['status'] in {'conflict', 'stale'}:
-            raise ValueError('同日已有不同评分或更新的记录，已保留原记录与本次来源，请核对后再处理')
+        if result['status'] == 'stale':
+            raise ValueError('同一 Issue 已有更新版本，已保留本次来源，请稍后重试')
         record = result['record']
         url = verifier(record)
         fresh = gh_api(repo, f'issues/{number}')
         if source_snapshot(fresh) != initial:
             return {'number': number, 'status': 'superseded'}
-        body = marker + '\n' + receipt(record, url, run_url)
+        body = marker + '\n' + receipt(record, url, run_url, older=result['status'] == 'older')
         upsert_comment(repo, number, body, marker)
         set_state(repo, issue, '睡眠:已归档')
         gh_api(repo, f'issues/{number}', 'PATCH', {'state': 'closed', 'state_reason': 'completed'})

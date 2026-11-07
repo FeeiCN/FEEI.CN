@@ -3,7 +3,7 @@
 import argparse
 from contextlib import contextmanager
 from copy import deepcopy
-from datetime import date
+from datetime import date, datetime
 import fcntl
 import hashlib
 import json
@@ -105,6 +105,23 @@ def validate_submission(submission):
             or source['issueNumber'] < 1 or not re.fullmatch(r'[a-f0-9]{64}', source.get('bodySha256', ''))
             or source['bodySha256'] != hashlib.sha256(submission['rawText'].encode()).hexdigest()):
         raise ValueError('OCR 来源记录无效')
+    capture_order(record)
+
+
+def source_time(value):
+    try:
+        parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except (AttributeError, TypeError, ValueError) as error:
+        raise ValueError('评分来源时间无效') from error
+    if parsed.tzinfo is None:
+        raise ValueError('评分来源时间缺少时区')
+    return parsed
+
+
+def capture_order(record):
+    source = record.get('provenance', {})
+    return (source_time(source.get('issueCreatedAt') or record.get('capturedAt')),
+            source.get('issueNumber', 0))
 
 
 def archive_import(root, submission):
@@ -129,7 +146,6 @@ def upsert(root, submission):
         archive_import(root, submission)
         status = 'created'
         if existing:
-            same = facts(existing) == facts(incoming)
             old_source = existing.get('provenance', {})
             source = incoming['provenance']
             same_issue = old_source.get('issueUrl') == source['issueUrl']
@@ -137,30 +153,12 @@ def upsert(root, submission):
                 if old_source.get('bodySha256') == source['bodySha256']:
                     rebuild_index(root)
                     return {'status': 'unchanged', 'record': existing}
-                if source['issueUpdatedAt'] <= old_source.get('issueUpdatedAt', ''):
+                if source_time(source['issueUpdatedAt']) <= source_time(old_source['issueUpdatedAt']):
                     return {'status': 'stale', 'record': existing}
-                status = 'updated'
-            elif not same:
-                return {'status': 'conflict', 'record': existing}
-            else:
-                # A matching OCR capture may enrich an older UI export but never
-                # discard its more precise details or its original source.
-                merged = deepcopy(existing)
-                for key in ('observations', 'quality'):
-                    if key in incoming:
-                        merged.setdefault(key, {}).update(incoming[key])
-                if not merged.get('classification') and incoming.get('classification'):
-                    merged['classification'] = incoming['classification']
-                for key in COMPONENTS:
-                    if not merged['components'][key].get('detail') and incoming['components'][key].get('detail'):
-                        merged['components'][key]['detail'] = incoming['components'][key]['detail']
-                imports = merged.setdefault('imports', [])
-                reference = {key: source[key] for key in ('issueUrl', 'bodySha256', 'issueUpdatedAt')}
-                if not any(item.get('issueUrl') == reference['issueUrl'] and
-                           item.get('bodySha256') == reference['bodySha256'] for item in imports):
-                    imports.append(reference)
-                incoming = merged
-                status = 'merged'
+            elif capture_order(incoming) <= capture_order(existing):
+                rebuild_index(root)
+                return {'status': 'older', 'record': existing}
+            status = 'updated'
         atomic_write(target, incoming)
         count = rebuild_index(root)
         return {'status': status, 'record': incoming, 'days': count}

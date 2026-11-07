@@ -126,22 +126,61 @@ class SleepScoreImportTests(unittest.TestCase):
         self.assertEqual(storage.upsert(self.root, submission(older))['status'], 'stale')
         self.assertEqual(json.loads(storage.day_path(self.root, '2026-02-21').read_text())['score'], 83)
 
-    def test_conflicting_same_day_different_issue_is_not_overwritten(self):
+    def test_newer_same_day_issue_replaces_old_even_with_lower_score(self):
         storage.upsert(self.root, submission())
-        other = issue(13, BODY.replace('40/50', '41/50').replace('\n83\n', '\n84\n'))
-        self.assertEqual(storage.upsert(self.root, submission(other))['status'], 'conflict')
-        self.assertEqual(json.loads(storage.day_path(self.root, '2026-02-21').read_text())['score'], 83)
+        other = issue(13, BODY.replace('40/50', '39/50').replace('\n83\n', '\n82\n'), created='2026-02-21T01:00:00Z')
+        result = storage.upsert(self.root, submission(other))
+        self.assertEqual(result['status'], 'updated')
+        self.assertEqual(result['record'], submission(other)['record'])
+        self.assertEqual(json.loads((self.root / 'index.json').read_text())['scores'], [['2026-02-21', 82, 39, 25, 18]])
+        self.assertEqual(len(list((self.root / 'imports/12').glob('*.json'))), 1)
         self.assertEqual(len(list((self.root / 'imports/13').glob('*.json'))), 1)
 
-    def test_matching_capture_enriches_legacy_without_losing_precise_detail(self):
+    def test_older_issue_retry_or_later_edit_cannot_roll_back_latest_capture(self):
+        latest = issue(13, created='2026-02-21T01:00:00Z')
+        storage.upsert(self.root, submission(latest))
+        target = storage.day_path(self.root, '2026-02-21')
+        modified = target.stat().st_mtime_ns
+        old = issue(body=BODY.replace('40/50', '41/50').replace('\n83\n', '\n84\n'))
+        old['updated_at'] = '2026-02-22T02:00:00Z'
+        result = storage.upsert(self.root, submission(old))
+        self.assertEqual(result['status'], 'older')
+        self.assertEqual(result['record'], submission(latest)['record'])
+        self.assertEqual(target.stat().st_mtime_ns, modified)
+        self.assertTrue(list((self.root / 'imports/12').glob('*.json')))
+
+    def test_equal_creation_second_uses_issue_number_independent_of_arrival_order(self):
+        storage.upsert(self.root, submission(issue(13)))
+        self.assertEqual(storage.upsert(self.root, submission(issue(12)))['status'], 'older')
+        result = storage.upsert(self.root, submission(issue(14)))
+        self.assertEqual(result['status'], 'updated')
+        self.assertEqual(result['record']['provenance']['issueNumber'], 14)
+
+    def test_creation_order_compares_instants_across_timezones(self):
+        storage.upsert(self.root, submission(issue(12, created='2026-02-21T01:00:00Z')))
+        older = submission(issue(13, created='2026-02-21T08:30:00+08:00'))
+        result = storage.upsert(self.root, older)
+        self.assertEqual(result['status'], 'older')
+        self.assertEqual(result['record']['provenance']['issueNumber'], 12)
+
+    def test_newer_same_score_replaces_details_and_does_not_carry_old_warning(self):
+        storage.upsert(self.root, submission())
+        clean = BODY.replace('备注：你的 Apple Watch 于 07:10 关机。\n这可能影响了你的评分。\n', '')
+        other = issue(13, clean.replace('\n7小时\n', '\n7小时12分钟\n'), created='2026-02-21T01:00:00Z')
+        result = storage.upsert(self.root, submission(other))
+        self.assertEqual(result['status'], 'updated')
+        self.assertNotIn('quality', result['record'])
+        self.assertEqual(result['record']['components']['duration']['detail'], '7小时12分钟')
+        self.assertEqual(result['record']['provenance']['issueNumber'], 13)
+
+    def test_newer_capture_replaces_legacy_as_a_complete_snapshot(self):
         legacy = submission()['record']
         legacy.pop('provenance')
         legacy['components']['duration']['detail'] = '7小时12分钟'
         storage.seed(self.root, records=[legacy])
         result = storage.upsert(self.root, submission())
-        self.assertEqual(result['status'], 'merged')
-        self.assertEqual(result['record']['components']['duration']['detail'], '7小时12分钟')
-        self.assertEqual(result['record']['imports'][0]['issueUrl'], issue()['html_url'])
+        self.assertEqual(result['status'], 'updated')
+        self.assertEqual(result['record'], submission()['record'])
 
     def test_seed_never_overwrites_live_record(self):
         storage.upsert(self.root, submission())
@@ -179,7 +218,8 @@ class SleepScoreImportTests(unittest.TestCase):
         changed_metadata = issue()
         changed_metadata['updated_at'] = '2026-02-21T04:00:00Z'
         result = storage.upsert(self.root, submission(changed_metadata))
-        self.assertEqual(len(result['record']['imports']), 1)
+        self.assertEqual(result['status'], 'unchanged')
+        self.assertEqual(len(list((self.root / 'imports/12').glob('*.json'))), 1)
         self.assertEqual(target.stat().st_mtime_ns, modified)
 
     def test_invalid_json_shapes_are_rejected(self):
@@ -252,6 +292,25 @@ class SleepScoreImportTests(unittest.TestCase):
         self.assertEqual(result['status'], 'created')
         self.assertIn('查看评分数据', comments[0]['body'])
         self.assertEqual(calls[-1][2]['state'], 'closed')
+
+    def test_older_issue_is_closed_with_current_source_in_receipt(self):
+        latest = submission(issue(13, created='2026-02-21T01:00:00Z'))
+        storage.upsert(self.root, latest)
+        current, comments, calls, api = self.api_fixture(issue())
+        checked = []
+
+        def verify(record):
+            checked.append(record)
+            return 'https://feei.cn/data/sleep-score/2026/02/21.json'
+
+        with patch.object(importer, 'gh_api', side_effect=api):
+            result = importer.process_issue(REPO, 12, 'run1', self.root, verify)
+        self.assertEqual(result['status'], 'older')
+        self.assertEqual(checked, [latest['record']])
+        self.assertEqual(current['state'], 'closed')
+        self.assertIn('采用较新的[Issue #13]', comments[0]['body'])
+        self.assertIn('本次输入已留档', comments[0]['body'])
+        self.assertNotIn('待核对', comments[0]['body'])
 
     def test_online_failure_leaves_issue_open_then_retry_updates_same_receipt(self):
         current, comments, calls, api = self.api_fixture(issue())

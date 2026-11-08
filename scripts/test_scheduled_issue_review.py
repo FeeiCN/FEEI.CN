@@ -541,11 +541,57 @@ class ScheduledReviewTests(unittest.TestCase):
         self.assertEqual(decide(issue)['mode'], 'skip')
 
     def test_protected_paths_and_traversal_are_not_publishable(self):
-        for name in ['.github/workflows/check.yml', 'AGENTS.md', 'scripts/helper.py',
+        for name in ['.github/workflows/nested/check.yml', '.github/actions/action.yml', 'AGENTS.md', 'scripts/helper.py',
                      'docs/../secret', 'static/data/health/raw.json']:
             text = TEXT.replace(FILE, name)
             with self.subTest(name=name), self.assertRaises(ValueError):
                 review.seal(fixture(), OWNER, text, 'abc123')
+
+    def test_workflow_changes_require_complete_review_and_exact_owner_approval(self):
+        for filename in ['.github/workflows/check.yml', '.github/workflows/check.yaml',
+                         '.github/workflows/codex-issue-driver.yml']:
+            body = 'name: Check\non: push\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok'
+            text = TEXT.replace(FILE, filename).replace(BODY, body).replace('````markdown', '````yaml')
+            with self.subTest(filename=filename):
+                with self.assertRaisesRegex(ValueError, 'medium'):
+                    review.seal(fixture(), OWNER, text, 'abc123')
+                text = text.replace('"risk": "low"', '"risk": "medium"')
+                issue = fixture()
+                issue['comments'][0]['body'] = '修改 workflow，成功写入后关闭 Issue'
+                issue['comments'].append(comment('plan', review.BOT, review.seal(issue, OWNER, text, 'abc123'), '2026-11-05T01:01:00Z'))
+                issue['comments'].append(comment('approval', OWNER, '确认写入', '2026-11-05T01:02:00Z'))
+                issue['labels'] = [{'name': 'codex:plan-ready'}]
+                context = decide(issue, intent=interpretation(issue, 'approve'))
+                self.assertEqual(context['mode'], 'execute')
+                self.assertEqual(context['files'], [filename])
+                with tempfile.TemporaryDirectory() as folder, patch.object(review, 'ROOT', Path(folder)):
+                    root = Path(folder)
+                    subprocess.run(['git', 'init', '-q', folder], check=True)
+                    subprocess.run(['git', '-C', folder, '-c', 'user.name=test', '-c', 'user.email=test@example.com',
+                                    'commit', '-qm', 'baseline', '--allow-empty'], check=True)
+                    context['base'] = subprocess.check_output(['git', '-C', folder, 'rev-parse', 'HEAD'], text=True).strip()
+                    review.apply_draft(issue, OWNER, context)
+                    self.assertEqual((root / filename).read_text(), body + '\n')
+                    (root / filename).write_text(body + '\n# unapproved change\n')
+                    with self.assertRaisesRegex(ValueError, '不一致'):
+                        review.verify_files(context)
+
+    def test_workflow_yaml_gate_rejects_invalid_or_incomplete_workflows(self):
+        workflow = (review.ROOT / '.github/workflows/codex-issue-driver.yml').read_text()
+        script = textwrap.dedent(workflow.split("node <<'PYAML'\n", 1)[1].split('\n          PYAML', 1)[0])
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / '.github/workflows/check.yml'
+            target.parent.mkdir(parents=True)
+            context = base64.b64encode(json.dumps({'files': ['.github/workflows/check.yml']}).encode()).decode()
+            env = {**os.environ, 'REVIEW_CONTEXT': context,
+                   'NODE_PATH': str(review.ROOT / 'node_modules')}
+            for body, valid in [('on: push\njobs: {}\n', True), ('on: [\n', False),
+                                ('name: Missing jobs\non: push\n', False)]:
+                target.write_text(body)
+                result = subprocess.run(['node', '-'], input=script, text=True, capture_output=True,
+                                        cwd=folder, env=env)
+                with self.subTest(body=body):
+                    self.assertEqual(result.returncode == 0, valid, result.stderr)
 
     def test_final_files_must_equal_approved_version_and_only_use_planned_paths(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(review, 'ROOT', Path(folder)):

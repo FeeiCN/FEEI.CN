@@ -163,8 +163,9 @@ def content_paths(paths):
     for name in paths:
         if (not isinstance(name, str) or '\\' in name or name.startswith('/')
                 or '..' in PurePosixPath(name).parts or str(PurePosixPath(name)) != name
-                or not name.startswith(('docs/', 'blog/', 'static/media/'))):
-            raise ValueError('定时任务写入仅支持 docs/、blog/ 和 static/media/ 内的已审阅文件')
+                or not (name.startswith(('docs/', 'blog/', 'static/media/'))
+                        or re.fullmatch(r'\.github/workflows/[a-zA-Z0-9_-]+\.ya?ml', name))):
+            raise ValueError('写入仅支持 docs/、blog/、static/media/ 和 .github/workflows/ 内的已审阅文件')
     return paths
 
 
@@ -179,11 +180,13 @@ def metadata(text, write=True):
     if value.get('task_type') != 'implementation' or not paths:
         raise ValueError('写入计划必须列出具体内容文件')
     content_paths(paths)
+    if any(name.startswith('.github/workflows/') for name in paths) and value.get('risk') not in {'medium', 'high'}:
+        raise ValueError('workflow 修改的 risk 至少为 medium')
     return value
 
 
 def draft_contents(text):
-    blocks = re.findall(r'^### ([^\n]+?)[ \t]*\n(?:[ \t]*\n)*````(?:markdown|md|mdx|svg|text)\n([\s\S]*?)\n````[ \t]*$', text, re.M)
+    blocks = re.findall(r'^### ([^\n]+?)[ \t]*\n(?:[ \t]*\n)*````(?:markdown|md|mdx|svg|text|yaml|yml)\n([\s\S]*?)\n````[ \t]*$', text, re.M)
     if not blocks:
         return {}
     content_paths([name for name, _ in blocks])
@@ -201,6 +204,8 @@ def seal_report(body, title, base):
     if not re.search(r'^## 完整待审稿\s*$', body, re.M):
         return body
     contents = draft_contents(body)
+    if any(name.startswith('.github/workflows/') for name in contents):
+        raise ValueError('workflow 修改必须在本人评论请求后展示待审版本，不支持自动报告直接发布')
     if not contents or not re.fullmatch(r'[a-f0-9]{40}', base):
         raise ValueError('首次待审稿缺少完整文件或有效的 main 基线')
     if REPORT_PLAN in body:

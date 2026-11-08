@@ -205,6 +205,7 @@ def seal_report(body, title, base):
         raise ValueError('首次待审稿缺少完整文件或有效的 main 基线')
     if REPORT_PLAN in body:
         raise ValueError('首次待审稿不能自带审批封存标记')
+    body = readable_draft(body)
     value = {'version': 1, 'base': base, 'title': title,
              'body_sha256': hashlib.sha256(body.encode()).hexdigest(),
              'file_hashes': draft_files(body, list(contents))}
@@ -461,6 +462,28 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
     return context
 
 
+def readable_draft(text):
+    previews = []
+    for name, content in draft_contents(text).items():
+        if not name.endswith(('.md', '.mdx')):
+            continue
+        front = re.match(r'\A---\n([\s\S]*?)\n---\n', content)
+        title = None
+        if front:
+            match = re.search(r'^title: *(.+)$', front[1], re.M)
+            title = match[1].strip().strip('\"\'') if match else None
+            content = content[front.end():].lstrip('\n')
+        previews.append(('### ' + (title or PurePosixPath(name).stem) + '\n\n' + content).rstrip())
+    if not previews:
+        return text
+    introduction = text.split('## 完整待审稿', 1)[0].strip()
+    introduction = re.split(r'<details\b', introduction, maxsplit=1, flags=re.I)[0].strip()
+    return ((introduction + '\n\n' if introduction else '')
+            + '## 正文预览\n\n' + '\n\n---\n\n'.join(previews)
+            + '\n\n<details>\n<summary>文件源码与写入计划（供核对）</summary>\n\n'
+            + text + '\n\n</details>')
+
+
 def seal(issue, owner, text, base, initial_approval=False):
     spec = metadata(text, write=False)
     if spec['task_type'] in {'analysis', 'discussion'}:
@@ -476,7 +499,7 @@ def seal(issue, owner, text, base, initial_approval=False):
     notice = ('本次先整理完整待写入稿，尚未写入仓库。'
               '请审阅下方具体版本，确认后直接说明“这版可以，写入网站吧”。\n\n' if initial_approval else '')
     body = (f'{PLAN}commit={base}:review-source={snapshot(issue, owner)} -->\n\n'
-            + notice + text + '\n\n---\n继续修改、提问或暂停都可直接说明；确认本版完整正文及文件后，请明确说“这版可以，写入网站吧”。命令仍兼容。')
+            + notice + readable_draft(text) + '\n\n---\n继续修改、提问或暂停都可直接说明；确认本版完整正文及文件后，请明确说“这版可以，写入网站吧”。命令仍兼容。')
     if len(body.encode()) > 63000:
         raise ValueError('完整待审稿超出评论长度，不能截断后等待审批；请缩小本轮写入范围')
     return body

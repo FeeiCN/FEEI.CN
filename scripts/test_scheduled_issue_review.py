@@ -76,6 +76,47 @@ def report_ready(base='a' * 40):
 
 
 class ScheduledReviewTests(unittest.TestCase):
+    def test_preview_stays_outside_existing_draft_details(self):
+        text = '说明。\n\n<details>\n<summary>查看完整待审稿</summary>\n\n' + TEXT + '\n\n</details>'
+        preview = review.readable_draft(text)
+        visible = preview.split('<details>', 1)[0]
+        self.assertIn('## 正文预览', visible)
+        self.assertIn('确认后的正文', visible)
+        self.assertEqual(preview.count('<details>'), preview.count('</details>'))
+        self.assertEqual(review.draft_files(preview, [FILE]), review.draft_files(text, [FILE]))
+
+    def test_initial_report_preview_is_sealed_with_exact_source_files(self):
+        issue = fixture()
+        text = '介绍。\n\n<details>\n<summary>完整待审稿</summary>\n\n' + TEXT + '\n\n</details>\n'
+        issue['title'] = '标题'
+        issue['body'] = review.seal_report(text, issue['title'], 'a' * 40)
+        visible = issue['body'].split('<details>', 1)[0]
+        self.assertIn('确认后的正文', visible)
+        self.assertNotIn('slug:', visible)
+        draft = review.report_draft(issue)
+        self.assertEqual(draft['file_hashes'], review.draft_files(TEXT, [FILE]))
+        issue['body'] = issue['body'].replace('确认后的正文', '修改预览', 1)
+        self.assertIsNone(review.report_draft(issue))
+
+    def test_plain_reports_and_non_markdown_drafts_are_not_given_fake_previews(self):
+        self.assertEqual(review.seal_report('正常报告。', '标题', 'a' * 40), '正常报告。')
+        text = '## 完整待审稿\n### static/media/chart.svg\n````svg\n<svg/>\n````\n'
+        self.assertEqual(review.readable_draft(text), text)
+
+    def test_draft_preview_renders_markdown_and_preserves_exact_approved_files(self):
+        body = BODY.replace('slug: /example', 'slug: /example\ntitle: 易读的标题') + '\n\n## 小节\n\n**重点**\n\n```python\nprint(1)\n```'
+        text = TEXT.replace(BODY, body)
+        sealed = review.seal(fixture(), OWNER, text, 'abc123')
+        visible, source = sealed.split('<details>', 1)
+        self.assertIn('### 易读的标题', visible)
+        self.assertIn('## 小节\n\n**重点**', visible)
+        self.assertNotIn('slug:', visible)
+        self.assertNotIn('````markdown', visible)
+        self.assertIn(text, source)
+        self.assertEqual(review.draft_contents(sealed), {FILE: body + '\n'})
+        self.assertEqual(review.draft_files(sealed, [FILE]), review.draft_files(text, [FILE]))
+        self.assertEqual(review.metadata(sealed), review.metadata(text))
+
     def weread_fixture(self):
         data = {'book_title': '测试书', 'book_author': '作者', 'create_time_text': '2026-10-16 21:30:52',
                 'bookmark_id': '3300231591_42_5143-5154', 'book_id': '3300231591',

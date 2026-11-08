@@ -408,7 +408,12 @@ class AutomationResultTests(unittest.TestCase):
         draft = review.report_draft(issue)
         self.assertIsNotNone(draft)
         self.assertEqual(list(draft['file_hashes']), ['docs/example.md'])
-        self.assertEqual(body.count('完整正文'), 1)
+        visible, source = body.split('<details>', 1)
+        self.assertIn('## 正文预览', visible)
+        self.assertIn('完整正文', visible)
+        self.assertNotIn('````markdown', visible)
+        self.assertIn('````markdown\n完整正文\n````', source)
+        self.assertEqual(review.draft_contents(body), {'docs/example.md': '完整正文\n'})
         self.assertEqual(sum(c.args[:2] == ('issue', 'create') for c in api.call_args_list), 1)
         self.assertFalse(any(c.args[:2] == ('issue', 'comment') for c in api.call_args_list))
 

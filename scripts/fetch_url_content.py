@@ -123,6 +123,56 @@ def markdown_title(markdown: str) -> str:
     return ""
 
 
+def title_text(value: str) -> str:
+    value = re.sub(r'!?\[([^\]]*)\]\([^)]*\)', r'\1', value)
+    value = re.sub(r'<[^>]+>', '', unescape(value))
+    value = re.sub(r'[*_`]', '', value)
+    value = re.sub(r'（英文：[^）]*）', '', value)
+    return re.sub(r'\s+', ' ', value).strip()
+
+
+def usable_title(value: str) -> bool:
+    return bool(value and not re.match(r'https?://', value, re.I)
+                and value.casefold() not in {'untitled', '无标题', '微信公众平台', 'just a moment...',
+                                             'access denied', '403 forbidden', '404 not found'})
+
+
+def resolve_issue_title(result: dict[str, Any], url: str) -> str:
+    """Use the article heading when metadata is missing, and its existing translation when available."""
+    original = title_text(str(result.get('title') or ''))
+    valid = usable_title(original) and original != url
+    lines = str(result.get('markdown') or '').splitlines()
+    headings = []
+    fence = None
+    for index, line in enumerate(lines):
+        marker = re.match(r'^\s{0,3}(`{3,}|~{3,})', line)
+        if marker:
+            token = marker[1]
+            if fence is None:
+                fence = token
+            elif token[0] == fence[0] and len(token) >= len(fence):
+                fence = None
+            continue
+        if fence:
+            continue
+        match = re.match(r'^\s{0,3}(#{1,6})\s+(.+?)(?:\s+#+)?\s*$', line)
+        if match:
+            heading = title_text(match[2])
+            if usable_title(heading) and not re.match(r'^(?:\d+[.、]\s*)?(?:逐行翻译|通俗讲解|来源|内容)$', heading):
+                headings.append((index, len(match[1]), heading))
+    chosen = original if valid else (headings[0][2] if headings else '')
+    if result.get('translated'):
+        for (index, level, source), (next_index, next_level, translated) in zip(headings, headings[1:]):
+            if (level != next_level or any(line.strip() for line in lines[index + 1:next_index])
+                    or re.search(r'[\u4e00-\u9fff]', source)
+                    or not re.search(r'[\u4e00-\u9fff]', translated)):
+                continue
+            if (valid and source.casefold() in original.casefold()) or (not valid and source == chosen):
+                chosen = re.sub(re.escape(source), lambda _: translated, original, count=1, flags=re.I) if valid else translated
+                break
+    return chosen[:255].rstrip() + '…' if len(chosen) > 256 else chosen
+
+
 class MarkdownHTMLParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=False)
@@ -751,6 +801,7 @@ def fetch_url_content(
                     translate_timeout=translate_timeout,
                     bilingual=bilingual,
                 )
+            result['title'] = resolve_issue_title(result, url) or url
         return result
     except RuntimeError as error:
         return {

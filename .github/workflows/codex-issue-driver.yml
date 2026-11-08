@@ -831,16 +831,7 @@ jobs:
             echo '已回复讨论或说明缺失信息；本次未写入网站。' >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # ─────────────────────────────────────
-      # 5. execute 分支:build → commit → ff-merge main → push main
-      # 文本型仓库(owner 唯一、Markdown 单一)不再走 PR 模式:
-      #   - 不需要外部 review
-      #   - 不需要 CI 矩阵
-      #   - PAT 不需要 createPullRequest scope
-      #   - 避免 agent/issue-N 分支残留 / runner ephemeral 磁盘丢改动
-      # 改为:Codex 直接在 main 上改文件 → build 卡门 → commit → rebase → push main
-      # rebase 冲突 = 远端 main 上有冲突更新,driver 不强推,标 failed 等用户处理
-      # ─────────────────────────────────────
+      # 写入成功以 main 推送完成为准。
       - name: Build and push
         id: build
         if: steps.decide.outputs.mode == 'execute' && steps.codex.outcome == 'success'
@@ -989,17 +980,17 @@ jobs:
           LABEL="${STATE:-failed}"
           gh issue edit "$N" --repo "$REPO" --add-label "codex:${LABEL}"
 
-      # ─────────────────────────────────────
-      # 6. 终态保险:无论前面哪步失败 / cancel,这里都跑一次,
-      # 把 issue label 拉回一致状态。覆盖以下漏网场景:
-      #   - setup 步骤失败 (Checkout / Setup Node / Cache / Install)
-      #   - 无凭证 (creds check → skip=no_credentials)
-      #   - codex 步骤 cancelled (timeout 60min / 手动 cancel)
-      #   - Post plan comment 中段失败 (gh issue comment exit 后跳过 label 切换)
-      #   - 整个 workflow 被 cancel
-      # 设计原则:按 mode + 各 step outcome 算出「期望终态」,
-      # 已经是期望值时 no-op,避免覆盖正常路径的 label 切换。
-      # ─────────────────────────────────────
+          if [ "$STATE" = "done" ]; then
+            if ! gh issue close "$N" --repo "$REPO" --reason completed; then
+              MESSAGE='内容已写入 main，但自动关闭 Issue 失败，请查看本次运行日志。'
+              echo "::warning::$MESSAGE"
+              echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
+              gh issue comment "$N" --repo "$REPO" --body "<!-- codex-driver:close-failed -->
+          $MESSAGE" || true
+            fi
+          fi
+
+      # 失败时回复并协调终态标签。
       - name: 回复审阅失败
         if: >-
           always() && steps.decide.outputs.scheduled-review == 'true' &&

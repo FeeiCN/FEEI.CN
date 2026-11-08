@@ -892,6 +892,32 @@ class ScheduledReviewTests(unittest.TestCase):
         self.assertEqual(context['files'], [FILE])
         source_lookup.assert_not_called()
 
+    def test_new_owner_issue_starts_readonly_review_without_comment_or_command(self):
+        issue = fixture()
+        issue.update(author={'login': OWNER}, title='到底人追求的是什么',
+                     body='收入提高之后，为什么还觉得无法停下来？', comments=[])
+        self.assertTrue(review.owner_content_request(issue, OWNER))
+        context = decide(issue)
+        self.assertEqual(context['mode'], 'plan')
+        self.assertEqual(context['task'], 'owner-issue')
+        self.assertEqual(context['source'], review.snapshot(issue, OWNER))
+        self.assertNotIn('approval_id', context)
+        self.assertEqual(decide(issue, actor='outsider')['mode'], 'skip')
+
+        for changes in [
+            {'state': 'CLOSED'}, {'body': ''}, {'author': {'login': 'outsider'}},
+            {'labels': [{'name': 'codex:paused'}]},
+            {'labels': [{'name': 'codex:planning'}]},
+            {'comments': [comment('reply', review.BOT, '<!-- codex-driver:review:reply -->\n答复', '2026-11-08T10:35:00Z')]},
+            *({'title': title} for title in ['/plan 修改组件', 'https://example.com', '睡眠评分', '今日日记', '[自动任务] 研究']),
+        ]:
+            candidate = deepcopy(issue)
+            candidate.update(changes)
+            with self.subTest(changes=changes):
+                self.assertFalse(review.initial_owner_request(candidate, OWNER))
+                if changes.get('author', {}).get('login', OWNER) == OWNER:
+                    self.assertEqual(decide(candidate)['mode'], 'skip')
+
     def test_owner_legacy_development_commands_keep_the_existing_route(self):
         issue = fixture()
         issue['author'] = {'login': OWNER}

@@ -327,12 +327,26 @@ def intent_prompt(issue, owner, task):
     return instructions + '\n\n<input_data>\n' + json.dumps(data, ensure_ascii=False) + '\n</input_data>\n'
 
 
+def initial_owner_request(issue, owner):
+    title = issue.get('title', '').strip()
+    if (issue.get('author', {}).get('login') != owner or issue.get('state') != 'OPEN'
+            or not issue.get('body', '').strip() or not title
+            or title.startswith(('http://', 'https://', '/', '[自动任务]'))
+            or title == '睡眠评分' or any(word in title for word in ('天气', '上车', '下车', '日记'))
+            or issue.get('body', '').startswith('<!-- history-life-journey:session:')
+            or any(label['name'].startswith('codex:') for label in issue.get('labels', []))):
+        return False
+    return not any(c['author']['login'] == owner or
+                   (bot(c['author']) and c['body'].startswith('<!-- codex-driver:'))
+                   for c in trusted_comments(issue, owner))
+
+
 def owner_content_request(issue, owner):
     if issue.get('author', {}).get('login') != owner:
         return False
     request, _ = latest_request_and_plan(issue, owner)
     if request is None:
-        return False
+        return initial_owner_request(issue, owner)
     if not request['body'].lstrip().startswith('/'):
         return True
     if re.match(r'^/(?:review|revise)(?:\s|$)', request['body'].strip()):
@@ -383,6 +397,8 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
     comments = trusted_comments(issue, owner)
     own = [c for c in comments if c.get('author', {}).get('login') == owner]
     if not own:
+        if initial_owner_request(issue, owner):
+            context.update(mode='plan', source=snapshot(issue, owner))
         return context
     request = own[-1]
     text = request['body'].strip()

@@ -3,7 +3,7 @@ name: 每日个人记录
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 13 * * *"
+    - cron: "0 2 * * *"
 
 permissions:
   contents: read

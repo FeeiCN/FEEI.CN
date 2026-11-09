@@ -1,0 +1,87 @@
+name: GitHub Actions 失败诊断
+
+on:
+  workflow_run:
+    workflows:
+      - "AI 编程与研发提效"
+      - "AI 安全前沿研究流水线"
+      - "自动任务执行器"
+      - "网站严格检查"
+      - "Codex 议题驱动"
+      - "每日个人记录"
+      - "每日阅读精选"
+      - "网站部署"
+      - "日记提示词同步检查"
+      - "议题内容抓取与行车记录"
+      - "历史人物一生决策"
+      - "港股热门新股提醒"
+      - "睡眠评分议题归档"
+      - "FEEI.CN 知识库治理"
+      - "Mac mini 数据同步"
+      - "音乐播放器检查"
+      - "个人健康趋势研究"
+      - "日记议题归档"
+      - "安全架构与防御创新"
+      - "安全事件研究复盘"
+      - "大模型用量同步"
+      - "安全工程内容同步"
+      - "微信读书数据同步"
+      - "微信读书划线同步至议题"
+      - "更新体重壁纸"
+      - "每周阅读回访"
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 需要诊断的失败运行编号
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: actions-failure-diagnosis-${{ github.event.workflow_run.id || inputs.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
+      (github.event.workflow_run.head_repository.full_name == github.repository &&
+       github.event.workflow_run.name != 'GitHub Actions 失败诊断' &&
+       contains(fromJSON('["failure", "timed_out"]'), github.event.workflow_run.conclusion))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TARGET_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check diagnosis boundaries and delivery
+        run: python3 -m unittest discover -s scripts -p test_actions_failure_diagnosis.py
+      - name: Collect failed steps and redacted evidence
+        id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/actions_failure_diagnosis.py collect
+      - name: Generate diagnostic suggestions
+        if: steps.collect.outputs.ready == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+        run: python3 scripts/actions_failure_diagnosis.py analyze
+      - name: Publish diagnostic issue and summary
+        if: steps.collect.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/actions_failure_diagnosis.py publish

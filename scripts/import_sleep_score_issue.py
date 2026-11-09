@@ -24,6 +24,13 @@ MARKER = '<!-- sleep-score-import:'
 LABELS = {'睡眠评分': '7057ff', '睡眠:已归档': '0e8a16', '睡眠:待核对': 'fbca04', '睡眠:处理中': '1d76db'}
 
 
+class ScoreParseError(ValueError):
+    def __init__(self, candidate_count):
+        super().__init__('未找到明确的单个总分，请检查 OCR 文本')
+        self.diagnostic = {'stage': 'extract_total', 'error_code': 'ambiguous_total_score',
+                           'candidate_count': candidate_count}
+
+
 def gh_api(repo, endpoint, method='GET', payload=None):
     command = ['gh', 'api', f'repos/{repo}/{endpoint}', '--method', method]
     if payload is not None:
@@ -74,11 +81,12 @@ def parse_issue(issue, repo):
             raise ValueError('缺少或存在重复的分项：' + chinese)
         score, maximum = map(int, matches[0])
         components[key] = {'score': score, 'maximum': maximum}
-    totals = re.findall(r'^\s*(\d{1,3})\s*$', text, re.M)
+    score_panel = re.split(r'^[ \t]*睡眠[ \t]*$', text, maxsplit=1, flags=re.M)[0]
+    totals = re.findall(r'^[ \t]*(\d{1,3})[ \t]*$', score_panel, re.M)
     if not totals:
-        totals = re.findall(r'睡眠评分\s*[:：]?\s*(\d{1,3})(?!\d|\s*/)', text)
+        totals = re.findall(r'睡眠评分\s*[:：]?\s*(\d{1,3})(?!\d|\s*/)', score_panel)
     if len(totals) != 1:
-        raise ValueError('未找到明确的单个总分，请检查 OCR 文本')
+        raise ScoreParseError(len(totals))
     created = datetime.fromisoformat(issue['created_at'].replace('Z', '+00:00'))
     if created.tzinfo is None:
         raise ValueError('Issue 创建时间缺少时区')
@@ -251,7 +259,11 @@ def process_issue(repo, number, run_url, local_root=None, verifier=verify_online
             gh_api(repo, f'issues/{number}', 'PATCH', {'state': 'open'})
         message = marker + '\n睡眠评分暂未归档：' + str(error) + f'。\n\n[查看运行]({run_url})'
         upsert_comment(repo, number, message, marker)
-        return {'number': number, 'status': 'blocked', 'reason': str(error)}
+        result = {'number': number, 'status': 'blocked', 'reason': str(error)}
+        if isinstance(error, ScoreParseError):
+            result['diagnostic'] = {**error.diagnostic, 'version': 1, 'issue_number': number,
+                                    'body_sha256': hashlib.sha256((issue.get('body') or '').encode()).hexdigest()}
+        return result
 
 
 def main():
@@ -276,6 +288,9 @@ def main():
     numbers = [args.issue] if args.issue else [item['number'] for item in pages(repo, 'issues?state=open') if is_sleep_issue(item, repo)]
     url = f"https://github.com/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
     results = [process_issue(repo, number, url, args.local_root) for number in sorted(numbers)]
+    for item in results:
+        if item.get('diagnostic'):
+            print('ACTION_DIAGNOSTIC ' + json.dumps(item['diagnostic'], ensure_ascii=False))
     print(json.dumps(results, ensure_ascii=False, indent=2))
     if os.environ.get('GITHUB_STEP_SUMMARY'):
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:

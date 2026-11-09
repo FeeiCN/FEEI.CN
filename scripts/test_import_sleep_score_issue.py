@@ -60,6 +60,18 @@ class SleepScoreImportTests(unittest.TestCase):
         self.assertEqual(record['components']['duration']['detail'], '7小时12分钟')
         self.assertEqual(record['observations']['durationPrecision'], 'minutes')
 
+    def test_other_sleep_panel_numbers_are_not_total_score_candidates(self):
+        text = BODY.replace('睡眠\n生命体征\n', '睡眠\n生命体征\n11\n')
+        self.assertEqual(submission(issue(body=text))['record']['score'], 83)
+        text = text.replace('\n83\n', '\n')
+        with self.assertRaises(ValueError):
+            submission(issue(body=text))
+
+    def test_multiple_scores_in_score_panel_remain_ambiguous(self):
+        text = BODY.replace('\n83\n', '\n83\n82\n')
+        with self.assertRaises(ValueError):
+            submission(issue(body=text))
+
     def test_shutdown_is_quality_warning_not_wake_time(self):
         record = submission()['record']
         self.assertEqual(record['quality']['warnings'][0]['time'], '07:10')
@@ -74,7 +86,8 @@ class SleepScoreImportTests(unittest.TestCase):
     def test_missing_duplicate_invalid_components_and_ambiguous_totals_fail(self):
         for text in [BODY.replace('•中断：18/20\n', ''), BODY + '\n中断:18/20',
                      BODY.replace('40/50', '51/50'), BODY.replace('40/50', '40/60'),
-                     BODY.replace('\n83\n', '\n84\n'), BODY + '\n82\n', BODY.replace('\n83\n', '\n101\n')]:
+                     BODY.replace('\n83\n', '\n84\n'), BODY.replace('\n83\n', '\n83\n82\n'),
+                     BODY.replace('\n83\n', '\n101\n')]:
             with self.subTest(text=text), self.assertRaises(ValueError):
                 submission(issue(body=text))
 
@@ -330,6 +343,19 @@ class SleepScoreImportTests(unittest.TestCase):
         with patch.object(importer, 'gh_api', side_effect=api), patch.object(importer, 'storage_request') as write:
             result = importer.process_issue(REPO, 12, 'run1', self.root)
         self.assertEqual(result['status'], 'blocked')
+        self.assertEqual(current['state'], 'open')
+        write.assert_not_called()
+
+    def test_ambiguous_total_emits_bounded_diagnostic_metadata(self):
+        text = BODY.replace('\n83\n', '\n83\n82\n')
+        current, comments, calls, api = self.api_fixture(issue(body=text))
+        with patch.object(importer, 'gh_api', side_effect=api), patch.object(importer, 'storage_request') as write:
+            result = importer.process_issue(REPO, 12, 'run1', self.root)
+        self.assertEqual(result['diagnostic']['error_code'], 'ambiguous_total_score')
+        self.assertEqual(result['diagnostic']['candidate_count'], 2)
+        self.assertEqual(result['diagnostic']['issue_number'], 12)
+        self.assertEqual(result['diagnostic']['body_sha256'], importer.hashlib.sha256(text.encode()).hexdigest())
+        self.assertNotIn(text, json.dumps(result))
         self.assertEqual(current['state'], 'open')
         write.assert_not_called()
 

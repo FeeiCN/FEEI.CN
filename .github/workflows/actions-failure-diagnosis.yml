@@ -41,6 +41,7 @@ on:
 permissions:
   contents: read
   actions: read
+  checks: read
   issues: write
 
 concurrency:
@@ -55,7 +56,7 @@ jobs:
        github.event.workflow_run.name != 'GitHub Actions 失败诊断' &&
        contains(fromJSON('["failure", "timed_out"]'), github.event.workflow_run.conclusion))
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       TARGET_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
     steps:
@@ -67,7 +68,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Check diagnosis boundaries and delivery
-        run: python3 -m unittest discover -s scripts -p test_actions_failure_diagnosis.py
+        run: python3 -m unittest discover -s scripts -p 'test_actions_failure*.py'
       - name: Collect failed steps and redacted evidence
         id: collect
         env:
@@ -80,6 +81,19 @@ jobs:
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: python3 scripts/actions_failure_diagnosis.py analyze
+      - name: Collect requested source evidence
+        id: supplement
+        if: steps.collect.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/actions_failure_diagnosis.py supplement
+      - name: Refine suggestions with additional evidence
+        if: steps.supplement.outputs.ready == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+        run: python3 scripts/actions_failure_diagnosis.py refine
       - name: Publish diagnostic issue and summary
         if: steps.collect.outputs.ready == 'true'
         env:

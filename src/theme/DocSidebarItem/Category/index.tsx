@@ -35,6 +35,25 @@ import type {
 } from '@docusaurus/plugin-content-docs';
 import styles from './styles.module.css';
 
+function countArticles(items: PropSidebarItemCategory['items']): number {
+  const docIds = new Set<string>();
+  function visit(children: PropSidebarItemCategory['items'], categoryHref?: string) {
+    for (const child of children) {
+      if (child.type === 'category') {
+        visit(child.items, child.href);
+      } else if (
+        child.type === 'link' && child.docId && !child.unlisted
+        && child.href !== categoryHref
+        && child.label !== '总览' && child.label !== '人工智能安全体系'
+      ) {
+        docIds.add(child.docId);
+      }
+    }
+  }
+  visit(items);
+  return docIds.size;
+}
+
 function useAutoExpandActiveCategory({
   isActive,
   collapsed,
@@ -170,6 +189,7 @@ function DocSidebarItemCategoryCollapsible({
   ...props
 }: Props): ReactNode {
   const {items, label, collapsible, className, href, customProps} = item;
+  const articleCount = useMemo(() => countArticles(items), [items]);
   const {
     docs: {
       sidebar: {autoCollapseCategories},
@@ -244,14 +264,21 @@ function DocSidebarItemCategoryCollapsible({
     'menu__link--active-parent': isActive && !isCurrentPage,
   });
   const linkLabel = (
-    <SidebarItemLabel
-      label={label}
-      icon={icon}
-      iconRef={iconAnimation.iconRef}
-      disableHover={iconAnimation.disableHover}
-      onMouseEnter={iconAnimation.onMouseEnter}
-      onMouseLeave={iconAnimation.onMouseLeave}
-    />
+    <>
+      <SidebarItemLabel
+        label={label}
+        icon={icon}
+        iconRef={iconAnimation.iconRef}
+        disableHover={iconAnimation.disableHover}
+        onMouseEnter={iconAnimation.onMouseEnter}
+        onMouseLeave={iconAnimation.onMouseLeave}
+      />
+      {articleCount > 0 && (
+        <span className={styles.articleCount} aria-label={`共 ${articleCount} 篇文章`}>
+          {articleCount}
+        </span>
+      )}
+    </>
   );
 
   return (

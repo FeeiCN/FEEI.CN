@@ -17,8 +17,15 @@ WRITING_TASKS = {
 }
 MAX_REVISIONS = 2
 TIME_BUDGET = 1800
-PHASE_TIMEOUTS = {'draft': 720, 'review': 180, 'revise': 240}
+WRITING_TIME_BUDGET = 5400
+PHASE_TIMEOUTS = {'draft': 1200, 'review': 720, 'revise': 900}
 CHECKS = ('facts', 'logic', 'readability', 'preservation')
+
+
+class WritingBudgetError(TimeoutError):
+    def __init__(self, phase, remaining, reserved):
+        super().__init__('剩余时间不足以完成当前阶段并保留必要复核预算')
+        self.phase, self.remaining, self.reserved = phase, remaining, reserved
 
 
 def object_schema(properties):
@@ -98,14 +105,17 @@ def stage_instructions(stage):
 
 
 class CodexExecutor:
-    def __init__(self, out):
+    def __init__(self, out, time_budget=TIME_BUDGET):
         self.out = out
-        self.deadline = time.monotonic() + TIME_BUDGET
+        self.deadline = time.monotonic() + time_budget
 
     def __call__(self, phase, prompt, schema):
         remaining = int(self.deadline - time.monotonic())
+        reserved = PHASE_TIMEOUTS['review'] if phase.startswith('revise-') else 0
         if remaining <= 0:
-            raise TimeoutError('写作执行时间预算已用完')
+            raise WritingBudgetError(phase, remaining, reserved)
+        if remaining <= reserved:
+            raise WritingBudgetError(phase, remaining, reserved)
         schema_path = save(self.out, 'stage-schema.json', schema)
         result_path = output_path(self.out, 'stage-result.json')
         result_path.unlink(missing_ok=True)
@@ -131,7 +141,7 @@ class CodexExecutor:
         log_dir = Path(os.environ.get('RUNNER_TEMP', '/tmp'))
         with (log_dir / 'automation.log').open('w') as log, (log_dir / 'automation.err').open('w') as err:
             completed = subprocess.run(command, input=prompt, text=True, stdout=log, stderr=err,
-                                       cwd=ROOT, timeout=min(remaining, phase_limit))
+                                       cwd=ROOT, timeout=min(remaining - reserved, phase_limit))
         if completed.returncode:
             raise RuntimeError(f'Codex {phase} 执行失败，退出码 {completed.returncode}')
         path = output_path(self.out, 'stage-result.json')
@@ -173,12 +183,13 @@ def execute(task_id, out, executor):
 
     instructions = {stage: stage_instructions(stage) for stage in ('draft', 'review', 'revise')}
     goal = {
-        'task_id': task_id, 'max_revisions': MAX_REVISIONS, 'time_budget_seconds': TIME_BUDGET,
+        'task_id': task_id, 'max_revisions': MAX_REVISIONS, 'time_budget_seconds': WRITING_TIME_BUDGET,
         'phase_timeout_seconds': PHASE_TIMEOUTS,
         'objective': '形成回答一个明确问题、证据可追溯、清楚易读的完整待审稿；不写入网站',
         'criteria': ['关键事实有来源且不超出证据', '机制与推导完整',
                      '术语、例子与段落服务读者理解', '保留作者观点、重要细节、引用与适用边界'],
         'state': 'drafting', 'selected_version': None, 'stop_reason': '',
+        'active_phase': None, 'phase_runs': [],
         'instructions_sha256': hashlib.sha256(
             (base + json.dumps(instructions, ensure_ascii=False, sort_keys=True)).encode()).hexdigest(),
     }
@@ -204,9 +215,33 @@ def execute(task_id, out, executor):
         save(out, 'result.json', result)
         return result
 
+    def call_phase(phase, prompt, schema):
+        goal['active_phase'] = phase
+        checkpoint()
+        started = time.monotonic()
+        record = {'phase': phase, 'limit_seconds': PHASE_TIMEOUTS[phase.split('-')[0]]}
+        try:
+            value = executor(phase, prompt, schema)
+            record['status'] = 'completed'
+            return value
+        except (TimeoutError, subprocess.TimeoutExpired) as error:
+            record['status'] = 'budget_exhausted' if isinstance(error, WritingBudgetError) else 'timed_out'
+            if isinstance(error, subprocess.TimeoutExpired):
+                record['timeout_seconds'] = error.timeout
+            if isinstance(error, WritingBudgetError):
+                record.update(remaining_seconds=error.remaining, reserved_review_seconds=error.reserved)
+            raise
+        except Exception:
+            record['status'] = 'failed'
+            raise
+        finally:
+            record['elapsed_seconds'] = round(time.monotonic() - started, 1)
+            goal['phase_runs'].append(record)
+            checkpoint()
+
     checkpoint()
     try:
-        draft = executor('draft', base + '\n\n' + instructions['draft'],
+        draft = call_phase('draft', base + '\n\n' + instructions['draft'],
                          DRAFT_SCHEMA)
         validate_shape(draft, DRAFT_SCHEMA)
         brief, result = draft['brief'], draft['result']
@@ -225,7 +260,7 @@ def execute(task_id, out, executor):
                         '核对问题是否解决，并与上一版比较是否丢失证据或引入错误。' if reviews else '')
             if parents[candidate] is not None:
                 previous += f'本版编辑基线为 output/writing/draft-{parents[candidate]}.json，必须核对重要内容是否保留。'
-            review = executor(f'review-{round_number}', base + '\n\n' + instructions['review'] + '\n' +
+            review = call_phase(f'review-{round_number}', base + '\n\n' + instructions['review'] + '\n' +
                               f'读取 output/writing/brief.json、output/writing/draft-{candidate}.json。'
                               f'返回 draft_sha256={digest(current)}。{previous}', REVIEW_SCHEMA)
             ready = review_ready(review, current)
@@ -241,7 +276,7 @@ def execute(task_id, out, executor):
                 candidate -= 1
             goal['state'] = 'revising'
             checkpoint()
-            revised = executor(f'revise-{round_number + 1}', base + '\n\n' + instructions['revise'] + '\n' +
+            revised = call_phase(f'revise-{round_number + 1}', base + '\n\n' + instructions['revise'] + '\n' +
                                f'写作目标在 output/writing/brief.json；编辑基线为 output/writing/draft-{candidate}.json；'
                                f'本轮意见为 output/writing/review-{len(reviews) - 1}.json。', SCHEMA)
             validate_shape(revised, SCHEMA)
@@ -264,9 +299,33 @@ def execute(task_id, out, executor):
                        if item['priority'] != 'optional']
         return finish(blocked_result(versions[0], '达到两轮修订上限，当前稿件仍有问题：\n' + '\n'.join(outstanding)),
                       'blocked', '达到修订上限不代表通过')
-    except (TimeoutError, subprocess.TimeoutExpired):
-        result = blocked_result(versions[0] if versions else None, '阶段超时或执行达到时间预算，未完成稿件复核')
-        return finish(result, 'blocked', '阶段超时或总时间预算已用完')
+    except (TimeoutError, subprocess.TimeoutExpired) as error:
+        phase = goal['active_phase'] or 'draft'
+        labels = {'draft': '初稿', 'review': '审稿', 'revise': '修订'}
+        label = labels[phase.split('-')[0]]
+        limit = getattr(error, 'timeout', PHASE_TIMEOUTS[phase.split('-')[0]])
+        reason = (f'{phase} {label}阶段时间预算不足：剩余 {max(0, error.remaining)} 秒，'
+                  f'需为后续复核保留 {error.reserved} 秒。' if isinstance(error, WritingBudgetError) else
+                  f'{phase} {label}阶段达到 {limit} 秒时间预算，未完成稿件复核。')
+        latest = versions[-1] if versions else None
+        result = blocked_result(latest, reason)
+        topic = (latest['report_markdown'].splitlines()[0].lstrip('# ').strip() if latest else
+                 {'security-event-research': '安全事件研究', 'ai-security-frontier-research': 'AI 安全前沿研究',
+                  'ai-coding-rd-efficiency': 'AI 编程与研发提效',
+                  'security-architecture-defense': '安全架构与防御创新'}[task_id])
+        result['report_markdown'] = result['report_markdown'].replace(
+            '# 研究稿尚未完成复核', f'# {topic[:150]}：{label}未完成', 1)
+        result['report_markdown'] += f'\n\n已保留 {len(versions)} 版完整稿件、{len(reviews)} 次审稿记录；均未写入网站。'
+        if reviews:
+            findings = [item for item in reviews[-1]['findings'] if item['priority'] != 'optional']
+            if findings:
+                result['report_markdown'] += '\n\n最近一轮审稿意见（是否已解决仍待完整复核）：\n' + '\n'.join(
+                    f"- {item['location']}：{item['problem']}" for item in findings)
+        diagnostic = {'version': 1, 'task_id': task_id, 'stage': phase,
+                      'error_code': 'writing_budget_exhausted' if isinstance(error, WritingBudgetError) else 'writing_phase_timeout',
+                      'timeout_seconds': limit, 'draft_count': len(versions), 'review_count': len(reviews)}
+        print('ACTION_DIAGNOSTIC ' + json.dumps(diagnostic, ensure_ascii=False))
+        return finish(result, 'blocked', reason)
     except Exception:
         goal.update(state='failed', stop_reason='阶段执行或结果校验失败；未交付未经复核的稿件')
         checkpoint()
@@ -293,7 +352,9 @@ def main():
         if not os.environ.get(key):
             raise ValueError(f'缺少执行配置 {key}')
     out = ROOT / 'output'
-    result = execute(os.environ['TASK_ID'], out, CodexExecutor(out))
+    task_id = os.environ['TASK_ID']
+    budget = WRITING_TIME_BUDGET if task_id in WRITING_TASKS else TIME_BUDGET
+    result = execute(task_id, out, CodexExecutor(out, time_budget=budget))
     print(f"任务执行完成：{result['status']}")
 
 

@@ -181,6 +181,59 @@ class WritingLoopTests(unittest.TestCase):
         self.assertEqual(result['status'], 'blocked')
         self.assertTrue((self.out / 'writing/draft-0.md').is_file())
         self.assertIn('时间预算', self.goal()['stop_reason'])
+        self.assertEqual(self.goal()['active_phase'], 'review-0')
+        self.assertEqual(self.goal()['phase_runs'][-1]['status'], 'timed_out')
+        self.assertEqual(self.goal()['phase_runs'][-1]['timeout_seconds'], 30)
+        self.assertIn('review-0', result['report_markdown'])
+        self.assertIn('一个问题', result['report_markdown'])
+
+    def test_revision_timeout_preserves_review_findings_in_blocked_report(self):
+        result = self.execute(self.draft(), self.review(category='facts', priority='blocking'),
+                              subprocess.TimeoutExpired('codex', writing.PHASE_TIMEOUTS['revise']))
+        self.assertEqual(result['status'], 'blocked')
+        self.assertIn('revise-1', result['report_markdown'])
+        self.assertIn('900 秒', result['report_markdown'])
+        self.assertIn('术语没有解释', result['report_markdown'])
+        self.assertIn('1 版完整稿件、1 次审稿记录', result['report_markdown'])
+        self.assertEqual(self.goal()['phase_runs'][-1]['phase'], 'revise-1')
+
+    def test_draft_timeout_does_not_claim_a_saved_draft(self):
+        result = self.execute(subprocess.TimeoutExpired('codex', 720))
+        self.assertIn('尚未形成完整初稿', result['report_markdown'])
+        self.assertIn('0 版完整稿件', result['report_markdown'])
+        self.assertIn('安全事件研究', result['report_markdown'])
+        self.assertFalse((self.out / 'writing/draft-0.md').exists())
+
+    def test_revision_reserves_time_for_review_without_exceeding_total_budget(self):
+        env = {'OPENAI_MODEL': 'configured-model', 'OPENAI_BASE_URL': 'https://example.com/v1',
+               'OPENAI_API_KEY': 'test-key', 'AUTOMATION_PERMISSION_CONFIG': '{extends=":read-only"}',
+               'RUNNER_TEMP': str(self.root)}
+        executor = writing.CodexExecutor(self.out)
+        executor.deadline = 500 + writing.PHASE_TIMEOUTS['review'] + 140
+        def complete(command, **kwargs):
+            self.assertEqual(kwargs['timeout'], 140)
+            (self.out / 'stage-result.json').write_text(json.dumps(self.result))
+            return subprocess.CompletedProcess(command, 0)
+        with patch.dict('os.environ', env), patch.object(writing.time, 'monotonic', return_value=500), patch.object(
+                writing.subprocess, 'run', side_effect=complete):
+            executor('revise-1', 'instructions', writing.SCHEMA)
+        with patch.object(writing.time, 'monotonic', return_value=executor.deadline - 300), patch.object(writing.subprocess, 'run') as call:
+            with self.assertRaises(writing.WritingBudgetError) as caught:
+                executor('revise-1', 'instructions', writing.SCHEMA)
+            self.assertEqual(caught.exception.reserved, writing.PHASE_TIMEOUTS['review'])
+            call.assert_not_called()
+
+    def test_main_selects_research_budget_without_extending_other_tasks(self):
+        env = {'OPENAI_MODEL': 'configured-model', 'OPENAI_BASE_URL': 'https://example.com/v1',
+               'OPENAI_API_KEY': 'test-key', 'AUTOMATION_PERMISSION_CONFIG': '{extends=":read-only"}'}
+        for task, budget in (('security-event-research', 5400), ('daily-personal-record', 1800)):
+            with patch.dict('os.environ', {**env, 'TASK_ID': task}), patch.object(writing.Path, 'cwd', return_value=self.root), patch.object(
+                    writing, 'CodexExecutor') as executor, patch.object(writing, 'execute', return_value={'status': 'no_update'}):
+                writing.main()
+                executor.assert_called_once_with(self.out, time_budget=budget)
+        required = (writing.PHASE_TIMEOUTS['draft'] + (writing.MAX_REVISIONS + 1) * writing.PHASE_TIMEOUTS['review']
+                    + writing.MAX_REVISIONS * writing.PHASE_TIMEOUTS['revise'])
+        self.assertLessEqual(required, writing.WRITING_TIME_BUDGET)
 
     def test_revision_blocker_preserves_specific_missing_information(self):
         blocked = copy.deepcopy(self.result)

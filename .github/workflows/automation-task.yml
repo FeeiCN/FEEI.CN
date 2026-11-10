@@ -12,6 +12,14 @@ on:
       delivery:
         required: true
         type: string
+      personal_date:
+        required: false
+        default: ''
+        type: string
+      personal_issue:
+        required: false
+        default: ''
+        type: string
 
       review_issue:
         description: 原壁纸 Issue 编号（由议题驱动器传入）
@@ -47,6 +55,8 @@ jobs:
       TASK_ID: ${{ inputs.task_id }}
       TASK_PROMPT_SOURCE: ${{ inputs.prompt_source }}
       TASK_DELIVERY: ${{ inputs.delivery }}
+      PERSONAL_DATE: ${{ inputs.personal_date }}
+      PERSONAL_ISSUE: ${{ inputs.personal_issue }}
       REVIEW_ISSUE: ${{ inputs.review_issue }}
       REVIEW_COMMENT: ${{ inputs.review_comment }}
       REVIEW_REQUEST_DIGEST: ${{ inputs.review_request_digest }}

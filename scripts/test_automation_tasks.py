@@ -374,6 +374,19 @@ class AutomationResultTests(unittest.TestCase):
             'prompt_sha256': 'abc', 'commit': 'def', 'schedule_check': schedule,
         }))
 
+    def test_daily_clues_update_existing_issue_instead_of_creating_another(self):
+        import daily_personal_record as daily
+        self.task.update(id='daily-personal-record')
+        self.write_delivery_metadata()
+        with patch.dict('os.environ', {'PERSONAL_ISSUE': '864', 'PERSONAL_DATE': '2026-11-10'}), patch.object(
+                automation, 'destination', return_value='owner/public'), patch.object(daily, 'find_issue', return_value={
+                    'number': 864, 'html_url': 'https://github.com/owner/public/issues/864'}), patch.object(
+                daily, 'publish_comment') as publish, patch.object(automation, 'gh') as create:
+            automation.deliver(self.task, self.out)
+        create.assert_not_called()
+        self.assertIn('daily-clues-status:completed', publish.call_args.args[3])
+        self.assertEqual(json.loads((self.out / 'metadata.json').read_text())['issue_url'], 'https://github.com/owner/public/issues/864')
+
     def test_expired_candidate_is_saved_without_posting_stale_alert(self):
         self.task.update(id='hk-ipo-alerts', title='港股提醒')
         self.write_delivery_metadata({'expires_at': '2020-01-01T00:45:00+00:00'})

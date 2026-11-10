@@ -1,11 +1,12 @@
 name: 大模型用量同步
 
-# 每天北京时间 07:10（UTC 23:10）抓取 LLM token 消耗摘要并提交。
+# 每天北京时间 07:10、22:45 抓取 LLM token 消耗摘要并提交。
 # 未配置的可选来源跳过；已配置来源失败时保留其他成功数据并明确报错。
 
 on:
   schedule:
     - cron: '10 23 * * *'
+    - cron: '45 14 * * *'
   workflow_dispatch:
 
 concurrency:

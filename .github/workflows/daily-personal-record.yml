@@ -2,8 +2,20 @@ name: 每日个人记录
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 自动选择、早间创建或晚间刷新
+        type: choice
+        default: auto
+        options: [auto, create, refresh]
+      date:
+        description: 北京时间日期 YYYY-MM-DD，留空自动选择
+        type: string
   schedule:
-    - cron: "0 2 * * *"
+    - cron: '45 23,0-14 * * *'
+    - cron: '15 15 * * *'
+    - cron: '45 15 * * *'
+    - cron: '15 16 * * *'
 
 permissions:
   contents: read
@@ -14,11 +26,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    if: ${{ vars.AUTOMATION_DAILY_PERSONAL_RECORD == 'true' && (github.event_name != 'workflow_dispatch' || github.actor == github.repository_owner) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      ready: ${{ steps.daily.outputs.ready }}
+      date: ${{ steps.daily.outputs.date }}
+      issue: ${{ steps.daily.outputs.issue }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify daily creation and refresh rules
+        run: python3 -m unittest discover -s scripts -p test_daily_personal_record.py
+      - name: Create daily inbox or refresh factual snapshot
+        id: daily
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PERSONAL_MODE: ${{ inputs.mode || 'auto' }}
+          PERSONAL_DATE: ${{ inputs.date }}
+          TRIGGER_SCHEDULE: ${{ github.event.schedule }}
+        run: python3 scripts/daily_personal_record.py prepare
+      - name: Save scheduling evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-schedule-${{ github.run_id }}
+          path: output/daily-schedule.json
+          if-no-files-found: ignore
+          retention-days: 30
   run:
-    if: ${{ vars.AUTOMATION_DAILY_PERSONAL_RECORD == 'true' }}
+    needs: prepare
+    if: ${{ vars.AUTOMATION_DAILY_PERSONAL_RECORD == 'true' && needs.prepare.outputs.ready == 'true' }}
     uses: ./.github/workflows/automation-task.yml
     with:
       task_id: daily-personal-record
       prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/定时任务/每日个人记录任务提示词.md
       delivery: issue
+      personal_date: ${{ needs.prepare.outputs.date }}
+      personal_issue: ${{ needs.prepare.outputs.issue }}
     secrets: inherit

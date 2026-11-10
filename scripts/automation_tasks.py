@@ -97,7 +97,10 @@ def check():
         except (ValueError, OSError) as error:
             raise ValueError(f"{t['workflow']}: {t['prompt_source']}: {error}") from error
         variable = 'AUTOMATION_' + t['id'].upper().replace('-', '_')
-        if t['condition'] != "${{ vars." + variable + " == 'true' }}":
+        allowed = ["${{ vars." + variable + " == 'true' }}"]
+        if t['id'] == 'daily-personal-record':
+            allowed.append("${{ vars." + variable + " == 'true' && needs.prepare.outputs.ready == 'true' }}")
+        if t['condition'] not in allowed:
             raise ValueError(f"{t['id']}: 缺少对应的启用开关")
         if not t['schedule'] or not t['manual']:
             raise ValueError(f"{t['id']}: 缺少定时或手动触发入口")
@@ -114,6 +117,8 @@ def destination(t):
 
 def collect_personal_data(t, out):
     today = datetime.now(ZoneInfo('Asia/Shanghai')).date()
+    if t['id'] == 'daily-personal-record' and os.environ.get('PERSONAL_DATE'):
+        today = datetime.fromisoformat(os.environ['PERSONAL_DATE']).date()
     if t['id'] == 'update-weight-wallpaper':
         first = today.replace(month=1, day=1)
     elif t['id'] == 'personal-health-trend-research':
@@ -237,6 +242,9 @@ def prepare(t, out):
         'reply_to': reply_to,
         'schedule_check': json.loads((out / 'schedule-check.json').read_text()) if (out / 'schedule-check.json').exists() else None,
     }
+    if t['id'] == 'daily-personal-record':
+        context['target_date'] = os.environ.get('PERSONAL_DATE') or datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat()
+        context['daily_issue'] = os.environ.get('PERSONAL_ISSUE') or None
     context['repository_activity'] = subprocess.check_output(
         ['git', 'log', '-25', '--format=%h %aI %s'], cwd=ROOT, text=True)
     if t['id'] in PERSONAL:
@@ -389,6 +397,25 @@ def deliver(t, out):
     repo = destination(t)
     if meta['delivery_repository'] != repo:
         raise ValueError('交付目的地发生变化')
+    if t['id'] == 'daily-personal-record' and os.environ.get('PERSONAL_ISSUE'):
+        import daily_personal_record as daily
+        day = datetime.fromisoformat(os.environ['PERSONAL_DATE']).date()
+        issue = daily.find_issue(repo, day)
+        if not issue or str(issue['number']) != os.environ['PERSONAL_ISSUE']:
+            raise ValueError('当天个人记录 Issue 已改变，停止交付')
+        if status != 'no_update':
+            marker = f'<!-- daily-personal-clues:{day} -->'
+            daily.publish_comment(repo, issue, marker, marker + f'\n<!-- daily-clues-status:{status} -->\n\n' + report + '\n\n仅供本人补充与纠正，未自动写入网站。')
+        meta.update(status=status, issue_url=issue['html_url'])
+        (out / 'metadata.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+        (out / 'report.md').write_text(report)
+        summary = os.environ.get('GITHUB_STEP_SUMMARY')
+        if summary:
+            with open(summary, 'a') as stream:
+                stream.write(f'个人记录：{issue["html_url"]} · {status}。线索已在原议题交付。\n')
+        if status == 'blocked':
+            raise ValueError('个人记录采集受阻，原 Issue 保持可补充状态')
+        return
     marker = f"<!-- automation-task:{t['id']} -->"
     digest = hashlib.sha256(report.encode()).hexdigest()
     fingerprint = f'<!-- report-sha256:{digest} -->'

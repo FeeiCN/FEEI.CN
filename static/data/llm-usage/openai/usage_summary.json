@@ -1,12 +1,12 @@
 {
   "vendor": "openai",
-  "fetchedAt": "2026-11-09 10:37:03",
+  "fetchedAt": "2026-11-10 12:35:45",
   "source": "ai.feei.cn",
   "source_endpoint": "https://ai.feei.cn/api/v1/admin/usage/stats",
   "timezone": "Asia/Shanghai",
   "sync_window": {
-    "start_date": "2026-10-11",
-    "end_date": "2026-11-09",
+    "start_date": "2026-10-12",
+    "end_date": "2026-11-10",
     "days": 30
   },
   "daily_token_usage": {
@@ -148,7 +148,8 @@
     "2026-11-06": 32834882,
     "2026-11-07": 254723167,
     "2026-11-08": 40718252,
-    "2026-11-09": 756859
+    "2026-11-09": 47991176,
+    "2026-11-10": 3443506
   },
   "date_usage_stats": {
     "2026-05-22": {
@@ -2168,28 +2169,28 @@
       "average_duration_ms": 0
     },
     "2026-11-06": {
-      "total_requests": 378,
-      "total_input_tokens": 3817969,
-      "total_output_tokens": 137729,
-      "total_cache_tokens": 26156160,
+      "total_requests": 0,
+      "total_input_tokens": 0,
+      "total_output_tokens": 0,
+      "total_cache_tokens": 0,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 26156160,
-      "total_tokens": 30111858,
-      "total_cost": 20.146537,
-      "total_actual_cost": 24.711671,
-      "average_duration_ms": 12146.550264550266
+      "total_cache_read_tokens": 0,
+      "total_tokens": 0,
+      "total_cost": 0.0,
+      "total_actual_cost": 0.0,
+      "average_duration_ms": 0
     },
     "2026-11-07": {
-      "total_requests": 2179,
-      "total_input_tokens": 7434018,
-      "total_output_tokens": 1398205,
-      "total_cache_tokens": 245890944,
+      "total_requests": 1904,
+      "total_input_tokens": 6352709,
+      "total_output_tokens": 1167780,
+      "total_cache_tokens": 213075712,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 245890944,
-      "total_tokens": 254723167,
-      "total_cost": 57.894839,
-      "total_actual_cost": 86.842258,
-      "average_duration_ms": 16805.34235888022
+      "total_cache_read_tokens": 213075712,
+      "total_tokens": 220596201,
+      "total_cost": 50.146448,
+      "total_actual_cost": 75.219671,
+      "average_duration_ms": 16322.41649159664
     },
     "2026-11-08": {
       "total_requests": 526,
@@ -2204,28 +2205,40 @@
       "average_duration_ms": 14629.77186311787
     },
     "2026-11-09": {
-      "total_requests": 16,
-      "total_input_tokens": 92466,
-      "total_output_tokens": 5961,
-      "total_cache_tokens": 658432,
+      "total_requests": 420,
+      "total_input_tokens": 5366326,
+      "total_output_tokens": 266834,
+      "total_cache_tokens": 42358016,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 658432,
-      "total_tokens": 756859,
-      "total_cost": 0.310385,
-      "total_actual_cost": 0.412632,
-      "average_duration_ms": 11756.5
+      "total_cache_read_tokens": 42358016,
+      "total_tokens": 47991176,
+      "total_cost": 40.890953,
+      "total_actual_cost": 57.451669,
+      "average_duration_ms": 15552.933333333332
+    },
+    "2026-11-10": {
+      "total_requests": 18,
+      "total_input_tokens": 397281,
+      "total_output_tokens": 15057,
+      "total_cache_tokens": 3031168,
+      "total_cache_creation_tokens": 0,
+      "total_cache_read_tokens": 3031168,
+      "total_tokens": 3443506,
+      "total_cost": 4.808489,
+      "total_actual_cost": 5.03345,
+      "average_duration_ms": 20900.5
     }
   },
-  "window_total_requests": 3099,
-  "window_total_cost": 91.402996,
-  "window_total_actual_cost": 131.178275,
-  "total_token_consumed": "10.22B",
-  "total_days": 139,
-  "active_days": 139,
-  "current_consecutive_days": 32,
+  "window_total_requests": 2868,
+  "window_total_cost": 108.897124,
+  "window_total_actual_cost": 156.916504,
+  "total_token_consumed": "10.27B",
+  "total_days": 140,
+  "active_days": 140,
+  "current_consecutive_days": 33,
   "most_active_day": {
     "date": "2026-10-25",
     "token_count": "1.23B"
   },
-  "daily_avg_token_consumed": "73.54M"
+  "daily_avg_token_consumed": "73.37M"
 }

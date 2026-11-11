@@ -8,9 +8,9 @@ import type {HomeRecord} from '../../plugins/homeRecordsPlugin';
 import styles from './index.module.css';
 
 const featured = [
-  {category: '经历', title: '我的网络安全之路', description: '从漏洞研究到大型平台安全建设的职业记录。', to: '/my-journey-in-cybersecurity'},
-  {category: '方法', title: '安全体系', description: '把风险、责任和技术能力组织成可运行的系统。', to: '/security-system'},
-  {category: '人生', title: '创造确定性人生', description: '一个人如何在不确定中建立长期选择权。', to: '/life-certainty'},
+  {category: '经历', title: '我的网络安全之路', description: '从漏洞研究到企业安全建设，我为什么不再只盯着单个漏洞？', to: '/my-journey-in-cybersecurity'},
+  {category: '方法', title: '安全体系', description: '安全工具都有了，如何建设经得起持续对抗的安全体系？', to: '/security-system'},
+  {category: '人生', title: '创造确定性人生', description: '每天都很忙，如何让时间和精力真正流向重要的事？', to: '/life-certainty'},
 ];
 
 function formatHomeDate(date: string, referenceYear?: string): string {
@@ -22,14 +22,14 @@ function HeroSection(): ReactNode {
     <section className={styles.hero}>
       <div className={styles.heroInner}>
         <h1>吴飞飞</h1>
-        <p className={styles.heroIntro}>写网络安全、人工智能安全，也记录生活。</p>
-        <p className={styles.heroGuide}>我把这些年的工作、思考和生活记录在这里。第一次来，可以先从下面三篇开始。</p>
+        <p className={styles.heroIntro}>探索高等级的安全如何建设，也记录生活。</p>
+        <p className={styles.heroGuide}>从网络安全到人工智能安全，积累攻防、架构与组织建设的方法。第一次来，可以从下面的问题开始。</p>
         <div className={styles.compactActions}>
           <a href="#start-reading">从这里开始 ↓</a>
           <Link to="/about">关于我 →</Link>
-          <a href="/rss.xml">RSS ↗</a>
+          <a href="/rss.xml">订阅新文章 · RSS ↗</a>
         </div>
-        <p className={styles.currentFocus}>最近在关注：AI 自动化攻击、漏洞挖掘，以及如何把经验写成系统。</p>
+        <p className={styles.currentFocus}>订阅安全研究、人生实践与日常记录的新文章；不固定更新频率，正文修订不会重复推送。</p>
       </div>
     </section>
   );
@@ -66,7 +66,7 @@ function RecentSection(): ReactNode {
         <h2 id="recent-heading" className={styles.compactHeading}>最近记录</h2>
         <div className={styles.updateGrid}>
           {updates.length > 0 && <div>
-            <h3><Link to="/security-engineering">网络安全 · 最近更新 →</Link></h3>
+            <h3><Link to="/security-engineering">网络安全 · 近期修订 →</Link></h3>
             <div className={styles.recentList}>{updates.map((item) => (
               <Link key={item.to} to={item.to} className={styles.recentItem}>
                 <time dateTime={item.date}>{formatHomeDate(item.date, updatesYear)}</time><span>{item.title}</span>
@@ -89,7 +89,7 @@ function RecentSection(): ReactNode {
 
 export default function Home(): ReactNode {
   return (
-    <Layout wrapperClassName={styles.homeLayout} description="吴飞飞的个人网站。写网络安全、人工智能安全与人生系统，也记录健康、阅读、旅行和日常生活。">
+    <Layout wrapperClassName={styles.homeLayout} description="吴飞飞的个人网站。探索高等级的安全如何建设，积累网络安全与人工智能安全的攻防、架构和组织建设方法，也记录人生实践与日常生活。">
       <Head>
         <title>吴飞飞 · 安全界</title>
         <meta property="og:title" content="吴飞飞 · 安全界" />

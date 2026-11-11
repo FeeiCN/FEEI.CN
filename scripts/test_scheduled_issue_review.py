@@ -76,6 +76,15 @@ def report_ready(base='a' * 40):
 
 
 class ScheduledReviewTests(unittest.TestCase):
+    def test_source_repaired_request_can_retry_after_skip_diagnostic(self):
+        issue = fixture()
+        issue['comments'].append(comment('skip', review.BOT, '<!-- codex-driver:diagnostic:skip -->缺少来源',
+                                         '2026-11-05T01:01:00Z'))
+        self.assertEqual(decide(issue)['mode'], 'interpret')
+        issue['comments'].append(comment('reply', review.BOT, '<!-- codex-driver:review: -->已回复',
+                                         '2026-11-05T01:02:00Z'))
+        self.assertEqual(decide(issue)['mode'], 'skip')
+
     def test_preview_stays_outside_existing_draft_details(self):
         text = '说明。\n\n<details>\n<summary>查看完整待审稿</summary>\n\n' + TEXT + '\n\n</details>'
         preview = review.readable_draft(text)

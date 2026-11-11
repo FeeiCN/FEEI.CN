@@ -413,7 +413,8 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
         return context
     _, plan = latest_request_and_plan(issue, owner)
     # Ignore old commands when an Issue edit/manual rerun follows a delivered response.
-    responses = [c for c in comments if bot(c.get('author', {})) and c['body'].startswith('<!-- codex-driver:')]
+    responses = [c for c in comments if bot(c.get('author', {})) and c['body'].startswith('<!-- codex-driver:')
+                 and not c['body'].startswith('<!-- codex-driver:diagnostic:skip -->')]
     if responses and max(c['createdAt'] for c in responses) >= request.get('updatedAt', request['createdAt']):
         return context
     labels = {x['name'] for x in issue.get('labels', [])}

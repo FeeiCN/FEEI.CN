@@ -80,7 +80,7 @@ class ScheduledReviewTests(unittest.TestCase):
         issue = fixture()
         issue['comments'].append(comment('skip', review.BOT, '<!-- codex-driver:diagnostic:skip -->缺少来源',
                                          '2026-11-05T01:01:00Z'))
-        self.assertEqual(decide(issue)['mode'], 'interpret')
+        self.assertEqual(decide(issue)['mode'], 'plan')
         issue['comments'].append(comment('reply', review.BOT, '<!-- codex-driver:review: -->已回复',
                                          '2026-11-05T01:02:00Z'))
         self.assertEqual(decide(issue)['mode'], 'skip')

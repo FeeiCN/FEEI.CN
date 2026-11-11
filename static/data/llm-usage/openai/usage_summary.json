@@ -1,12 +1,12 @@
 {
   "vendor": "openai",
-  "fetchedAt": "2026-11-11 10:44:37",
+  "fetchedAt": "2026-11-12 05:33:27",
   "source": "ai.feei.cn",
   "source_endpoint": "https://ai.feei.cn/api/v1/admin/usage/stats",
   "timezone": "Asia/Shanghai",
   "sync_window": {
-    "start_date": "2026-10-13",
-    "end_date": "2026-11-11",
+    "start_date": "2026-10-14",
+    "end_date": "2026-11-12",
     "days": 30
   },
   "daily_token_usage": {
@@ -150,7 +150,8 @@
     "2026-11-08": 40718252,
     "2026-11-09": 47991176,
     "2026-11-10": 103057331,
-    "2026-11-11": 10351151
+    "2026-11-11": 102826910,
+    "2026-11-12": 2854666
   },
   "date_usage_stats": {
     "2026-05-22": {
@@ -2194,28 +2195,28 @@
       "average_duration_ms": 0
     },
     "2026-11-08": {
-      "total_requests": 510,
-      "total_input_tokens": 2795417,
-      "total_output_tokens": 271730,
-      "total_cache_tokens": 36613888,
+      "total_requests": 0,
+      "total_input_tokens": 0,
+      "total_output_tokens": 0,
+      "total_cache_tokens": 0,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 36613888,
-      "total_tokens": 39681035,
-      "total_cost": 12.647045,
-      "total_actual_cost": 18.60543,
-      "average_duration_ms": 14581.578431372549
+      "total_cache_read_tokens": 0,
+      "total_tokens": 0,
+      "total_cost": 0.0,
+      "total_actual_cost": 0.0,
+      "average_duration_ms": 0
     },
     "2026-11-09": {
-      "total_requests": 420,
-      "total_input_tokens": 5366326,
-      "total_output_tokens": 266834,
-      "total_cache_tokens": 42358016,
+      "total_requests": 411,
+      "total_input_tokens": 5310411,
+      "total_output_tokens": 261679,
+      "total_cache_tokens": 41946880,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 42358016,
-      "total_tokens": 47991176,
-      "total_cost": 40.890953,
-      "total_actual_cost": 57.451669,
-      "average_duration_ms": 15552.933333333332
+      "total_cache_read_tokens": 41946880,
+      "total_tokens": 47518970,
+      "total_cost": 40.686459,
+      "total_actual_cost": 57.144929,
+      "average_duration_ms": 15560.93187347932
     },
     "2026-11-10": {
       "total_requests": 807,
@@ -2230,28 +2231,40 @@
       "average_duration_ms": 14703.732342007435
     },
     "2026-11-11": {
-      "total_requests": 57,
-      "total_input_tokens": 1598182,
-      "total_output_tokens": 50249,
-      "total_cache_tokens": 8702720,
+      "total_requests": 646,
+      "total_input_tokens": 7132351,
+      "total_output_tokens": 301407,
+      "total_cache_tokens": 95393152,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 8702720,
-      "total_tokens": 10351151,
-      "total_cost": 12.678119,
-      "total_actual_cost": 18.268471,
-      "average_duration_ms": 20936.122807017546
+      "total_cache_read_tokens": 95393152,
+      "total_tokens": 102826910,
+      "total_cost": 60.128001,
+      "total_actual_cost": 88.393553,
+      "average_duration_ms": 15924.904024767802
+    },
+    "2026-11-12": {
+      "total_requests": 15,
+      "total_input_tokens": 106700,
+      "total_output_tokens": 7486,
+      "total_cache_tokens": 2740480,
+      "total_cache_creation_tokens": 0,
+      "total_cache_read_tokens": 2740480,
+      "total_tokens": 2854666,
+      "total_cost": 1.164611,
+      "total_actual_cost": 1.746916,
+      "average_duration_ms": 15062.2
     }
   },
-  "window_total_requests": 1794,
-  "window_total_cost": 183.802646,
-  "window_total_actual_cost": 261.940751,
-  "total_token_consumed": "10.38B",
-  "total_days": 141,
-  "active_days": 141,
-  "current_consecutive_days": 34,
+  "window_total_requests": 1879,
+  "window_total_cost": 219.5656,
+  "window_total_actual_cost": 314.900579,
+  "total_token_consumed": "10.48B",
+  "total_days": 142,
+  "active_days": 142,
+  "current_consecutive_days": 35,
   "most_active_day": {
     "date": "2026-10-25",
     "token_count": "1.23B"
   },
-  "daily_avg_token_consumed": "73.63M"
+  "daily_avg_token_consumed": "73.79M"
 }

@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 
 import daily_personal_record as daily
+import scheduled_issue_review as review
 
 DAY = date(2026, 11, 10)
 REPO = 'owner/repo'
@@ -32,6 +33,26 @@ def snapshot():
 
 
 class DailyTests(unittest.TestCase):
+    def test_created_inbox_passes_registered_task_source_validation(self):
+        body = daily.inbox_body(REPO, DAY, '42')
+        source = {'author': {'login': daily.BOT}, 'body': body}
+        run = {'path': '.github/workflows/daily-personal-record.yml', 'head_branch': 'main',
+               'event': 'schedule', 'head_repository': {'full_name': REPO}}
+        self.assertEqual(review.task_source(source, REPO, lambda _: run), 'daily-personal-record')
+        self.assertIn(daily.day_marker(DAY), body)
+        for field, value in [('path', '.github/workflows/other.yml'), ('head_branch', 'other'),
+                             ('head_repository', {'full_name': 'other/repo'}), ('event', 'issue_comment')]:
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                review.task_source(source, REPO, lambda _: {**run, field: value})
+        with self.assertRaises(ValueError):
+            review.task_source({**source, 'body': body + f'\nhttps://github.com/{REPO}/actions/runs/43'},
+                               REPO, lambda _: run)
+
+    def test_inbox_without_valid_run_id_is_not_created(self):
+        for run_id in (None, '', '0', '-1', '42/not-a-run'):
+            with self.subTest(run_id=run_id), self.assertRaises(ValueError):
+                daily.inbox_body(REPO, DAY, run_id)
+
     def test_timezone_and_midnight_refresh_pin_previous_date(self):
         self.assertEqual(daily.resolve(instant('2026-11-10T07:45:00')), (DAY, 'create'))
         self.assertEqual(daily.resolve(instant('2026-11-10T16:53:23')), (DAY, 'create'))
@@ -125,12 +146,17 @@ class DailyTests(unittest.TestCase):
     def test_inbox_created_before_slow_collection_and_morning_retries_skip_model(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(daily, 'ROOT', Path(folder)), patch.dict(os.environ, {
                 'GITHUB_REPOSITORY': REPO, 'PERSONAL_MODE': 'create', 'PERSONAL_DATE': str(DAY),
+                'GITHUB_RUN_ID': '42',
                 'GITHUB_OUTPUT': folder + '/outputs', 'GITHUB_STEP_SUMMARY': folder + '/summary'}), patch.object(
                 daily, 'find_issue', return_value=None), patch.object(daily, 'api', return_value=issue()) as api, patch.object(
                 daily, 'pages', return_value=[]), patch.object(daily, 'timing', return_value={}), patch.object(daily, 'publish_comment'), patch(
                 'sys.argv', ['daily', 'prepare']):
             def collect(*args):
                 self.assertEqual(api.call_args.args[1], 'POST')
+                posted = api.call_args.args[2]['body']
+                self.assertEqual(review.task_source({'author': {'login': daily.BOT}, 'body': posted}, REPO,
+                    lambda _: {'path': '.github/workflows/daily-personal-record.yml', 'head_branch': 'main',
+                               'event': 'schedule', 'head_repository': {'full_name': REPO}}), 'daily-personal-record')
                 return snapshot()
             with patch.object(daily, 'collect', side_effect=collect):
                 daily.main()

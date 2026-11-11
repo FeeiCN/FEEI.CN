@@ -63,6 +63,14 @@ def day_marker(day):
     return f'<!-- daily-personal-record:{day} -->'
 
 
+def inbox_body(repo, day, run_id):
+    if not re.fullmatch(r'[1-9][0-9]*', str(run_id or '')):
+        raise ValueError('创建个人记录需要有效的 GitHub Actions 运行编号')
+    return (f'{TASK_MARKER}\n{day_marker(day)}\n\n今天发生了哪些真正值得记住的事？\n\n'
+            '可以直接在这里记录；自动采集线索和数据在评论中更新，不代表已确认事实或网站发布。\n\n'
+            f'来源运行：https://github.com/{repo}/actions/runs/{run_id}')
+
+
 def snapshot_marker(day):
     return f'<!-- daily-personal-data:{day} -->'
 
@@ -321,7 +329,7 @@ def main():
     issue = find_issue(repo, day)
     created = issue is None
     if created:
-        body = f'{TASK_MARKER}\n{day_marker(day)}\n\n今天发生了哪些真正值得记住的事？\n\n可以直接在这里记录；自动采集线索和数据在评论中更新，不代表已确认事实或网站发布。'
+        body = inbox_body(repo, day, os.environ.get('GITHUB_RUN_ID'))
         issue = api(f'repos/{repo}/issues', 'POST', {'title': f'{day} 每日个人记录', 'body': body})
     schedule = timing(repo, day, mode, now)
     (out / 'daily-schedule.json').write_text(json.dumps(schedule, ensure_ascii=False))

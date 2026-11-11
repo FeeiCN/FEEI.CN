@@ -93,7 +93,7 @@ class DiagnosisTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder, patch.object(diagnosis, 'OUT', Path(folder)), patch.dict(
                 os.environ, {'OPENAI_API_KEY': 'test', 'OPENAI_BASE_URL': 'https://proxy.example/v1', 'OPENAI_MODEL': 'configured-model'}):
             (Path(folder) / 'context.json').write_text('{}')
-            result = {**{key: '建议' for key in diagnosis.FIELDS}, 'assessment': 'suspected', 'requested_sources': []}
+            result = {**{key: '建议' for key in diagnosis.FIELDS}, 'assessment': 'suspected', 'requested_sources': [], 'evidence_requests': []}
             response = {'status': 'completed', 'output': [{'type': 'message', 'content': [
                 {'type': 'output_text', 'text': json.dumps(result)}]}]}
             from io import BytesIO
@@ -176,7 +176,7 @@ class DiagnosisTests(unittest.TestCase):
         from types import SimpleNamespace
         with patch.object(diagnosis.subprocess, 'run', return_value=SimpleNamespace(
                 returncode=1, stderr=b'HTTP 403: secret details')), patch.object(diagnosis.time, 'sleep'), patch.object(
-                diagnosis, 'pages', return_value=[{'annotation_level': 'failure', 'message': 'synthetic failure'}]):
+                diagnosis, 'gh', return_value=[{'annotation_level': 'failure', 'message': 'synthetic failure'}]):
             evidence = diagnosis.job_evidence('owner/repo', {'id': 42, 'check_run_url': 'https://api.github.com/repos/owner/repo/check-runs/12'})
         self.assertIn('HTTP 403', evidence)
         self.assertIn('synthetic failure', evidence)
@@ -228,7 +228,7 @@ class EvidenceFlowTests(unittest.TestCase):
 
     def result(self, paths=None):
         return {**{key: '建议' for key in diagnosis.FIELDS},
-                'assessment': 'suspected', 'requested_sources': paths or []}
+                'assessment': 'suspected', 'requested_sources': paths or [], 'evidence_requests': []}
 
     def response(self, result):
         from io import BytesIO
@@ -259,7 +259,7 @@ class EvidenceFlowTests(unittest.TestCase):
     def test_refine_failure_preserves_initial_suggestions_and_marks_degraded(self):
         self.save('context.json', {'run': run(), 'sources': {}})
         self.save('diagnosis.json', self.result())
-        with patch.object(diagnosis, 'urlopen', return_value=self.response(self.result(['scripts/again.py']))):
+        with patch.object(diagnosis, 'urlopen', side_effect=TimeoutError):
             diagnosis.refine()
         result = json.loads((self.out / 'diagnosis.json').read_text())
         self.assertEqual(result['cause'], '建议')

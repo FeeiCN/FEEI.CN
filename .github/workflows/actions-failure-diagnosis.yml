@@ -74,28 +74,27 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/actions_failure_diagnosis.py collect
-      - name: Generate diagnostic suggestions
-        if: steps.collect.outputs.ready == 'true'
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
-        run: python3 scripts/actions_failure_diagnosis.py analyze
-      - name: Collect requested source evidence
-        id: supplement
+      - name: Investigate with bounded read-only evidence
         if: steps.collect.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/actions_failure_diagnosis.py supplement
-      - name: Refine suggestions with additional evidence
-        if: steps.supplement.outputs.ready == 'true'
-        env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
-        run: python3 scripts/actions_failure_diagnosis.py refine
+        run: python3 scripts/actions_failure_diagnosis.py investigate
       - name: Publish diagnostic issue and summary
         if: steps.collect.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/actions_failure_diagnosis.py publish
+      - name: Preserve diagnosis and read-only investigation audit
+        if: always() && steps.collect.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-diagnosis-${{ github.run_id }}
+          path: |
+            output/actions-failure-diagnosis/report.md
+            output/actions-failure-diagnosis/diagnosis.json
+            output/actions-failure-diagnosis/audit.json
+          if-no-files-found: ignore
+          retention-days: 30

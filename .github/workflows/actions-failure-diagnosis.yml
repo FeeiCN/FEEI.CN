@@ -9,6 +9,10 @@ on:
         description: 可选，指定失败运行编号；留空巡检全部 Actions 最近7天记录
         required: false
         type: string
+      report_run_id:
+        description: 可选，仅从指定诊断运行的成功调查产物重放交付，不调用模型；与 run_id 互斥
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -19,7 +23,7 @@ concurrency:
 
 jobs:
   investigate:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.actor == github.repository_owner)
+    if: github.ref == 'refs/heads/main' && inputs.report_run_id == '' && (github.event_name == 'schedule' || github.actor == github.repository_owner)
     runs-on: ubuntu-latest
     timeout-minutes: 50
     permissions:
@@ -68,7 +72,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always() && steps.prepare.outputs.ready == 'true'
         with:
-          name: codex-actions-diagnosis-${{ github.run_id }}
+          name: codex-actions-diagnosis-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
             output/codex-actions-diagnosis/context.json
             output/codex-actions-diagnosis/result.json
@@ -84,9 +88,36 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+  restore:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.report_run_id != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      ready: ${{ steps.validate.outputs.ready }}
+      artifact_id: ${{ steps.validate.outputs.artifact-id }}
+      source_run: ${{ steps.validate.outputs.source-run }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate completed investigation and immutable artifact
+        id: validate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPORT_RUN_ID: ${{ inputs.report_run_id }}
+          TARGET_RUN_ID: ${{ inputs.run_id }}
+        run: python3 scripts/codex_actions_diagnosis.py replay
+
   publish:
-    needs: investigate
-    if: needs.investigate.outputs.ready == 'true'
+    needs: [investigate, restore]
+    if: always() && !cancelled() && ((needs.investigate.result == 'success' && needs.investigate.outputs.ready == 'true') || (needs.restore.result == 'success' && needs.restore.outputs.ready == 'true'))
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -101,10 +132,20 @@ jobs:
         with:
           python-version: '3.12'
       - uses: actions/download-artifact@v4
+        if: needs.investigate.outputs.ready == 'true'
         with:
-          name: codex-actions-diagnosis-${{ github.run_id }}
+          name: codex-actions-diagnosis-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: output/codex-actions-diagnosis
+      - uses: actions/download-artifact@v4
+        if: needs.restore.outputs.ready == 'true'
+        with:
+          artifact-ids: ${{ needs.restore.outputs.artifact_id }}
+          merge-multiple: true
+          run-id: ${{ needs.restore.outputs.source_run }}
+          github-token: ${{ github.token }}
           path: output/codex-actions-diagnosis
       - name: Validate and publish solutions
         env:
           GH_TOKEN: ${{ github.token }}
+          REPLAY_REPORT: ${{ needs.restore.outputs.ready }}
         run: python3 scripts/codex_actions_diagnosis.py publish

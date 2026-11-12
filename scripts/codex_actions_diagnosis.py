@@ -18,21 +18,57 @@ SCHEMA = {'type': 'object', 'additionalProperties': False, 'properties': {
     'findings': {'type': 'array', 'items': {'type': 'object', 'additionalProperties': False,
         'properties': {'run_id': {'type': 'integer'}, 'report_markdown': {'type': 'string'}},
         'required': ['run_id', 'report_markdown']}}}, 'required': ['coverage', 'findings']}
+WORKFLOW = '.github/workflows/actions-failure-diagnosis.yml'
 
 
 def marker(run):
     return f'<!-- actions-codex-run:{run["id"]}:attempt:{run["run_attempt"]} -->'
 
 
-def delivered(repo, run):
-    issue, _ = find_delivery(repo, run)
-    if not issue:
-        return None, False
+def report_location(repo, run, issue):
     original = gh(f'repos/{repo}/issues/{issue}')
     comments = pages(f'repos/{repo}/issues/{issue}/comments')
-    return issue, marker(run) in original.get('body', '') or any(
-        entry.get('user', {}).get('login') == 'github-actions[bot]' and marker(run) in entry.get('body', '')
-        for entry in comments)
+    locations = [(f'repos/{repo}/issues/{issue}', original)] + [
+        (f'repos/{repo}/issues/comments/{entry["id"]}', entry) for entry in comments]
+    found = [(endpoint, entry) for endpoint, entry in locations
+             if entry.get('user', {}).get('login') == 'github-actions[bot]' and marker(run) in entry.get('body', '')]
+    if len(found) > 1:
+        raise ValueError('同次运行存在多份报告，停止自动覆盖')
+    return found[0] if found else None
+
+
+def delivered(repo, run):
+    issue, _ = find_delivery(repo, run)
+    return issue, bool(issue and report_location(repo, run, issue))
+
+
+def replay():
+    repo = os.environ['GITHUB_REPOSITORY']
+    identifier = os.environ.get('REPORT_RUN_ID', '')
+    if os.environ.get('TARGET_RUN_ID'):
+        raise ValueError('调查运行编号与交付重放编号不能同时指定')
+    if not re.fullmatch(r'[1-9]\d*', identifier):
+        raise ValueError('产物来源运行编号无效')
+    source = gh(f'repos/{repo}/actions/runs/{identifier}')
+    if (source.get('head_repository', {}).get('full_name') != repo or source.get('head_branch') != 'main'
+            or source.get('path') != WORKFLOW or source.get('status') != 'completed'
+            or source.get('event') not in ('schedule', 'workflow_dispatch')
+            or (source['event'] == 'workflow_dispatch' and source.get('actor', {}).get('login') != repo.split('/')[0])):
+        raise ValueError('产物必须来自本仓库 main 上的可信诊断运行')
+    attempt = source['run_attempt']
+    jobs = pages(f'repos/{repo}/actions/runs/{identifier}/attempts/{attempt}/jobs', 'jobs')
+    if not any(job.get('name') == 'investigate' and job.get('conclusion') == 'success' for job in jobs):
+        raise ValueError('来源调查未成功，不能重放未经校验的模型结果')
+    names = {f'codex-actions-diagnosis-{identifier}-attempt-{attempt}'}
+    if attempt == 1:
+        names.add(f'codex-actions-diagnosis-{identifier}')
+    artifacts = pages(f'repos/{repo}/actions/runs/{identifier}/artifacts', 'artifacts')
+    selected = [entry for entry in artifacts if entry['name'] in names and not entry.get('expired')
+                and 0 < entry.get('size_in_bytes', 0) <= 5_000_000]
+    if len(selected) != 1:
+        raise ValueError('未找到唯一、有效且大小合规的诊断产物')
+    with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+        output.write(f'ready=true\nartifact-id={selected[0]["id"]}\nsource-run={identifier}\n')
 
 
 def prepare():
@@ -107,6 +143,24 @@ def execute():
         raise ValueError('Codex 修改了受保护的仓库文件')
 
 
+def report_text(text):
+    # Normalize a literal header-name reference, while retaining conservative redaction for values.
+    lines = []
+    for line in text.splitlines(keepends=True):
+        def normalize(literal):
+            if re.search(r'\b[\w.-]+\s*=\s*[^\s,;]+', line[literal.end():]):
+                return literal[0]
+            return 'Cookie 请求头前缀'
+        lines.append(re.sub(r'`Cookie:\s*`\s*前缀', normalize, line, flags=re.I))
+    return redact(''.join(lines)).replace('@', '@\u200b')
+
+
+def report_body(run, text):
+    return (workflow_marker(run) + '\n' + marker(run) + '\n\n'
+            + f'运行：[{run["id"]}]({run["html_url"]}) · 第 {run["run_attempt"]} 次尝试\n\n'
+            + text + '\n\n仅调查并提供方案，未自动修复、重跑或部署。\n')
+
+
 def publish():
     context = json.loads((OUT / 'context.json').read_text())
     result = json.loads((OUT / 'result.json').read_text())
@@ -114,6 +168,10 @@ def publish():
     repo = os.environ['GITHUB_REPOSITORY']
     if context['repository'] != repo:
         raise ValueError('交付仓库不匹配')
+    repair = os.environ.get('REPLAY_REPORT') == 'true'
+    if repair and (os.environ.get('GITHUB_EVENT_NAME') != 'workflow_dispatch'
+                   or os.environ.get('GITHUB_ACTOR') != repo.split('/')[0]):
+        raise ValueError('仅本人手动重放可以更新已有机器人报告')
     summary = []
     for item in result['findings']:
         run = gh(f'repos/{repo}/actions/runs/{item["run_id"]}')
@@ -121,12 +179,23 @@ def publish():
         if not eligible(run, repo) or any(run[key] != original[key] for key in ('run_attempt', 'head_sha', 'path')):
             raise ValueError('运行来源或尝试版本变化，停止交付')
         issue, seen = delivered(repo, run)
-        if seen:
+        if seen and not repair:
             continue
-        text = redact(item['report_markdown']).replace('@', '@\u200b')
-        body = (workflow_marker(run) + '\n' + marker(run) + '\n\n'
-                + f'运行：[{run["id"]}]({run["html_url"]}) · 第 {run["run_attempt"]} 次尝试\n\n'
-                + text + '\n\n仅调查并提供方案，未自动修复、重跑或部署。\n')
+        body = report_body(run, report_text(item['report_markdown']))
+        if seen:
+            location = report_location(repo, run, issue)
+            if not location:
+                raise ValueError('原机器人报告已变化，停止重放')
+            endpoint, existing = location
+            if existing['body'] == body:
+                summary.append(existing['html_url'] + '（正文相同，未重复写入）')
+                continue
+            legacy = report_body(run, redact(item['report_markdown']).replace('@', '@\u200b'))
+            if existing['body'] != legacy:
+                raise ValueError('原报告与本次产物不一致，可能有人工修改；停止覆盖')
+            response = gh(endpoint, 'PATCH', {'body': body})
+            summary.append(response['html_url'] + '（已更新原报告）')
+            continue
         endpoint = f'repos/{repo}/issues/{issue}/comments' if issue else f'repos/{repo}/issues'
         data = {'body': body} if issue else {'title': 'Actions 失败诊断：' + run['name'][:150], 'body': body}
         response = gh(endpoint, 'POST', data)
@@ -136,6 +205,6 @@ def publish():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2 or sys.argv[1] not in ('prepare', 'execute', 'publish'):
-        raise SystemExit('用法：codex_actions_diagnosis.py prepare|execute|publish')
+    if len(sys.argv) != 2 or sys.argv[1] not in ('prepare', 'execute', 'publish', 'replay'):
+        raise SystemExit('用法：codex_actions_diagnosis.py prepare|execute|publish|replay')
     globals()[sys.argv[1]]()

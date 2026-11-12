@@ -1,100 +1,101 @@
 name: GitHub Actions 失败诊断
 
 on:
-  workflow_run:
-    workflows:
-      - "AI 编程与研发提效"
-      - "AI 安全前沿研究流水线"
-      - "自动任务执行器"
-      - "网站严格检查"
-      - "Codex 议题驱动"
-      - "每日个人记录"
-      - "每日阅读精选"
-      - "网站部署"
-      - "日记提示词同步检查"
-      - "议题内容抓取与行车记录"
-      - "历史人物一生决策"
-      - "港股热门新股提醒"
-      - "睡眠评分议题归档"
-      - "FEEI.CN 知识库治理"
-      - "Mac mini 数据同步"
-      - "音乐播放器检查"
-      - "个人健康趋势研究"
-      - "日记议题归档"
-      - "安全架构与防御创新"
-      - "安全事件研究复盘"
-      - "大模型用量同步"
-      - "安全工程内容同步"
-      - "微信读书数据同步"
-      - "微信读书划线同步至议题"
-      - "更新体重壁纸"
-      - "每周阅读回访"
-    types: [completed]
-    branches: [main]
+  schedule:
+    - cron: '23 */6 * * *'
   workflow_dispatch:
     inputs:
       run_id:
-        description: 需要诊断的失败运行编号
-        required: true
+        description: 可选，指定失败运行编号；留空巡检全部 Actions 最近7天记录
+        required: false
         type: string
 
 permissions:
   contents: read
-  actions: read
-  checks: read
-  issues: write
 
 concurrency:
-  group: actions-failure-diagnosis-${{ github.event.workflow_run.id || inputs.run_id }}
+  group: actions-failure-diagnosis
   cancel-in-progress: false
 
 jobs:
-  diagnose:
-    if: >-
-      (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
-      (github.event.workflow_run.head_repository.full_name == github.repository &&
-       github.event.workflow_run.name != 'GitHub Actions 失败诊断' &&
-       contains(fromJSON('["failure", "timed_out"]'), github.event.workflow_run.conclusion))
+  investigate:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.actor == github.repository_owner)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      TARGET_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+    timeout-minutes: 50
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+      issues: read
+    outputs:
+      ready: ${{ steps.prepare.outputs.ready }}
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: main
+          ref: ${{ github.sha }}
           persist-credentials: false
+          fetch-depth: 100
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Check diagnosis boundaries and delivery
-        run: python3 -m unittest discover -s scripts -p 'test_actions_failure*.py'
-      - name: Collect failed steps and redacted evidence
-        id: collect
+      - name: Verify diagnosis and delivery
+        run: python3 -m unittest discover -s scripts -p 'test_codex_actions_diagnosis.py'
+      - name: Read all workflows and pending failed runs
+        id: prepare
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/actions_failure_diagnosis.py collect
-      - name: Investigate with bounded read-only evidence
-        if: steps.collect.outputs.ready == 'true'
+          TARGET_RUN_ID: ${{ inputs.run_id }}
+        run: python3 scripts/codex_actions_diagnosis.py prepare
+      - name: Install Codex
+        if: steps.prepare.outputs.ready == 'true'
+        run: npm install --global @openai/codex
+      - name: Verify read-only repository and research network
+        if: steps.prepare.outputs.ready == 'true'
+        env:
+          AUTOMATION_PERMISSION_CONFIG: '{extends=":read-only", filesystem={":workspace_roots"={output="write"}}, network={enabled=true}}'
+        run: python3 scripts/check_automation_permissions.py
+      - name: Investigate failures with Codex
+        if: steps.prepare.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
-        run: python3 scripts/actions_failure_diagnosis.py investigate
-      - name: Publish diagnostic issue and summary
-        if: steps.collect.outputs.ready == 'true'
+        run: python3 scripts/codex_actions_diagnosis.py execute
+      - uses: actions/upload-artifact@v4
+        if: steps.prepare.outputs.ready == 'true'
+        with:
+          name: codex-actions-diagnosis-${{ github.run_id }}
+          path: |
+            output/codex-actions-diagnosis/context.json
+            output/codex-actions-diagnosis/result.json
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: investigate
+    if: needs.investigate.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: codex-actions-diagnosis-${{ github.run_id }}
+          path: output/codex-actions-diagnosis
+      - name: Validate and publish solutions
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/actions_failure_diagnosis.py publish
-      - name: Preserve diagnosis and read-only investigation audit
-        if: always() && steps.collect.outputs.ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: failure-diagnosis-${{ github.run_id }}
-          path: |
-            output/actions-failure-diagnosis/report.md
-            output/actions-failure-diagnosis/diagnosis.json
-            output/actions-failure-diagnosis/audit.json
-          if-no-files-found: ignore
-          retention-days: 30
+        run: python3 scripts/codex_actions_diagnosis.py publish

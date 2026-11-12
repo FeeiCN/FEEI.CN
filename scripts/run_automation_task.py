@@ -94,6 +94,22 @@ def digest(result):
     return hashlib.sha256(result['report_markdown'].encode()).hexdigest()
 
 
+def prepare_review_copy(result):
+    if result['status'] != 'completed':
+        return result
+    result = json.loads(json.dumps(result))
+    lines = result['report_markdown'].splitlines(keepends=True)
+    for index, line in enumerate(lines):
+        if line.startswith('# '):
+            break
+        if line.lstrip().startswith('完整'):
+            for notice in ('待后续模型复核', '待下一阶段复核', '尚待后续复核'):
+                line = line.replace(notice, '待本人审阅')
+            lines[index] = line
+    result['report_markdown'] = ''.join(lines)
+    return result
+
+
 def stage_instructions(stage):
     source = (ROOT / COMMON).read_text(encoding='utf-8')
     start, end = f'<!-- writing-stage:{stage}:start -->', f'<!-- writing-stage:{stage}:end -->'
@@ -248,7 +264,7 @@ def execute(task_id, out, executor):
         draft = call_phase('draft', base + '\n\n' + instructions['draft'],
                          DRAFT_SCHEMA)
         validate_shape(draft, DRAFT_SCHEMA)
-        brief, result = draft['brief'], draft['result']
+        brief, result = draft['brief'], prepare_review_copy(draft['result'])
         validate_result({'id': task_id}, result, out)
         versions.append(result)
         checkpoint()
@@ -284,6 +300,7 @@ def execute(task_id, out, executor):
                                f'写作目标在 output/writing/brief.json；编辑基线为 output/writing/draft-{candidate}.json；'
                                f'本轮意见为 output/writing/review-{len(reviews) - 1}.json。', SCHEMA)
             validate_shape(revised, SCHEMA)
+            revised = prepare_review_copy(revised)
             validate_result({'id': task_id}, revised, out)
             versions.append(revised)
             parents.append(candidate)

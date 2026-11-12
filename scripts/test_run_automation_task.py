@@ -115,6 +115,24 @@ class WritingLoopTests(unittest.TestCase):
         self.assertEqual(self.goal()['selected_version'], 0)
         self.assertIn('1 次模型审稿、0 轮修订', result['audit']['summary'])
 
+    def test_stage_notice_is_fixed_before_review_hash_and_preserves_article_quotes(self):
+        raw = copy.deepcopy(self.result)
+        raw['report_markdown'] = ('完整修订稿，待后续模型复核，尚未写入 FEEI.CN。\n\n' +
+                                  raw['report_markdown'] + '\n\n引用原话：“待后续模型复核”。')
+        expected = raw['report_markdown'].replace('完整修订稿，待后续模型复核', '完整修订稿，待本人审阅', 1)
+        def call(phase, prompt, schema):
+            if phase == 'draft':
+                return self.draft(raw)
+            current = json.loads((self.out / 'writing/draft-0.json').read_text())
+            self.assertEqual(current['report_markdown'], expected)
+            return self.review(current)
+        result = writing.execute('security-event-research', self.out, call)
+        stored = json.loads((self.out / 'writing/draft-0.json').read_text())
+        reviewed = json.loads((self.out / 'writing/review-0.json').read_text())
+        self.assertEqual(result['report_markdown'], expected)
+        self.assertEqual(writing.digest(result), reviewed['draft_sha256'])
+        self.assertEqual(writing.digest(stored), reviewed['draft_sha256'])
+
     def test_revision_is_reviewed_and_all_versions_remain_available(self):
         revised = copy.deepcopy(self.result)
         revised['report_markdown'] += '\n\n具体解释和例子。'

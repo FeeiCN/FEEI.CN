@@ -84,9 +84,9 @@ def render(data, output, preview=False):
     foreground, muted, accent, background = '#f1f0eb', '#929a9f', '#a3d8bd', '#101518'
     fig = Figure(figsize=(13.2, 28.68), dpi=100, facecolor=background)
     target = state['target']
-    title = f'下一站，{target}斤' if target else '保持，140斤'
     gap = max(0, state['current'] - (target or 140))
-    subtitle = f'还有 {gap:.1f} 斤' if target else '保持已经达到的阶段'
+    title = f'下一站，{target}斤' if target else ('回到，140斤' if gap else '保持，140斤')
+    subtitle = f'还有 {gap:.1f} 斤' if gap else '保持已经达到的阶段'
     fig.text(.5, .70, title, ha='center', color=foreground, fontsize=60, weight='bold')
     fig.text(.5, .65, subtitle, ha='center', color=accent, fontsize=32)
     fig.text(.5, .59, f"当前 {state['current']:.1f} 斤  ·  {state['latest']:%Y-%m-%d}",

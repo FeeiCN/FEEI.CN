@@ -406,6 +406,21 @@ class AutomationResultTests(unittest.TestCase):
         self.assertIn('待审阅', issue)
         self.assertNotIn('已交付', issue)
 
+    def test_governance_keeps_talk_snapshot_and_allows_separate_current_article(self):
+        self.task['id'] = 'knowledge-base-governance'
+        path = self.root / 'docs/talk.md'
+        path.parent.mkdir()
+        original = '---\nslug: /old-talk\nsidebar_badge:\n  text: 演讲\n---\n历史内容\n'
+        path.write_text(original)
+        self.result['report_markdown'] = ('## 完整待审稿\n### docs/talk.md\n````markdown\n' +
+                                          original + '\n当前补充\n````\n')
+        with self.assertRaisesRegex(ValueError, '演讲快照'):
+            automation.validate_result(self.task, self.result, self.out)
+        self.assertEqual(path.read_text(), original)
+        self.result['report_markdown'] = ('## 完整待审稿\n### docs/current.md\n````markdown\n'
+                                          '---\nslug: /current\n---\n新版观点，引用历史页。\n````\n')
+        self.assertEqual(automation.validate_result(self.task, self.result, self.out)[0], 'completed')
+
     def test_governance_delivery_seals_initial_draft_for_one_step_approval(self):
         self.task.update(id='knowledge-base-governance', title='知识库治理')
         self.result['report_markdown'] = ('# 修正 TLS 建议\n\n简短理由。\n\n<details>\n<summary>完整待审稿</summary>\n\n'

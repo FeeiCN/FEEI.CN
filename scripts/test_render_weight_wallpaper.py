@@ -43,6 +43,22 @@ class WallpaperTests(unittest.TestCase):
         data['weights'][0]['weight_jin'] = 139
         self.assertIsNone(normalize(data)['target'])
 
+    def test_final_goal_rebound_renders_current_gap(self):
+        data = fixture()
+        data['weights'][0]['weight_jin'] = 139
+        with tempfile.TemporaryDirectory() as folder:
+            render(data, Path(folder), preview=True)
+            svg = (Path(folder) / 'wallpaper.svg').read_text()
+            self.assertIn('回到，140斤', svg)
+            self.assertIn('还有 16.0 斤', svg)
+            self.assertNotIn('保持已经达到的阶段', svg)
+        data['weights'][-1]['weight_jin'] = 139
+        with tempfile.TemporaryDirectory() as folder:
+            render(data, Path(folder), preview=True)
+            svg = (Path(folder) / 'wallpaper.svg').read_text()
+            self.assertIn('保持，140斤', svg)
+            self.assertIn('保持已经达到的阶段', svg)
+
     def test_invalid_values_dates_sources_and_units_are_rejected(self):
         for changes in [{'weight_jin': float('nan')}, {'weight_jin': True}, {'weight_jin': 0},
                         {'date': '2026-11-06'}, {'date': '2026-11-04'},

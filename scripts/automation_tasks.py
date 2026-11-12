@@ -370,6 +370,20 @@ def validate_result(t, result, out):
         files.append(target)
     if t['id'] == 'daily-reading-selection' and status == 'completed':
         report = reading_full_text(result, report, out, files)
+    if t['id'] == 'knowledge-base-governance' and status == 'completed':
+        from scheduled_issue_review import draft_contents
+        for name, proposed in draft_contents(report).items():
+            path = ROOT / name
+            if not path.resolve().is_relative_to(ROOT.resolve()) or path.is_symlink():
+                raise ValueError('治理待审稿不能引用仓库外文件或符号链接')
+            if not path.is_file():
+                continue
+            original = path.read_text()
+            front = re.match(r'\A---\n(.*?)\n---(?:\n|$)', original, re.S)
+            meta = yaml.safe_load(front[1]) if front else {}
+            badge = meta.get('sidebar_badge') if isinstance(meta, dict) else None
+            if isinstance(badge, dict) and badge.get('text') == '演讲' and proposed != original:
+                raise ValueError('演讲快照必须保留原文件；当前观点请另建文章，不在历史页添加说明')
     if t['id'] == 'update-weight-wallpaper' and status == 'completed':
         from PIL import Image
         image = (out / 'wallpaper.png').resolve()

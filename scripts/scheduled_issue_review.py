@@ -124,6 +124,7 @@ def skip_feedback_required(issue, owner, actor, reason):
         return False
     request = max(requests, key=lambda c: c.get('updatedAt', c['createdAt']))
     return not any(bot(c.get('author', {})) and c.get('body', '').startswith('<!-- codex-driver:')
+                   and not c.get('body', '').startswith('<!-- codex-driver:review-failed -->')
                    and c.get('updatedAt', c['createdAt']) >= request.get('updatedAt', request['createdAt'])
                    for c in comments)
 
@@ -404,7 +405,8 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
     _, plan = latest_request_and_plan(issue, owner)
     # Ignore old commands when an Issue edit/manual rerun follows a delivered response.
     responses = [c for c in comments if bot(c.get('author', {})) and c['body'].startswith('<!-- codex-driver:')
-                 and not c['body'].startswith('<!-- codex-driver:diagnostic:skip -->')]
+                 and not c['body'].startswith(('<!-- codex-driver:diagnostic:skip -->',
+                                               '<!-- codex-driver:review-failed -->'))]
     if responses and max(c['createdAt'] for c in responses) >= request.get('updatedAt', request['createdAt']):
         return context
     labels = {x['name'] for x in issue.get('labels', [])}

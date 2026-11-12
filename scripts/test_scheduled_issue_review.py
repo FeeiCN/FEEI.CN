@@ -76,6 +76,19 @@ def report_ready(base='a' * 40):
 
 
 class ScheduledReviewTests(unittest.TestCase):
+    def test_failed_review_remains_retryable_but_delivered_report_is_not_repeated(self):
+        issue = fixture()
+        issue['comments'][0]['body'] = '只修订当前报告并补齐来源，不写入网站。'
+        issue['labels'] = [{'name': 'codex:failed'}]
+        issue['comments'].append(comment('failure', review.BOT, '<!-- codex-driver:review-failed -->未完成',
+                                         '2026-11-05T01:01:00Z'))
+        self.assertEqual(decide(issue)['mode'], 'interpret')
+        self.assertTrue(review.skip_feedback_required(issue, OWNER, OWNER, '重试仍未完成'))
+        issue['comments'].append(comment('delivered', review.BOT, '<!-- codex-driver:review:reply -->完整报告',
+                                         '2026-11-05T01:02:00Z'))
+        self.assertEqual(decide(issue)['mode'], 'skip')
+        self.assertFalse(review.skip_feedback_required(issue, OWNER, OWNER, '已回复'))
+
     def test_source_repaired_request_can_retry_after_skip_diagnostic(self):
         issue = fixture()
         issue['comments'].append(comment('skip', review.BOT, '<!-- codex-driver:diagnostic:skip -->缺少来源',

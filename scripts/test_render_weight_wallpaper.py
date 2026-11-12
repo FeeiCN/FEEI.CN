@@ -44,6 +44,10 @@ class WallpaperTests(unittest.TestCase):
         self.assertIsNone(normalize(data)['target'])
 
     def test_final_goal_rebound_renders_current_gap(self):
+        try:
+            import matplotlib
+        except ImportError:
+            self.skipTest('渲染集成验证需要 workflow 的 matplotlib 依赖')
         data = fixture()
         data['weights'][0]['weight_jin'] = 139
         with tempfile.TemporaryDirectory() as folder:

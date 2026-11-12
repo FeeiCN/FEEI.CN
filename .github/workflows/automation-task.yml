@@ -102,6 +102,9 @@ jobs:
             --output "$font_file"
           test "$(git hash-object "$font_file")" = 'dc15562470b4f842321894787a0d066879ccff8b'
           fc-cache --force "$font_dir"
+      - name: Verify fixed wallpaper renderer
+        if: ${{ inputs.task_id == 'update-weight-wallpaper' && steps.freshness.outputs.expired != 'true' }}
+        run: python3 -m unittest discover -s scripts -p test_render_weight_wallpaper.py
       - name: Check documented task configuration
         if: ${{ inputs.task_id != 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
         run: |

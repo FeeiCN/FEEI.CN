@@ -411,6 +411,12 @@ def deliver(t, out):
     repo = destination(t)
     if meta['delivery_repository'] != repo:
         raise ValueError('交付目的地发生变化')
+    if t['id'] == 'hk-ipo-alerts':
+        missing = [url for url in dict.fromkeys(result['sources']) if url not in report]
+        if missing:
+            links = [f'- [来源 {index} · {urlparse(url).hostname}](<{url}>)'
+                     for index, url in enumerate(missing, 1)]
+            report += '\n\n<details>\n<summary>核验来源</summary>\n\n' + '\n'.join(links) + '\n\n</details>'
     if t['id'] == 'daily-personal-record' and os.environ.get('PERSONAL_ISSUE'):
         import daily_personal_record as daily
         day = datetime.fromisoformat(os.environ['PERSONAL_DATE']).date()

@@ -406,6 +406,20 @@ class AutomationResultTests(unittest.TestCase):
         self.assertIn('待审阅', issue)
         self.assertNotIn('已交付', issue)
 
+    def test_ipo_delivery_keeps_missing_sources_readable_without_repeating_inline_links(self):
+        self.task.update(id='hk-ipo-alerts', title='港股提醒')
+        self.result['report_markdown'] = '# 发行结果\n\n[正式公告](https://example.com/a)'
+        self.result['sources'].append('https://example.com/b')
+        self.write_delivery_metadata()
+        with patch.object(automation, 'destination', return_value='owner/public'), \
+                patch.object(automation, 'gh', return_value='https://example.com/issue'):
+            automation.deliver(self.task, self.out)
+        body = (self.out / 'report.md').read_text()
+        self.assertIn('<summary>核验来源</summary>', body)
+        self.assertEqual(body.count('https://example.com/a'), 1)
+        self.assertEqual(body.count('https://example.com/b'), 1)
+        self.assertEqual(json.loads((self.out / 'metadata.json').read_text())['sources'], self.result['sources'])
+
     def test_governance_keeps_talk_snapshot_and_allows_separate_current_article(self):
         self.task['id'] = 'knowledge-base-governance'
         path = self.root / 'docs/talk.md'

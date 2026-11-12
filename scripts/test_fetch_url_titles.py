@@ -1,5 +1,8 @@
 import unittest
+from pathlib import Path
 from unittest.mock import patch
+
+import yaml
 
 import fetch_url_content as fetch
 
@@ -39,6 +42,22 @@ class IssueTitleTests(unittest.TestCase):
         translated = {'translated': True, 'markdown': '# Original\n\n# 中文标题\n\n译文'}
         with patch.object(fetch, '_fetch_raw', return_value=raw), patch.object(fetch, 'maybe_translate_markdown', return_value=translated):
             self.assertEqual(fetch.fetch_url_content(self.url, timeout=1)['title'], '中文标题')
+
+    def test_workflow_budget_allows_translation_timeout_fallback_and_delivery(self):
+        workflow = yaml.safe_load((Path(fetch.__file__).resolve().parents[1] /
+                                   '.github/workflows/fetch-issue-url.yml').read_text())
+        budget = workflow['jobs']['process']['timeout-minutes'] * 60
+        self.assertGreaterEqual(budget - fetch.DEFAULT_TRANSLATE_TIMEOUT, 300)
+
+    def test_translation_timeout_preserves_original_for_delivery(self):
+        raw = {'status': 'success', 'title': 'Original', 'markdown': 'An English article with enough Latin letters for language detection and a complete paragraph.'}
+        with patch.object(fetch, '_fetch_raw', return_value=raw), \
+                patch.object(fetch, 'translate_text', side_effect=fetch.TranslationError('timeout')):
+            result = fetch.fetch_url_content(self.url, timeout=1)
+        self.assertEqual(result['status'], 'success')
+        self.assertFalse(result['translated'])
+        self.assertEqual(result['markdown'], raw['markdown'])
+        self.assertEqual(result['translate_error'], 'timeout')
 
 
 if __name__ == '__main__':

@@ -146,7 +146,7 @@ def run_codex(prompt, *, output, timeout, cwd=ROOT, schema=None, permissions=Non
               profile='automation', sandbox='read-only', effort='high', search=None,
               exclude=(), github_read=False, ignore_user_config=False, model=None,
               binary='codex', stdout_log=None, stderr_log=None, max_bytes=2_000_000,
-              stage='task', attempt=1):
+              stage='task', attempt=1, allow_shell=True):
     stage = stage if re.fullmatch(r'[a-z0-9_-]{1,80}', stage) else 'task'
     started = time.monotonic()
     selected_model = model or os.environ.get('OPENAI_MODEL')
@@ -158,6 +158,7 @@ def run_codex(prompt, *, output, timeout, cwd=ROOT, schema=None, permissions=Non
         'permissions_sha256': hashlib.sha256((permissions or sandbox).encode()).hexdigest(),
         'cli_version': cli_version(binary), 'expected_cli_version': CODEX_VERSION,
         'model': selected_model, 'reasoning_effort': effort, 'schema': schema is not None,
+        'allow_shell': allow_shell,
         'run_id': os.environ.get('GITHUB_RUN_ID'), 'run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
         'run_url': ('https://github.com/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/'
                     + os.environ['GITHUB_RUN_ID']) if os.environ.get('GITHUB_REPOSITORY') and os.environ.get('GITHUB_RUN_ID') else None,
@@ -179,6 +180,8 @@ def run_codex(prompt, *, output, timeout, cwd=ROOT, schema=None, permissions=Non
             if record['cli_version'] != 'codex-cli ' + CODEX_VERSION:
                 raise ValueError('Codex CLI 版本与已验证版本不一致')
         config = {'model_reasoning_effort': effort}
+        if not allow_shell:
+            config['features.shell_tool'] = False
         command = [binary, 'exec', '--cd', str(cwd), '--ephemeral']
         if ignore_user_config:
             command.append('--ignore-user-config')

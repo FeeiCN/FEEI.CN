@@ -25,7 +25,7 @@ permissions:
 jobs:
   process:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
     if: >-
       github.event.issue.user.login == github.repository_owner &&
       (startsWith(github.event.issue.title, 'http://') ||

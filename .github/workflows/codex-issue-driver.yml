@@ -310,7 +310,7 @@ jobs:
                 echo "- Issue 关闭后仍可评论提问、修改或确认写入，无需重新打开"
                 echo "- 若 driver 被锁(\`codex:executing\` 等),等待上一次 \`/approve\` 流程结束后再发"
                 echo
-                echo "<!-- 本条评论由 driver 自动生成,无 Codex 调用 -->"
+                echo "<!-- 本条回执由固定程序生成；未执行后续审阅、写入或重做。意图判断是否调用模型见运行记录。 -->"
               } > /tmp/diag.md
               gh issue comment "$N" --repo "$REPO" --body-file /tmp/diag.md
               ;;

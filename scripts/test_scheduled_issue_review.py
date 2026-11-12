@@ -903,6 +903,9 @@ class ScheduledReviewTests(unittest.TestCase):
             def fake_run(command, **kwargs):
                 self.assertEqual(command[:2], ['codex', 'exec'])
                 self.assertIn('--ephemeral', command)
+                self.assertIn('--ignore-user-config', command)
+                self.assertIn('features.shell_tool=false', command)
+                self.assertEqual(kwargs['timeout'], 300)
                 self.assertEqual(command[command.index('--sandbox') + 1], 'read-only')
                 self.assertEqual(command[command.index('--model') + 1], 'configured-model')
                 self.assertNotIn('test-secret', ' '.join(command))

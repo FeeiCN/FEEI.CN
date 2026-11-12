@@ -62,6 +62,16 @@ class CodexRunnerTests(unittest.TestCase):
         self.assertNotIn('--sandbox', command)
         self.assertIn('shell_environment_policy.exclude=["OPENAI_*", "ACTIONS_*"]', command)
 
+    def test_text_only_call_disables_shell_without_changing_repository_or_sandbox(self):
+        with patch.object(runner, 'run_process', side_effect=self.complete) as call:
+            self.invoke(allow_shell=False, search='disabled', ignore_user_config=True)
+        command = call.call_args.args[0]
+        self.assertIn('features.shell_tool=false', command)
+        self.assertIn('web_search="disabled"', command)
+        self.assertIn('--ignore-user-config', command)
+        self.assertEqual(command[command.index('--cd') + 1], str(self.root))
+        self.assertEqual(command[command.index('--sandbox') + 1], 'read-only')
+
     def test_failure_removes_stale_output_and_never_retries(self):
         self.output.write_text('old success')
         with patch.object(runner, 'run_process', return_value=subprocess.CompletedProcess([], 7)) as call:
@@ -133,6 +143,8 @@ Path(sys.argv[sys.argv.index('--output-last-message') + 1]).write_text('{"ok":tr
                 patch.object(translate_text, 'run_codex', return_value='中文译文') as call:
             self.assertEqual(translate_text._call_codex('article', timeout=30, model='chosen'), '中文译文')
             self.assertEqual(call.call_args.kwargs['model'], 'chosen')
+            self.assertFalse(call.call_args.kwargs['allow_shell'])
+            self.assertEqual(call.call_args.kwargs['search'], 'disabled')
             self.assertIn('<source_article>\narticle\n</source_article>', call.call_args.args[0])
         for error in [runner.CodexError('failed', 3), ValueError('empty'), subprocess.TimeoutExpired('codex', 30)]:
             with patch.object(translate_text, '_resolve_codex_bin', return_value='codex'), \

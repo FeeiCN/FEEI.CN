@@ -8,7 +8,7 @@
 - 通用 → 自实现 HTML 解析,失败回退 Wayback Machine
 
 抓取后默认会调用 translate_text 翻译成中文（仅在内容判定为英文时）。
-翻译通过 Claude Code 走,超时默认 300s,与 HTTP 抓取超时(--timeout 20s)独立。
+翻译通过 Codex 执行,超时默认 900s,与 HTTP 抓取超时(--timeout 20s)独立。
 
 CLI: python fetch_url_content.py <url> [--timeout SECONDS] [--no-translate] [--bilingual]
 输出: JSON 到 stdout, 字段:
@@ -702,7 +702,7 @@ def block_media_url(block: dict[str, Any], entity_map: dict[str, dict[str, Any]]
     return None
 
 
-DEFAULT_TRANSLATE_TIMEOUT = 300.0
+DEFAULT_TRANSLATE_TIMEOUT = 900.0
 
 
 def maybe_translate_markdown(
@@ -714,8 +714,8 @@ def maybe_translate_markdown(
 ) -> dict[str, Any]:
     """判断 markdown 是否英文,是则翻译;返回附加字段 dict。
 
-    `translate_timeout` 是 Claude Code 调用超时(秒),与 HTTP fetch 超时独立。
-    翻译长文 + 标注 + 讲解常常需要 30-180s,默认 300s。
+    `translate_timeout` 是 Codex 调用超时(秒),与 HTTP fetch 超时独立。
+    长文翻译、标注和讲解共用900秒预算，超时后保留原文。
     """
     fields: dict[str, Any] = {
         "translated": False,
@@ -784,7 +784,7 @@ def fetch_url_content(
         timeout: HTTP 抓取超时(秒),默认 20。
         translate: 是否对英文内容做翻译。
         target_language: 翻译目标语言。
-        translate_timeout: Claude Code 调用超时(秒),默认 300。
+        translate_timeout: Codex 调用超时(秒),默认 900。
             翻译长文 + 标注 + 讲解需要 30-180s,不要复用 HTTP 抓取超时。
         bilingual: 已弃用,本实现忽略(Claude 输出本身就是结构化对照)。
     """

@@ -28,7 +28,7 @@ from codex_runner import run_codex
 
 
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1.15 Safari/605.1.15"
-DEFAULT_TIMEOUT = 300.0
+DEFAULT_TIMEOUT = 900.0
 CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 CACHE_VERSION = "v5"
 
@@ -235,7 +235,8 @@ def _call_codex(article: str, *, timeout: float, model: str | None) -> str:
         output_path = Path(temp_dir) / "result.md"
         try:
             return run_codex(full_prompt, output=output_path, timeout=timeout,
-                             effort='medium', stage='translation', model=model, binary=codex_bin)
+                             effort='medium', stage='translation', model=model, binary=codex_bin,
+                             search='disabled', allow_shell=False, ignore_user_config=True)
         except subprocess.TimeoutExpired as error:
             raise TranslationError(f"codex 调用超时({timeout}s)") from error
         except OSError as error:
@@ -263,7 +264,7 @@ def translate_text(
         target_language: 目标语言代码,默认 `zh-CN`。
         cache_path: 缓存文件路径;`None` 时使用 `scripts/cache/translation_cache.json`。
         use_cache: 是否读写本地缓存。
-        timeout: codex 调用超时秒数,默认 300。
+        timeout: codex 调用超时秒数,默认 900。
         bilingual: 兼容旧 API,本实现忽略(Codex 输出本身就是结构化对照)。
         model: 覆盖 Codex 模型,默认读 `OPENAI_MODEL` 环境变量或 Codex 默认。
 
@@ -319,7 +320,7 @@ def main() -> int:
     parser.add_argument("--source", default="", help="源语言代码,留空自动检测")
     parser.add_argument("--target", default="zh-CN", help="目标语言代码,默认 zh-CN")
     parser.add_argument("--no-cache", action="store_true", help="跳过本地缓存读写")
-    parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT, help="codex 调用超时秒数,默认 300")
+    parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT, help="codex 调用超时秒数,默认 900")
     parser.add_argument("--bilingual", action="store_true", help="兼容旧 API(本实现忽略)")
     parser.add_argument("--model", default=None, help="覆盖 Codex 模型,默认读 OPENAI_MODEL")
     parser.add_argument("--json", action="store_true", help="以 JSON 输出结果")

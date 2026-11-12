@@ -374,8 +374,9 @@ def interpret_message(issue, owner, task, state_dir):
     output = state_dir / 'intent.json'
     schema.write_text(json.dumps(INTENT_SCHEMA))
     output.unlink(missing_ok=True)
-    run_codex(text, output=output, schema=schema, cwd=ROOT, timeout=120,
+    run_codex(text, output=output, schema=schema, cwd=ROOT, timeout=300,
               effort='low', search='disabled', stage='intent', exclude=['REVIEW_*'],
+              allow_shell=False, ignore_user_config=True,
               stdout_log=state_dir / 'intent.log', stderr_log=state_dir / 'intent.err')
     return bind_intent(issue, owner, json.loads(output.read_text()))
 

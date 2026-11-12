@@ -15,7 +15,7 @@ import codex_runner as runner
 
 class CodexRunnerTests(unittest.TestCase):
     def setUp(self):
-        env = patch.dict(os.environ, {'GITHUB_ACTIONS': 'false'})
+        env = patch.dict(os.environ, {'GITHUB_ACTIONS': 'false', 'GITHUB_STEP_SUMMARY': ''})
         env.start()
         self.addCleanup(env.stop)
         version = patch.object(runner, 'cli_version', return_value='codex-cli ' + runner.CODEX_VERSION)

@@ -899,7 +899,7 @@ class ScheduledReviewTests(unittest.TestCase):
         result = interpretation(issue, 'approve')['result']
         with tempfile.TemporaryDirectory() as folder:
             state = Path(folder)
-            env = {'GITHUB_ACTIONS': 'false', 'OPENAI_API_KEY': 'test-secret', 'OPENAI_BASE_URL': 'https://proxy.example/v1/', 'OPENAI_MODEL': 'configured-model'}
+            env = {'GITHUB_ACTIONS': 'false', 'RUNNER_TEMP': folder, 'GITHUB_STEP_SUMMARY': '', 'OPENAI_API_KEY': 'test-secret', 'OPENAI_BASE_URL': 'https://proxy.example/v1/', 'OPENAI_MODEL': 'configured-model'}
             def fake_run(command, **kwargs):
                 self.assertEqual(command[:2], ['codex', 'exec'])
                 self.assertIn('--ephemeral', command)

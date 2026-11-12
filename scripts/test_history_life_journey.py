@@ -324,7 +324,7 @@ class HistoryJourneyTests(unittest.TestCase):
             for name, value in [('prepared.json', prepared), ('archive.json', issue)]:
                 (out / name).write_text(json.dumps(value))
             (out / 'prompt.md').write_text('只读执行，理由未知。')
-            env = {'GITHUB_ACTIONS': 'false', 'OPENAI_BASE_URL': 'https://example.com/v1', 'OPENAI_MODEL': 'configured-model',
+            env = {'GITHUB_ACTIONS': 'false', 'GITHUB_STEP_SUMMARY': '', 'OPENAI_BASE_URL': 'https://example.com/v1', 'OPENAI_MODEL': 'configured-model',
                    'AUTOMATION_PERMISSION_CONFIG': '{extends=":read-only"}', 'RUNNER_TEMP': folder}
 
             def model(command, **kwargs):

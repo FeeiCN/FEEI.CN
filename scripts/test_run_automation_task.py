@@ -13,7 +13,7 @@ import run_automation_task as writing
 
 class WritingLoopTests(unittest.TestCase):
     def setUp(self):
-        env = patch.dict('os.environ', {'GITHUB_ACTIONS': 'false'})
+        env = patch.dict('os.environ', {'GITHUB_ACTIONS': 'false', 'GITHUB_STEP_SUMMARY': ''})
         env.start()
         self.addCleanup(env.stop)
         stage_document = (writing.ROOT / writing.COMMON).read_text()

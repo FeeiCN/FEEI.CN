@@ -14,7 +14,7 @@ from test_actions_failure_diagnosis import run
 class CodexDiagnosisTests(unittest.TestCase):
     def test_codex_has_read_only_profile_and_schema_without_direct_model_http(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(task, 'OUT', Path(folder)), patch.dict(
-                os.environ, {'GITHUB_ACTIONS': 'false', 'OPENAI_BASE_URL': 'https://proxy.example/v1', 'OPENAI_MODEL': 'test-model'}):
+                os.environ, {'GITHUB_ACTIONS': 'false', 'RUNNER_TEMP': folder, 'GITHUB_STEP_SUMMARY': '', 'OPENAI_BASE_URL': 'https://proxy.example/v1', 'OPENAI_MODEL': 'test-model'}):
             Path(folder, 'context.json').write_text(json.dumps(self.context()))
             def execute(command, **kwargs):
                 self.assertEqual(command[:2], ['codex', 'exec'])
@@ -30,7 +30,7 @@ class CodexDiagnosisTests(unittest.TestCase):
 
     def test_executor_failure_does_not_produce_fallback_report(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(task, 'OUT', Path(folder)), patch.dict(
-                os.environ, {'GITHUB_ACTIONS': 'false', 'OPENAI_BASE_URL': 'https://proxy.example/v1', 'OPENAI_MODEL': 'test-model'}):
+                os.environ, {'GITHUB_ACTIONS': 'false', 'RUNNER_TEMP': folder, 'GITHUB_STEP_SUMMARY': '', 'OPENAI_BASE_URL': 'https://proxy.example/v1', 'OPENAI_MODEL': 'test-model'}):
             Path(folder, 'context.json').write_text(json.dumps(self.context()))
             with patch.object(runner, 'run_process', return_value=SimpleNamespace(returncode=1)), self.assertRaises(RuntimeError):
                 task.execute()

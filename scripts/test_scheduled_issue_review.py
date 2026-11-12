@@ -273,12 +273,12 @@ class ScheduledReviewTests(unittest.TestCase):
         self.assertEqual(data['current_draft']['id'], context['plan_id'])
         self.assertIn(BODY, data['current_draft']['body'])
 
-    def test_first_report_respects_owner_locks_pause_and_praise(self):
+    def test_first_report_respects_owner_pause_and_praise_with_stale_labels(self):
         issue = report_ready()
         self.assertEqual(decide(issue, actor='outsider')['mode'], 'skip')
         for label in ['codex:planning', 'codex:executing']:
             issue['labels'] = [{'name': label}]
-            self.assertEqual(decide(issue)['mode'], 'skip')
+            self.assertEqual(decide(issue, intent=interpretation(issue, 'approve'))['mode'], 'execute')
         issue['labels'] = []
         self.assertEqual(decide(issue, intent=interpretation(issue, 'pause'))['mode'], 'paused')
         issue['comments'][0]['body'] = '可以'
@@ -502,13 +502,13 @@ class ScheduledReviewTests(unittest.TestCase):
         self.assertEqual(confirmed['mode'], 'execute')
         self.assertEqual(confirmed['approval_id'], 'confirmation')
 
-    def test_initial_approval_still_checks_owner_and_does_not_override_locks(self):
+    def test_initial_approval_still_checks_owner_with_stale_labels(self):
         issue = fixture()
         issue['comments'][0]['body'] = '/approve'
         self.assertEqual(decide(issue, actor='outsider')['mode'], 'skip')
         for label in ['codex:planning', 'codex:executing']:
             issue['labels'] = [{'name': label}]
-            self.assertEqual(decide(issue)['mode'], 'skip')
+            self.assertEqual(decide(issue)['mode'], 'plan')
 
     def test_no_approval_without_complete_files(self):
         for text in [TEXT.replace('## 完整待审稿', '## 提纲'), TEXT.replace('````markdown', '```markdown')]:
@@ -555,10 +555,10 @@ class ScheduledReviewTests(unittest.TestCase):
         issue['comments'].append(comment('resume', OWNER, '/review', '2026-11-05T01:03:00Z'))
         self.assertEqual(decide(issue)['mode'], 'plan')
 
-    def test_running_and_completed_approvals_are_not_replayed(self):
+    def test_stale_running_label_does_not_block_but_delivered_approval_is_not_replayed(self):
         issue = ready()
         issue['labels'] = [{'name': 'codex:executing'}]
-        self.assertEqual(decide(issue)['mode'], 'skip')
+        self.assertEqual(decide(issue)['mode'], 'execute')
         issue['comments'].append(comment('done', review.BOT, '<!-- codex-driver:execute -->完成', '2026-11-05T01:03:00Z'))
         self.assertEqual(decide(issue)['mode'], 'skip')
 
@@ -1035,10 +1035,13 @@ class ScheduledReviewTests(unittest.TestCase):
         self.assertNotIn('approval_id', context)
         self.assertEqual(decide(issue, actor='outsider')['mode'], 'skip')
 
+        for label in ['codex:paused', 'codex:planning', 'codex:executing']:
+            candidate = deepcopy(issue)
+            candidate['labels'] = [{'name': label}]
+            self.assertEqual(decide(candidate)['mode'], 'plan')
+
         for changes in [
             {'state': 'CLOSED'}, {'body': ''}, {'author': {'login': 'outsider'}},
-            {'labels': [{'name': 'codex:paused'}]},
-            {'labels': [{'name': 'codex:planning'}]},
             {'comments': [comment('reply', review.BOT, '<!-- codex-driver:review:reply -->\n答复', '2026-11-08T10:35:00Z')]},
             *({'title': title} for title in ['/plan 修改组件', 'https://example.com', '睡眠评分', '今日日记', '[自动任务] 研究']),
         ]:

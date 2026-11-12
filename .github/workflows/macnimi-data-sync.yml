@@ -33,6 +33,17 @@ jobs:
     outputs:
       tasks: ${{ steps.select.outputs.tasks }}
     steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+          fetch-depth: 1
+      - name: 开始任务状态
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
       - id: select
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -52,6 +63,24 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as handle:
               handle.write('tasks=' + json.dumps(tasks) + '\n')
           PYTASKS
+
+      - name: 完成任务状态
+        if: always() && hashFiles('.github/actions/workflow-status/action.yml') != ''
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
+          if-no-files-found: ignore
+          retention-days: 30
 
   sync:
     name: 同步 ${{ matrix.task }}
@@ -95,6 +124,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
+      - name: 开始任务状态
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ matrix.task || github.job }}
       - name: Prepare runner
         run: |
           echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
@@ -168,6 +203,11 @@ jobs:
             tail -n 600 "$log" | grep -Ei 'error:|code 65|provisioning profile|device.*locked|signing.*failed|certificate.*expired' | tail -n 30 || true
           done
 
+      - name: 更新阶段：执行任务
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: 同步当前任务
         id: task
         env:
@@ -264,6 +304,12 @@ jobs:
                       sys.exit(status)
           PY
 
+      - name: 更新阶段：交付结果
+        if: always()
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: delivering
       - name: 记录本任务结果
         if: always()
         env:
@@ -273,3 +319,20 @@ jobs:
           python3 scripts/workflow_delivery.py "static/data/$TASK" \
             --operation sync --state "${RESULT:-skipped}" \
             --title "已完成 $TASK 同步。" --output /tmp/sync-delivery.md
+      - name: 完成任务状态
+        if: always() && hashFiles('.github/actions/workflow-status/action.yml') != ''
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ matrix.task || github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
+          if-no-files-found: ignore
+          retention-days: 30

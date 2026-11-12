@@ -68,6 +68,12 @@ jobs:
           ref: main
           persist-credentials: false
           fetch-depth: 100
+      - name: 开始任务状态
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ inputs.task_id || github.job }}
       - uses: actions/setup-node@v4
         if: ${{ inputs.task_id != 'diary-prompt-sync' }}
         with:
@@ -121,6 +127,12 @@ jobs:
       - name: Verify prompt synchronization without a model
         if: ${{ inputs.task_id == 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
         run: python3 scripts/automation_tasks.py verify-sync --task "$TASK_ID"
+      - name: 更新阶段：执行任务
+        if: ${{ inputs.task_id != 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: Execute task
         if: ${{ inputs.task_id != 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
         env:
@@ -144,9 +156,21 @@ jobs:
               raise SystemExit('执行器在 output/ 外新增了文件')
           PY
           test -s output/result.json
+      - name: 更新阶段：验证结果
+        if: ${{ inputs.task_id == 'update-weight-wallpaper' && steps.freshness.outputs.expired != 'true' }}
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: verifying
       - name: Render wallpaper with fixed template
         if: ${{ inputs.task_id == 'update-weight-wallpaper' && steps.freshness.outputs.expired != 'true' }}
         run: python3 scripts/automation_tasks.py render-wallpaper --task "$TASK_ID"
+      - name: 更新阶段：交付结果
+        if: ${{ inputs.task_id != 'update-weight-wallpaper' && steps.freshness.outputs.expired != 'true' }}
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: delivering
       - name: Validate and deliver result
         if: ${{ inputs.task_id != 'update-weight-wallpaper' && steps.freshness.outputs.expired != 'true' }}
         env:
@@ -193,5 +217,23 @@ jobs:
         with:
           name: codex-execution-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/codex-executions/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: 完成任务状态
+        if: always() && hashFiles('feei.cn/.github/actions/workflow-status/action.yml') != ''
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status == 'success' && steps.freshness.outputs.expired == 'true' && 'skipped' || job.status }}
+          task: ${{ inputs.task_id || github.job }}
+          result-file: feei.cn/output/metadata.json
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
           if-no-files-found: ignore
           retention-days: 30

@@ -61,6 +61,13 @@ jobs:
         if: steps.classify.outputs.mode != 'skip'
         uses: actions/checkout@v6
 
+      - name: 开始任务状态
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
+        if: steps.classify.outputs.mode != 'skip'
       - name: Setup Python
         if: steps.classify.outputs.mode != 'skip'
         uses: actions/setup-python@v5
@@ -76,6 +83,12 @@ jobs:
         if: steps.classify.outputs.mode == 'drive'
         run: python3 -m unittest scripts/test_upsert_drive_event.py
 
+      - name: 更新阶段：执行任务
+        if: steps.classify.outputs.mode == 'drive'
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: Save drive JSON
         id: drive
         if: steps.classify.outputs.mode == 'drive'
@@ -176,6 +189,12 @@ jobs:
           which codex
           codex --version
 
+      - name: 更新阶段：执行任务
+        if: steps.classify.outputs.mode == 'url'
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: Fetch URL content
         id: fetch
         if: steps.classify.outputs.mode == 'url'
@@ -203,6 +222,12 @@ jobs:
               fp.write("\n```\n")
           PY
 
+      - name: 更新阶段：交付结果
+        if: steps.classify.outputs.mode == 'url'
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: delivering
       - name: Post comment and update title
         if: steps.classify.outputs.mode == 'url'
         env:
@@ -278,5 +303,22 @@ jobs:
         with:
           name: codex-execution-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/codex-executions/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: 完成任务状态
+        if: always() && hashFiles('.github/actions/workflow-status/action.yml') != ''
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
           if-no-files-found: ignore
           retention-days: 30

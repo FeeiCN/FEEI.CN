@@ -35,6 +35,12 @@ jobs:
         with:
           token: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
 
+      - name: 开始任务状态
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -52,6 +58,12 @@ jobs:
             echo "skip=no" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: 更新阶段：执行任务
+        if: steps.creds.outputs.skip == 'no'
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: Run export script
         if: steps.creds.outputs.skip == 'no'
         env:
@@ -67,3 +79,20 @@ jobs:
             fi
           fi
           python3 scripts/export_weread_data.py "${args[@]}"
+      - name: 完成任务状态
+        if: always() && hashFiles('.github/actions/workflow-status/action.yml') != ''
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
+          if-no-files-found: ignore
+          retention-days: 30

@@ -22,6 +22,12 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: 开始任务状态
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -32,8 +38,15 @@ jobs:
         run: python3 -m pip install PyYAML Pillow
       - name: Install locked Node test dependencies
         run: npm ci --ignore-scripts
+      - name: 更新阶段：验证结果
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: verifying
       - name: Verify lifecycle, retries and task compatibility
         run: |
+          node --test scripts/test_workflow_status.mjs
+          python3 -m unittest discover -s scripts -p test_workflow_status.py
           python3 -m unittest discover -s scripts -p test_codex_runner.py
           python3 -m unittest discover -s scripts -p test_run_automation_task.py
           python3 -m unittest discover -s scripts -p test_codex_actions_diagnosis.py
@@ -43,6 +56,11 @@ jobs:
         run: python3 scripts/codex_runner.py install
       - name: Verify exact filesystem and network permissions
         run: python3 scripts/check_automation_permissions.py
+      - name: 更新阶段：执行任务
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: Verify real Codex invocation
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -57,5 +75,22 @@ jobs:
           path: |
             ${{ runner.temp }}/codex-executions/*.json
             output/codex-smoke/result.json
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: 完成任务状态
+        if: always() && hashFiles('.github/actions/workflow-status/action.yml') != ''
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
           if-no-files-found: ignore
           retention-days: 30

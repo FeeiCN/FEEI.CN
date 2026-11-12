@@ -65,6 +65,12 @@ jobs:
           path: feei.cn
           ref: main
           persist-credentials: false
+      - name: 开始任务状态
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -85,6 +91,11 @@ jobs:
             feei.cn/output/wallpaper.svg
           if-no-files-found: error
           retention-days: 30
+      - name: 更新阶段：交付结果
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: delivering
       - name: 校验并交付壁纸
         env:
           WALLPAPER_ARTIFACT_ID: ${{ steps.wallpaper.outputs.artifact-id }}
@@ -98,6 +109,25 @@ jobs:
           path: |
             feei.cn/output/report.md
             feei.cn/output/metadata.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: 完成任务状态
+        if: always() && hashFiles('feei.cn/.github/actions/workflow-status/action.yml') != ''
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+          result-file: feei.cn/output/metadata.json
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
           if-no-files-found: ignore
           retention-days: 30
 
@@ -117,6 +147,17 @@ jobs:
           path: feei.cn
           ref: main
           persist-credentials: false
+      - name: 开始任务状态
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
+      - name: 更新阶段：交付结果
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: delivering
       - name: 回复壁纸重做未完成
         env:
           GH_TOKEN: ${{ github.token }}
@@ -142,3 +183,20 @@ jobs:
           subprocess.check_call(['gh', 'issue', 'comment', os.environ['REVIEW_ISSUE'], '--repo', repo,
                                  '--body-file', '/tmp/wallpaper-failure.md'])
           PYFAILURE
+      - name: 完成任务状态
+        if: always() && hashFiles('feei.cn/.github/actions/workflow-status/action.yml') != ''
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
+          if-no-files-found: ignore
+          retention-days: 30

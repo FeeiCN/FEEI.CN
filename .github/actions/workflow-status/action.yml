@@ -1,0 +1,30 @@
+name: Workflow status
+description: Record task progress and update optional Issue status without blocking the task
+inputs:
+  phase:
+    description: preparing, running, verifying, delivering, or finished
+    default: preparing
+  state:
+    description: Actual job conclusion for the finished phase
+    default: running
+  issue-number:
+    description: Issue already verified by the calling workflow
+    default: ''
+  label:
+    description: Optional codex status label
+    default: ''
+  result-file:
+    description: Optional task result metadata, relative to the workspace
+    default: ''
+  details-file:
+    description: Optional file containing per-source synchronization states
+    default: ''
+  task:
+    description: Stable task or matrix item identifier
+    default: ''
+  token:
+    description: Token used only for optional Issue label updates
+    default: ${{ github.token }}
+runs:
+  using: node24
+  main: index.cjs

@@ -39,6 +39,18 @@ class CodexRunnerTests(unittest.TestCase):
         self.output.write_text('{"ok":true}')
         return subprocess.CompletedProcess(command, 0)
 
+    def test_install_reuses_the_exact_pinned_version(self):
+        with patch('sys.argv', ['codex_runner.py', 'install']), patch.object(runner.subprocess, 'run') as install:
+            self.assertEqual(runner.main(), 0)
+            install.assert_not_called()
+
+    def test_install_replaces_other_versions_and_rechecks_after_install(self):
+        with patch('sys.argv', ['codex_runner.py', 'install']), patch.object(runner.subprocess, 'run') as install:
+            with patch.object(runner, 'cli_version', side_effect=['unknown', 'codex-cli ' + runner.CODEX_VERSION]) as version:
+                self.assertEqual(runner.main(), 0)
+                install.assert_called_once()
+                version.cache_clear.assert_called_once()
+
     def test_default_is_readonly_and_credentials_are_not_command_arguments(self):
         with patch.dict(os.environ, {'OPENAI_BASE_URL': 'https://proxy.example/v1/',
                                     'OPENAI_API_KEY': 'test-secret', 'OPENAI_MODEL': 'configured-model'}):

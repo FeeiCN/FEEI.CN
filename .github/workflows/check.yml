@@ -23,6 +23,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 开始任务状态
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
@@ -56,8 +62,32 @@ jobs:
           fi
           npm run check:docs -- --base="$DOCS_BASE"
 
+      - name: Verify shared workflow status
+        run: node --test scripts/test_workflow_status.mjs
+      - name: 更新阶段：验证结果
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: verifying
       - name: Type check
         run: npm run typecheck
 
       - name: Strict build check
         run: DOCUSAURUS_FASTER=true CI_STRICT=true npm run build
+      - name: 完成任务状态
+        if: always() && hashFiles('.github/actions/workflow-status/action.yml') != ''
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
+          if-no-files-found: ignore
+          retention-days: 30

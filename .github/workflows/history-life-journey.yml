@@ -50,6 +50,17 @@ jobs:
           path: feei.cn
           persist-credentials: false
           fetch-depth: 1
+      - name: 开始任务状态
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
+      - name: 更新阶段：执行任务
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: 定位或创建唯一人物旅程
         id: resolve
         working-directory: feei.cn
@@ -61,6 +72,24 @@ jobs:
           PERSON: ${{ inputs.person || '朱元璋' }}
           CARRY_DISCUSSION: ${{ inputs.carry_discussion }}
         run: python3 scripts/history_life_journey.py resolve
+      - name: 完成任务状态
+        if: always() && hashFiles('feei.cn/.github/actions/workflow-status/action.yml') != ''
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
+          if-no-files-found: ignore
+          retention-days: 30
+
   journey:
     needs: resolve
     concurrency:
@@ -81,6 +110,12 @@ jobs:
           path: feei.cn
           persist-credentials: false
           fetch-depth: 1
+      - name: 开始任务状态
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -105,6 +140,12 @@ jobs:
       - name: 验证仓库只读与研究网络
         if: steps.prepare.outputs.skip == 'false'
         run: python3 scripts/check_automation_permissions.py
+      - name: 更新阶段：执行任务
+        if: steps.prepare.outputs.skip == 'false'
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: 生成本轮历史叙述与分析
         if: steps.prepare.outputs.skip == 'false'
         env:
@@ -120,6 +161,12 @@ jobs:
           if any(name and not name.startswith('output/') for name in names):
               raise SystemExit('执行器在 output/ 外新增了文件')
           PY
+      - name: 更新阶段：交付结果
+        if: steps.prepare.outputs.skip == 'false'
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: delivering
       - name: 核对最新请求并原子交付回复与进度
         if: steps.prepare.outputs.skip == 'false'
         env:
@@ -149,5 +196,22 @@ jobs:
         with:
           name: codex-execution-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/codex-executions/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: 完成任务状态
+        if: always() && hashFiles('feei.cn/.github/actions/workflow-status/action.yml') != ''
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
           if-no-files-found: ignore
           retention-days: 30

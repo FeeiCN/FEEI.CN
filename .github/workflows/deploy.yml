@@ -57,6 +57,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: 开始任务状态
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -64,6 +70,11 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: 更新阶段：执行任务
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: Deploy on server
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
@@ -350,3 +361,20 @@ jobs:
           python3 scripts/workflow_delivery.py --operation deploy --state "$RESULT" \
             --title '网站部署步骤已完成。' --link https://feei.cn \
             --output /tmp/deploy-delivery.md
+      - name: 完成任务状态
+        if: always() && hashFiles('.github/actions/workflow-status/action.yml') != ''
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
+          if-no-files-found: ignore
+          retention-days: 30

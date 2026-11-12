@@ -39,11 +39,22 @@ jobs:
         with:
           ref: main
           persist-credentials: false
+      - name: 开始任务状态
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Verify daily creation and refresh rules
         run: python3 -m unittest discover -s scripts -p test_daily_personal_record.py
+      - name: 更新阶段：执行任务
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: Create daily inbox or refresh factual snapshot
         id: daily
         env:
@@ -60,6 +71,24 @@ jobs:
           path: output/daily-schedule.json
           if-no-files-found: ignore
           retention-days: 30
+      - name: 完成任务状态
+        if: always() && hashFiles('.github/actions/workflow-status/action.yml') != ''
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
+          if-no-files-found: ignore
+          retention-days: 30
+
   run:
     needs: prepare
     if: ${{ vars.AUTOMATION_DAILY_PERSONAL_RECORD == 'true' && needs.prepare.outputs.ready == 'true' }}

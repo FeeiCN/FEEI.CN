@@ -82,6 +82,12 @@ jobs:
       # ─────────────────────────────────────
       # 1. 解析 issue 编号 + 决策 mode
       # ─────────────────────────────────────
+      - name: 开始任务状态
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
       - name: 核验议题来源与请求
         id: inspect
         env:
@@ -150,15 +156,6 @@ jobs:
               sys.exit(0)
 
           labels = {l["name"] for l in d["labels"]}
-          # planning / executing / paused 锁住 driver(防并发覆盖);done / failed 不挡,
-          # owner 可在已完成的 issue 上评论 /plan 重新激活(走"非 plan-ready"分支)。
-          locked = labels & {"codex:paused","codex:executing","codex:planning"}
-          if locked:
-              reason = f"driver locked by label(s): {', '.join(sorted(locked))}; 请等待上次 /approve 流程结束"
-              print("mode=skip"); print(f"number={n}"); print(f"reason={reason}")
-              print(f"author={author_login}"); print(f"state={d['state']}")
-              sys.exit(0)
-
           comments = d["comments"]
           last_codex = max(
               (c for c in comments if c["body"].startswith("<!-- codex-driver:")),
@@ -185,7 +182,7 @@ jobs:
              and not has(d["title"], "/replan") \
              and not has(d["title"], "/reject"):
               reason = "no owner comment with /plan|/approve|/replan|/reject and title has no command"
-          elif "codex:plan-ready" in labels:
+          elif last_codex and last_codex["body"].startswith("<!-- codex-driver:plan:commit="):
               if not last_codex or (last_owner and last_owner["createdAt"] > last_codex["createdAt"]):
                   combined = ((last_owner["body"] if last_owner else "") + "\n" + d["title"])
                   if has(combined, "/reject"):
@@ -221,6 +218,15 @@ jobs:
                 f"title_has_replan={has(d['title'], '/replan')} title_has_reject={has(d['title'], '/reject')}",
                 file=sys.stderr)
           PY
+
+      - name: 来源核验后显示执行状态
+        if: contains(fromJSON('["interpret", "plan", "execute"]'), steps.inspect.outputs.mode) && github.event.inputs.dry_run != 'true'
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          issue-number: ${{ steps.inspect.outputs.number }}
+          label: executing
 
       - name: 准备自然语言解释器
         if: steps.inspect.outputs.mode == 'interpret' && github.event.inputs.dry_run != 'true'
@@ -316,56 +322,23 @@ jobs:
               ;;
           esac
 
-      - name: Ensure labels
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          # driver 用到 6 个 codex:* label,仓库里可能一个都没有;
-          # 已存在会报 "already exists",吞掉即可,保证后续 add 不会因 label 不存在失败。
-          declare -A L=(
-            [codex:planning]="fbc108"
-            [codex:plan-ready]="0e8a16"
-            [codex:executing]="fbca04"
-            [codex:done]="0e8a16"
-            [codex:failed]="d93f0b"
-            [codex:paused]="cccccc"
-            [codex:discussing]="bfdadc"
-          )
-          for name in "${!L[@]}"; do
-            gh label create "$name" --repo "$REPO" --color "${L[$name]}" \
-              --description "Codex driver state" 2>/dev/null || true
-          done
-
       - name: Apply paused label
-        if: steps.decide.outputs.mode == 'paused'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          N: ${{ steps.decide.outputs.number }}
-        run: |
-          for s in planning plan-ready executing done failed discussing; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
-          done
-          gh issue edit "$N" --repo "$REPO" --add-label codex:paused
+        if: steps.decide.outputs.mode == 'paused' && github.event.inputs.dry_run != 'true'
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
+          issue-number: ${{ steps.decide.outputs.number }}
+          label: paused
 
       - name: Apply state label
-        if: steps.decide.outputs.mode == 'plan' || steps.decide.outputs.mode == 'execute'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          N: ${{ steps.decide.outputs.number }}
-          MODE: ${{ steps.decide.outputs.mode }}
-        run: |
-          # 视觉信号:Codex 进入 plan 阶段立刻上 planning label(失败也方便定位);
-          # execute 阶段实际上由 codex step 内部 add codex:executing(因为要等切分支),
-          # 这里只对 plan 模式加 planning,execute 模式不做事。
-          for s in planning plan-ready executing done failed discussing; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
-          done
-          if [ "$MODE" = "plan" ]; then
-            gh issue edit "$N" --repo "$REPO" --add-label codex:planning 2>/dev/null || true
-          fi
+        if: (steps.decide.outputs.mode == 'plan' || steps.decide.outputs.mode == 'execute') && github.event.inputs.dry_run != 'true'
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          issue-number: ${{ steps.decide.outputs.number }}
+          label: ${{ steps.decide.outputs.mode == 'plan' && 'planning' || 'executing' }}
 
       # ─────────────────────────────────────
       # 2. 凭证 + setup(仅 plan/execute)
@@ -422,6 +395,12 @@ jobs:
       # ─────────────────────────────────────
       # 3. 构造 prompt + 跑 Codex
       # ─────────────────────────────────────
+      - name: 更新阶段：执行任务
+        if: (steps.decide.outputs.mode == 'plan' || steps.decide.outputs.mode == 'execute') && steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: 审阅讨论或写入已批准稿
         id: codex
         if: (steps.decide.outputs.mode == 'plan' || steps.decide.outputs.mode == 'execute') && steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
@@ -443,16 +422,12 @@ jobs:
           BASE_SHA="$(git rev-parse origin/main)"
           echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
 
-          # execute: 同步 main + 上 executing label 锁(不再切 agent/issue-N 分支)
+          # 写入前同步 main，状态已在环境准备前更新。
           if [ "$MODE" = "execute" ]; then
             git fetch origin main
             git reset --hard origin/main
             git config user.name  "FeeiCN[bot]"
             git config user.email "feei@feei.cn"
-            for s in planning plan-ready done failed discussing; do
-              gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
-            done
-            gh issue edit "$N" --repo "$REPO" --add-label codex:executing
           fi
 
           if [ "$SCHEDULED_REVIEW" = "true" ] && [ "$MODE" = "execute" ]; then
@@ -665,26 +640,12 @@ jobs:
             exit 1
           fi
 
-      # ─────────────────────────────────────
-      # 4. 失败时清锁:plan 阶段 codex 失败(execute 阶段由 Post execute result 负责)
-      # 不清就会把 issue 永久锁在 codex:planning / codex:executing,后续指令全部被
-      # Decide mode 的 `locked` 拦截。覆盖 plan-only 失败 + plan/execute 都失败两种情况。
-      # ─────────────────────────────────────
-      - name: Cleanup stuck lock on plan failure
-        if: steps.codex.outcome == 'failure' && steps.decide.outputs.mode == 'plan'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          N: ${{ steps.decide.outputs.number }}
-        run: |
-          for s in planning plan-ready executing done paused discussing; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
-          done
-          gh issue edit "$N" --repo "$REPO" --add-label codex:failed 2>/dev/null || true
-
-      # ─────────────────────────────────────
-      # 4. plan 分支:post + label
-      # ─────────────────────────────────────
+      - name: 更新阶段：交付结果
+        if: steps.decide.outputs.mode == 'plan' && steps.codex.outcome == 'success'
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: delivering
       - name: Post plan comment
         id: post_plan
         if: steps.decide.outputs.mode == 'plan' && steps.codex.outcome == 'success'
@@ -740,10 +701,7 @@ jobs:
           if [ "$SCHEMA_STATUS" -ne 0 ]; then
             REJECT_REASON="$(python3 -c "import sys; print('rejected by schema validator (exit=)')" 2>/dev/null || true)"
             echo "::error::plan schema 校验失败,exit=$SCHEMA_STATUS"
-            for s in planning plan-ready executing done paused discussing; do
-              gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
-            done
-            gh issue edit "$N" --repo "$REPO" --add-label codex:failed 2>/dev/null || true
+            [ -z "${WORKFLOW_STATUS_NODE:-}" ] || "$WORKFLOW_STATUS_NODE" "${WORKFLOW_STATUS_SCRIPT:-}" --phase delivering --issue-number "$N" --label failed || true
             {
               echo "<!-- codex-driver:plan-rejected -->"
               echo
@@ -782,15 +740,12 @@ jobs:
           fi
           gh issue comment "$N" --repo "$REPO" --body-file /tmp/comment.md
 
-          for s in planning executing done failed paused plan-ready discussing; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
-          done
           REVIEW_STATE=plan-ready
           if [ "$SCHEDULED_REVIEW" = "true" ]; then
             if grep -q '^<!-- codex-driver:review:needs-input -->' /tmp/comment.md; then REVIEW_STATE=paused; fi
             if grep -q '^<!-- codex-driver:review:reply -->' /tmp/comment.md; then REVIEW_STATE=discussing; fi
           fi
-          gh issue edit "$N" --repo "$REPO" --add-label "codex:$REVIEW_STATE"
+          [ -z "${WORKFLOW_STATUS_NODE:-}" ] || "$WORKFLOW_STATUS_NODE" "${WORKFLOW_STATUS_SCRIPT:-}" --phase delivering --issue-number "$N" --label "$REVIEW_STATE" || true
           echo "review-state=$REVIEW_STATE" >> "$GITHUB_OUTPUT"
           if [ "$REVIEW_STATE" = "plan-ready" ]; then
             echo '已生成完整待审稿，等待本人确认；本次尚未写入、提交或部署。' >> "$GITHUB_STEP_SUMMARY"
@@ -799,6 +754,12 @@ jobs:
           fi
 
       # 写入成功以 main 推送完成为准。
+      - name: 更新阶段：验证结果
+        if: steps.decide.outputs.mode == 'execute' && steps.codex.outcome == 'success'
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: verifying
       - name: Build and push
         id: build
         if: steps.decide.outputs.mode == 'execute' && steps.codex.outcome == 'success'
@@ -941,11 +902,8 @@ jobs:
           fi
           gh issue comment "$N" --repo "$REPO" --body-file /tmp/result.md
 
-          for s in planning plan-ready executing done failed discussing; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
-          done
           LABEL="${STATE:-failed}"
-          gh issue edit "$N" --repo "$REPO" --add-label "codex:${LABEL}"
+          [ -z "${WORKFLOW_STATUS_NODE:-}" ] || "$WORKFLOW_STATUS_NODE" "${WORKFLOW_STATUS_SCRIPT:-}" --phase delivering --issue-number "$N" --label "$LABEL" || true
 
           if [ "$STATE" = "done" ]; then
             if ! gh issue close "$N" --repo "$REPO" --reason completed; then
@@ -980,7 +938,7 @@ jobs:
           gh issue comment "$N" --repo "$REPO" --body-file /tmp/review-failure.md
 
       - name: Reconcile final label
-        if: always() && steps.decide.outputs.number != ''
+        if: always() && steps.decide.outputs.number != '' && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -1020,37 +978,7 @@ jobs:
               ;;
           esac
 
-          # 查现状
-          CURRENT_LABELS="$(gh issue view "$N" --repo "$REPO" --json labels --jq -r '.labels[].name' | grep '^codex:' || true)"
-          CURRENT_COUNT="$(printf '%s\n' "$CURRENT_LABELS" | grep -c . || true)"
-          echo "current codex:* labels: ${CURRENT_LABELS:-<none>}"
-          echo "desired: codex:$DESIRED"
-
-          # 已经是期望状态(且只有一个 codex:* label),不动
-          if [ "$CURRENT_COUNT" = "1" ] && printf '%s\n' "$CURRENT_LABELS" | grep -qx "codex:$DESIRED"; then
-            echo "label 已是 codex:$DESIRED, 无需调整"
-            exit 0
-          fi
-
-          # 一次性清掉所有 codex:*
-          for s in planning plan-ready executing done failed paused discussing; do
-            gh issue edit "$N" --repo "$REPO" --remove-label "codex:$s" 2>/dev/null || true
-          done
-
-          # 加上期望值
-          gh issue edit "$N" --repo "$REPO" --add-label "codex:$DESIRED" 2>/dev/null || true
-
-          # step summary 留 trace,方便排查
-          {
-            echo "### 🧹 Final label reconciliation"
-            echo
-            echo "- issue: #${N}"
-            echo "- mode: \`${MODE}\`"
-            echo "- codex outcome: \`${CODEX_OUTCOME:-<n/a>}\`"
-            echo "- post_plan outcome: \`${POST_PLAN_OUTCOME:-<n/a>}\`"
-            echo "- build state: \`${BUILD_STATE:-<n/a>}\`"
-            echo "- previous: \`${CURRENT_LABELS:-<none>}\` → \`codex:${DESIRED}\`"
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          [ -z "${WORKFLOW_STATUS_NODE:-}" ] || "$WORKFLOW_STATUS_NODE" "${WORKFLOW_STATUS_SCRIPT:-}" --phase delivering --issue-number "$N" --label "$DESIRED" || true
 
       - name: Save Codex execution evidence
         if: always()
@@ -1058,6 +986,24 @@ jobs:
         with:
           name: codex-execution-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/codex-executions/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: 完成任务状态
+        if: always() && hashFiles('feei.cn/.github/actions/workflow-status/action.yml') != ''
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status == 'success' && steps.decide.outputs.mode == 'skip' && 'skipped' || job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
           if-no-files-found: ignore
           retention-days: 30
 
@@ -1079,6 +1025,17 @@ jobs:
           ref: main
           path: feei.cn
           persist-credentials: false
+      - name: 开始任务状态
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+          task: ${{ github.job }}
+      - name: 更新阶段：执行任务
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: running
       - name: 核验本人请求并重新生成壁纸
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1090,3 +1047,20 @@ jobs:
         run: |
           gh issue view "$N" --repo "$REPO" --json body,labels,author,state,title > /tmp/issue.json
           python3 scripts/scheduled_issue_review.py regenerate
+      - name: 完成任务状态
+        if: always() && hashFiles('feei.cn/.github/actions/workflow-status/action.yml') != ''
+        uses: ./feei.cn/.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+          task: ${{ github.job }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-${{ strategy.job-index || 0 }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/${{ github.job }}-${{ env.WORKFLOW_STATUS_TASK }}.json
+          if-no-files-found: ignore
+          retention-days: 30

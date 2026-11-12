@@ -148,6 +148,13 @@ def run_codex(prompt, *, output, timeout, cwd=ROOT, schema=None, permissions=Non
               binary='codex', stdout_log=None, stderr_log=None, max_bytes=2_000_000,
               stage='task', attempt=1, allow_shell=True):
     stage = stage if re.fullmatch(r'[a-z0-9_-]{1,80}', stage) else 'task'
+    if os.environ.get('GITHUB_ACTIONS') == 'true' and os.environ.get('WORKFLOW_STATUS_SCRIPT'):
+        try:
+            subprocess.run([os.environ['WORKFLOW_STATUS_NODE'], os.environ['WORKFLOW_STATUS_SCRIPT'],
+                            '--phase', 'verifying' if stage.startswith('review') else 'running'],
+                           check=False, timeout=5)
+        except (KeyError, OSError, subprocess.SubprocessError):
+            print('任务阶段记录不可用，继续执行。', file=sys.stderr)
     started = time.monotonic()
     selected_model = model or os.environ.get('OPENAI_MODEL')
     record = {
@@ -264,7 +271,11 @@ def run_codex(prompt, *, output, timeout, cwd=ROOT, schema=None, permissions=Non
 
 def main():
     if sys.argv[1:] == ['install']:
+        if cli_version('codex') == 'codex-cli ' + CODEX_VERSION:
+            print('复用已安装的 codex-cli ' + CODEX_VERSION)
+            return 0
         subprocess.run(['npm', 'install', '--global', '@openai/codex@' + CODEX_VERSION], check=True, timeout=180)
+        cli_version.cache_clear()
         version = cli_version('codex')
         if version != 'codex-cli ' + CODEX_VERSION:
             raise ValueError('Codex CLI 安装后版本不符')

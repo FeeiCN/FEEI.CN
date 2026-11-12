@@ -341,8 +341,7 @@ def initial_owner_request(issue, owner):
             or not issue.get('body', '').strip() or not title
             or title.startswith(('http://', 'https://', '/', '[自动任务]'))
             or title == '睡眠评分' or any(word in title for word in ('天气', '上车', '下车', '日记'))
-            or issue.get('body', '').startswith('<!-- history-life-journey:session:')
-            or any(label['name'].startswith('codex:') for label in issue.get('labels', []))):
+            or issue.get('body', '').startswith('<!-- history-life-journey:session:')):
         return False
     return not any(c['author']['login'] == owner or
                    (bot(c['author']) and c['body'].startswith('<!-- codex-driver:'))
@@ -409,10 +408,6 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
                                                '<!-- codex-driver:review-failed -->'))]
     if responses and max(c['createdAt'] for c in responses) >= request.get('updatedAt', request['createdAt']):
         return context
-    labels = {x['name'] for x in issue.get('labels', [])}
-    if labels & {'codex:planning', 'codex:executing'}:
-        context['reason'] = '任务正在处理，请等待完成后继续评论'
-        return context
     action = None
     if intent is not None:
         result = checked_intent(issue, owner, intent)
@@ -435,7 +430,7 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
     if 'approve' in tokens or action == 'approve':
         if action != 'approve' and (tokens != ['approve'] or text != '/approve'):
             raise ValueError('确认写入时请单独说明，不夹带新修改要求；先审阅修改后的完整稿')
-        if plan is None or ('codex:plan-ready' not in labels and plan.get('origin') != 'report'):
+        if plan is None:
             context.update(mode='plan', source=snapshot(issue, owner), initial_approval=True,
                            reason='尚无可批准的完整版本，本次先生成待审稿，展示后再确认写入')
             return context
@@ -759,8 +754,6 @@ def main():
     else:
         context = json.loads(base64.b64decode(os.environ['REVIEW_CONTEXT']))
         fresh = fresh_issue()
-        # The executing label replaces plan-ready after initial approval validation.
-        fresh['labels'] = [x for x in fresh['labels'] if x['name'] != 'codex:executing'] + [{'name': 'codex:plan-ready'}]
         current = decide(fresh, owner, os.environ['COMMAND_ACTOR'], repo,
                          lambda run_id: api_run(repo, run_id), intent=context.get('intent'))
         if current != context:

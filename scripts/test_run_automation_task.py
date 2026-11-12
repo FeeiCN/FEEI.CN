@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
+import codex_runner as runner
 import unittest
 from unittest.mock import patch
 
@@ -12,6 +13,9 @@ import run_automation_task as writing
 
 class WritingLoopTests(unittest.TestCase):
     def setUp(self):
+        env = patch.dict('os.environ', {'GITHUB_ACTIONS': 'false'})
+        env.start()
+        self.addCleanup(env.stop)
         stage_document = (writing.ROOT / writing.COMMON).read_text()
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -177,7 +181,7 @@ class WritingLoopTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 1)
 
     def test_timeout_keeps_draft_but_never_claims_completion(self):
-        result = self.execute(self.draft(), subprocess.TimeoutExpired('codex', 30))
+        result = self.execute(self.draft(), subprocess.TimeoutExpired('codex', 30), subprocess.TimeoutExpired('codex', 30))
         self.assertEqual(result['status'], 'blocked')
         self.assertTrue((self.out / 'writing/draft-0.md').is_file())
         self.assertIn('时间预算', self.goal()['stop_reason'])
@@ -204,6 +208,29 @@ class WritingLoopTests(unittest.TestCase):
         self.assertIn('安全事件研究', result['report_markdown'])
         self.assertFalse((self.out / 'writing/draft-0.md').exists())
 
+    def test_review_timeout_retries_same_draft_once_and_records_attempts(self):
+        result = self.execute(self.draft(), subprocess.TimeoutExpired('codex', 720), self.review())
+        self.assertEqual(result['status'], 'completed')
+        records = self.goal()['phase_runs']
+        self.assertEqual([entry['status'] for entry in records], ['completed', 'timed_out', 'completed'])
+        self.assertEqual([entry['attempt'] for entry in records], [1, 1, 2])
+        self.assertEqual(records[-1]['retry_reason'], 'phase_timeout')
+        self.assertEqual(self.calls[1], self.calls[2])
+        self.assertFalse((self.out / 'writing/draft-1.md').exists())
+
+    def test_review_timeout_does_not_spend_required_followup_budget(self):
+        executor = self.executor(self.draft(), subprocess.TimeoutExpired('codex', 720))
+        executor.deadline = writing.time.monotonic() + 3950
+        result = writing.execute('security-event-research', self.out, executor)
+        self.assertEqual(result['status'], 'blocked')
+        self.assertEqual(len(self.calls), 2)
+
+    def test_non_timeout_failure_is_not_retried(self):
+        with self.assertRaises(runner.CodexError):
+            self.execute(self.draft(), runner.CodexError('authentication failed', 1))
+        self.assertEqual(len(self.calls), 2)
+        self.assertEqual(self.goal()['state'], 'failed')
+
     def test_revision_reserves_time_for_review_without_exceeding_total_budget(self):
         env = {'OPENAI_MODEL': 'configured-model', 'OPENAI_BASE_URL': 'https://example.com/v1',
                'OPENAI_API_KEY': 'test-key', 'AUTOMATION_PERMISSION_CONFIG': '{extends=":read-only"}',
@@ -215,9 +242,9 @@ class WritingLoopTests(unittest.TestCase):
             (self.out / 'stage-result.json').write_text(json.dumps(self.result))
             return subprocess.CompletedProcess(command, 0)
         with patch.dict('os.environ', env), patch.object(writing.time, 'monotonic', return_value=500), patch.object(
-                writing.subprocess, 'run', side_effect=complete):
+                runner, 'run_process', side_effect=complete):
             executor('revise-1', 'instructions', writing.SCHEMA)
-        with patch.object(writing.time, 'monotonic', return_value=executor.deadline - 300), patch.object(writing.subprocess, 'run') as call:
+        with patch.object(writing.time, 'monotonic', return_value=executor.deadline - 300), patch.object(runner, 'run_process') as call:
             with self.assertRaises(writing.WritingBudgetError) as caught:
                 executor('revise-1', 'instructions', writing.SCHEMA)
             self.assertEqual(caught.exception.reserved, writing.PHASE_TIMEOUTS['review'])
@@ -272,7 +299,7 @@ class WritingLoopTests(unittest.TestCase):
             self.assertTrue(0 < kwargs['timeout'] <= writing.TIME_BUDGET)
             return subprocess.CompletedProcess(command, 0)
 
-        with patch.dict('os.environ', env), patch.object(writing.subprocess, 'run', side_effect=complete):
+        with patch.dict('os.environ', env), patch.object(runner, 'run_process', side_effect=complete):
             result = writing.CodexExecutor(self.out)('task', 'instructions', writing.SCHEMA)
         self.assertEqual(result, self.result)
 

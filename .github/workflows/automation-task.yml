@@ -85,7 +85,7 @@ jobs:
       - name: Install executor
         if: ${{ inputs.task_id != 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
         run: |
-          npm install --global @openai/codex
+          python3 scripts/codex_runner.py install
           codex --version
 
       - name: Install wallpaper fonts
@@ -184,3 +184,11 @@ jobs:
             feei.cn/output/wallpaper.svg
           if-no-files-found: error
           retention-days: 1
+      - name: Save Codex execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-execution-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/codex-executions/*.json
+          if-no-files-found: ignore
+          retention-days: 30

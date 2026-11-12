@@ -899,7 +899,7 @@ class ScheduledReviewTests(unittest.TestCase):
         result = interpretation(issue, 'approve')['result']
         with tempfile.TemporaryDirectory() as folder:
             state = Path(folder)
-            env = {'OPENAI_API_KEY': 'test-secret', 'OPENAI_BASE_URL': 'https://proxy.example/v1/', 'OPENAI_MODEL': 'configured-model'}
+            env = {'GITHUB_ACTIONS': 'false', 'OPENAI_API_KEY': 'test-secret', 'OPENAI_BASE_URL': 'https://proxy.example/v1/', 'OPENAI_MODEL': 'configured-model'}
             def fake_run(command, **kwargs):
                 self.assertEqual(command[:2], ['codex', 'exec'])
                 self.assertIn('--ephemeral', command)
@@ -913,8 +913,27 @@ class ScheduledReviewTests(unittest.TestCase):
                 self.assertEqual(schema, review.INTENT_SCHEMA)
                 Path(command[command.index('--output-last-message') + 1]).write_text(json.dumps(result))
                 return subprocess.CompletedProcess(command, 0)
-            with patch.dict(os.environ, env), patch.object(review.subprocess, 'run', side_effect=fake_run):
+            with patch.dict(os.environ, env), patch('codex_runner.run_process', side_effect=fake_run):
                 self.assertEqual(review.interpret_message(issue, OWNER, 'security-event-research', state)['result']['intent'], 'approve')
+
+    def test_shared_executor_failure_skips_writes_and_reports_reason(self):
+        issue = ready()
+        original = {'task': 'security-event-research', 'mode': 'interpret'}
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder, 'issue.json').write_text(json.dumps(issue))
+            env = {'ISSUE_REVIEW_STATE_DIR': folder, 'OWNER': OWNER, 'REPO': REPO, 'N': '1',
+                   'COMMAND_ACTOR': OWNER,
+                   'REVIEW_CONTEXT': base64.b64encode(json.dumps(original).encode()).decode()}
+            with patch.dict(os.environ, env), patch.object(review, 'decide', return_value=original), \
+                    patch.object(review.subprocess, 'check_output', return_value=json.dumps(issue)), \
+                    patch.object(review, 'read_comments', return_value=issue['comments']), \
+                    patch.object(review, 'interpret_message', side_effect=review.CodexError('failed', 7)), \
+                    patch('sys.argv', ['scheduled_issue_review.py', 'interpret']), \
+                    patch('sys.stdout', io.StringIO()) as captured:
+                review.main()
+            values = dict(line.split('=', 1) for line in captured.getvalue().splitlines())
+            self.assertEqual(values['mode'], 'skip')
+            self.assertIn('自然语言解释器执行失败', values['reason'])
 
     def test_cli_natural_approval_is_classified_once_then_bound_through_verification(self):
         issue = ready()

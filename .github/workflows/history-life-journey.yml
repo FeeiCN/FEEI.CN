@@ -101,7 +101,7 @@ jobs:
           node-version: '22'
       - name: 安装执行器依赖
         if: steps.prepare.outputs.skip == 'false'
-        run: npm install --global @openai/codex
+        run: python3 scripts/codex_runner.py install
       - name: 验证仓库只读与研究网络
         if: steps.prepare.outputs.skip == 'false'
         run: python3 scripts/check_automation_permissions.py
@@ -141,5 +141,13 @@ jobs:
             feei.cn/output/history/prepared.json
             feei.cn/output/history/result.json
             feei.cn/output/history/reply.md
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: Save Codex execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-execution-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/codex-executions/*.json
           if-no-files-found: ignore
           retention-days: 30

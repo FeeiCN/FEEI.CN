@@ -1,0 +1,59 @@
+name: Codex 执行器验收
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codex-runner-check
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AUTOMATION_PERMISSION_CONFIG: '{extends=":read-only", filesystem={":workspace_roots"={output="write"}}, network={enabled=true}}'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Install test dependencies
+        run: python3 -m pip install PyYAML Pillow
+      - name: Verify lifecycle, retries and task compatibility
+        run: |
+          python3 -m unittest discover -s scripts -p test_codex_runner.py
+          python3 -m unittest discover -s scripts -p test_run_automation_task.py
+          python3 -m unittest discover -s scripts -p test_codex_actions_diagnosis.py
+          python3 -m unittest discover -s scripts -p test_history_life_journey.py
+          python3 -m unittest discover -s scripts -p test_scheduled_issue_review.py
+      - name: Install pinned Codex
+        run: python3 scripts/codex_runner.py install
+      - name: Verify exact filesystem and network permissions
+        run: python3 scripts/check_automation_permissions.py
+      - name: Verify real Codex invocation
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+        run: python3 scripts/check_codex_runner.py
+      - name: Save execution evidence on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-runner-check-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/codex-executions/*.json
+            output/codex-smoke/result.json
+          if-no-files-found: ignore
+          retention-days: 30

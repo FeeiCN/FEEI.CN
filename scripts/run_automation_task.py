@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 
+from codex_runner import run_codex
 from automation_tasks import COMMON, ROOT, SCHEMA, reading_review_preflight, validate_result
 
 
@@ -108,6 +109,7 @@ class CodexExecutor:
     def __init__(self, out, time_budget=TIME_BUDGET):
         self.out = out
         self.deadline = time.monotonic() + time_budget
+        self.attempts = {}
 
     def __call__(self, phase, prompt, schema):
         remaining = int(self.deadline - time.monotonic())
@@ -120,30 +122,15 @@ class CodexExecutor:
         result_path = output_path(self.out, 'stage-result.json')
         result_path.unlink(missing_ok=True)
         phase_limit = PHASE_TIMEOUTS.get(phase.split('-')[0], TIME_BUDGET)
-        command = ['codex', 'exec', '--cd', str(ROOT), '--ephemeral']
-        config = {
-            'default_permissions': 'automation',
-            'permissions.automation': None,
-            'model_provider': 'custom',
-            'model_providers.custom.name': 'AI Proxy',
-            'model_providers.custom.base_url': os.environ['OPENAI_BASE_URL'].rstrip('/'),
-            'model_providers.custom.wire_api': 'responses',
-            'model_providers.custom.env_key': 'OPENAI_API_KEY',
-            'model_reasoning_effort': 'high',
-            'web_search': 'live',
-            'shell_environment_policy.exclude': ['OPENAI_*', 'GH_*', 'GITHUB_*', 'ACTIONS_*', 'AUTOMATION_*'],
-        }
-        for key, value in config.items():
-            setting = os.environ['AUTOMATION_PERMISSION_CONFIG'] if value is None else json.dumps(value)
-            command.extend(['--config', f'{key}={setting}'])
-        command.extend(['--model', os.environ['OPENAI_MODEL'], '--output-schema', str(schema_path),
-                        '--output-last-message', str(result_path), '-'])
         log_dir = Path(os.environ.get('RUNNER_TEMP', '/tmp'))
-        with (log_dir / 'automation.log').open('w') as log, (log_dir / 'automation.err').open('w') as err:
-            completed = subprocess.run(command, input=prompt, text=True, stdout=log, stderr=err,
-                                       cwd=ROOT, timeout=min(remaining - reserved, phase_limit))
-        if completed.returncode:
-            raise RuntimeError(f'Codex {phase} 执行失败，退出码 {completed.returncode}')
+        self.attempts[phase] = self.attempts.get(phase, 0) + 1
+        attempt = self.attempts[phase]
+        run_codex(prompt, output=result_path, schema=schema_path, cwd=ROOT,
+                  timeout=min(remaining - reserved, phase_limit),
+                  permissions=os.environ['AUTOMATION_PERMISSION_CONFIG'], search='live',
+                  exclude=['AUTOMATION_*'], stage=phase, attempt=attempt,
+                  stdout_log=log_dir / f'automation-{phase}-{attempt}.log',
+                  stderr_log=log_dir / f'automation-{phase}-{attempt}.err')
         path = output_path(self.out, 'stage-result.json')
         if path.stat().st_size > 2_000_000:
             raise ValueError('阶段结果超过大小限制')
@@ -194,6 +181,7 @@ def execute(task_id, out, executor):
             (base + json.dumps(instructions, ensure_ascii=False, sort_keys=True)).encode()).hexdigest(),
     }
     versions, reviews, parents = [], [], [None]
+    deadline = getattr(executor, 'deadline', time.monotonic() + WRITING_TIME_BUDGET)
     brief = None
 
     def checkpoint():
@@ -216,10 +204,26 @@ def execute(task_id, out, executor):
         return result
 
     def call_phase(phase, prompt, schema):
+        reserve = ((MAX_REVISIONS - int(phase.split('-')[1])) *
+                   (PHASE_TIMEOUTS['revise'] + PHASE_TIMEOUTS['review'])) if phase.startswith('review-') else 0
+        for attempt in (1, 2):
+            try:
+                return call_attempt(phase, prompt, schema, attempt)
+            except subprocess.TimeoutExpired:
+                remaining = deadline - time.monotonic()
+                if not phase.startswith('review-') or attempt == 2 or remaining < PHASE_TIMEOUTS['review'] + reserve:
+                    raise
+                goal['retry_reason'] = 'review_timeout_with_remaining_budget'
+                checkpoint()
+                print(f'[writing] retry {phase}; remaining={remaining:.0f}s; reserved={reserve}s', flush=True)
+
+    def call_attempt(phase, prompt, schema, attempt):
         goal['active_phase'] = phase
         checkpoint()
         started = time.monotonic()
-        record = {'phase': phase, 'limit_seconds': PHASE_TIMEOUTS[phase.split('-')[0]]}
+        record = {'phase': phase, 'attempt': attempt, 'remaining_seconds': max(0, round(deadline - started)),
+                  'retry_reason': 'phase_timeout' if attempt > 1 else None,
+                  'limit_seconds': PHASE_TIMEOUTS[phase.split('-')[0]]}
         try:
             value = executor(phase, prompt, schema)
             record['status'] = 'completed'

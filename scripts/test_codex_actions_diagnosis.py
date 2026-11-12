@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import codex_runner as runner
 import unittest
 from unittest.mock import patch
 from types import SimpleNamespace
@@ -13,7 +14,7 @@ from test_actions_failure_diagnosis import run
 class CodexDiagnosisTests(unittest.TestCase):
     def test_codex_has_read_only_profile_and_schema_without_direct_model_http(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(task, 'OUT', Path(folder)), patch.dict(
-                os.environ, {'OPENAI_BASE_URL': 'https://proxy.example/v1', 'OPENAI_MODEL': 'test-model'}):
+                os.environ, {'GITHUB_ACTIONS': 'false', 'OPENAI_BASE_URL': 'https://proxy.example/v1', 'OPENAI_MODEL': 'test-model'}):
             Path(folder, 'context.json').write_text(json.dumps(self.context()))
             def execute(command, **kwargs):
                 self.assertEqual(command[:2], ['codex', 'exec'])
@@ -23,15 +24,15 @@ class CodexDiagnosisTests(unittest.TestCase):
                 self.assertEqual(kwargs['timeout'], 2400)
                 Path(folder, 'result.json').write_text(json.dumps(self.result()))
                 return SimpleNamespace(returncode=0)
-            with patch.object(task.subprocess, 'run', side_effect=execute), patch.object(
+            with patch.object(runner, 'run_process', side_effect=execute), patch.object(
                     task.subprocess, 'check_output', return_value=b''):
                 task.execute()
 
     def test_executor_failure_does_not_produce_fallback_report(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(task, 'OUT', Path(folder)), patch.dict(
-                os.environ, {'OPENAI_BASE_URL': 'https://proxy.example/v1', 'OPENAI_MODEL': 'test-model'}):
+                os.environ, {'GITHUB_ACTIONS': 'false', 'OPENAI_BASE_URL': 'https://proxy.example/v1', 'OPENAI_MODEL': 'test-model'}):
             Path(folder, 'context.json').write_text(json.dumps(self.context()))
-            with patch.object(task.subprocess, 'run', return_value=SimpleNamespace(returncode=1)), self.assertRaises(RuntimeError):
+            with patch.object(runner, 'run_process', return_value=SimpleNamespace(returncode=1)), self.assertRaises(RuntimeError):
                 task.execute()
             self.assertFalse(Path(folder, 'result.json').exists())
 

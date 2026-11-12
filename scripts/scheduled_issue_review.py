@@ -9,6 +9,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
+from codex_runner import CodexError, run_codex
 from workflow_delivery import article_links as delivery_links, delivery_report
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -373,21 +374,9 @@ def interpret_message(issue, owner, task, state_dir):
     output = state_dir / 'intent.json'
     schema.write_text(json.dumps(INTENT_SCHEMA))
     output.unlink(missing_ok=True)
-    command = ['codex', 'exec', '--cd', str(ROOT), '--ephemeral', '--sandbox', 'read-only',
-               '--output-schema', str(schema), '--output-last-message', str(output),
-               '--model', os.environ['OPENAI_MODEL']]
-    config = {
-        'model_provider': 'custom', 'model_providers.custom.name': 'AI Proxy',
-        'model_providers.custom.base_url': os.environ['OPENAI_BASE_URL'].rstrip('/'),
-        'model_providers.custom.wire_api': 'responses', 'model_providers.custom.env_key': 'OPENAI_API_KEY',
-        'model_reasoning_effort': 'low', 'web_search': 'disabled',
-        'shell_environment_policy.exclude': ['OPENAI_*', 'GH_*', 'GITHUB_*', 'ACTIONS_*', 'REVIEW_*'],
-    }
-    for key, value in config.items():
-        command += ['--config', key + '=' + json.dumps(value)]
-    command.append('-')
-    with (state_dir / 'intent.log').open('w') as log, (state_dir / 'intent.err').open('w') as error:
-        subprocess.run(command, input=text, text=True, stdout=log, stderr=error, cwd=ROOT, timeout=120, check=True)
+    run_codex(text, output=output, schema=schema, cwd=ROOT, timeout=120,
+              effort='low', search='disabled', stage='intent', exclude=['REVIEW_*'],
+              stdout_log=state_dir / 'intent.log', stderr_log=state_dir / 'intent.err')
     return bind_intent(issue, owner, json.loads(output.read_text()))
 
 
@@ -714,9 +703,9 @@ def main():
             reason = ('模型返回的 JSON 无效，请稍后重试' if isinstance(error, json.JSONDecodeError)
                       else str(error).replace('\n', ' ').replace('\r', ' '))
             context = {'scheduled': True, 'mode': 'skip', 'reason': reason + '；本次未执行写入或重做。'}
-        except (KeyError, OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        except (KeyError, OSError, CodexError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
             reason = ('自然语言判断超时' if isinstance(error, subprocess.TimeoutExpired)
-                      else '自然语言解释器执行失败' if isinstance(error, subprocess.CalledProcessError)
+                      else '自然语言解释器执行失败' if isinstance(error, (CodexError, subprocess.CalledProcessError))
                       else '审阅数据或运行环境不完整')
             context = {'scheduled': True, 'mode': 'skip', 'reason': reason + '；本次未执行，请检查运行记录后重试。'}
         print('review-context=' + base64.b64encode(json.dumps(context).encode()).decode())

@@ -51,7 +51,7 @@ jobs:
         run: python3 scripts/codex_actions_diagnosis.py prepare
       - name: Install Codex
         if: steps.prepare.outputs.ready == 'true'
-        run: npm install --global @openai/codex
+        run: python3 scripts/codex_runner.py install
       - name: Verify read-only repository and research network
         if: steps.prepare.outputs.ready == 'true'
         env:
@@ -66,13 +66,22 @@ jobs:
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: python3 scripts/codex_actions_diagnosis.py execute
       - uses: actions/upload-artifact@v4
-        if: steps.prepare.outputs.ready == 'true'
+        if: always() && steps.prepare.outputs.ready == 'true'
         with:
           name: codex-actions-diagnosis-${{ github.run_id }}
           path: |
             output/codex-actions-diagnosis/context.json
             output/codex-actions-diagnosis/result.json
-          if-no-files-found: error
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Save Codex execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-execution-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/codex-executions/*.json
+          if-no-files-found: ignore
           retention-days: 30
 
   publish:

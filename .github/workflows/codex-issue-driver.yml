@@ -230,7 +230,7 @@ jobs:
       - name: 安装自然语言解释器
         id: intent_setup
         if: steps.inspect.outputs.mode == 'interpret' && github.event.inputs.dry_run != 'true'
-        run: npm install --global @openai/codex
+        run: python3 scripts/codex_runner.py install
       - name: 确定本次处理方式
         id: decide
         if: always() && steps.inspect.outcome == 'success'
@@ -416,7 +416,7 @@ jobs:
       - name: Install dependencies
         if: steps.creds.outputs.skip == 'no' && github.event.inputs.dry_run != 'true'
         run: |
-          npm install -g @openai/codex
+          python3 scripts/codex_runner.py install
           npm ci
 
       # ─────────────────────────────────────
@@ -611,60 +611,35 @@ jobs:
           )
           PY
 
-          # 定时任务仅写内容目录；普通本人任务沿用现有工作区权限。
-          COMMON=(
-            exec
-            --cd "$GITHUB_WORKSPACE/feei.cn"
-            --ephemeral
-            --output-last-message /tmp/result.txt
-            --config 'model_provider="custom"'
-            --config 'model_providers.custom.name="AI Proxy"'
-            --config "model_providers.custom.base_url=\"${OPENAI_BASE_URL}\""
-            --config 'model_providers.custom.wire_api="responses"'
-            --config 'model_providers.custom.env_key="OPENAI_API_KEY"'
-            --config 'model_reasoning_effort="medium"'
-          )
+          # 权限由本流程选择，模型调用交给公共执行器。
           if [ "$MODE" = "plan" ] && [ "$SCHEDULED_REVIEW" = "true" ]; then
             EXTRA=(
-              --config 'default_permissions="content_review"'
-              --config 'permissions.content_review={extends=":read-only", network={enabled=true}}'
-              --config 'web_search="live"'
+              --permission-profile content_review
+              --permission-config '{extends=":read-only", network={enabled=true}}'
+              --web-search live
             )
           elif [ "$MODE" = "plan" ]; then
             EXTRA=( --sandbox read-only )
           elif [ "$SCHEDULED_REVIEW" = "true" ]; then
             EXTRA=(
-              --config 'default_permissions="content_review"'
-              --config 'permissions.content_review={extends=":read-only", filesystem={":workspace_roots"={docs="write", blog="write", "static/media"="write"}}, network={enabled=true}}'
+              --permission-profile content_review
+              --permission-config '{extends=":read-only", filesystem={":workspace_roots"={docs="write", blog="write", "static/media"="write"}}, network={enabled=true}}'
             )
           else
             EXTRA=( --sandbox workspace-write )
           fi
-          EXTRA+=( --config 'shell_environment_policy.exclude=["OPENAI_*","GH_*","GITHUB_*","ACTIONS_*","REVIEW_*"]' )
-          if [ -n "${OPENAI_MODEL:-}" ]; then
-            EXTRA+=( --model "$OPENAI_MODEL" )
-          fi
 
           : > /tmp/result.txt
           set +e
-          codex "${COMMON[@]}" "${EXTRA[@]}" - < /tmp/prompt.md \
-            > /tmp/codex.log 2> /tmp/codex.err
+          python3 scripts/codex_runner.py \
+            --prompt /tmp/prompt.md --output /tmp/result.txt \
+            --cwd "$GITHUB_WORKSPACE/feei.cn" --timeout 2700 --effort medium --stage issue-driver \
+            --exclude 'REVIEW_*' --stdout-log /tmp/codex.log --stderr-log /tmp/codex.err \
+            "${EXTRA[@]}"
           CODEX_STATUS=$?
           set -e
 
-          # 诊断:inline 日志 + step summary 都写,任何页面都能看到
-          {
-            echo "### Codex stderr 前 2000 字符"
-            echo '```'
-            tail -c 2000 /tmp/codex.err || true
-            echo
-            echo '```'
-            echo "### Codex log 前 1500 字符"
-            echo '```'
-            head -c 1500 /tmp/codex.log || true
-            echo
-            echo '```'
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Codex status: $CODEX_STATUS；执行摘要将保存到 Actions 附件。"
 
           RESULT_NONEMPTY="$(python3 - <<'PY'
           from pathlib import Path
@@ -678,15 +653,6 @@ jobs:
           echo "result_len=$(wc -c < /tmp/result.txt)" >> "$GITHUB_OUTPUT"
 
           if [ "$CODEX_STATUS" -ne 0 ] || [ "$RESULT_NONEMPTY" != "yes" ]; then
-            echo "::group::Codex diagnostics"
-            echo "codex_status=$CODEX_STATUS"
-            echo "--- stderr ---"
-            tail -c 4000 /tmp/codex.err || true
-            echo
-            echo "--- log head ---"
-            head -c 4000 /tmp/codex.log || true
-            echo
-            echo "::endgroup::"
             {
               echo "## Codex 执行失败"
               echo
@@ -1084,6 +1050,15 @@ jobs:
             echo "- build state: \`${BUILD_STATE:-<n/a>}\`"
             echo "- previous: \`${CURRENT_LABELS:-<none>}\` → \`codex:${DESIRED}\`"
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Save Codex execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-execution-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/codex-executions/*.json
+          if-no-files-found: ignore
+          retention-days: 30
 
   regenerate-wallpaper:
     needs: drive

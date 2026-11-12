@@ -10,6 +10,8 @@ import re
 import subprocess
 from urllib.parse import quote, urlparse
 
+from codex_runner import run_codex
+
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = '.github/workflows/history-life-journey.yml'
 PROMPT = ROOT / 'docs/05-吴飞飞/01-关于/关于FEEI.CN/定时任务/历史人物一生决策任务提示词.md'
@@ -419,31 +421,12 @@ def execute(out):
     schema_path, result_path = out / 'schema.json', out / 'model-result.json'
     schema_path.write_text(json.dumps(SCHEMA))
     result_path.unlink(missing_ok=True)
-    command = ['codex', 'exec', '--cd', str(ROOT), '--ephemeral', '--ignore-user-config']
-    config = {
-        'default_permissions': 'automation',
-        'permissions.automation': os.environ['AUTOMATION_PERMISSION_CONFIG'],
-        'approval_policy': 'never',
-        'model_provider': 'custom',
-        'model_providers.custom.name': 'AI Proxy',
-        'model_providers.custom.base_url': os.environ['OPENAI_BASE_URL'].rstrip('/'),
-        'model_providers.custom.wire_api': 'responses',
-        'model_providers.custom.env_key': 'OPENAI_API_KEY',
-        'model_reasoning_effort': 'high', 'web_search': 'live',
-        'shell_environment_policy.exclude': ['OPENAI_*', 'GH_*', 'GITHUB_*', 'ACTIONS_*', 'AUTOMATION_*'],
-    }
-    for key, value in config.items():
-        command += ['--config', key + '=' + (value if key == 'permissions.automation' else json.dumps(value))]
-    command += ['--model', os.environ['OPENAI_MODEL'], '--output-schema', str(schema_path),
-                '--output-last-message', str(result_path), '-']
     log_dir = Path(os.environ.get('RUNNER_TEMP', '/tmp'))
-    with (log_dir / 'history-model.log').open('w') as log, (log_dir / 'history-model.err').open('w') as err:
-        completed = subprocess.run(command, input=(out / 'prompt.md').read_text(), text=True,
-                                   stdout=log, stderr=err, cwd=ROOT, timeout=1800)
-    if completed.returncode:
-        raise RuntimeError(f'历史旅程执行失败，退出码 {completed.returncode}')
-    if result_path.stat().st_size > 1_000_000:
-        raise ValueError('模型结果超过大小限制')
+    run_codex((out / 'prompt.md').read_text(), output=result_path, schema=schema_path,
+              cwd=ROOT, timeout=1800, stage='history', permissions=os.environ['AUTOMATION_PERMISSION_CONFIG'],
+              search='live', exclude=['AUTOMATION_*'], ignore_user_config=True,
+              stdout_log=log_dir / 'history-model.log', stderr_log=log_dir / 'history-model.err',
+              max_bytes=1_000_000)
     result = json.loads(result_path.read_text())
     issue = json.loads((out / 'archive.json').read_text())
     validate_result(result, context, issue, context['repo'].split('/')[0])

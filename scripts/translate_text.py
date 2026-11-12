@@ -24,6 +24,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from codex_runner import run_codex
+
 
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1.15 Safari/605.1.15"
 DEFAULT_TIMEOUT = 300.0
@@ -231,58 +233,15 @@ def _call_codex(article: str, *, timeout: float, model: str | None) -> str:
 
     with tempfile.TemporaryDirectory(prefix="codex-translate-") as temp_dir:
         output_path = Path(temp_dir) / "result.md"
-        cmd = [
-            codex_bin,
-            "exec",
-            "--ephemeral",
-            "--sandbox",
-            "read-only",
-            "--output-last-message",
-            str(output_path),
-        ]
-        base_url = (os.environ.get("OPENAI_BASE_URL") or "").strip()
-        if base_url:
-            cmd.extend(
-                [
-                    "--config",
-                    'model_provider="custom"',
-                    "--config",
-                    'model_providers.custom.name="AI Proxy"',
-                    "--config",
-                    f"model_providers.custom.base_url={json.dumps(base_url)}",
-                    "--config",
-                    'model_providers.custom.wire_api="responses"',
-                    "--config",
-                    'model_providers.custom.env_key="OPENAI_API_KEY"',
-                    "--config",
-                    'model_reasoning_effort="medium"',
-                ]
-            )
-        if model:
-            cmd.extend(["--model", model])
-        cmd.append("-")
         try:
-            result = subprocess.run(
-                cmd,
-                input=full_prompt,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                check=False,
-            )
+            return run_codex(full_prompt, output=output_path, timeout=timeout,
+                             effort='medium', stage='translation', model=model, binary=codex_bin)
         except subprocess.TimeoutExpired as error:
             raise TranslationError(f"codex 调用超时({timeout}s)") from error
         except OSError as error:
             raise TranslationError(f"codex 调用失败: {error}") from error
-
-        if result.returncode != 0:
-            stderr = (result.stderr or "").strip()[:500]
-            raise TranslationError(f"codex exit={result.returncode}: {stderr or '(no stderr)'}")
-
-        text = output_path.read_text(encoding="utf-8").strip() if output_path.is_file() else ""
-        if not text:
-            raise TranslationError("codex 输出为空")
-        return text
+        except (RuntimeError, ValueError) as error:
+            raise TranslationError(str(error)) from error
 
 
 def translate_text(

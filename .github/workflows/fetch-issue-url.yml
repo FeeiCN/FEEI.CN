@@ -172,7 +172,7 @@ jobs:
       - name: Install Codex
         if: steps.classify.outputs.mode == 'url' && steps.creds.outputs.translate_flag == ''
         run: |
-          npm install -g @openai/codex
+          python3 scripts/codex_runner.py install
           which codex
           codex --version
 
@@ -272,3 +272,11 @@ jobs:
                   )
                   print(f"已更新标题: {new_title}")
           PY
+      - name: Save Codex execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-execution-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/codex-executions/*.json
+          if-no-files-found: ignore
+          retention-days: 30

@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 
+from codex_runner import run_codex
 from actions_failure_diagnosis import eligible, find_delivery, gh, pages, redact, workflow_marker
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -96,28 +97,11 @@ def execute():
     (OUT / 'schema.json').write_text(json.dumps(SCHEMA))
     result_path = OUT / 'result.json'
     result_path.unlink(missing_ok=True)
-    config = {
-        'default_permissions': 'diagnosis',
-        'permissions.diagnosis': '{extends=":read-only", filesystem={":workspace_roots"={output="write"}}, network={enabled=true}}',
-        'model_provider': 'custom', 'model_providers.custom.name': 'AI Proxy',
-        'model_providers.custom.base_url': os.environ['OPENAI_BASE_URL'].rstrip('/'),
-        'model_providers.custom.wire_api': 'responses',
-        'model_providers.custom.env_key': 'OPENAI_API_KEY', 'model_reasoning_effort': 'high',
-        'shell_environment_policy.exclude': ['OPENAI_*', 'ACTIONS_*'],
-    }
-    command = ['codex', 'exec', '--cd', str(ROOT), '--ephemeral']
-    for key, value in config.items():
-        command += ['--config', f'{key}={value if key == "permissions.diagnosis" else json.dumps(value)}']
-    command += ['--model', os.environ['OPENAI_MODEL'], '--output-schema', str(OUT / 'schema.json'),
-                '--output-last-message', str(result_path), '-']
     prompt = PROMPT.read_text() + '\n\n本轮输入见 output/codex-actions-diagnosis/context.json。'
-    with (Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'actions-codex.log').open('w') as log:
-        completed = subprocess.run(command, input=prompt, text=True, stdout=log, stderr=log,
-                                   cwd=ROOT, timeout=2400)
-    if completed.returncode:
-        raise RuntimeError(f'Codex 诊断未完成，退出码 {completed.returncode}；未发布根因报告')
-    if result_path.stat().st_size > 2000000:
-        raise ValueError('诊断输出过大')
+    log = Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'actions-codex.log'
+    run_codex(prompt, output=result_path, schema=OUT / 'schema.json', cwd=ROOT, timeout=2400,
+              permissions='{extends=":read-only", filesystem={":workspace_roots"={output="write"}}, network={enabled=true}}',
+              profile='diagnosis', github_read=True, stage='actions-diagnosis', stdout_log=log, stderr_log=log)
     validate(json.loads(result_path.read_text()), context)
     if subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=ROOT).strip():
         raise ValueError('Codex 修改了受保护的仓库文件')

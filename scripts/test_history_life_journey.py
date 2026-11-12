@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import codex_runner as runner
 import unittest
 from unittest.mock import patch
 from contextlib import redirect_stdout
@@ -323,7 +324,7 @@ class HistoryJourneyTests(unittest.TestCase):
             for name, value in [('prepared.json', prepared), ('archive.json', issue)]:
                 (out / name).write_text(json.dumps(value))
             (out / 'prompt.md').write_text('只读执行，理由未知。')
-            env = {'OPENAI_BASE_URL': 'https://example.com/v1', 'OPENAI_MODEL': 'configured-model',
+            env = {'GITHUB_ACTIONS': 'false', 'OPENAI_BASE_URL': 'https://example.com/v1', 'OPENAI_MODEL': 'configured-model',
                    'AUTOMATION_PERMISSION_CONFIG': '{extends=":read-only"}', 'RUNNER_TEMP': folder}
 
             def model(command, **kwargs):
@@ -332,7 +333,7 @@ class HistoryJourneyTests(unittest.TestCase):
                 (out / 'model-result.json').write_text(json.dumps(result()))
                 return type('Completed', (), {'returncode': 0})()
 
-            with patch.dict(os.environ, env), patch.object(journey.subprocess, 'run', side_effect=model):
+            with patch.dict(os.environ, env), patch.object(runner, 'run_process', side_effect=model):
                 journey.execute(out)
             self.assertEqual(json.loads((out / 'result.json').read_text())['open_question'], '')
 

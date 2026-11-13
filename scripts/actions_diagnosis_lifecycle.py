@@ -40,6 +40,10 @@ def state(body):
         return None
 
 
+def comment_digest(comment):
+    return hashlib.sha256(json.dumps([comment.get('body'), comment.get('updated_at'), comment.get('user', {}).get('login')], sort_keys=True).encode()).hexdigest()
+
+
 def issue_snapshot(issue, comments):
     return hashlib.sha256(json.dumps([issue.get('body'), issue.get('state'), issue.get('updated_at'),
                                      [(c['id'], c.get('body'), c.get('updated_at')) for c in comments]],
@@ -62,6 +66,7 @@ def inventory(repo):
             'number': issue['number'], 'state': issue['state'], 'body': issue['body'],
             'paused': any(label['name'] == PAUSED for label in issue.get('labels', [])),
             'snapshot': issue_snapshot(issue, comments),
+            'comments': {str(c['id']): comment_digest(c) for c in comments},
             'managed': {'endpoint': managed[-1][0]['endpoint'], 'body': managed[-1][0]['body'], 'value': managed[-1][1]} if managed else None,
         })
     return groups
@@ -101,7 +106,8 @@ def collect(repo, target=''):
                 continue
             match = re.search(r'<!-- actions-(?:codex|failure)-run:(\d+):attempt:', issue['body'])
             if match:
-                run = gh(f'repos/{repo}/actions/runs/{match[1]}')
+                identifier = max(issue['managed']['value']['attempts'])[0] if issue['managed'] and issue['managed']['value']['attempts'] else match[1]
+                run = gh(f'repos/{repo}/actions/runs/{identifier}')
                 if eligible(run, repo):
                     candidates.setdefault(workflow_path(run), []).append(run)
     failures, historical, paused = [], [], []
@@ -179,7 +185,7 @@ def verify_recovery(repo, original, finding):
 
 
 def body_for(run, finding, attempts, duplicates):
-    value = {'version': 2, 'state': finding['state'], 'fault_key': finding['fault_key'], 'attempts': sorted(attempts),
+    value = {'version': 2, 'state': finding['state'], 'fault_key': finding['fault_key'], 'attempts': sorted(attempts)[-1000:],
              'checked_run': [run['latest_run']['id'], run['latest_run']['run_attempt']] if run.get('latest_run') else None}
     encoded = base64.b64encode(json.dumps(value, separators=(',', ':')).encode()).decode()
     links = '\n'.join(f'- [历史诊断 #{number}](https://github.com/{os.environ["GITHUB_REPOSITORY"]}/issues/{number})' for number in duplicates)
@@ -196,12 +202,35 @@ def body_for(run, finding, attempts, duplicates):
     return body
 
 
-def check_snapshot(repo, issue):
+def check_snapshot(repo, issue, expected_body=None, merge_message=None, recovered=False, expected_marker=None):
     current = gh(f'repos/{repo}/issues/{issue["number"]}')
     comments = pages(f'repos/{repo}/issues/{issue["number"]}/comments')
     if (current.get('user', {}).get('login') != BOT or 'pull_request' in current
-            or issue_snapshot(current, comments) != issue['snapshot']):
-        raise ValueError('诊断 Issue 在调查期间变化，停止覆盖或关闭')
+            or (expected_marker and not (current.get('body') or '').startswith(expected_marker))):
+        raise ValueError('诊断 Issue 来源变化，停止交付')
+    if any(label['name'] == PAUSED for label in current.get('labels', [])):
+        raise ValueError('调查期间本人暂停了诊断，停止交付')
+    unchanged = issue_snapshot(current, comments) == issue['snapshot']
+    matched = [entry for entry in [{'body': current.get('body'), 'endpoint': f'repos/{repo}/issues/{issue["number"]}', 'user': current['user']}] + [
+        {**c, 'endpoint': f'repos/{repo}/issues/comments/{c["id"]}'} for c in comments]
+        if entry.get('user', {}).get('login') == BOT and expected_body and entry.get('body') == expected_body]
+    merged = any(c.get('user', {}).get('login') == BOT and merge_message and c.get('body') == merge_message for c in comments)
+    if not unchanged:
+        baseline = issue.get('comments')
+        present = {str(c['id']) for c in comments}
+        own_retry = (baseline is not None and set(baseline).issubset(present)
+                     and current.get('body') in [issue['body'], expected_body]
+                     and (current['state'] == issue['state'] or (current['state'] == 'closed' and ((recovered and matched) or merged))))
+        for comment in comments:
+            identifier = str(comment['id'])
+            if baseline is not None and baseline.get(identifier) == comment_digest(comment):
+                continue
+            allowed = [body for body in [expected_body, merge_message] if body]
+            if comment.get('user', {}).get('login') != BOT or comment.get('body') not in allowed:
+                own_retry = False
+        if not own_retry:
+            raise ValueError('诊断 Issue 在调查期间变化，停止覆盖或关闭')
+    return {'state': current['state'], 'matched': matched[-1] if matched else None, 'merged': merged}
 
 
 def publish(context, result):
@@ -209,6 +238,7 @@ def publish(context, result):
     if context['repository'] != repo:
         raise ValueError('交付仓库不匹配')
     plans = []
+    fresh_groups = None
     for finding in result['findings']:
         original = next(r for r in context['failures'] if r['id'] == finding['run_id'])
         run = gh(f'repos/{repo}/actions/runs/{original["id"]}')
@@ -218,29 +248,45 @@ def publish(context, result):
         active = sorted([issue for issue in issues if issue['state'] == 'open'], key=lambda issue: issue['number'])
         if any(issue['paused'] for issue in active):
             continue
-        for issue in active:
-            check_snapshot(repo, issue)
+        attempts = {tuple(pair) for pair in original['related_attempts']}
+        for issue in original['diagnosis_issues']:
+            if issue['managed']:
+                attempts.update(tuple(pair) for pair in issue['managed']['value']['attempts'])
+        if not active and finding['state'] != 'recovered':
+            if fresh_groups is None:
+                fresh_groups = inventory(repo)
+            key = re.search(r':([a-f0-9]{20})', workflow_marker(original))[1]
+            fresh = sorted([issue for issue in fresh_groups.get(key, []) if issue['state'] == 'open'], key=lambda issue: issue['number'])
+            if fresh:
+                expected = body_for(original, finding, attempts, [issue['number'] for issue in issues])
+                if len(fresh) != 1 or not fresh[0]['managed'] or fresh[0]['managed']['body'] != expected:
+                    raise ValueError('调查后已有新的故障 Issue，停止重复建单并等待重新核验')
+                active = fresh
         if finding['state'] == 'recovered':
             verify_recovery(repo, original, finding)
         elif not active:
             latest = latest_run(repo, workflow_path(original))
             if latest and latest['conclusion'] == 'success':
                 continue  # Historical failures never create new incidents after a later success.
-        plans.append((original, finding, active))
+        duplicates = [issue['number'] for issue in issues if not active or issue['number'] != active[0]['number']]
+        body = body_for(original, finding, attempts, duplicates)
+        merge_message = f'重复诊断已归并至 #{active[0]["number"]}；原报告和讨论保留，后续在该 Issue 跟进。' if active else ''
+        for index, issue in enumerate(active):
+            issue['live'] = check_snapshot(repo, issue, expected_body=body if index == 0 else None,
+                                           merge_message=merge_message if index else None,
+                                           recovered=finding['state'] == 'recovered',
+                                           expected_marker=workflow_marker(original)) or {}
+        plans.append((original, finding, active, body, merge_message))
     summary = [result['coverage']]
-    for original, finding, active in plans:
+    for original, finding, active, body, merge_message in plans:
         canonical = active[0] if active else None
         if finding['state'] == 'recovered' and not canonical:
             continue
         prior = canonical.get('managed') if canonical else None
-        attempts = {tuple(pair) for pair in original['related_attempts']}
-        for issue in original['diagnosis_issues']:
-            if issue['managed']:
-                attempts.update(tuple(pair) for pair in issue['managed']['value']['attempts'])
-        duplicates = [issue['number'] for issue in original['diagnosis_issues'] if not canonical or issue['number'] != canonical['number']]
-        body = body_for(original, finding, attempts, duplicates)
         if canonical:
-            if prior and prior['value']['fault_key'] == finding['fault_key'] and prior['value']['state'] == finding['state']:
+            if canonical['live'].get('matched'):
+                pass  # A validated artifact replay has already delivered this exact summary.
+            elif prior and prior['value']['fault_key'] == finding['fault_key'] and prior['value']['state'] == finding['state']:
                 if prior['body'] != body:
                     gh(prior['endpoint'], 'PATCH', {'body': body})
             else:
@@ -250,10 +296,12 @@ def publish(context, result):
             response = gh(f'repos/{repo}/issues', 'POST', {'title': 'Actions 失败诊断：' + original['name'][:150], 'body': body})
             number = response['number']
         for duplicate in active[1:]:
-            gh(f'repos/{repo}/issues/{duplicate["number"]}/comments', 'POST', {
-                'body': f'重复诊断已归并至 #{number}；原报告和讨论保留，后续在该 Issue 跟进。'})
+            if duplicate['live'].get('state') == 'closed':
+                continue
+            if not duplicate['live'].get('merged'):
+                gh(f'repos/{repo}/issues/{duplicate["number"]}/comments', 'POST', {'body': merge_message})
             gh(f'repos/{repo}/issues/{duplicate["number"]}', 'PATCH', {'state': 'closed', 'state_reason': 'not_planned'})
-        if finding['state'] == 'recovered':
+        if finding['state'] == 'recovered' and canonical['live'].get('state') != 'closed':
             gh(f'repos/{repo}/issues/{number}', 'PATCH', {'state': 'closed', 'state_reason': 'completed'})
         summary.append(f'- {workflow_path(original)}：{finding["state"]} · https://github.com/{repo}/issues/{number}')
     summary += [f'- 历史失败（未新建 Issue）：{entry["failure"]}；后续成功：{entry["later_success"]}' for entry in context['historical']]

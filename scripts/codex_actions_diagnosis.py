@@ -126,7 +126,8 @@ def validate(result, context):
 
 
 def execute():
-    context = json.loads((OUT / 'context.json').read_text())
+    context_bytes = (OUT / 'context.json').read_bytes()
+    context = json.loads(context_bytes)
     (OUT / 'schema.json').write_text(json.dumps(lifecycle_schema() if context.get('version') == 2 else SCHEMA))
     result_path = OUT / 'result.json'
     result_path.unlink(missing_ok=True)
@@ -135,6 +136,8 @@ def execute():
     run_codex(prompt, output=result_path, schema=OUT / 'schema.json', cwd=ROOT, timeout=2400,
               permissions='{extends=":read-only", filesystem={":workspace_roots"={output="write"}}, network={enabled=true}}',
               profile='diagnosis', github_read=True, stage='actions-diagnosis', stdout_log=log, stderr_log=log)
+    if (OUT / 'context.json').read_bytes() != context_bytes:
+        raise ValueError('调查输入在模型执行期间变化，停止交付')
     validate(json.loads(result_path.read_text()), context)
     if subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=ROOT).strip():
         raise ValueError('Codex 修改了受保护的仓库文件')

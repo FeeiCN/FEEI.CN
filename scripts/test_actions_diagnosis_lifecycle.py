@@ -135,18 +135,18 @@ class LifecycleTests(unittest.TestCase):
         data = context([issue(managed=managed)])
         changed = finding(report_markdown='新的证据说明，原因未变。')
         with patch.object(lifecycle, 'gh', return_value=failure()) as api, \
-                patch.object(lifecycle, 'check_snapshot'):
+                patch.object(lifecycle, 'check_snapshot', return_value={}):
             lifecycle.publish(data, {'coverage': '核对', 'findings': [changed]})
         mutations = [c for c in api.call_args_list if len(c.args) > 1]
         self.assertEqual(len(mutations), 1)
         self.assertEqual(mutations[0].args[:2], (managed['endpoint'], 'PATCH'))
-        with patch.object(lifecycle, 'gh', return_value=failure()) as api, patch.object(lifecycle, 'check_snapshot'):
+        with patch.object(lifecycle, 'gh', return_value=failure()) as api, patch.object(lifecycle, 'check_snapshot', return_value={}):
             lifecycle.publish(data, {'coverage': '核对', 'findings': [finding()]})
         self.assertFalse(any(len(c.args) > 1 for c in api.call_args_list))
 
     def test_changed_cause_notifies_once_and_duplicate_closure_preserves_history(self):
         data = context([issue(9), issue(7)])
-        with patch.object(lifecycle, 'gh', return_value=failure()) as api, patch.object(lifecycle, 'check_snapshot'):
+        with patch.object(lifecycle, 'gh', return_value=failure()) as api, patch.object(lifecycle, 'check_snapshot', return_value={}):
             lifecycle.publish(data, {'coverage': '核对', 'findings': [finding(fault_key='new-cause')]})
         calls = [c.args for c in api.call_args_list if len(c.args) > 1]
         self.assertEqual(calls[0][:2], ('repos/owner/repo/issues/7/comments', 'POST'))
@@ -164,7 +164,7 @@ class LifecycleTests(unittest.TestCase):
             self.assertFalse(any(len(c.args) > 1 for c in api.call_args_list))
 
     def test_verified_recovery_closes_only_the_incident_after_delivering_evidence(self):
-        with patch.object(lifecycle, 'gh', return_value=failure()) as api, patch.object(lifecycle, 'check_snapshot'), \
+        with patch.object(lifecycle, 'gh', return_value=failure()) as api, patch.object(lifecycle, 'check_snapshot', return_value={}), \
                 patch.object(lifecycle, 'verify_recovery', return_value=success()):
             lifecycle.publish(context([issue()]), {'coverage': '核对', 'findings': [finding('recovered')]})
         self.assertEqual(api.call_args.args, ('repos/owner/repo/issues/7', 'PATCH', {'state': 'closed', 'state_reason': 'completed'}))
@@ -195,6 +195,58 @@ class LifecycleTests(unittest.TestCase):
         self.assertIn('ready=false', Path(self.temp.name, 'outputs').read_text())
         task.validate(result, data)
         lifecycle.publish(data, result)
+
+    def test_artifact_replay_is_idempotent_after_publication_and_still_rejects_owner_edits(self):
+        original = {'number': 7, 'state': 'open', 'body': lifecycle.workflow_marker(failure()), 'updated_at': 'before', 'user': {'login': lifecycle.BOT}}
+        frozen = {**issue(), 'comments': {}, 'snapshot': lifecycle.issue_snapshot(original, [])}
+        data = context([frozen])
+        current, comments, mutations = deepcopy(original), [], []
+        def api(endpoint, method='GET', payload=None):
+            if method == 'GET':
+                return failure() if '/actions/runs/' in endpoint else current
+            mutations.append((endpoint, method, payload))
+            if method == 'POST':
+                comments.append({'id': 99, 'user': {'login': lifecycle.BOT}, 'body': payload['body'], 'updated_at': 'after'})
+            else:
+                current.update(payload)
+            current['updated_at'] = 'after'
+            return {'number': 7}
+        with patch.object(lifecycle, 'gh', side_effect=api), patch.object(lifecycle, 'pages', side_effect=lambda *args: comments), patch.object(lifecycle, 'verify_recovery'):
+            result = {'coverage': '核验', 'findings': [finding('recovered')]}
+            lifecycle.publish(data, result)
+            self.assertEqual(len(mutations), 2)
+            lifecycle.publish(data, result)
+            self.assertEqual(len(mutations), 2)
+            comments.append({'id': 100, 'user': {'login': 'owner'}, 'body': '本人刚补充的条件', 'updated_at': 'later'})
+            with self.assertRaisesRegex(ValueError, '变化'):
+                lifecycle.publish(data, result)
+            self.assertEqual(len(mutations), 2)
+
+    def test_partial_initial_issue_creation_reuses_exact_delivery_instead_of_creating_again(self):
+        data = context()
+        body = lifecycle.body_for(data['failures'][0], finding(), {(42, 1)}, [])
+        existing = issue(managed={'endpoint': 'repos/owner/repo/issues/7', 'body': body, 'value': lifecycle.state(body)})
+        key = lifecycle.workflow_marker(failure()).split(':')[1].split()[0]
+        with patch.object(lifecycle, 'gh', return_value=failure()) as api, patch.object(lifecycle, 'inventory', return_value={key: [existing]}), patch.object(lifecycle, 'check_snapshot', return_value={'matched': {'body': body}, 'state': 'open'}):
+            lifecycle.publish(data, {'coverage': '核对', 'findings': [finding()]})
+        self.assertFalse(any(len(c.args) > 1 for c in api.call_args_list))
+
+    def test_same_bot_author_does_not_authorize_mutating_another_workflow_or_article(self):
+        current = {'state': 'open', 'body': '这是另一篇机器人文章', 'user': {'login': lifecycle.BOT}}
+        frozen = {'number': 7, 'snapshot': lifecycle.issue_snapshot(current, [])}
+        with patch.object(lifecycle, 'gh', return_value=current), patch.object(lifecycle, 'pages', return_value=[]), self.assertRaisesRegex(ValueError, '来源'):
+            lifecycle.check_snapshot(REPO, frozen, expected_marker=lifecycle.workflow_marker(failure()))
+
+    def test_model_cannot_rewrite_the_issue_inventory_to_expand_publish_scope(self):
+        from pathlib import Path
+        folder = Path(self.temp.name)
+        data = context([issue()])
+        (folder / 'context.json').write_text(json.dumps(data))
+        def tamper(*args, **kwargs):
+            (folder / 'context.json').write_text(json.dumps({**data, 'repository': 'other/repo'}))
+            (folder / 'result.json').write_text(json.dumps({'coverage': '核对', 'findings': [finding()]}))
+        with patch.object(task, 'OUT', folder), patch.object(task, 'run_codex', side_effect=tamper), self.assertRaisesRegex(ValueError, '输入'):
+            task.execute()
 
 
 if __name__ == '__main__':

@@ -29,6 +29,7 @@
 | UI 组件与交互效果、Chakra UI、TypeScript、命名、front matter | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/网站开发规范.md` |
 | Docusaurus、sidebars、入口页 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/docusaurus配置.md` |
 | 通用文档写作、证据与审校 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/我的写作原则.md` |
+| 安全事件研究、攻击链还原、复盘写作与审校 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/安全事件分析原则.md` |
 | 散文、游记 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/散文写作.md` |
 | GitHub Issue 内容沉淀 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/github-issue-skill.md` |
 | 每日健康、阅读、财务、AI 数据分析 | `docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/每日三省吾身.md` |

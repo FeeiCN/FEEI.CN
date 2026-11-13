@@ -72,6 +72,11 @@ export function buildHealthDailyV5({date, exportedAt, aggregateMetrics, rawMetri
 }
 
 export function writeHealthDailyV5(root, built) {
+  const date = built.index.date;
+  const indexFile = path.join(root, date.slice(0, 4), date.slice(5, 7), `${date.slice(8, 10)}.json`);
+  if (!built.shards.length) {
+    return {changed: false, skipped: true, reason: 'empty_day', indexFile, files: 0};
+  }
   const shardContents = built.shards.map((shard) => {
     const json = Buffer.from(`${JSON.stringify(shard.payload)}\n`);
     const compressed = gzipSync(json, {level: 9, mtime: 0});
@@ -82,10 +87,8 @@ export function writeHealthDailyV5(root, built) {
     shards: shardContents.map(({relativePath, sha256}) => [relativePath, sha256]),
   };
   const revision = hashBuffer(Buffer.from(canonical(contentIdentity))).slice(0, 12);
-  const date = built.index.date;
   const dayDirectory = path.join(root, date.slice(0, 4), date.slice(5, 7), date.slice(8, 10));
   const revisionDirectory = path.join(dayDirectory, revision);
-  const indexFile = path.join(root, date.slice(0, 4), date.slice(5, 7), `${date.slice(8, 10)}.json`);
   const existing = readJson(indexFile);
   if (existing?.version === 5 && existing.revision === revision && validateHealthDailyV5(existing, date, root).length === 0) {
     return {changed: false, indexFile, revision, files: shardContents.length};

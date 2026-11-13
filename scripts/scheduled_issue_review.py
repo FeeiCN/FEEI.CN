@@ -18,6 +18,7 @@ REPORT_PLAN = '<!-- codex-driver:report-plan:'
 BOT = 'github-actions[bot]'
 WEREAD_TASK = 'weread-highlight'
 WEREAD_WORKFLOW = '.github/workflows/sync-weread-highlights.yml'
+DIAGNOSIS_TASK = 'actions-failure-diagnosis'
 INTENT_SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'properties': {
@@ -92,6 +93,18 @@ def task_source(issue, repo, runs, tasks=None):
     if not bot(issue.get('author', {})):
         raise ValueError('不是受支持的自动任务机器人 Issue')
     body = issue.get('body', '')
+    diagnosis = re.match(r'<!-- actions-failure-workflow:([a-f0-9]{20}) -->\n<!-- actions-(?:codex|failure)-run:(\d+):attempt:(\d+)(?::version:\d+)? -->', body)
+    if diagnosis:
+        run = runs(diagnosis[2])
+        workflow = run.get('path', '').split('@')[0]
+        expected = hashlib.sha256(workflow.encode()).hexdigest()[:20]
+        if (diagnosis[1] != expected or not workflow.startswith('.github/workflows/')
+                or run.get('head_branch') != 'main'
+                or run.get('head_repository', {}).get('full_name', '').lower() != repo.lower()
+                or run.get('conclusion') not in {'failure', 'timed_out', 'cancelled', 'action_required'}
+                or f'https://github.com/{repo}/actions/runs/{diagnosis[2]}' not in body):
+            raise ValueError('失败诊断 Issue 的运行来源未通过核验')
+        return DIAGNOSIS_TASK
     match = re.match(r'<!-- automation-task:([a-z][a-z0-9-]*) -->', body)
     if not match and legacy_weread_source(issue):
         return WEREAD_TASK
@@ -113,6 +126,12 @@ def task_source(issue, repo, runs, tasks=None):
 def trusted_comments(issue, owner):
     return [c for c in issue.get('comments', [])
             if c.get('author', {}).get('login') == owner or bot(c.get('author', {}))]
+
+
+def incomplete_diary_reply(issue, body):
+    return ('<!-- automation-task:daily-personal-record -->' in issue.get('body', '')
+            and body.startswith('<!-- codex-driver:review:reply -->')
+            and re.search(r'^## 完整(?:修订稿|待审稿)\s*$', body, re.M) is not None)
 
 
 def skip_feedback_required(issue, owner, actor, reason):
@@ -332,6 +351,9 @@ def intent_prompt(issue, owner, task):
         'approve/regenerate 的 quote 必须逐字等于本人最新完整评论去除首尾空白，不得截取有利片段；其余可为空。'
         'reason 简短说明判断依据；clarify 时用一句自然的问题澄清对象或意图，不要求使用命令。'
     )
+    if task == 'daily-personal-record':
+        instructions += ('每日个人记录中，本人补充当天经历或要点默认是 revise：整理日记待审稿；'
+                         '纯提问仍为 discuss，明确写入当前完整版本才为 approve。')
     return instructions + '\n\n<input_data>\n' + json.dumps(data, ensure_ascii=False) + '\n</input_data>\n'
 
 
@@ -404,6 +426,7 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
     _, plan = latest_request_and_plan(issue, owner)
     # Ignore old commands when an Issue edit/manual rerun follows a delivered response.
     responses = [c for c in comments if bot(c.get('author', {})) and c['body'].startswith('<!-- codex-driver:')
+                 and not incomplete_diary_reply(issue, c['body'])
                  and not c['body'].startswith(('<!-- codex-driver:diagnostic:skip -->',
                                                '<!-- codex-driver:review-failed -->'))]
     if responses and max(c['createdAt'] for c in responses) >= request.get('updatedAt', request['createdAt']):
@@ -480,6 +503,9 @@ def readable_draft(text):
 def seal(issue, owner, text, base, initial_approval=False):
     spec = metadata(text, write=False)
     if spec['task_type'] in {'analysis', 'discussion'}:
+        if ('<!-- automation-task:daily-personal-record -->' in issue.get('body', '')
+                and re.search(r'^## 完整(?:修订稿|待审稿)\s*$', text, re.M)):
+            raise ValueError('日记完整稿必须提供逐文件待审版本，不能作为普通讨论稿交付')
         reply = re.sub(r'^## Plan metadata\s*\n```json\s*\n[\s\S]*?\n```\s*$', '', text, flags=re.M).strip()
         kind = 'needs-input' if spec['task_type'] == 'analysis' else 'reply'
         body = f'<!-- codex-driver:review:{kind} -->\n\n{reply}'
@@ -724,8 +750,9 @@ def main():
         subprocess.check_call(['gh', 'issue', 'comment', os.environ['N'], '--repo', repo, '--body', message])
     elif args.command == 'context':
         context = json.loads(base64.b64decode(os.environ['REVIEW_CONTEXT']))
-        if context['task'] in {'owner-issue', WEREAD_TASK}:
-            scope = 'current_owner_issue' if context['task'] == 'owner-issue' else 'current_verified_highlight'
+        if context['task'] in {'owner-issue', WEREAD_TASK, DIAGNOSIS_TASK}:
+            scope = ('current_owner_issue' if context['task'] == 'owner-issue' else
+                     'current_verified_diagnosis' if context['task'] == DIAGNOSIS_TASK else 'current_verified_highlight')
             history = {'issues': [], 'scope': scope, 'comments_scope': 'all_owner_and_bot_comments', 'errors': []}
             source_path = None
         else:
@@ -742,6 +769,15 @@ def main():
             'history_scope': history['scope'], 'comments_scope': history['comments_scope'],
             'history_errors': history['errors'],
             'boundary': '历史只作上下文，不代表当前审批；没有本地或其他聊天会话记忆。',
+            'task_delivery': (
+                '本人在每日记录中补充当天经历要点时，默认按日记写作原则整理可承接审批的逐文件完整待审稿，'
+                '使用 implementation 并沿用 docs/05-吴飞飞/02-年度总结/年份/月份/DD.md 的日期文件约定展示完整内容；'
+                '不将完整日记稿按普通 Issue 报告降为 discussion。按仓库现有写作规范和最近已确认日记的格式整理，不补造经历或因果。'
+                '如果本人只问问题则先回答，缺少关键事实时说明具体缺口；本轮仍不写入仓库。'
+                if context['task'] == 'daily-personal-record' else
+                '核对原失败运行与当前代码、后续运行，区分尚未修复、已经修复和外部认证阻塞；'
+                '技术修复请求先给具体解决方案，不将普通讨论或历史诊断当作写入批准。'
+                if context['task'] == DIAGNOSIS_TASK else '按当前请求交付。'),
         }, ensure_ascii=False, indent=2))
     elif args.command == 'seal':
         text = (state_dir / 'result.txt').read_text()

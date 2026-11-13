@@ -270,7 +270,16 @@ jobs:
                   command, log_name = commands[task]
                   log_path = log_dir / log_name
                   status = run_logged(command, log_path)
+                  service_unavailable = False
                   if status != 0 and task == "health":
+                      try:
+                          service_unavailable = subprocess.run(
+                              ["/opt/homebrew/bin/node", "scripts/health_auto_export_mcp_server.mjs", "--check"],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60,
+                          ).returncode != 0
+                      except subprocess.TimeoutExpired:
+                          service_unavailable = True
+                  if service_unavailable:
                       print("健康同步失败，重启 Health Auto Export 后重试一次")
                       try:
                           urlopen(f"{os.environ['APPIUM_URL'].rstrip('/')}/status", timeout=2).read()

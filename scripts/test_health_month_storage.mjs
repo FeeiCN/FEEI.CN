@@ -307,3 +307,29 @@ test('compaction preserves chart output and summaries without mutating input', (
   assert.equal(compact.data.workouts.workouts[0].heartRateData, undefined);
   assert.deepEqual(mergeMonthData(compact.data, raw.data), compact.data);
 });
+
+test('empty health day is skipped without creating a revision or replacing existing data', async t => {
+  const {buildHealthDailyV5,writeHealthDailyV5}=await import('./health_daily_v5.mjs');
+  const root=fixture(t);
+  const built=buildHealthDailyV5({date:'2025-01-02',exportedAt:'2025-01-03T00:00:00Z',aggregateMetrics:[],rawMetrics:[],collections:{},timeline:[]});
+  assert.equal(built.shards.length,0);
+  const first=writeHealthDailyV5(root,built);
+  assert.equal(first.skipped,true);assert.equal(first.reason,'empty_day');
+  assert.equal(fs.existsSync(first.indexFile),false);
+  assert.equal(fs.existsSync(path.join(root,'2025/01/02')),false);
+  fs.mkdirSync(path.dirname(first.indexFile),{recursive:true});
+  const original='{"version":5,"activity":{"steps":42}}\n';fs.writeFileSync(first.indexFile,original);
+  assert.equal(writeHealthDailyV5(root,built).skipped,true);
+  assert.equal(fs.readFileSync(first.indexFile,'utf8'),original);
+});
+
+test('exporter succeeds on empty new day and preserves prior day on empty refresh', t=>{
+ const root=fixture(t);const server=path.join(root,'empty.mjs');
+ fs.writeFileSync(server,`import readline from 'node:readline';for await(const line of readline.createInterface({input:process.stdin})){const m=JSON.parse(line);if(m.id)process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:m.id,result:m.method==='tools/call'?{data:{metrics:[],workouts:[],ecg:[]}}:{}})+'\\n');}`);
+ const args=['--date','2025-01-02','--target',root,'--mcp-server',server];
+ const first=run('export_health_year_from_mcp.mjs',args);
+ assert.equal(first.status,0,first.stderr);assert.match(first.stderr,/Skipped 2025-01-02: no health records/);
+ const file=path.join(root,'2025/01/02.json');assert.equal(fs.existsSync(file),false);
+ fs.mkdirSync(path.dirname(file),{recursive:true});const original=JSON.stringify({version:5,date:'2025-01-02',activity:{steps:42},files:{}});fs.writeFileSync(file,original);
+ const again=run('export_health_year_from_mcp.mjs',args);assert.equal(again.status,0,again.stderr);assert.equal(fs.readFileSync(file,'utf8'),original);
+});

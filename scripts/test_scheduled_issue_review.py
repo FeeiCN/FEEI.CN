@@ -1118,3 +1118,47 @@ class ScheduledReviewTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class ActualIssueRegressionTests(unittest.TestCase):
+    def test_verified_failure_diagnosis_can_be_discussed_without_task_marker(self):
+        workflow = '.github/workflows/ai-coding-rd-efficiency.yml'
+        marker = hashlib.sha256(workflow.encode()).hexdigest()[:20]
+        issue = fixture()
+        issue['body'] = (f'<!-- actions-failure-workflow:{marker} -->\n'
+                         '<!-- actions-failure-run:123:attempt:1:version:3 -->\n'
+                         f'https://github.com/{REPO}/actions/runs/123')
+        issue['comments'][0]['body'] = '修复'
+        source = {'path': workflow, 'head_branch': 'main', 'conclusion': 'failure',
+                  'head_repository': {'full_name': REPO}}
+        context = decide(issue, lookup=lambda _: source)
+        self.assertEqual(context['task'], review.DIAGNOSIS_TASK)
+        self.assertEqual(context['mode'], 'interpret')
+        for changed in [{'head_branch': 'other'}, {'head_repository': {'full_name': 'outsider/repo'}},
+                        {'path': '.github/workflows/unrelated.yml'}, {'conclusion': 'success'}]:
+            with self.subTest(changed=changed), self.assertRaises(ValueError):
+                review.task_source(issue, REPO, lambda _: {**source, **changed})
+        issue['author'] = {'login': 'outsider'}
+        with self.assertRaises(ValueError):
+            review.task_source(issue, REPO, lambda _: source)
+
+    def test_complete_diary_cannot_be_sealed_as_a_discussion_reply(self):
+        issue = fixture()
+        issue['body'] = '<!-- automation-task:daily-personal-record -->\n今天记录'
+        metadata = {'task_type': 'discussion', 'affected_files': [], 'risk': 'low', 'verification': ['已核对本人要点']}
+        text = '## 完整修订稿\n\n# 香火鼎盛\n\n本人确认的经历\n\n## Plan metadata\n```json\n' + json.dumps(metadata) + '\n```'
+        with self.assertRaisesRegex(ValueError, '逐文件'):
+            review.seal(issue, OWNER, text, 'abc123')
+        self.assertIn('review:reply', review.seal(issue, OWNER, text.replace('## 完整修订稿', '## 回答'), 'abc123'))
+        self.assertIn('review-source', review.seal(issue, OWNER, TEXT, 'abc123'))
+
+    def test_old_unapprovable_diary_reply_can_be_retried_but_new_plan_is_not_replayed(self):
+        issue = fixture()
+        issue['body'] = '<!-- automation-task:daily-personal-record -->\nhttps://github.com/' + REPO + '/actions/runs/123'
+        issue['comments'][0]['body'] = '早起\n灵隐寺香火鼎盛\n失望'
+        issue['comments'].append(comment('reply', review.BOT, '<!-- codex-driver:review:reply -->\n\n## 完整修订稿\n# 香火鼎盛\n当天正文', '2026-11-05T01:02:00Z'))
+        tasks = {'daily-personal-record': '.github/workflows/daily-personal-record.yml'}
+        source = {**run('123'), 'path': tasks['daily-personal-record']}
+        result = review.decide(issue, OWNER, OWNER, REPO, lambda _: source, tasks)
+        self.assertEqual(result['mode'], 'interpret')
+        issue['comments'].append(comment('plan', review.BOT, review.seal(issue, OWNER, TEXT, 'abc123'), '2026-11-05T01:03:00Z'))
+        self.assertEqual(review.decide(issue, OWNER, OWNER, REPO, lambda _: source, tasks)['mode'], 'skip')

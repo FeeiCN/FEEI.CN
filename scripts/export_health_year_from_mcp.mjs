@@ -265,6 +265,7 @@ async function main() {
 
       const months = [...new Set(enumerateDates(startDate, endDate).map((day) => day.slice(0, 7)))];
       for (const month of months) {
+        if (!fs.existsSync(path.join(targetRoot, month.replace('-', '/')))) continue;
         const file = path.join(targetRoot, month.replace('-', '/') + '.json');
         writeMonthlyHealth(file, buildMonthlyHealthFromDailyFiles(targetRoot, month));
         console.log(`Built ${month} health cache from v5 daily indexes`);
@@ -274,7 +275,7 @@ async function main() {
     await client.close();
   }
 
-  await buildHealthChartHistory({healthRoot: targetRoot});
+  await buildHealthChartHistory({healthRoot: targetRoot, allowEmpty: true});
 }
 
 function restoreExistingMonthlySections(file, payload, sections) {
@@ -642,6 +643,11 @@ async function exportDailyCompactFiles(client, options) {
         continue;
       }
       const result = writeHealthDailyV5(options.targetRoot, dailyData);
+      if (result.skipped) {
+        process.stderr.write(`Skipped ${day}: no health records; existing daily file preserved if present\n`);
+        if (fs.existsSync(dailyFile)) preserved.push(dailyFile);
+        continue;
+      }
       const writtenIndex = JSON.parse(fs.readFileSync(dailyFile, 'utf8'));
       const shardErrors = validateHealthDailyV5(writtenIndex, day, options.targetRoot);
       if (shardErrors.length) {

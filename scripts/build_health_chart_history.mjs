@@ -63,10 +63,13 @@ function mergeHealthData(months) {
   };
 }
 
-export async function buildHealthChartHistory({healthRoot = defaultHealthRoot} = {}) {
+export async function buildHealthChartHistory({healthRoot = defaultHealthRoot, allowEmpty = false} = {}) {
   const resolvedRoot = path.resolve(healthRoot);
   const monthFiles = healthMonthFiles(resolvedRoot);
-  if (!monthFiles.length) throw new Error(`No monthly health files found in ${resolvedRoot}`);
+  if (!monthFiles.length) {
+    if (allowEmpty) return null;
+    throw new Error(`No monthly health files found in ${resolvedRoot}`);
+  }
 
   const months = monthFiles.map(({key, file}) => ({
     key,

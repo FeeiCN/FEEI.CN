@@ -1162,3 +1162,14 @@ class ActualIssueRegressionTests(unittest.TestCase):
         self.assertEqual(result['mode'], 'interpret')
         issue['comments'].append(comment('plan', review.BOT, review.seal(issue, OWNER, TEXT, 'abc123'), '2026-11-05T01:03:00Z'))
         self.assertEqual(review.decide(issue, OWNER, OWNER, REPO, lambda _: source, tasks)['mode'], 'skip')
+
+    def test_real_daily_notes_have_a_direct_file_delivery_instruction(self):
+        issue = {'body': '<!-- automation-task:daily-personal-record -->\n<!-- daily-personal-record:2026-11-13 -->'}
+        context = {'task': 'daily-personal-record', 'intent': {'result': {'intent': 'revise'}}}
+        prompt = review.task_instructions(context, issue)
+        self.assertIn('docs/05-吴飞飞/02-年度总结/2026/十一月/13.md', prompt)
+        self.assertIn('不能降为 discussion', prompt)
+        self.assertEqual(review.task_instructions({**context, 'intent': {'result': {'intent': 'discuss'}}}, issue), '')
+        self.assertEqual(review.task_instructions({'task': 'security-event-research'}, issue), '')
+        with self.assertRaises(ValueError):
+            review.task_instructions(context, {'body': ''})

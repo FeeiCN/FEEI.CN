@@ -23,9 +23,8 @@ on:
 
 concurrency:
   group: codex-driver-issue-${{ github.event.issue.number || github.event.inputs.issue_number }}
-  # 不再 cancel-in-progress:旧 run 自然结束。否则 owner 在 /plan 跑出后再发 /replan,
-  # 旧 run 被中途杀,codex step 走 cancelled → 残留 codex:planning 锁,issue 卡死。
-  # 现在 cleanup step 已覆盖 failure + cancelled,保留旧 run 让其贴出 plan 后再退出即可。
+  # 同一议题串行处理，避免取消正在进行的送审或交付。
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -298,7 +297,7 @@ jobs:
 
           # 已核对本人的未答复请求时统一回执；旧命令入口保留原有诊断。
           case "${SKIP_DIAGNOSTIC}:${REASON}" in
-            true:*|:*"author is not owner"*|:*"state is"*|:*"driver locked by"*|:*"审批"*|:*"审阅"*|:*"来源"*|:*"运行链接"*)
+            true:*|:*"author is not owner"*|:*"state is"*|:*"审批"*|:*"审阅"*|:*"来源"*|:*"运行链接"*)
               {
                 echo "<!-- codex-driver:diagnostic:skip -->"
                 echo
@@ -314,7 +313,6 @@ jobs:
                 echo
                 echo "- 定时任务 Issue 可直接说明需要回答、修改或确认写入的内容；本人其他 Issue 仍可使用兼容命令"
                 echo "- Issue 关闭后仍可评论提问、修改或确认写入，无需重新打开"
-                echo "- 若 driver 被锁(\`codex:executing\` 等),等待上一次 \`/approve\` 流程结束后再发"
                 echo
                 echo "<!-- 本条回执由固定程序生成；未执行后续审阅、写入或重做。意图判断是否调用模型见运行记录。 -->"
               } > /tmp/diag.md
@@ -557,6 +555,8 @@ jobs:
                       role += "discuss 只回答问题；revise 交付所要求的完整修订，Issue 报告使用 discussion，仓库待写入版本才使用逐文件 implementation；clarify 只澄清不明确之处；不得把分类结果当作额外写入授权。"
                   if review_context.get('initial_approval'):
                       role += "本人本次确认之前尚无有效的完整待审稿。本轮先整理逐文件完整待审版本，展示后等待再次确认；确实缺少事实时说明需要补充什么。"
+                  from scheduled_issue_review import task_instructions
+                  role += task_instructions(review_context, d)
               else:
                   role += (
                       "\n只写入已批准评论中的完整待审稿及列出的文件，保留正文、证据和图，不重新改稿或研究。"

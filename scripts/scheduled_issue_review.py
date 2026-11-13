@@ -9,6 +9,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
+from datetime import date
 from codex_runner import CodexError, run_codex
 from workflow_delivery import article_links as delivery_links, delivery_report
 
@@ -132,6 +133,30 @@ def incomplete_diary_reply(issue, body):
     return ('<!-- automation-task:daily-personal-record -->' in issue.get('body', '')
             and body.startswith('<!-- codex-driver:review:reply -->')
             and re.search(r'^## 完整(?:修订稿|待审稿)\s*$', body, re.M) is not None)
+
+
+def task_instructions(context, issue):
+    if context['task'] != 'daily-personal-record':
+        return ''
+    action = context.get('intent', {}).get('result', {}).get('intent')
+    if action != 'revise' and not context.get('initial_approval'):
+        return ''
+    match = re.search(r'<!-- daily-personal-record:(\d{4}-\d{2}-\d{2}) -->', issue['body'])
+    if not match:
+        raise ValueError('每日记录缺少唯一日期，无法确定待审文件')
+    day = date.fromisoformat(match[1])
+    month = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'][day.month - 1]
+    target = f'docs/05-吴飞飞/02-年度总结/{day.year}/{month}/{day.day:02}.md'
+    return (
+        '\n【本次日记交付要求】本人正在每日记录中补充真实经历，当前任务是整理仓库待审日记。'
+        '这不是普通报告修订；必须用 implementation、非空 affected_files，'
+        f'以 {target} 为唯一目标，先读取该文件（若存在）和相邻已确认日记以沿用格式。'
+        '按照前述四反引号逐文件契约展示完整正文和 front matter，再由程序生成正文预览和审批引导。'
+        '即使只写成短记，也要交付可承接审批的完整文件，不能降为 discussion。'
+        '以本人原始要点为事实源；旧机器人整理不等于本人确认。'
+        '要点之间未明确的因果与对应关系保持未知，不把失望的原因、内网帖子内容或事件细节补造出来。'
+        '不自行写入或发布；确实缺少关键事实则具体说明，不能用空文件冒充完成。'
+    )
 
 
 def skip_feedback_required(issue, owner, actor, reason):

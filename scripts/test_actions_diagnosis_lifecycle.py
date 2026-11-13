@@ -248,6 +248,22 @@ class LifecycleTests(unittest.TestCase):
         with patch.object(task, 'OUT', folder), patch.object(task, 'run_codex', side_effect=tamper), self.assertRaisesRegex(ValueError, '输入'):
             task.execute()
 
+    def test_insufficient_recovery_evidence_keeps_the_incident_open_without_blocking_other_groups(self):
+        data = context([issue()])
+        second = {**data['failures'][0], 'id': 44, 'path': '.github/workflows/other.yml', 'diagnosis_issues': [issue(8)]}
+        data['failures'].append(second)
+        reports = [finding('recovered'), finding('recovered', run_id=44)]
+        def source(endpoint, method='GET', payload=None):
+            if '/actions/runs/44' in endpoint:
+                return failure(id=44, path=second['path'])
+            return failure()
+        with patch.object(lifecycle, 'gh', side_effect=source) as api, patch.object(lifecycle, 'check_snapshot', return_value={}), patch.object(lifecycle, 'verify_recovery', side_effect=[lifecycle.UnverifiedRecovery('提交早于故障'), success()]):
+            lifecycle.publish(data, {'coverage': '核对两组', 'findings': reports})
+        changes = [c.args for c in api.call_args_list if len(c.args) > 1]
+        self.assertIn('保持待验证', changes[0][2]['body'])
+        self.assertFalse(any(c[0].endswith('/7') and c[2].get('state') == 'closed' for c in changes))
+        self.assertEqual(changes[-1], ('repos/owner/repo/issues/8', 'PATCH', {'state': 'closed', 'state_reason': 'completed'}))
+
 
 if __name__ == '__main__':
     unittest.main()

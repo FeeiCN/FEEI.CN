@@ -14,6 +14,10 @@ STATE = '<!-- actions-diagnosis-state:'
 PAUSED = 'diagnosis:paused'
 
 
+class UnverifiedRecovery(ValueError):
+    """A valid investigation whose recovery claim lacks sufficient evidence."""
+
+
 def workflow_path(run):
     return run['path'].split('@')[0]
 
@@ -164,23 +168,23 @@ def verify_recovery(repo, original, finding):
     if (not trusted(run, repo) or workflow_path(run) != workflow_path(original)
             or run.get('status') != 'completed' or run.get('conclusion') != 'success'
             or run['created_at'] <= original['created_at']):
-        raise ValueError('恢复验证不是同一 workflow 后续成功运行')
+        raise UnverifiedRecovery('恢复验证不是同一 workflow 后续成功运行')
     failed_jobs = pages(f'repos/{repo}/actions/runs/{original["id"]}/attempts/{original["run_attempt"]}/jobs', 'jobs')
     jobs = pages(f'repos/{repo}/actions/runs/{run["id"]}/attempts/{run["run_attempt"]}/jobs', 'jobs')
     failed = {job['name'] for job in failed_jobs if job.get('conclusion') in {'failure', 'timed_out'}}
     passed = {job['name'] for job in jobs if job.get('conclusion') == 'success'}
     if not failed or not failed.issubset(set(proof['jobs'])) or not set(proof['jobs']).issubset(passed):
-        raise ValueError('成功验证未覆盖原失败作业；不同矩阵任务不能互相证明恢复')
+        raise UnverifiedRecovery('成功验证未覆盖原失败作业；不同矩阵任务不能互相证明恢复')
     if proof['fix_commit']:
         if not re.fullmatch(r'[a-f0-9]{40}', proof['fix_commit']):
-            raise ValueError('修复提交必须为完整 SHA')
+            raise UnverifiedRecovery('修复提交必须为完整 SHA')
         for index, (base, head) in enumerate([(original['head_sha'], proof['fix_commit']), (proof['fix_commit'], run['head_sha'])]):
             comparison = gh(f'repos/{repo}/compare/{base}...{head}')
             if comparison.get('status') not in ({'ahead'} if index == 0 else {'ahead', 'identical'}):
-                raise ValueError('验证版本未包含原失败版本及修复提交')
+                raise UnverifiedRecovery('验证版本未包含原失败版本及修复提交')
     latest = latest_run(repo, workflow_path(original))
     if not latest or latest['conclusion'] != 'success' or latest['created_at'] < run['created_at']:
-        raise ValueError('恢复验证后又出现失败，不能关闭故障')
+        raise UnverifiedRecovery('恢复验证后又出现失败，不能关闭故障')
     return run
 
 
@@ -263,7 +267,15 @@ def publish(context, result):
                     raise ValueError('调查后已有新的故障 Issue，停止重复建单并等待重新核验')
                 active = fresh
         if finding['state'] == 'recovered':
-            verify_recovery(repo, original, finding)
+            try:
+                verify_recovery(repo, original, finding)
+            except UnverifiedRecovery as error:
+                finding = json.loads(json.dumps(finding))
+                finding['state'] = 'uncertain'
+                finding['resolution'] = {'run_id': 0, 'fix_commit': '', 'jobs': [], 'explanation': str(error)}
+                finding['report_markdown'] = ('恢复证据未通过程序核验，保持待验证，暂不关闭。\n\n'
+                    + str(error) + '\n\n<details>\n<summary>原调查判断（待核验）</summary>\n\n'
+                    + finding['report_markdown'] + '\n\n</details>')
         elif not active:
             latest = latest_run(repo, workflow_path(original))
             if latest and latest['conclusion'] == 'success':

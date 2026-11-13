@@ -21,6 +21,21 @@ SCHEMA = {'type': 'object', 'additionalProperties': False, 'properties': {
 WORKFLOW = '.github/workflows/actions-failure-diagnosis.yml'
 
 
+def lifecycle_schema():
+    value = json.loads(json.dumps(SCHEMA))
+    item = value['properties']['findings']['items']
+    item['properties'].update({
+        'fault_key': {'type': 'string'},
+        'state': {'type': 'string', 'enum': ['active', 'uncertain', 'recovered']},
+        'resolution': {'type': 'object', 'additionalProperties': False, 'properties': {
+            'run_id': {'type': 'integer'}, 'fix_commit': {'type': 'string'},
+            'jobs': {'type': 'array', 'items': {'type': 'string'}}, 'explanation': {'type': 'string'},
+        }, 'required': ['run_id', 'fix_commit', 'jobs', 'explanation']},
+    })
+    item['required'] = list(item['properties'])
+    return value
+
+
 def marker(run):
     return f'<!-- actions-codex-run:{run["id"]}:attempt:{run["run_attempt"]} -->'
 
@@ -72,36 +87,14 @@ def replay():
 
 
 def prepare():
+    from actions_diagnosis_lifecycle import collect
     OUT.mkdir(parents=True, exist_ok=True)
-    repo = os.environ['GITHUB_REPOSITORY']
-    workflows = pages(f'repos/{repo}/actions/workflows', 'workflows')
-    target = os.environ.get('TARGET_RUN_ID', '')
-    since = (datetime.now(timezone.utc) - timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%SZ')
-    runs = []
-    if target:
-        if not re.fullmatch(r'[1-9]\d*', target):
-            raise ValueError('运行编号无效')
-        runs = [gh(f'repos/{repo}/actions/runs/{target}')]
-    else:
-        # GitHub search returns at most 1000 results. Record this limit instead of claiming exhaustive history.
-        for page in range(1, 11):
-            batch = gh(f'repos/{repo}/actions/runs?branch=main&created=%3E%3D{since}&per_page=100&page={page}')['workflow_runs']
-            runs.extend(batch)
-            if len(batch) < 100:
-                break
-    failures = []
-    for run in runs:
-        if eligible(run, repo) and not delivered(repo, run)[1]:
-            failures.append({key: run[key] for key in (
-                'id', 'run_attempt', 'name', 'path', 'html_url', 'head_sha', 'conclusion', 'created_at')})
-    context = {'repository': repo, 'workflows': workflows, 'failures': failures,
-               'scope': f'全部已登记 workflow；运行范围：指定运行 {target}' if target else
-                        f'全部已登记 workflow；main 最近7天，从 {since} 起，最多1000次运行，实际读取 {len(runs)} 次。',
-               'recent_runs': [{key: run.get(key) for key in ('id', 'name', 'path', 'conclusion', 'head_sha', 'created_at')}
-                               for run in runs]}
+    context = collect(os.environ['GITHUB_REPOSITORY'], os.environ.get('TARGET_RUN_ID', ''))
     (OUT / 'context.json').write_text(json.dumps(context, ensure_ascii=False))
+    if not context['failures']:
+        (OUT / 'result.json').write_text(json.dumps({'coverage': context['scope'], 'findings': []}, ensure_ascii=False))
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
-        output.write(f'ready={str(bool(failures)).lower()}\n')
+        output.write(f'ready={str(bool(context["failures"])).lower()}\n')
 
 
 def validate(result, context):
@@ -114,7 +107,8 @@ def validate(result, context):
     expected = {run['id'] for run in context['failures']}
     identifiers = []
     for item in result['findings']:
-        if not isinstance(item, dict) or set(item) != {'run_id', 'report_markdown'}:
+        fields = {'run_id', 'report_markdown', 'fault_key', 'state', 'resolution'} if context.get('version') == 2 else {'run_id', 'report_markdown'}
+        if not isinstance(item, dict) or set(item) != fields:
             raise ValueError('诊断条目无效')
         if type(item['run_id']) is not int or item['run_id'] not in expected:
             raise ValueError('诊断对象超出当前失败运行范围')
@@ -126,11 +120,14 @@ def validate(result, context):
         identifiers.append(item['run_id'])
     if len(set(identifiers)) != len(identifiers) or set(identifiers) != expected:
         raise ValueError('失败运行存在遗漏或重复；未发布部分报告')
+    if context.get('version') == 2:
+        from actions_diagnosis_lifecycle import validate as validate_lifecycle
+        validate_lifecycle(result, context)
 
 
 def execute():
     context = json.loads((OUT / 'context.json').read_text())
-    (OUT / 'schema.json').write_text(json.dumps(SCHEMA))
+    (OUT / 'schema.json').write_text(json.dumps(lifecycle_schema() if context.get('version') == 2 else SCHEMA))
     result_path = OUT / 'result.json'
     result_path.unlink(missing_ok=True)
     prompt = PROMPT.read_text() + '\n\n本轮输入见 output/codex-actions-diagnosis/context.json。'
@@ -165,6 +162,12 @@ def publish():
     context = json.loads((OUT / 'context.json').read_text())
     result = json.loads((OUT / 'result.json').read_text())
     validate(result, context)
+    if context.get('version') == 2:
+        from actions_diagnosis_lifecycle import publish as publish_lifecycle
+        for item in result['findings']:
+            item['report_markdown'] = report_text(item['report_markdown'])
+            item['resolution']['explanation'] = report_text(item['resolution']['explanation'])
+        return publish_lifecycle(context, result)
     repo = os.environ['GITHUB_REPOSITORY']
     if context['repository'] != repo:
         raise ValueError('交付仓库不匹配')

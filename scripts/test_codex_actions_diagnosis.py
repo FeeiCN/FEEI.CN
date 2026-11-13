@@ -81,9 +81,7 @@ class CodexDiagnosisTests(unittest.TestCase):
     def test_prepare_uses_all_workflows_and_only_trusted_failures(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(task, 'OUT', Path(folder)), patch.dict(
                 os.environ, {'GITHUB_REPOSITORY': 'owner/repo', 'GITHUB_OUTPUT': folder + '/outputs', 'TARGET_RUN_ID': ''}):
-            with patch.object(task, 'pages', return_value=[{'name': 'all'}]), patch.object(task, 'gh', return_value={
-                    'workflow_runs': [run(created_at='2026-11-12T00:00:00Z'), run(id=43, conclusion='success'), run(id=44, head_branch='other')]}), patch.object(
-                    task, 'delivered', return_value=(None, False)):
+            with patch('actions_diagnosis_lifecycle.collect', return_value={**self.context(), 'version': 2}):
                 task.prepare()
             context = json.loads(Path(folder, 'context.json').read_text())
             self.assertEqual([entry['id'] for entry in context['failures']], [42])

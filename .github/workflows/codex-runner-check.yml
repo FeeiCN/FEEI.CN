@@ -50,6 +50,7 @@ jobs:
           python3 -m unittest discover -s scripts -p test_codex_runner.py
           python3 -m unittest discover -s scripts -p test_run_automation_task.py
           python3 -m unittest discover -s scripts -p test_codex_actions_diagnosis.py
+          python3 -m unittest discover -s scripts -p test_actions_diagnosis_lifecycle.py
           python3 -m unittest discover -s scripts -p test_history_life_journey.py
           python3 -m unittest discover -s scripts -p test_scheduled_issue_review.py
       - name: Install pinned Codex

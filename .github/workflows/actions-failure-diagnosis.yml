@@ -33,6 +33,7 @@ jobs:
       issues: read
     outputs:
       ready: ${{ steps.prepare.outputs.ready }}
+      prepared: ${{ steps.prepare.outcome == 'success' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -52,7 +53,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Verify diagnosis and delivery
-        run: python3 -m unittest discover -s scripts -p 'test_codex_actions_diagnosis.py'
+        run: |
+          python3 -m unittest discover -s scripts -p test_codex_actions_diagnosis.py
+          python3 -m unittest discover -s scripts -p test_actions_diagnosis_lifecycle.py
       - name: Read all workflows and pending failed runs
         id: prepare
         env:
@@ -82,7 +85,7 @@ jobs:
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: python3 scripts/codex_actions_diagnosis.py execute
       - uses: actions/upload-artifact@v4
-        if: always() && steps.prepare.outputs.ready == 'true'
+        if: always() && steps.prepare.outcome == 'success'
         with:
           name: codex-actions-diagnosis-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
@@ -176,7 +179,7 @@ jobs:
 
   publish:
     needs: [investigate, restore]
-    if: always() && !cancelled() && ((needs.investigate.result == 'success' && needs.investigate.outputs.ready == 'true') || (needs.restore.result == 'success' && needs.restore.outputs.ready == 'true'))
+    if: always() && !cancelled() && ((needs.investigate.result == 'success' && needs.investigate.outputs.prepared == 'true') || (needs.restore.result == 'success' && needs.restore.outputs.ready == 'true'))
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -197,7 +200,7 @@ jobs:
         with:
           python-version: '3.12'
       - uses: actions/download-artifact@v4
-        if: needs.investigate.outputs.ready == 'true'
+        if: needs.investigate.outputs.prepared == 'true'
         with:
           name: codex-actions-diagnosis-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: output/codex-actions-diagnosis

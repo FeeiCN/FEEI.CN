@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import ast
 import concurrent.futures
 import json
@@ -22,8 +23,9 @@ MUSIC_DIR = ROOT / "static/music"
 LYRICS_TS_PATH = ROOT / "src/components/GlobalMusicPlayer/localLyrics.ts"
 REPORT_PATH = ROOT / "static/music/lyrics-report.json"
 USER_AGENT = "Mozilla/5.0 (compatible; feei-site-lyrics-bot/1.0)"
+JS_STRING = r'''(?:'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")'''
 TRACK_PATTERN = re.compile(
-    r"localTrack\(\s*(?P<title>'(?:\\.|[^'])*')\s*,\s*(?P<artist>'(?:\\.|[^'])*')\s*,\s*(?P<file>'(?:\\.|[^'])*')\s*\)"
+    rf"localTrack\(\s*(?P<title>{JS_STRING})\s*,\s*(?P<artist>{JS_STRING})\s*,\s*(?P<file>{JS_STRING})\s*\)"
 )
 
 
@@ -51,7 +53,7 @@ def parse_js_string(source: str) -> str:
     return ast.literal_eval(source)
 
 
-def load_tracks() -> list[Track]:
+def load_tracks(*, include_missing: bool = False) -> list[Track]:
     playlist_source = PLAYLIST_PATH.read_text()
     tracks: list[Track] = []
 
@@ -61,7 +63,7 @@ def load_tracks() -> list[Track]:
             artist=parse_js_string(match.group("artist")),
             file_name=parse_js_string(match.group("file")),
         )
-        if track.audio_path.exists():
+        if include_missing or track.audio_path.is_file():
             tracks.append(track)
 
     return tracks
@@ -196,27 +198,20 @@ def pick_candidate(track: Track, candidates: Iterable[dict]) -> dict | None:
     return best_candidate
 
 
-def seconds_to_lrc_timestamp(seconds: float) -> str:
-    minutes = int(seconds // 60)
-    remaining = seconds - minutes * 60
-    return f"{minutes:02d}:{remaining:05.2f}"
-
-
-def build_pseudo_lrc(plain_lyrics: str, duration: float | int | None) -> str | None:
-    lines = [line.strip() for line in plain_lyrics.splitlines() if line.strip()]
-    if not lines:
-        return None
-
-    total_duration = float(duration or 0)
-    if total_duration <= 0:
-        total_duration = max(len(lines) * 4, 4)
-
-    interval = total_duration / max(len(lines), 1)
-    lrc_lines = [
-        f"[{seconds_to_lrc_timestamp(index * interval)}] {line}"
-        for index, line in enumerate(lines)
-    ]
-    return "\n".join(lrc_lines) + "\n"
+def read_lyrics_module() -> dict[str, str]:
+    if not LYRICS_TS_PATH.exists():
+        return {}
+    source = LYRICS_TS_PATH.read_text()
+    match = re.search(r"export const localLyricsFileByAudioFile[^=]*=\s*({[\s\S]*});\s*$", source)
+    if not match:
+        raise ValueError("无法读取现有歌词映射，停止生成")
+    mapping = ast.literal_eval(match.group(1))
+    if not isinstance(mapping, dict) or any(
+        not isinstance(key, str) or not isinstance(value, str)
+        for key, value in mapping.items()
+    ):
+        raise ValueError("现有歌词映射格式错误，停止生成")
+    return mapping
 
 
 def write_lyrics_module(file_map: dict[str, str]) -> None:
@@ -233,9 +228,23 @@ def write_lyrics_module(file_map: dict[str, str]) -> None:
     LYRICS_TS_PATH.write_text(module_source)
 
 
-def main() -> int:
-    tracks = load_tracks()
-    lyric_file_map: dict[str, str] = {}
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="下载同步歌词并增量更新歌词映射，保留仅在服务器存在的歌曲")
+    parser.add_argument("--audio-file", action="append", help="只处理指定的已注册音频文件，可重复传入")
+    args = parser.parse_args(argv)
+    registered = {track.file_name: track for track in load_tracks(include_missing=True)}
+    if args.audio_file:
+        unavailable = [name for name in args.audio_file
+                       if name not in registered or not registered[name].audio_path.is_file()]
+        if unavailable:
+            parser.error("指定歌曲未注册或本地音频缺失：" + ", ".join(unavailable))
+        tracks = [registered[name] for name in dict.fromkeys(args.audio_file)]
+    else:
+        tracks = [track for track in registered.values() if track.audio_path.is_file()]
+    previous = read_lyrics_module()
+    lyric_file_map = previous.copy() if args.audio_file else {
+        name: lyric for name, lyric in previous.items() if name in registered
+    }
     report: list[dict] = []
 
     def process_track(index_and_track: tuple[int, Track]) -> dict:
@@ -291,13 +300,9 @@ def main() -> int:
                 status = "synced"
                 source = "syncedLyrics"
             elif candidate.get("plainLyrics"):
-                lyric_content = build_pseudo_lrc(
-                    candidate["plainLyrics"],
-                    candidate.get("duration"),
-                )
-                if lyric_content:
-                    status = "plain_to_lrc"
-                    source = "plainLyrics"
+                track.audio_path.with_suffix(".lyrics.txt").write_text(candidate["plainLyrics"].strip() + "\n")
+                status = "plain_only"
+                source = "plainLyrics"
 
         if lyric_content:
             track.lyric_path.write_text(lyric_content)
@@ -339,14 +344,18 @@ def main() -> int:
         report_for_json.append(cleaned)
 
     write_lyrics_module(lyric_file_map)
+    if args.audio_file and REPORT_PATH.exists():
+        old_report = json.loads(REPORT_PATH.read_text())
+        selected = {track.file_name for track in tracks}
+        report_for_json = [item for item in old_report if item.get("file_name") not in selected] + report_for_json
     REPORT_PATH.write_text(json.dumps(report_for_json, ensure_ascii=False, indent=2) + "\n")
 
     summary: dict[str, int] = {}
-    for item in report_for_json:
+    for item in report:
         summary[item["status"]] = summary.get(item["status"], 0) + 1
 
     print(json.dumps({"summary": summary, "written": len(lyric_file_map)}, ensure_ascii=False))
-    return 0
+    return int(any(item["status"] in {"missing", "error", "plain_only"} for item in report))
 
 
 if __name__ == "__main__":

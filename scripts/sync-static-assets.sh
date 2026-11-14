@@ -18,10 +18,11 @@ export LANG="${LANG:-en_US.UTF-8}"
 
 dry_run=false
 delete=false
+music_files_from=""
 
 usage() {
   cat <<'EOF'
-Usage: bash scripts/sync-static-assets.sh [--dry-run] [--delete]
+Usage: bash scripts/sync-static-assets.sh [--dry-run] [--delete] [--music-files-from FILE]
 
 Sync local static/music and static/media to:
   root@feei.cn:/data/wufeifei-assets/music
@@ -29,6 +30,8 @@ Sync local static/music and static/media to:
 
 Defaults to real upload. Use --dry-run to preview changes.
 Use --delete only when remote files removed locally should also be removed remotely.
+Use --music-files-from FILE to upload only the listed paths relative to static/music,
+without syncing media. This mode does not allow --delete.
 Set ASSETS_SYNC_ICONV= to disable filename charset conversion.
 Set ASSETS_SYNC_ICONV=UTF-8-MAC,UTF-8 to force a specific conversion.
 EOF
@@ -41,6 +44,14 @@ while [ "$#" -gt 0 ]; do
       ;;
     --delete)
       delete=true
+      ;;
+    --music-files-from)
+      if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+        echo "--music-files-from requires a file list"
+        exit 2
+      fi
+      music_files_from="$2"
+      shift
       ;;
     -h|--help)
       usage
@@ -64,7 +75,29 @@ require_dir() {
 }
 
 require_dir "$local_music_dir"
-require_dir "$local_media_dir"
+if [ -n "$music_files_from" ]; then
+  if [ "$delete" = "true" ]; then
+    echo "--delete cannot be combined with --music-files-from"
+    exit 2
+  fi
+  python3 - "$local_music_dir" "$music_files_from" <<'PY'
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1]).resolve()
+files = [name for name in Path(sys.argv[2]).read_text().splitlines() if name]
+if not files:
+    raise SystemExit("Music file list is empty")
+for name in files:
+    relative = Path(name)
+    path = root / relative
+    if (relative.is_absolute() or ".." in relative.parts or path.is_symlink()
+            or not path.resolve().is_relative_to(root) or not path.is_file()):
+        raise SystemExit("Invalid music file: " + name)
+PY
+else
+  require_dir "$local_media_dir"
+fi
 
 remote="${remote_user}@${remote_host}"
 ssh_args=(-p "$remote_port")
@@ -98,9 +131,16 @@ fi
 if [ "$delete" = "true" ]; then
   rsync_args+=(--delete-after)
 fi
+if [ -n "$music_files_from" ]; then
+  rsync_args+=(--files-from="$music_files_from")
+fi
 
 echo "Ensuring remote directories exist..."
-if [ "$dry_run" = "true" ]; then
+if [ -n "$music_files_from" ] && [ "$dry_run" = "true" ]; then
+  echo "[dry-run] ssh ${ssh_args[*]} $remote \"mkdir -p '$remote_music_dir'\""
+elif [ -n "$music_files_from" ]; then
+  ssh "${ssh_args[@]}" "$remote" "mkdir -p '$remote_music_dir'"
+elif [ "$dry_run" = "true" ]; then
   echo "[dry-run] ssh ${ssh_args[*]} $remote \"mkdir -p '$remote_music_dir' '$remote_media_dir'\""
 else
   ssh "${ssh_args[@]}" "$remote" "mkdir -p '$remote_music_dir' '$remote_media_dir'"
@@ -109,7 +149,9 @@ fi
 echo "Syncing static/music -> $remote:$remote_music_dir/"
 rsync "${rsync_args[@]}" "$local_music_dir/" "$remote:$remote_music_dir/"
 
-echo "Syncing static/media -> $remote:$remote_media_dir/"
-rsync "${rsync_args[@]}" "$local_media_dir/" "$remote:$remote_media_dir/"
+if [ -z "$music_files_from" ]; then
+  echo "Syncing static/media -> $remote:$remote_media_dir/"
+  rsync "${rsync_args[@]}" "$local_media_dir/" "$remote:$remote_media_dir/"
+fi
 
 echo "Done."

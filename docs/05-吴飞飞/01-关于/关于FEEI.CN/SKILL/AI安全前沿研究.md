@@ -1,23 +1,13 @@
 ---
-sidebar_badge:
-  text: GitHub Action
 slug: /ai-security-frontier-research-task-prompt
-title: AI 安全前沿研究流水线任务提示词
+title: AI 安全前沿研究
 icon: pen-icon
-description: AI 安全前沿研究流水线的完整执行提示词，供 GitHub Actions 直接读取并按结果状态交付。
+description: 研究 Agent 权限、记忆安全与 AI 辅助漏洞发现时使用，延续可证伪假设、原始证据和实验记录，交付有新增价值的成果。
 ---
 
-本页是本任务在 GitHub Actions 中的提示词执行源。修改本页后，下次运行直接使用更新后的正文，无需修改 workflow。已有 ChatGPT Tasks 不会被自动更改或停用。
+研究 Agent 权限、记忆安全与 AI 辅助漏洞发现时使用，延续可证伪假设、原始证据和实验记录，交付有新增价值的成果。交互任务按本次请求确定输入和交付；GitHub Actions 调用使用 workflow 提供的上下文，并遵循[自动化执行约定](/automation-execution-contract)。
 
-- 任务 ID：`ai-security-frontier-research`
-- 执行时间：北京时间 DAILY 08:00
-- 交付：公开 Issue 审阅；无更新时保持静默
-- 共用要求：[自动任务执行约定](./自动任务执行约定.md)
-
-## 当前执行提示词
-
-<!-- automation-prompt:start -->
-每天推进 AI 安全前沿研究，以可证伪假设、可追溯证据和可复现成果为目标。研究每天进行，有实质成果时才交付完整文章。范围与优先级保持如下：
+推进 AI 安全前沿研究，以可证伪假设、可追溯证据和可复现成果为目标。研究每天进行，有实质成果时才交付完整文章。范围与优先级保持如下：
 - AI Agent 执行权限与信任边界：Prompt/Tool Injection、MCP、Capability/Action Envelope、工具网关、身份委托、凭证隔离与沙箱。
 - 跨会话记忆与共享状态安全：Memory Poisoning、跨 Agent 状态污染和可信事实升级。
 - AI 辅助高价值漏洞挖掘方法：补丁不变量、Variant Hunting、异常路径、所有权/生命周期、跨组件安全契约、Parser Differential、状态与利用链组合；PHP2Shell 等公开案例可作为研究材料。
@@ -31,4 +21,3 @@ description: AI 安全前沿研究流水线的完整执行提示词，供 GitHub
 周一选定一个主攻问题并复核证伪条件；每月首个工作日整理重点专题证据、实验设计与研究缺口；每季度首个工作日复盘方法、复现情况、原创发现、无效假设及外部可验证影响。这些是研究过程，不强制生成日报、周报或月报。
 
 交付前回答：是否讲清一个机制、排除了重要假设、获得了可复用的源码/补丁结论，或纠正了原有重要判断？相比已发内容新增了什么？仅增加来源、更新状态、重复常识或重写未执行实验不构成交稿。成熟成果优先完善既有 AI 系统安全、AI 赋能安全文章，完整待审稿按共用约定交付公开 Issue。若形成原创发现，说明负责任披露、同行复核、开源评测或论文等可行后续路径，不抢先披露未修复高危细节。
-<!-- automation-prompt:end -->

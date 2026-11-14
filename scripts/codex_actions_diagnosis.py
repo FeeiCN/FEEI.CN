@@ -12,7 +12,7 @@ from actions_failure_diagnosis import eligible, find_delivery, gh, pages, redact
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'output/codex-actions-diagnosis'
-PROMPT = ROOT / 'docs/05-吴飞飞/01-关于/关于FEEI.CN/定时任务/Actions失败诊断任务提示词.md'
+PROMPT = ROOT / 'docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/Actions故障诊断.md'
 SCHEMA = {'type': 'object', 'additionalProperties': False, 'properties': {
     'coverage': {'type': 'string'},
     'findings': {'type': 'array', 'items': {'type': 'object', 'additionalProperties': False,

@@ -95,7 +95,7 @@ jobs:
     uses: ./.github/workflows/automation-task.yml
     with:
       task_id: daily-personal-record
-      prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/定时任务/每日个人记录任务提示词.md
+      prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/每日个人记录.md
       delivery: issue
       personal_date: ${{ needs.prepare.outputs.date }}
       personal_issue: ${{ needs.prepare.outputs.issue }}

@@ -20,7 +20,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKSTAGE = Path('docs/05-吴飞飞/01-关于/关于FEEI.CN')
-COMMON = BACKSTAGE / '定时任务/自动任务执行约定.md'
+COMMON = BACKSTAGE / 'SKILL/自动化执行约定.md'
 START = '<!-- automation-prompt:start -->'
 END = '<!-- automation-prompt:end -->'
 RESEARCH = {'security-event-research', 'ai-security-frontier-research',
@@ -74,7 +74,7 @@ def prompt(path):
     if path.is_absolute() or '..' in path.parts or not path.is_relative_to(BACKSTAGE):
         raise ValueError('提示词必须位于网站幕后目录')
     content = (ROOT / path).read_text()
-    if path.is_relative_to(BACKSTAGE / 'SKILL') and path.suffix == '.md':
+    if path != COMMON and path.is_relative_to(BACKSTAGE / 'SKILL') and path.suffix == '.md':
         if re.match(r'\A---[ \t]*(?:\n|$)', content):
             front_matter = re.match(r'\A---[ \t]*\n.*?\n---[ \t]*(?:\n|$)', content, re.S)
             if not front_matter:
@@ -362,7 +362,7 @@ def validate_result(t, result, out):
             raise ValueError('无效的来源 URL')
     if status == 'completed' and t['id'] in RESEARCH and len(set(result['sources'])) < 2:
         raise ValueError('研究结果缺少至少两个本轮核验来源')
-    if status == 'no_update' and t['id'] != 'diary-prompt-sync' and not result['sources']:
+    if status == 'no_update' and not result['sources']:
         raise ValueError('无更新结果必须记录实际检查的来源')
     files = []
     for name in result['artifacts']:
@@ -518,24 +518,6 @@ def deliver(t, out):
         raise ValueError('任务受阻，已记录到指定审阅渠道；不能标为成功')
 
 
-def verify_sync(t, out):
-    if t['id'] != 'diary-prompt-sync':
-        raise ValueError('同步检查仅供 diary-prompt-sync 使用')
-    try:
-        check()
-        status, report = 'no_update', '所有任务 workflow 与文档提示词一致，无需修改。'
-    except (ValueError, OSError, KeyError, yaml.YAMLError) as error:
-        status, report = 'blocked', (
-            f'任务配置与提示词同步检查失败：\n\n{error}\n\n'
-            '请修复上述任务的 workflow 输入、启用条件或对应文档标记，'
-            '再在仓库根目录运行 `python3 scripts/automation_tasks.py check`；本轮没有自动修改文件。')
-    (out / 'result.json').write_text(json.dumps({
-        'status': status, 'report_markdown': report, 'sources': [], 'artifacts': [],
-        'audit': {'summary': report, 'data_cutoff': datetime.now(timezone.utc).isoformat(),
-                  'deduplication_reason': '本轮确定性检查配置与提示词；无差异时不创建 Issue。'},
-    }, ensure_ascii=False))
-
-
 def render_wallpaper(t, out):
     if t['id'] != 'update-weight-wallpaper':
         raise ValueError('固定壁纸渲染仅供 update-weight-wallpaper 使用')
@@ -573,7 +555,7 @@ def render_wallpaper(t, out):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['check', 'prepare', 'deliver', 'verify-sync', 'render-wallpaper'])
+    parser.add_argument('command', choices=['check', 'prepare', 'deliver', 'render-wallpaper'])
     parser.add_argument('--task')
     args = parser.parse_args()
     os.chdir(ROOT)
@@ -587,7 +569,7 @@ def main():
         if os.environ.get(env) != t[key]:
             raise ValueError(f'执行参数 {env} 与任务 workflow 不一致')
     out = ROOT / 'output'
-    {'prepare': prepare, 'deliver': deliver, 'verify-sync': verify_sync,
+    {'prepare': prepare, 'deliver': deliver,
      'render-wallpaper': render_wallpaper}[args.command](t, out)
 
 

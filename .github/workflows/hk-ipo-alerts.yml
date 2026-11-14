@@ -19,6 +19,6 @@ jobs:
     uses: ./.github/workflows/automation-task.yml
     with:
       task_id: hk-ipo-alerts
-      prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/定时任务/港股热门新股提醒任务提示词.md
+      prompt_source: docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/港股新股跟踪.md
       delivery: issue
     secrets: inherit

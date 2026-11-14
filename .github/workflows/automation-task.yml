@@ -75,7 +75,6 @@ jobs:
           phase: preparing
           task: ${{ inputs.task_id || github.job }}
       - uses: actions/setup-node@v4
-        if: ${{ inputs.task_id != 'diary-prompt-sync' }}
         with:
           node-version: '22'
       - uses: actions/setup-python@v5
@@ -89,7 +88,7 @@ jobs:
           TRIGGER_SCHEDULE: ${{ github.event.schedule }}
         run: python3 scripts/automation_schedule.py
       - name: Install executor
-        if: ${{ inputs.task_id != 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
+        if: ${{ steps.freshness.outputs.expired != 'true' }}
         run: |
           python3 scripts/codex_runner.py install
           codex --version
@@ -112,29 +111,26 @@ jobs:
         if: ${{ inputs.task_id == 'update-weight-wallpaper' && steps.freshness.outputs.expired != 'true' }}
         run: python3 -m unittest discover -s scripts -p test_render_weight_wallpaper.py
       - name: Check documented task configuration
-        if: ${{ inputs.task_id != 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
+        if: ${{ steps.freshness.outputs.expired != 'true' }}
         run: |
           python3 scripts/automation_tasks.py check
           python3 -m unittest discover -s scripts -p test_run_automation_task.py
       - name: Verify research network and repository protection
-        if: ${{ inputs.task_id != 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
+        if: ${{ steps.freshness.outputs.expired != 'true' }}
         run: python3 scripts/check_automation_permissions.py
       - name: Read documented prompt and previous results
         if: steps.freshness.outputs.expired != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/automation_tasks.py prepare --task "$TASK_ID"
-      - name: Verify prompt synchronization without a model
-        if: ${{ inputs.task_id == 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
-        run: python3 scripts/automation_tasks.py verify-sync --task "$TASK_ID"
       - name: 更新阶段：执行任务
-        if: ${{ inputs.task_id != 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
+        if: ${{ steps.freshness.outputs.expired != 'true' }}
         uses: ./feei.cn/.github/actions/workflow-status
         continue-on-error: true
         with:
           phase: running
       - name: Execute task
-        if: ${{ inputs.task_id != 'diary-prompt-sync' && steps.freshness.outputs.expired != 'true' }}
+        if: ${{ steps.freshness.outputs.expired != 'true' }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}

@@ -45,27 +45,6 @@ class AutomationWorkflowTests(unittest.TestCase):
         (self.workflows / filename).write_text(automation.yaml.safe_dump(content))
         return content
 
-    def test_sync_checks_without_model_or_network_and_is_silent_on_success(self):
-        self.workflow(task_id='diary-prompt-sync')
-        out = self.root / 'output'
-        out.mkdir()
-        with patch.object(automation.subprocess, 'check_output') as command:
-            automation.verify_sync({'id': 'diary-prompt-sync'}, out)
-            command.assert_not_called()
-        self.assertEqual(json.loads((out / 'result.json').read_text())['status'], 'no_update')
-
-    def test_sync_reports_missing_document_with_path_and_repair_command(self):
-        self.workflow(task_id='diary-prompt-sync')
-        (self.root / self.source).unlink()
-        out = self.root / 'output'
-        out.mkdir()
-        automation.verify_sync({'id': 'diary-prompt-sync'}, out)
-        result = json.loads((out / 'result.json').read_text())
-        self.assertEqual(result['status'], 'blocked')
-        self.assertIn(str(self.source), result['report_markdown'])
-        self.assertIn('example.yml', result['report_markdown'])
-        self.assertIn('automation_tasks.py check', result['report_markdown'])
-
     def test_configuration_comes_entirely_from_workflow(self):
         self.workflow()
         automation.check()
@@ -95,6 +74,18 @@ class AutomationWorkflowTests(unittest.TestCase):
     def test_skill_without_front_matter_keeps_entire_body(self):
         body = '# 分析方法\n\n先读材料。\n\n## 成稿\n写清因果。'
         self.assertEqual(automation.prompt(self.skill(body)), body)
+
+    def test_shared_execution_skill_keeps_stage_instructions_separate(self):
+        path = self.root / automation.COMMON
+        source = ('---\ntitle: 自动化执行约定\n---\n页面说明\n'
+                  + automation.START + '\n公共要求\n' + automation.END
+                  + '\n<!-- writing-stage:review:start -->\n只审稿\n'
+                  + '<!-- writing-stage:review:end -->\n')
+        path.write_text(source)
+        self.assertEqual(automation.prompt(automation.COMMON), '公共要求')
+        path.write_text(source.replace(automation.END, ''))
+        with self.assertRaisesRegex(ValueError, '提示词标记'):
+            automation.prompt(automation.COMMON)
 
     def test_skill_rejects_empty_body_and_unclosed_front_matter(self):
         for content in [' \n', '---\ntitle: 分析\n---\n', '---\ntitle: 分析\n正文']:
@@ -391,12 +382,10 @@ class AutomationResultTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '缺少执行结果正文'):
             automation.validate_result(self.task, self.result, self.out)
 
-    def test_no_update_requires_checked_sources_except_deterministic_sync(self):
+    def test_no_update_requires_checked_sources(self):
         self.result.update(status='no_update', sources=[])
         with self.assertRaisesRegex(ValueError, '实际检查的来源'):
             automation.validate_result(self.task, self.result, self.out)
-        self.task['id'] = 'diary-prompt-sync'
-        self.assertEqual(automation.validate_result(self.task, self.result, self.out)[0], 'no_update')
 
     def test_audit_fields_cannot_be_empty_or_missing(self):
         for key in ['summary', 'data_cutoff', 'deduplication_reason']:

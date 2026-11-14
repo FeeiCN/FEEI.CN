@@ -1,11 +1,11 @@
 ---
 slug: /actions-failure-diagnosis-task-prompt
-title: Actions 失败诊断任务提示词
+title: Actions 故障诊断
 icon: code-icon
-sidebar_badge:
-  text: GitHub Action
-description: 由 Codex 读取本仓库全部 GitHub Actions，调查失败运行并交付有证据的解决方案。
+description: 调查 GitHub Actions 失败或恢复候选时使用，追查实际失败条件、日志与源码，交付有证据的根因、修复和验证建议。
 ---
+
+调查 GitHub Actions 失败或恢复候选时使用，追查实际失败条件、日志与源码，交付有证据的根因、修复和验证建议。交互任务按本次请求确定输入和交付；GitHub Actions 调用使用 workflow 提供的上下文，并遵循[自动化执行约定](/automation-execution-contract)。
 
 本任务每 6 小时巡检全部 GitHub Actions 的近 7 天 main 运行，也可手动指定失败运行。每个 workflow 本轮只调查最新失败，其他失败作为关联记录。已有后续成功且没有未关闭故障的历史运行只进入 Actions 摘要；未关闭条目仍须核验原失败条件。读日志的 Codex job 只有读取权限，聚合、去重与关闭由独立发布 job 执行。
 
@@ -23,7 +23,7 @@ description: 由 Codex 读取本仓库全部 GitHub Actions，调查失败运行
 
 首次尝试的旧产物名称保留兼容；新产物名称包含运行尝试编号，重跑不会与上一尝试冲突。更新只针对同次失败运行的原机器人报告，且旧正文须与该产物的既有渲染一致；人工改过的报告不自动覆盖。正文相同时只留执行摘要，不重复评论。实际凭证仍保守脱敏，普通请求头名称的说明保留完整句子。
 
-## 执行提示词
+## 调查与交付
 
 你负责调查当前仓库 GitHub Actions 失败的原因并给出解决方案。先读 AGENTS.md，再读 output/codex-actions-diagnosis/context.json。
 

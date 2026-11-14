@@ -1,23 +1,13 @@
 ---
-sidebar_badge:
-  text: GitHub Action
 slug: /ai-coding-rd-efficiency-task-prompt
-title: AI 编程与研发提效任务提示词
+title: AI 编程与研发提效
 icon: pen-icon
-description: AI 编程与研发提效的完整执行提示词，供 GitHub Actions 直接读取并按结果状态交付。
+description: 研究 AI 编程和 Agent 软件工程时使用，对照真实交付流程分析瓶颈、验证改进假设并解释效率、质量与成本。
 ---
 
-本页是本任务在 GitHub Actions 中的提示词执行源。修改本页后，下次运行直接使用更新后的正文，无需修改 workflow。已有 ChatGPT Tasks 不会被自动更改或停用。
+研究 AI 编程和 Agent 软件工程时使用，对照真实交付流程分析瓶颈、验证改进假设并解释效率、质量与成本。交互任务按本次请求确定输入和交付；GitHub Actions 调用使用 workflow 提供的上下文，并遵循[自动化执行约定](/automation-execution-contract)。
 
-- 任务 ID：`ai-coding-rd-efficiency`
-- 执行时间：北京时间 WEEKLY TH 09:00
-- 交付：公开 Issue 审阅；无更新时保持静默
-- 共用要求：[自动任务执行约定](./自动任务执行约定.md)
-
-## 当前执行提示词
-
-<!-- automation-prompt:start -->
-每周研究可验证的 Agent Native 软件工程方法，目标是提升端到端交付效率与质量。范围保持需求澄清、任务契约、上下文工程、Harness/Skill、Agent 规划与执行、代码生成、测试/Code Review、CI、发布、运维、协作与组织流程；安全研究作为风险约束，不重复漏洞情报与攻防假设。
+研究可验证的 Agent Native 软件工程方法，目标是提升端到端交付效率与质量。范围保持需求澄清、任务契约、上下文工程、Harness/Skill、Agent 规划与执行、代码生成、测试/Code Review、CI、发布、运维、协作与组织流程；安全研究作为风险约束，不重复漏洞情报与攻防假设。
 
 先阅读相关既有文章，如 AI编程.md、Harness工程.md、AI组织转型.md，以及实际可访问的先前研究。检索过去 7—14 天模型实验室、编程工具与框架的官方变更、工程博客、公开代码、论文、评测和一线复盘，核对版本、日期、任务条件、样本及指标口径。区分营销、榜单声称、受控实验、生产指标与个人经验。
 
@@ -28,4 +18,3 @@ description: AI 编程与研发提效的完整执行提示词，供 GitHub Actio
 每月首次运行选一个高价值瓶颈，完善 A/B 或分层对照方案：时间窗口、样本、干扰因素、质量门、成本、安全边界与停止条件，并复核旧实验能否推广。无实质成果时依共用约定保持静默。
 
 完整待审稿面向工程师、技术负责人和 AI 提效负责人，用具体需求、代码任务、评审或交接场景解释瓶颈、机制、现行流程的变化与适用条件。优先完善上述已有文章；完整正文、证据表达、Issue 审阅与网站写入遵循共用约定。
-<!-- automation-prompt:end -->

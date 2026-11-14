@@ -14,7 +14,7 @@ from codex_runner import run_codex
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = '.github/workflows/history-life-journey.yml'
-PROMPT = ROOT / 'docs/05-吴飞飞/01-关于/关于FEEI.CN/定时任务/历史人物一生决策任务提示词.md'
+PROMPT = ROOT / 'docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/历史人物决策.md'
 SESSION = '<!-- history-life-journey:session:'
 TURN = '<!-- history-life-journey:turn:'
 INDEX_START = '<!-- history-life-journey:index:start -->'

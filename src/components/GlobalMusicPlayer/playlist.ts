@@ -204,6 +204,10 @@ const favoriteTracks: Audio[] = [
   localTrack('SOBER', 'BIGBANG', 'SOBER-BIGBANG.flac'),
   localTrack('Tonight', 'BIGBANG', 'Tonight-BIGBANG.flac'),
   localTrack('WE LIKE 2 PARTY', 'BIGBANG', 'WELIKE2PARTY-BIGBANG.flac'),
+  localTrack('火花', '高耀太', '火花-高耀太.flac'),
+  localTrack('情歌', '梁静茹', '情歌-梁静茹.flac'),
+  localTrack('偏偏喜欢你', '陈百强', '偏偏喜欢你-陈百强.flac'),
+  localTrack('Take Me Home, Country Roads', 'John Denver', 'Take-Me-Home-Country-Roads-John-Denver.flac'),
 ];
 
 const jayTracks: Audio[] = [

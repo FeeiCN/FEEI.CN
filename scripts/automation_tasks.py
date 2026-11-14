@@ -74,9 +74,17 @@ def prompt(path):
     if path.is_absolute() or '..' in path.parts or not path.is_relative_to(BACKSTAGE):
         raise ValueError('提示词必须位于网站幕后目录')
     content = (ROOT / path).read_text()
-    if content.count(START) != 1 or content.count(END) != 1:
-        raise ValueError(f'{path}: 必须有且仅有一对提示词标记')
-    body = content.split(START)[1].split(END)[0].strip()
+    if path.is_relative_to(BACKSTAGE / 'SKILL') and path.suffix == '.md':
+        if re.match(r'\A---[ \t]*(?:\n|$)', content):
+            front_matter = re.match(r'\A---[ \t]*\n.*?\n---[ \t]*(?:\n|$)', content, re.S)
+            if not front_matter:
+                raise ValueError(f'{path}: SKILL front matter 未闭合')
+            content = content[front_matter.end():]
+        body = content.strip()
+    else:
+        if content.count(START) != 1 or content.count(END) != 1:
+            raise ValueError(f'{path}: 必须有且仅有一对提示词标记')
+        body = content.split(START)[1].split(END)[0].strip()
     if not body:
         raise ValueError(f'{path}: 提示词为空')
     return body

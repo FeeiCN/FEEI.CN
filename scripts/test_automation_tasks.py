@@ -75,6 +75,56 @@ class AutomationWorkflowTests(unittest.TestCase):
         self.assertEqual(task['schedule'], ['5 1 * * *'])
         self.assertFalse((self.root / 'automation').exists())
 
+    def skill(self, content):
+        source = automation.BACKSTAGE / 'SKILL/分析.md'
+        path = self.root / source
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+        return source
+
+    def test_workflow_can_use_skill_body_without_prompt_markers(self):
+        source = self.skill('---\ntitle: 分析\ndescription: 页面摘要\n---\n\n## 分析方法\n核对证据。\n')
+        content = self.workflow()
+        content['jobs']['run']['with']['prompt_source'] = str(source)
+        (self.workflows / 'example.yml').write_text(automation.yaml.safe_dump(content))
+        automation.check()
+        task = automation.tasks()[0]
+        self.assertEqual(task['prompt_source'], str(source))
+        self.assertEqual(automation.prompt(task['prompt_source']), '## 分析方法\n核对证据。')
+
+    def test_skill_without_front_matter_keeps_entire_body(self):
+        body = '# 分析方法\n\n先读材料。\n\n## 成稿\n写清因果。'
+        self.assertEqual(automation.prompt(self.skill(body)), body)
+
+    def test_skill_rejects_empty_body_and_unclosed_front_matter(self):
+        for content in [' \n', '---\ntitle: 分析\n---\n', '---\ntitle: 分析\n正文']:
+            with self.subTest(content=content):
+                with self.assertRaises(ValueError):
+                    automation.prompt(self.skill(content))
+
+    def test_task_prompt_extracts_only_marked_instructions(self):
+        (self.root / self.source).write_text(
+            '---\ntitle: 任务页面\n---\n页面说明\n' + automation.START
+            + '\n实际任务\n' + automation.END + '\n页尾说明')
+        self.assertEqual(automation.prompt(self.source), '实际任务')
+
+    def test_non_skill_document_still_requires_one_marker_pair(self):
+        for content in ['没有标记', automation.START + '\n缺少结束标记',
+                        automation.START * 2 + '\n正文\n' + automation.END,
+                        automation.START + '\n正文\n' + automation.END * 2]:
+            with self.subTest(content=content):
+                (self.root / self.source).write_text(content)
+                with self.assertRaisesRegex(ValueError, '提示词标记'):
+                    automation.prompt(self.source)
+
+    def test_prompt_path_boundaries_also_apply_to_skills(self):
+        source = self.skill('分析方法')
+        for path in [self.root / source, automation.BACKSTAGE / 'SKILL/../分析.md',
+                     Path('docs/其他/SKILL/分析.md')]:
+            with self.subTest(path=path):
+                with self.assertRaisesRegex(ValueError, '网站幕后目录'):
+                    automation.prompt(path)
+
     def test_duplicate_task_id_is_rejected(self):
         self.workflow()
         self.workflow(filename='duplicate.yml')

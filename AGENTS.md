@@ -84,6 +84,7 @@
 - 文档任务先确定页面职责，再决定结构和篇幅。
 - 文档首次发布日期使用 `published_at`；最后更新时间由 Git 获取，不手填复核日期。
 - Docusaurus 的 navbar、sidebar、dropdown 和 active 状态问题，优先修改 `src/theme/` 或通用客户端逻辑。
+- 多个会话在同一工作区开发时共用一个开发服务，优先复用已有地址；启动与重启遵循[仓库结构](docs/05-吴飞飞/01-关于/关于FEEI.CN/SKILL/仓库结构.md)的多会话约定。
 - 改动主题覆盖后若界面无变化，先确认 dev server 已重新编译，必要时重启 `npm run start`。
 - `build/`、`.docusaurus/` 是生成产物，禁止手动编辑。
 - 不添加无必要的注释，不创建 README，除非用户明确要求。

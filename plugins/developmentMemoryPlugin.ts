@@ -11,6 +11,11 @@ export default function developmentMemoryPlugin(): Plugin {
       const {CopyRspackPlugin} = currentBundler.instance as unknown as typeof import('@rspack/core');
       config.plugins = config.plugins?.filter((plugin) => !(plugin instanceof CopyRspackPlugin));
 
+      // Shared persistent-cache writes can leave an incomplete module graph
+      // that aborts the next start. Keep development caching in this process.
+      const rspackConfig = config as unknown as import('@rspack/core').Configuration;
+      rspackConfig.experiments = {...rspackConfig.experiments, cache: {type: 'memory'}};
+
       return {
         devtool: process.env.DOCUSAURUS_DEV_SOURCE_MAPS === 'true' ? config.devtool : false,
       };

@@ -51,6 +51,12 @@ REVIEW_SCHEMA = object_schema({
     'summary': TEXT,
 })
 
+class ReviewValidationError(ValueError):
+    def __init__(self, code, message, review):
+        super().__init__(message)
+        self.code = code
+        self.review = review
+
 
 def validate_shape(value, schema):
     kind = schema['type']
@@ -158,14 +164,15 @@ class CodexExecutor:
 def review_ready(review, candidate):
     validate_shape(review, REVIEW_SCHEMA)
     if review['draft_sha256'] != digest(candidate):
-        raise ValueError('审稿意见没有绑定当前稿件')
+        raise ReviewValidationError('review_draft_hash_mismatch', '审稿意见没有绑定当前稿件', review)
     identifiers = [item['id'] for item in review['findings']]
     if len(set(identifiers)) != len(identifiers):
-        raise ValueError('审稿问题 ID 重复')
+        raise ReviewValidationError('review_finding_id_duplicate', '审稿问题 ID 重复', review)
     for key in CHECKS:
         if not review['checks'][key]['passed'] and not any(
                 item['category'] == key and item['priority'] != 'optional' for item in review['findings']):
-            raise ValueError('未通过的检查缺少具体修改意见')
+            raise ReviewValidationError('review_failed_check_missing_finding',
+                                        '未通过的检查缺少具体修改意见', review)
     return (all(review['checks'][key]['passed'] for key in CHECKS)
             and not any(item['priority'] != 'optional' for item in review['findings']))
 
@@ -233,6 +240,43 @@ def execute(task_id, out, executor):
                 checkpoint()
                 print(f'[writing] retry {phase}; remaining={remaining:.0f}s; reserved={reserve}s', flush=True)
 
+    def review_with_retry(round_number, prompt, current):
+        phase = f'review-{round_number}'
+        for validation_attempt in (1, 2):
+            review = call_phase(phase, prompt, REVIEW_SCHEMA)
+            try:
+                ready = review_ready(review, current)
+                return review, ready, None
+            except ReviewValidationError as error:
+                invalid_path = f'writing/review-{round_number}-invalid-{validation_attempt}.json'
+                save(out, invalid_path, error.review)
+                if goal['phase_runs']:
+                    goal['phase_runs'][-1].update(
+                        status='invalid_result',
+                        error_code=error.code,
+                        validation_attempt=validation_attempt,
+                    )
+                diagnostic = {
+                    'version': 1,
+                    'task_id': task_id,
+                    'stage': phase,
+                    'validation_attempt': validation_attempt,
+                    'error_code': error.code,
+                    'invalid_result': f'output/{invalid_path}',
+                }
+                print('ACTION_DIAGNOSTIC ' + json.dumps(diagnostic, ensure_ascii=False))
+                checkpoint()
+                if validation_attempt == 2:
+                    return None, False, (
+                        f'{phase} 审稿结果校验失败（{error.code}）：{error}；'
+                        f'已保留 {invalid_path}，未交付未经有效复核的稿件'
+                    )
+                prompt += (
+                    f'\n\n上一次审稿结果未通过跨字段校验，错误码为 {error.code}：{error}。'
+                    f'无效结果已保存在 {invalid_path}。请修正该问题后重新返回完整审稿 JSON，'
+                    '仍须绑定当前稿件并为每个未通过检查提供具体修改意见。'
+                )
+
     def call_attempt(phase, prompt, schema, attempt):
         goal['active_phase'] = phase
         checkpoint()
@@ -280,10 +324,16 @@ def execute(task_id, out, executor):
                         '核对问题是否解决，并与上一版比较是否丢失证据或引入错误。' if reviews else '')
             if parents[candidate] is not None:
                 previous += f'本版编辑基线为 output/writing/draft-{parents[candidate]}.json，必须核对重要内容是否保留。'
-            review = call_phase(f'review-{round_number}', base + '\n\n' + instructions['review'] + '\n' +
-                              f'读取 output/writing/brief.json、output/writing/draft-{candidate}.json。'
-                              f'返回 draft_sha256={digest(current)}。{previous}', REVIEW_SCHEMA)
-            ready = review_ready(review, current)
+            review, ready, validation_error = review_with_retry(
+                round_number,
+                base + '\n\n' + instructions['review'] + '\n' +
+                f'读取 output/writing/brief.json、output/writing/draft-{candidate}.json。'
+                f'返回 draft_sha256={digest(current)}。{previous}',
+                current,
+            )
+            if validation_error:
+                return finish(blocked_result(versions[0], validation_error),
+                              'blocked', validation_error)
             reviews.append(review)
             checkpoint()
             if ready:

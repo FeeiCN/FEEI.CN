@@ -193,6 +193,7 @@ jobs:
             feei.cn/output/writing/review-0.json
             feei.cn/output/writing/review-1.json
             feei.cn/output/writing/review-2.json
+            feei.cn/output/writing/review-*-invalid.json
           if-no-files-found: ignore
           retention-days: 30
       - name: Transfer wallpaper to publisher

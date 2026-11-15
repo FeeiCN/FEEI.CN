@@ -168,16 +168,51 @@ class WritingLoopTests(unittest.TestCase):
     def test_stale_review_is_rejected(self):
         review = self.review()
         review['draft_sha256'] = 'stale'
-        with self.assertRaisesRegex(ValueError, '绑定'):
-            self.execute(self.draft(), review)
-        self.assertEqual(self.goal()['state'], 'failed')
-        self.assertFalse((self.out / 'result.json').exists())
+        with self.assertRaisesRegex(writing.ReviewValidationError, '绑定'):
+            writing.review_ready(review, self.result)
 
     def test_failed_check_requires_specific_actionable_finding(self):
         review = self.review()
         review['checks']['facts']['passed'] = False
-        with self.assertRaisesRegex(ValueError, '具体修改意见'):
-            self.execute(self.draft(), review)
+        with self.assertRaisesRegex(writing.ReviewValidationError, '具体修改意见'):
+            writing.review_ready(review, self.result)
+
+    def test_cross_field_review_errors_have_stable_codes(self):
+        cases = [
+            ('review_draft_hash_mismatch', lambda value: value.update(draft_sha256='stale')),
+            ('review_finding_id_duplicate', lambda value: value['findings'].extend([
+                copy.deepcopy(value['findings'][0])])),
+            ('review_failed_check_missing_finding', lambda value: value['checks']['facts'].update(passed=False)),
+        ]
+        for code, mutate in cases:
+            with self.subTest(code=code):
+                value = self.review(category='readability')
+                mutate(value)
+                with self.assertRaises(writing.ReviewValidationError) as caught:
+                    writing.review_ready(value, self.result)
+                self.assertEqual(caught.exception.code, code)
+
+    def test_invalid_review_is_preserved_and_retried_with_same_stage_feedback(self):
+        invalid = self.review(category='readability')
+        invalid['findings'].append(copy.deepcopy(invalid['findings'][0]))
+        valid = self.review()
+        result = self.execute(self.draft(), invalid, valid)
+        self.assertEqual(result['status'], 'completed')
+        self.assertEqual([phase for phase, _ in self.calls], ['draft', 'review-0', 'review-0'])
+        self.assertTrue((self.out / 'writing/review-0-invalid-1.json').is_file())
+        self.assertTrue((self.out / 'writing/review-0.json').is_file())
+        self.assertIn('review-0-invalid-1.json', self.calls[2][1])
+        self.assertIn('review_finding_id_duplicate', self.calls[2][1])
+
+    def test_second_invalid_review_blocks_and_preserves_both_results(self):
+        invalid = self.review(category='readability')
+        invalid['findings'].append(copy.deepcopy(invalid['findings'][0]))
+        second = copy.deepcopy(invalid)
+        result = self.execute(self.draft(), invalid, second)
+        self.assertEqual(result['status'], 'blocked')
+        self.assertIn('review_finding_id_duplicate', result['report_markdown'])
+        self.assertTrue((self.out / 'writing/review-0-invalid-1.json').is_file())
+        self.assertTrue((self.out / 'writing/review-0-invalid-2.json').is_file())
 
     def test_optional_preference_does_not_force_another_revision(self):
         review = self.review(category='readability', priority='optional')

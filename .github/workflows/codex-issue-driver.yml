@@ -95,6 +95,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           EVENT_ISSUE: ${{ github.event.issue.number }}
           MANUAL_ISSUE: ${{ github.event.inputs.issue_number }}
+          EVENT_ACTION: ${{ github.event.action }}
           COMMAND_ACTOR: ${{ github.event.sender.login || github.actor }}
         run: |
           python3 <<'PY' >> "$GITHUB_OUTPUT"
@@ -109,7 +110,7 @@ jobs:
 
           j = subprocess.check_output(
               ["gh","issue","view",n,"--repo",REPO,
-               "--json","body,comments,labels,author,state,title"],
+               "--json","body,comments,labels,author,state,title,createdAt,updatedAt"],
               text=True)
           with open("/tmp/issue.json", "w", encoding="utf-8") as f:
               f.write(j)
@@ -149,72 +150,18 @@ jobs:
               sys.exit(0)
 
           if author_login != OWNER:
-              reason = f"issue author is not owner (author={author_login}, owner={OWNER}); /plan 等命令已被忽略"
+              reason = f"issue author is not owner (author={author_login}, owner={OWNER})"
               print("mode=skip"); print(f"number={n}"); print(f"reason={reason}")
               print(f"author={author_login}"); print(f"state={d['state']}")
               sys.exit(0)
 
-          labels = {l["name"] for l in d["labels"]}
-          comments = d["comments"]
-          last_codex = max(
-              (c for c in comments if c["body"].startswith("<!-- codex-driver:")),
-              key=lambda c: c["createdAt"], default=None)
-          last_owner = max(
-              (c for c in comments
-               if c["author"]["login"] == OWNER
-               and not c["body"].startswith("<!-- codex-driver:")),
-              key=lambda c: c["createdAt"], default=None)
-
-          def has(body, tok):
-              # 认两种格式:`/plan`(独立一行) 或 `/plan 描述...`(行首 + 空格 + 描述)
-              return any(
-                  line.strip() == tok or line.strip().startswith(tok + ' ')
-                  for line in body.splitlines()
-              )
-
-          # 命令驱动:仅当 owner 最新评论或 issue 标题含 /plan / /replan / /approve / /reject
-          # 独立一行时 driver 才响应,其他情况(普通评论、issue 重开)一律 skip。
-          mode = "skip"
-          if not last_owner \
-             and not has(d["title"], "/plan") \
-             and not has(d["title"], "/approve") \
-             and not has(d["title"], "/replan") \
-             and not has(d["title"], "/reject"):
-              reason = "no owner comment with /plan|/approve|/replan|/reject and title has no command"
-          elif last_codex and last_codex["body"].startswith("<!-- codex-driver:plan:commit="):
-              if not last_codex or (last_owner and last_owner["createdAt"] > last_codex["createdAt"]):
-                  combined = ((last_owner["body"] if last_owner else "") + "\n" + d["title"])
-                  if has(combined, "/reject"):
-                      mode = "paused"
-                  elif has(combined, "/replan"):
-                      mode = "plan"
-                  elif has(combined, "/approve"):
-                      mode = "execute"
-                  # /plan 在 plan-ready 状态下被忽略(已经 plan 过了,要先 /replan)
-          else:
-              if not last_codex or (last_owner and last_owner["createdAt"] > last_codex["createdAt"]):
-                  combined = ((last_owner["body"] if last_owner else "") + "\n" + d["title"])
-                  if has(combined, "/reject"):
-                      mode = "paused"
-                  elif has(combined, "/plan"):
-                      mode = "plan"
-                  # /approve / /replan 在非 plan-ready 状态被忽略(尚未 plan)
-
-          print(f"mode={mode}")
+          print("mode=skip")
           print(f"number={n}")
           print(f"author={author_login}")
           print(f"state={d['state']}")
-          if reason:
-              print(f"reason={reason}")
+          print("reason=没有新的本人自然语言请求")
           print("issue-json-path=/tmp/issue.json")
-          # 调试信息打到 stderr(stdout 被重定向到 $GITHUB_OUTPUT)
-          print(f"[decide] issue=#{n} mode={mode} author={author_login} state={d['state']} "
-                f"labels={sorted(labels)} reason={reason or '-'} "
-                f"last_owner={last_owner['createdAt'] if last_owner else None} "
-                f"last_codex={last_codex['createdAt'] if last_codex else None} "
-                f"body_empty={not d['body'].strip()} comments={len(comments)} "
-                f"title_has_plan={has(d['title'], '/plan')} title_has_approve={has(d['title'], '/approve')} "
-                f"title_has_replan={has(d['title'], '/replan')} title_has_reject={has(d['title'], '/reject')}",
+          print(f"[decide] issue=#{n} author={author_login} state={d['state']} reason=没有新的本人自然语言请求",
                 file=sys.stderr)
           PY
 
@@ -247,6 +194,7 @@ jobs:
           REPO: ${{ github.repository }}
           OWNER: ${{ github.repository_owner }}
           N: ${{ steps.inspect.outputs.number }}
+          EVENT_ACTION: ${{ github.event.action }}
           COMMAND_ACTOR: ${{ github.event.sender.login || github.actor }}
           REVIEW_CONTEXT: ${{ steps.inspect.outputs.review-context }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -295,7 +243,7 @@ jobs:
             echo "| reason | ${REASON} |"
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
-          # 已核对本人的未答复请求时统一回执；旧命令入口保留原有诊断。
+          # 已核对本人的未答复请求时统一回执。
           case "${SKIP_DIAGNOSTIC}:${REASON}" in
             true:*|:*"author is not owner"*|:*"state is"*|:*"审批"*|:*"审阅"*|:*"来源"*|:*"运行链接"*)
               {
@@ -311,7 +259,7 @@ jobs:
                 echo
                 echo "如需重新触发:"
                 echo
-                echo "- 定时任务 Issue 可直接说明需要回答、修改或确认写入的内容；本人其他 Issue 仍可使用兼容命令"
+                echo "- 直接说明需要回答、修改、确认写入或暂停的内容即可"
                 echo "- Issue 关闭后仍可评论提问、修改或确认写入，无需重新打开"
                 echo
                 echo "<!-- 本条回执由固定程序生成；未执行后续审阅、写入或重做。意图判断是否调用模型见运行记录。 -->"
@@ -377,7 +325,7 @@ jobs:
           path: |
             ~/.npm
             $(npm root -g)
-          # 不再把 workflow 文件 hash 进 key:workflow 改一次就 cold cache,3 次 /replan
+          # 不再把 workflow 文件 hash 进 key:workflow 改一次就 cold cache,3 次重新整理
           # 全付重装代价。npm 包本身不依赖 workflow 变化。
           key: codex-cli-${{ hashFiles('package-lock.json') }}
           restore-keys: |
@@ -541,7 +489,7 @@ jobs:
                       "日记只能使用本人确认的真实经历，不能把自动线索写成本人经历。壁纸只通过 Actions 临时下载，不能当作网站长期图片。"
                       "本轮不写仓库，不进行提交、构建或发布；回复小于60000个UTF-8字节，过长则缩小写入范围，不能截断稿件。"
                       "仓库待写入稿只展示一次，源码放在折叠区；主要回复简述改动与依据，不重复贴原稿、diff和全文。Issue 报告修订遵循原任务的呈现方式。"
-                      "不要生成要求使用 /approve 或其他命令的操作提示，审批引导由程序统一添加。"
+                      "不要生成固定格式或命令提示，审批引导由程序统一添加。"
                       "最终末尾必须有唯一 `## Plan metadata`，其下是三反引号 json 代码块，且只含四个字段："
                       ' {"task_type":"discussion","affected_files":[],"risk":"low","verification":["已核对讨论上下文"]}。'
                       "普通问答使用 discussion、affected_files=[]；确实缺少完成请求必需的事实、需要本人补充时使用 analysis、affected_files=[]；"
@@ -709,7 +657,7 @@ jobs:
               echo
               echo "原因:Codex 输出的 \`## Plan metadata\` JSON 契约缺失或校验失败。"
               echo
-              echo "请重新发 \`/plan\` 让 Codex 重出。注意末尾必须含:"
+              echo "请直接说明需要如何重新整理。注意末尾必须含:"
               echo
               echo "## Plan metadata"
               echo '```json'
@@ -732,7 +680,7 @@ jobs:
               echo
               echo "---"
               echo
-              echo "确认请回复 \`/approve\` 独立一行;重出计划 \`/replan\`;终止 \`/reject\`。"
+              echo "请直接说明是否确认当前版本写入；如需修改、暂停或重新整理，也请用自然语言说明。"
             } | head -c 64000 > /tmp/comment.md
             if [ "$(wc -c < /tmp/comment.md)" -ge 64000 ]; then
               printf '\n\n<!-- 内容过长已截断 -->\n' >> /tmp/comment.md

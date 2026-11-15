@@ -193,8 +193,7 @@ def approval_source(issue, owner, request, plan, expected):
         if c['author']['login'] != owner or c['createdAt'] <= plan['createdAt']:
             continue
         text = c['body'].strip()
-        if not (re.fullmatch(r'(?:/approve|写入|确认写入|可以，写入|这版可以，写入网站吧|发布|发布吧)[。！!\s]*', text)
-                or (text == request['body'].strip() and explicit_action(text, 'approve'))):
+        if not explicit_action(text, 'approve'):
             break
         candidate['comments'] = [item for item in candidate['comments'] if item['id'] != c['id']]
         if snapshot(candidate, owner) == expected:
@@ -289,6 +288,22 @@ def report_draft(issue):
 def latest_request_and_plan(issue, owner):
     comments = trusted_comments(issue, owner)
     own = [c for c in comments if c['author']['login'] == owner]
+    edited = os.environ.get('EVENT_ACTION') == 'edited'
+    if (not own and initial_owner_request(issue, owner)) or (
+            edited and issue.get('author', {}).get('login') == owner
+            and issue.get('title', '').strip()
+            and issue.get('state') in {'OPEN', 'CLOSED'}):
+        body = issue.get('body', '').strip()
+        request_body = issue['title'].strip() + ('\n\n' + body if body else '')
+        identity = digest({'title': issue['title'], 'body': body})
+        prefix = 'edit:' if edited else 'title:'
+        own = [{
+            'id': f'{prefix}{identity}',
+            'author': {'login': owner},
+            'body': request_body,
+            'createdAt': issue.get('createdAt', ''),
+            'updatedAt': issue.get('updatedAt', issue.get('createdAt', '')),
+        }]
     plans = [c for c in comments if bot(c['author']) and c['body'].startswith(PLAN)]
     return (own[-1] if own else None, plans[-1] if plans else report_draft(issue))
 
@@ -305,7 +320,7 @@ def explicit_action(text, action):
         return False
     if action == 'approve':
         return bool(re.search(r'写入|发布|提交|上线|合入|存到|保存|加到|放到|放上|发上|同步到|收录|沉淀|落到|落进|更新网站|publish|merge|commit|ship|save', text, re.I))
-    return text == '/regenerate' or bool(re.search(r'(?:再|重).{0,12}(?:做|制作|生成|更新|来)|(?:更新|重做).{0,8}壁纸', text))
+    return bool(re.search(r'(?:再|重).{0,12}(?:做|制作|生成|更新|来)|(?:更新|重做).{0,8}壁纸', text))
 
 
 def bind_intent(issue, owner, result):
@@ -385,7 +400,7 @@ def intent_prompt(issue, owner, task):
 def initial_owner_request(issue, owner):
     title = issue.get('title', '').strip()
     if (issue.get('author', {}).get('login') != owner or issue.get('state') != 'OPEN'
-            or not issue.get('body', '').strip() or not title
+            or not title
             or title.startswith(('http://', 'https://', '/', '[自动任务]'))
             or title == '睡眠评分' or any(word in title for word in ('天气', '上车', '下车', '日记'))
             or issue.get('body', '').startswith('<!-- history-life-journey:session:')):
@@ -401,13 +416,7 @@ def owner_content_request(issue, owner):
     request, _ = latest_request_and_plan(issue, owner)
     if request is None:
         return initial_owner_request(issue, owner)
-    if not request['body'].lstrip().startswith('/'):
-        return True
-    if re.match(r'^/(?:review|revise)(?:\s|$)', request['body'].strip()):
-        return True
-    return any(bot(c.get('author', {})) and
-               (':review-source=' in c.get('body', '').split('\n', 1)[0] or c.get('body', '').startswith('<!-- codex-driver:review:'))
-               for c in issue.get('comments', []))
+    return bool(request['body'].strip())
 
 
 def interpret_message(issue, owner, task, state_dir):
@@ -438,18 +447,13 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
         context['reason'] = 'Issue 状态无效，本次未执行'
         return context
     comments = trusted_comments(issue, owner)
-    own = [c for c in comments if c.get('author', {}).get('login') == owner]
-    if not own:
-        if initial_owner_request(issue, owner):
-            context.update(mode='plan', source=snapshot(issue, owner))
+    request, plan = latest_request_and_plan(issue, owner)
+    if request is None:
         return context
-    request = own[-1]
     text = request['body'].strip()
-    tokens = re.findall(r'^/(approve|review|revise|plan|replan|reject)(?:\s|$)', text, re.M)
     if not text:
         return context
-    _, plan = latest_request_and_plan(issue, owner)
-    # Ignore old commands when an Issue edit/manual rerun follows a delivered response.
+    # Ignore old requests when an Issue edit/manual rerun follows a delivered response.
     responses = [c for c in comments if bot(c.get('author', {})) and c['body'].startswith('<!-- codex-driver:')
                  and not incomplete_diary_reply(issue, c['body'])
                  and not c['body'].startswith(('<!-- codex-driver:diagnostic:skip -->',
@@ -461,13 +465,13 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
         result = checked_intent(issue, owner, intent)
         context['intent'] = intent
         action = result['intent']
-    elif not tokens and text != '/regenerate':
+    elif intent is None:
         context.update(mode='interpret', source=snapshot(issue, owner))
         return context
-    if tokens == ['reject'] or action == 'pause':
+    if action == 'pause':
         context['mode'] = 'paused'
         return context
-    if task == 'update-weight-wallpaper' and (text == '/regenerate' or action == 'regenerate'):
+    if task == 'update-weight-wallpaper' and action == 'regenerate':
         context.update(mode='regenerate', source=snapshot(issue, owner),
                        request_id=request['id'], request_digest=digest(request))
         return context
@@ -475,9 +479,7 @@ def decide(issue, owner, actor, repo, runs, tasks=None, intent=None):
         context.update(mode='plan', source=snapshot(issue, owner),
                        reason='当前不是壁纸任务，请说明希望重新处理的内容')
         return context
-    if 'approve' in tokens or action == 'approve':
-        if action != 'approve' and (tokens != ['approve'] or text != '/approve'):
-            raise ValueError('确认写入时请单独说明，不夹带新修改要求；先审阅修改后的完整稿')
+    if action == 'approve':
         if plan is None:
             context.update(mode='plan', source=snapshot(issue, owner), initial_approval=True,
                            reason='尚无可批准的完整版本，本次先生成待审稿，展示后再确认写入')
@@ -543,7 +545,7 @@ def seal(issue, owner, text, base, initial_approval=False):
     notice = ('本次先整理完整待写入稿，尚未写入仓库。'
               '请审阅下方具体版本，确认后直接说明“这版可以，写入网站吧”。\n\n' if initial_approval else '')
     body = (f'{PLAN}commit={base}:review-source={snapshot(issue, owner)} -->\n\n'
-            + notice + readable_draft(text) + '\n\n---\n继续修改、提问或暂停都可直接说明；确认本版完整正文及文件后，请明确说“这版可以，写入网站吧”。命令仍兼容。')
+            + notice + readable_draft(text) + '\n\n---\n继续修改、提问或暂停都可直接说明；确认本版完整正文及文件后，请明确说“这版可以，写入网站吧”。')
     if len(body.encode()) > 63000:
         raise ValueError('完整待审稿超出评论长度，不能截断后等待审批；请缩小本轮写入范围')
     return body
@@ -710,7 +712,7 @@ def main():
     def fresh_issue():
         data = json.loads(subprocess.check_output(
             ['gh', 'issue', 'view', os.environ['N'], '--repo', repo, '--json',
-             'body,labels,author,state,title'], text=True))
+             'body,labels,author,state,title,createdAt,updatedAt'], text=True))
         data['comments'] = read_comments(repo, os.environ['N'])
         return data
     if args.command == 'route':

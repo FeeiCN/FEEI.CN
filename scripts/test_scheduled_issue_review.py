@@ -36,7 +36,7 @@ def fixture():
             'author': {'login': review.BOT}, 'labels': [],
             'body': '<!-- automation-task:security-event-research -->\n原文\n'
                     'https://github.com/FeeiCN/FEEI.CN/actions/runs/123',
-            'comments': [comment('request', OWNER, '/review 请补充根因和图，优化全文。', '2026-11-05T01:00:00Z')]}
+            'comments': [comment('request', OWNER, '请补充根因和图，优化全文。', '2026-11-05T01:00:00Z')]}
 
 
 def run(_):
@@ -62,7 +62,7 @@ def ready():
     issue = fixture()
     sealed = review.seal(issue, OWNER, TEXT, 'abc123')
     issue['comments'].append(comment('plan', review.BOT, sealed, '2026-11-05T01:01:00Z'))
-    issue['comments'].append(comment('approval', OWNER, '/approve', '2026-11-05T01:02:00Z'))
+    issue['comments'].append(comment('approval', OWNER, '这版可以，写入网站吧', '2026-11-05T01:02:00Z'))
     issue['labels'] = [{'name': 'codex:plan-ready'}]
     return issue
 
@@ -93,7 +93,7 @@ class ScheduledReviewTests(unittest.TestCase):
         issue = fixture()
         issue['comments'].append(comment('skip', review.BOT, '<!-- codex-driver:diagnostic:skip -->缺少来源',
                                          '2026-11-05T01:01:00Z'))
-        self.assertEqual(decide(issue)['mode'], 'plan')
+        self.assertEqual(decide(issue)['mode'], 'interpret')
         issue['comments'].append(comment('reply', review.BOT, '<!-- codex-driver:review: -->已回复',
                                          '2026-11-05T01:02:00Z'))
         self.assertEqual(decide(issue)['mode'], 'skip')
@@ -209,16 +209,16 @@ class ScheduledReviewTests(unittest.TestCase):
     def test_closed_issue_accepts_owner_comments_and_approval(self):
         issue = fixture()
         issue['state'] = 'CLOSED'
-        self.assertEqual(decide(issue)['mode'], 'plan')
+        self.assertEqual(decide(issue)['mode'], 'interpret')
         issue = ready()
         issue['state'] = 'CLOSED'
-        self.assertEqual(decide(issue)['mode'], 'execute')
+        self.assertEqual(decide(issue)['mode'], 'interpret')
         issue['comments'][-1]['body'] = '写入'
         self.assertEqual(decide(issue, intent=interpretation(issue, 'approve'))['mode'], 'execute')
         self.assertEqual(decide(issue, actor='outsider')['mode'], 'skip')
 
     def test_repeated_approvals_preserve_draft_but_content_changes_invalidate_it(self):
-        for first in ['/approve', '写入', '这版可以，写入网站吧']:
+        for first in ['这版可以，写入网站吧', '写入', '这版可以，写入网站吧']:
             issue = ready()
             issue['comments'][-1]['body'] = first
             issue['comments'].extend([
@@ -310,7 +310,7 @@ class ScheduledReviewTests(unittest.TestCase):
 
     def test_later_comment_draft_supersedes_initial_report(self):
         issue = report_ready()
-        issue['comments'][0]['body'] = '/revise 补充例子'
+        issue['comments'][0]['body'] = '补充例子'
         sealed = review.seal(issue, OWNER, TEXT.replace(BODY, BODY + '\n\n新增例子'), 'abc123')
         issue['comments'].extend([
             comment('plan', review.BOT, sealed, '2026-11-05T01:01:00Z'),
@@ -402,7 +402,7 @@ class ScheduledReviewTests(unittest.TestCase):
                                         capture_output=True, check=True)
                 return dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
             routed = command('route')
-            self.assertEqual(routed['mode'], 'plan')
+            self.assertEqual(routed['mode'], 'interpret')
             env['REVIEW_CONTEXT'] = routed['review-context']
             command('context')
             self.assertEqual(json.loads((state / 'review-history.json').read_text())['issues'], [])
@@ -413,13 +413,15 @@ class ScheduledReviewTests(unittest.TestCase):
             issue = deepcopy(initial)
             issue['comments'].extend([
                 comment('plan', review.BOT, (state / 'comment.md').read_text(), '2026-11-05T01:01:00Z'),
-                comment('approve', OWNER, '/approve', '2026-11-05T01:02:00Z')])
+                comment('approve', OWNER, '这版可以，写入网站吧', '2026-11-05T01:02:00Z')])
             issue['labels'] = [{'name': 'codex:plan-ready'}]
             for name in ['issue.json', 'github-issue.json']:
                 (state / name).write_text(json.dumps(issue))
             routed = command('route')
-            self.assertEqual(routed['mode'], 'execute')
-            env['REVIEW_CONTEXT'] = routed['review-context']
+            self.assertEqual(routed['mode'], 'interpret')
+            approved = review.decide(issue, OWNER, OWNER, REPO, lambda _: run('123'),
+                                     TASKS, intent=interpretation(issue, 'approve'))
+            env['REVIEW_CONTEXT'] = base64.b64encode(json.dumps(approved).encode()).decode()
             command('verify-approval')
             issue['body'] += '审阅后被改动'
             (state / 'github-issue.json').write_text(json.dumps(issue))
@@ -434,17 +436,18 @@ class ScheduledReviewTests(unittest.TestCase):
             issue['body'] = issue['body'].replace('security-event-research', task)
             source = {**run('123'), 'path': workflow}
             with self.subTest(task=task):
-                self.assertEqual(review.decide(issue, OWNER, OWNER, REPO, lambda _: source)['mode'], 'plan')
+                self.assertEqual(review.decide(issue, OWNER, OWNER, REPO, lambda _: source)['mode'], 'interpret')
 
     def test_natural_feedback_and_review_commands_produce_review(self):
-        for text in ['请优化因果图。', '/review', '/revise 补充证据', '/plan', '/replan']:
+        for text in ['请优化因果图。', '继续说明', '补充证据', '请制定计划', '请重新整理']:
             issue = fixture()
             issue['comments'][0]['body'] = text
             with self.subTest(text=text):
-                self.assertEqual(decide(issue)['mode'], 'interpret' if not text.startswith('/') else 'plan')
+                self.assertEqual(decide(issue)['mode'], 'interpret')
 
     def test_exact_approval_selects_bound_complete_draft(self):
-        context = decide(ready())
+        issue = ready()
+        context = decide(issue, intent=interpretation(issue, 'approve'))
         self.assertEqual(context['mode'], 'execute')
         self.assertEqual(context['files'], [FILE])
         self.assertEqual(context['file_hashes'][FILE], hashlib.sha256((BODY + '\n').encode()).hexdigest())
@@ -456,39 +459,43 @@ class ScheduledReviewTests(unittest.TestCase):
         sealed = review.seal(issue, OWNER, text, 'abc123')
         issue['comments'].extend([
             comment('plan', review.BOT, sealed, '2026-11-05T01:01:00Z'),
-            comment('approval', OWNER, '/approve', '2026-11-05T01:02:00Z')])
+            comment('approval', OWNER, '这版可以，写入网站吧', '2026-11-05T01:02:00Z')])
         issue['labels'] = [{'name': 'codex:plan-ready'}]
-        self.assertEqual(decide(issue)['file_hashes'][FILE], hashlib.sha256((body + '\n').encode()).hexdigest())
+        self.assertEqual(decide(issue, intent=interpretation(issue, 'approve'))['file_hashes'][FILE], hashlib.sha256((body + '\n').encode()).hexdigest())
 
     def test_plan_edited_after_approval_requires_fresh_confirmation(self):
         issue = ready()
+        intent = interpretation(issue, 'approve')
         issue['comments'][1]['updatedAt'] = '2026-11-05T01:03:00Z'
-        with self.assertRaisesRegex(ValueError, '审批后被编辑'):
-            decide(issue)
+        with self.assertRaisesRegex(ValueError, '判断失效'):
+            decide(issue, intent=intent)
 
     def test_issue_edit_invalidates_approval(self):
         for field in ['body', 'title']:
             issue = ready()
+            intent = interpretation(issue, 'approve')
             issue[field] += '改动'
-            with self.subTest(field=field), self.assertRaisesRegex(ValueError, '审批失效'):
-                decide(issue)
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, '判断失效'):
+                decide(issue, intent=intent)
 
     def test_edited_feedback_invalidates_approval(self):
         issue = ready()
+        intent = interpretation(issue, 'approve')
         issue['comments'][0]['body'] += '额外修改'
-        with self.assertRaisesRegex(ValueError, '审批失效'):
-            decide(issue)
+        with self.assertRaisesRegex(ValueError, '判断失效'):
+            decide(issue, intent=intent)
 
     def test_approval_with_new_instructions_is_rejected(self):
         issue = ready()
-        issue['comments'][-1]['body'] = '/approve\n再加一段。'
-        with self.assertRaisesRegex(ValueError, '单独说明'):
-            decide(issue)
+        intent = interpretation(issue, 'approve')
+        issue['comments'][-1]['body'] = '这版可以，写入网站吧\n再加一段。'
+        with self.assertRaisesRegex(ValueError, '判断失效'):
+            decide(issue, intent=intent)
 
     def test_initial_approval_produces_review_and_requires_fresh_confirmation(self):
         issue = fixture()
-        issue['comments'][0]['body'] = '/approve'
-        context = decide(issue)
+        issue['comments'][0]['body'] = '这版可以，写入网站吧'
+        context = decide(issue, intent=interpretation(issue, 'approve'))
         self.assertEqual(context['mode'], 'plan')
         self.assertTrue(context['initial_approval'])
         self.assertNotIn('approval_id', context)
@@ -497,18 +504,18 @@ class ScheduledReviewTests(unittest.TestCase):
         issue['comments'].append(comment('plan', review.BOT, sealed, '2026-11-05T01:01:00Z'))
         issue['labels'] = [{'name': 'codex:plan-ready'}]
         self.assertEqual(decide(issue)['mode'], 'skip')
-        issue['comments'].append(comment('confirmation', OWNER, '/approve', '2026-11-05T01:02:00Z'))
-        confirmed = decide(issue)
+        issue['comments'].append(comment('confirmation', OWNER, '这版可以，写入网站吧', '2026-11-05T01:02:00Z'))
+        confirmed = decide(issue, intent=interpretation(issue, 'approve'))
         self.assertEqual(confirmed['mode'], 'execute')
         self.assertEqual(confirmed['approval_id'], 'confirmation')
 
     def test_initial_approval_still_checks_owner_with_stale_labels(self):
         issue = fixture()
-        issue['comments'][0]['body'] = '/approve'
+        issue['comments'][0]['body'] = '这版可以，写入网站吧'
         self.assertEqual(decide(issue, actor='outsider')['mode'], 'skip')
         for label in ['codex:planning', 'codex:executing']:
             issue['labels'] = [{'name': label}]
-            self.assertEqual(decide(issue)['mode'], 'plan')
+            self.assertEqual(decide(issue, intent=interpretation(issue, 'approve'))['mode'], 'plan')
 
     def test_no_approval_without_complete_files(self):
         for text in [TEXT.replace('## 完整待审稿', '## 提纲'), TEXT.replace('````markdown', '```markdown')]:
@@ -521,7 +528,7 @@ class ScheduledReviewTests(unittest.TestCase):
     def test_graphql_cli_bot_alias_requires_bot_flag(self):
         issue = fixture()
         issue['author'] = {'login': 'app/github-actions', 'is_bot': True}
-        self.assertEqual(decide(issue)['mode'], 'plan')
+        self.assertEqual(decide(issue)['mode'], 'interpret')
         issue['author']['is_bot'] = False
         with self.assertRaises(ValueError):
             decide(issue)
@@ -544,21 +551,21 @@ class ScheduledReviewTests(unittest.TestCase):
         issue = ready()
         forged = comment('forged', 'outsider', issue['comments'][1]['body'], '2026-11-05T01:03:00Z')
         issue['comments'].append(forged)
-        self.assertEqual(decide(issue)['mode'], 'execute')
+        self.assertEqual(decide(issue)['mode'], 'interpret')
         self.assertNotIn(forged, review.trusted_comments(issue, OWNER))
 
     def test_reject_pauses_and_new_feedback_can_resume(self):
         issue = fixture()
-        issue['comments'][0]['body'] = '/reject'
-        self.assertEqual(decide(issue)['mode'], 'paused')
+        issue['comments'][0]['body'] = '先暂停'
+        self.assertEqual(decide(issue)['mode'], 'interpret')
         issue['labels'] = [{'name': 'codex:paused'}]
-        issue['comments'].append(comment('resume', OWNER, '/review', '2026-11-05T01:03:00Z'))
-        self.assertEqual(decide(issue)['mode'], 'plan')
+        issue['comments'].append(comment('resume', OWNER, '继续说明', '2026-11-05T01:03:00Z'))
+        self.assertEqual(decide(issue)['mode'], 'interpret')
 
     def test_stale_running_label_does_not_block_but_delivered_approval_is_not_replayed(self):
         issue = ready()
         issue['labels'] = [{'name': 'codex:executing'}]
-        self.assertEqual(decide(issue)['mode'], 'execute')
+        self.assertEqual(decide(issue)['mode'], 'interpret')
         issue['comments'].append(comment('done', review.BOT, '<!-- codex-driver:execute -->完成', '2026-11-05T01:03:00Z'))
         self.assertEqual(decide(issue)['mode'], 'skip')
 
@@ -621,7 +628,8 @@ class ScheduledReviewTests(unittest.TestCase):
             subprocess.run(['git', 'init', '-q', folder], check=True)
             subprocess.run(['git', '-C', folder, '-c', 'user.name=test', '-c', 'user.email=test@example.com',
                             'commit', '-qm', 'baseline', '--allow-empty'], check=True)
-            context = decide(ready())
+            issue = ready()
+            context = decide(issue, intent=interpretation(issue, 'approve'))
             context['base'] = subprocess.check_output(['git', '-C', folder, 'rev-parse', 'HEAD'], text=True).strip()
             target = root / FILE
             target.parent.mkdir()
@@ -679,7 +687,7 @@ class ScheduledReviewTests(unittest.TestCase):
         self.assertTrue(sealed.startswith('<!-- codex-driver:review:reply -->'))
         self.assertNotIn('needs-input', sealed)
         self.assertNotIn('Plan metadata', sealed)
-        self.assertNotIn('/approve', sealed)
+        self.assertNotIn('这版可以，写入网站吧', sealed)
         with self.assertRaises(ValueError):
             review.metadata(text)
 
@@ -1026,24 +1034,27 @@ class ScheduledReviewTests(unittest.TestCase):
     def test_new_owner_issue_starts_readonly_review_without_comment_or_command(self):
         issue = fixture()
         issue.update(author={'login': OWNER}, title='到底人追求的是什么',
-                     body='收入提高之后，为什么还觉得无法停下来？', comments=[])
+                     body='', comments=[])
         self.assertTrue(review.owner_content_request(issue, OWNER))
         context = decide(issue)
-        self.assertEqual(context['mode'], 'plan')
+        self.assertEqual(context['mode'], 'interpret')
         self.assertEqual(context['task'], 'owner-issue')
         self.assertEqual(context['source'], review.snapshot(issue, OWNER))
         self.assertNotIn('approval_id', context)
+        request, _ = review.latest_request_and_plan(issue, OWNER)
+        self.assertTrue(request['id'].startswith('title:'))
+        self.assertEqual(request['body'], issue['title'])
         self.assertEqual(decide(issue, actor='outsider')['mode'], 'skip')
 
         for label in ['codex:paused', 'codex:planning', 'codex:executing']:
             candidate = deepcopy(issue)
             candidate['labels'] = [{'name': label}]
-            self.assertEqual(decide(candidate)['mode'], 'plan')
+            self.assertEqual(decide(candidate)['mode'], 'interpret')
 
         for changes in [
-            {'state': 'CLOSED'}, {'body': ''}, {'author': {'login': 'outsider'}},
+            {'state': 'CLOSED'}, {'author': {'login': 'outsider'}},
             {'comments': [comment('reply', review.BOT, '<!-- codex-driver:review:reply -->\n答复', '2026-11-08T10:35:00Z')]},
-            *({'title': title} for title in ['/plan 修改组件', 'https://example.com', '睡眠评分', '今日日记', '[自动任务] 研究']),
+            *({'title': title} for title in ['https://example.com', '睡眠评分', '今日日记', '[自动任务] 研究']),
         ]:
             candidate = deepcopy(issue)
             candidate.update(changes)
@@ -1052,14 +1063,30 @@ class ScheduledReviewTests(unittest.TestCase):
                 if changes.get('author', {}).get('login', OWNER) == OWNER:
                     self.assertEqual(decide(candidate)['mode'], 'skip')
 
-    def test_owner_legacy_development_commands_keep_the_existing_route(self):
+    def test_owner_issue_edit_creates_a_new_natural_language_request(self):
+        issue = fixture()
+        issue.update(author={'login': OWNER}, title='原始问题', body='原始正文')
+        issue['comments'].append(comment('reply', review.BOT,
+                                         '<!-- codex-driver:review:reply -->\n旧回复',
+                                         '2026-11-08T10:35:00Z'))
+        issue['title'] = '修改后的问题'
+        issue['body'] = '修改后的正文'
+        issue['updatedAt'] = '2026-11-08T10:36:00Z'
+        with patch.dict(os.environ, {'EVENT_ACTION': 'edited'}):
+            request, _ = review.latest_request_and_plan(issue, OWNER)
+            context = decide(issue)
+        self.assertTrue(request['id'].startswith('edit:'))
+        self.assertEqual(request['body'], '修改后的问题\n\n修改后的正文')
+        self.assertEqual(context['mode'], 'interpret')
+
+    def test_owner_natural_language_messages_keep_the_existing_route(self):
         issue = fixture()
         issue['author'] = {'login': OWNER}
-        for text in ['/plan 修改组件', '/approve', '/reject']:
+        for text in ['请整理修改组件的计划', '这版可以，写入网站吧', '先暂停']:
             issue['comments'][0]['body'] = text
             with self.subTest(text=text):
-                self.assertFalse(review.owner_content_request(issue, OWNER))
-        for text in ['为什么这样设计？', '补个例子', '/review', '/revise 解释清楚']:
+                self.assertTrue(review.owner_content_request(issue, OWNER))
+        for text in ['为什么这样设计？', '补个例子', '继续说明', '解释清楚']:
             issue['comments'][0]['body'] = text
             with self.subTest(text=text):
                 self.assertTrue(review.owner_content_request(issue, OWNER))

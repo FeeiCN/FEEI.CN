@@ -152,7 +152,7 @@ def run_codex(prompt, *, output, timeout, cwd=ROOT, schema=None, permissions=Non
         try:
             subprocess.run([os.environ['WORKFLOW_STATUS_NODE'], os.environ['WORKFLOW_STATUS_SCRIPT'],
                             '--phase', 'verifying' if stage.startswith('review') else 'running'],
-                           check=False, timeout=5)
+                           check=False, timeout=5, stdout=sys.stderr)
         except (KeyError, OSError, subprocess.SubprocessError):
             print('任务阶段记录不可用，继续执行。', file=sys.stderr)
     started = time.monotonic()

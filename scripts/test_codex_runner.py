@@ -190,6 +190,18 @@ Path(sys.argv[sys.argv.index('--output-last-message') + 1]).write_text('{"ok":tr
                 self.invoke()
             call.assert_not_called()
 
+    def test_workflow_status_does_not_pollute_caller_stdout(self):
+        env = {'GITHUB_ACTIONS': 'true', 'GITHUB_REPOSITORY': 'FeeiCN/FEEI.CN',
+               'GITHUB_RUN_ID': '123', 'WORKFLOW_STATUS_NODE': 'node',
+               'WORKFLOW_STATUS_SCRIPT': 'workflow-status.cjs', 'OPENAI_MODEL': 'configured',
+               'OPENAI_BASE_URL': 'https://proxy.example/v1', 'OPENAI_API_KEY': 'test-key'}
+        with patch.dict(os.environ, env), patch.object(runner.subprocess, 'run') as status, \
+                patch.object(runner, 'run_process', side_effect=self.complete):
+            self.assertEqual(self.invoke(), '{"ok":true}')
+        status_calls = [call for call in status.call_args_list if call.args[0][0] == 'node']
+        self.assertEqual(len(status_calls), 1)
+        self.assertIs(status_calls[0].kwargs['stdout'], sys.stderr)
+
     def test_progress_is_visible_without_echoing_raw_logs(self):
         code = 'import time; print("private log", flush=True); time.sleep(.12)'
         with (self.root / 'stdout').open('w') as stdout, (self.root / 'stderr').open('w') as stderr, \

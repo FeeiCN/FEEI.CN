@@ -1,12 +1,12 @@
 {
   "vendor": "openai",
-  "fetchedAt": "2026-11-16 10:42:04",
+  "fetchedAt": "2026-11-17 07:31:13",
   "source": "ai.feei.cn",
   "source_endpoint": "https://ai.feei.cn/api/v1/admin/usage/stats",
   "timezone": "Asia/Shanghai",
   "sync_window": {
-    "start_date": "2026-10-18",
-    "end_date": "2026-11-16",
+    "start_date": "2026-10-19",
+    "end_date": "2026-11-17",
     "days": 30
   },
   "daily_token_usage": {
@@ -155,7 +155,8 @@
     "2026-11-13": 85556726,
     "2026-11-14": 359805846,
     "2026-11-15": 63319500,
-    "2026-11-16": 5241813
+    "2026-11-16": 28550934,
+    "2026-11-17": 709890
   },
   "date_usage_stats": {
     "2026-05-22": {
@@ -2259,28 +2260,28 @@
       "average_duration_ms": 0
     },
     "2026-11-13": {
-      "total_requests": 560,
-      "total_input_tokens": 2762890,
-      "total_output_tokens": 427786,
-      "total_cache_tokens": 68033920,
+      "total_requests": 0,
+      "total_input_tokens": 0,
+      "total_output_tokens": 0,
+      "total_cache_tokens": 0,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 68033920,
-      "total_tokens": 71224596,
-      "total_cost": 33.594351,
-      "total_actual_cost": 50.391526,
-      "average_duration_ms": 22711.519642857143
+      "total_cache_read_tokens": 0,
+      "total_tokens": 0,
+      "total_cost": 0.0,
+      "total_actual_cost": 0.0,
+      "average_duration_ms": 0
     },
     "2026-11-14": {
-      "total_requests": 2163,
-      "total_input_tokens": 10521558,
-      "total_output_tokens": 1617856,
-      "total_cache_tokens": 347666432,
+      "total_requests": 2068,
+      "total_input_tokens": 9739452,
+      "total_output_tokens": 1533491,
+      "total_cache_tokens": 326994560,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 347666432,
-      "total_tokens": 359805846,
-      "total_cost": 110.883227,
-      "total_actual_cost": 166.104468,
-      "average_duration_ms": 21577.680998613036
+      "total_cache_read_tokens": 326994560,
+      "total_tokens": 338267503,
+      "total_cost": 105.666781,
+      "total_actual_cost": 158.279798,
+      "average_duration_ms": 21325.40183752418
     },
     "2026-11-15": {
       "total_requests": 482,
@@ -2295,28 +2296,40 @@
       "average_duration_ms": 16063.560165975105
     },
     "2026-11-16": {
-      "total_requests": 71,
-      "total_input_tokens": 797978,
-      "total_output_tokens": 56635,
-      "total_cache_tokens": 4387200,
+      "total_requests": 428,
+      "total_input_tokens": 5598855,
+      "total_output_tokens": 320655,
+      "total_cache_tokens": 22631424,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 4387200,
-      "total_tokens": 5241813,
-      "total_cost": 7.326417,
-      "total_actual_cost": 10.809395,
-      "average_duration_ms": 17975.76056338028
+      "total_cache_read_tokens": 22631424,
+      "total_tokens": 28550934,
+      "total_cost": 43.852803,
+      "total_actual_cost": 63.323691,
+      "average_duration_ms": 16638.53971962617
+    },
+    "2026-11-17": {
+      "total_requests": 10,
+      "total_input_tokens": 103063,
+      "total_output_tokens": 10475,
+      "total_cache_tokens": 596352,
+      "total_cache_creation_tokens": 0,
+      "total_cache_read_tokens": 596352,
+      "total_tokens": 709890,
+      "total_cost": 1.127741,
+      "total_actual_cost": 1.691612,
+      "average_duration_ms": 20866.8
     }
   },
-  "window_total_requests": 3276,
-  "window_total_cost": 187.541722,
-  "window_total_actual_cost": 280.276679,
-  "total_token_consumed": "11.16B",
-  "total_days": 146,
-  "active_days": 146,
-  "current_consecutive_days": 39,
+  "window_total_requests": 2988,
+  "window_total_cost": 186.385053,
+  "window_total_actual_cost": 276.266391,
+  "total_token_consumed": "11.19B",
+  "total_days": 147,
+  "active_days": 147,
+  "current_consecutive_days": 40,
   "most_active_day": {
     "date": "2026-10-25",
     "token_count": "1.23B"
   },
-  "daily_avg_token_consumed": "76.45M"
+  "daily_avg_token_consumed": "76.09M"
 }

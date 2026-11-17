@@ -38,7 +38,7 @@ class ConversationTests(unittest.TestCase):
         subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
         subprocess.run(['git', 'config', 'user.name', 'test'], cwd=self.root, check=True)
         subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=self.root, check=True)
-        (self.root / '.gitignore').write_text('output/\n')
+        (self.root / '.gitignore').write_text((core.ROOT / '.gitignore').read_text())
         (self.root / 'docs').mkdir()
         (self.root / FILE).write_text(ORIGINAL)
         subprocess.run(['git', 'add', '.'], cwd=self.root, check=True)
@@ -296,6 +296,20 @@ class ConversationTests(unittest.TestCase):
         self.assertIn('read-only', self.calls[0][1]['permissions'])
         self.assertTrue((self.directory / 'response-1.json').exists())
         self.assertTrue((self.directory / 'response-2.json').exists())
+
+    def test_proposal_ids_are_owned_by_engine_and_do_not_trigger_another_model_call(self):
+        context = self.context()
+        value = self.propose()
+        value.update(draft_id='draft-request-v1', quote=context['request']['body'])
+        result = core.respond(context, self.directory, self.root, self.executor(value))
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(result['response']['draft_id'], '')
+        self.assertEqual(result['response']['quote'], '')
+        self.assertEqual(core.files_mapping(result['draft']['files']), {FILE: UPDATED})
+        approved = self.approve({**context, 'current_draft': result['draft']})
+        approved['draft_id'] = 'draft-request-v1'
+        with self.assertRaises(ValueError):
+            core.validate_response(approved, {**context, 'current_draft': result['draft']})
 
     def test_failed_model_turn_is_not_marked_handled_or_written(self):
         context = self.context()

@@ -397,7 +397,7 @@ def main():
         raise ValueError('产物未绑定仓库本人')
     if args.command == 'respond':
         check_fresh(context, args.root)
-        result = core.respond(context, STATE, args.root)
+        result = core.respond(context, STATE, args.root, footer=run_footer(context))
         issue, _ = check_fresh(context, args.root)
         action = decision(context, result, issue)
         outputs(action=action)

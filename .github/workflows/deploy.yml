@@ -2,6 +2,11 @@ name: 网站部署
 
 on:
   workflow_dispatch:
+    inputs:
+      inspect_only:
+        description: 只读检查服务器连接、部署锁和发布版本
+        type: boolean
+        default: false
   workflow_run:
     workflows: ['日记议题归档', 'Codex 议题驱动', '议题内容抓取与行车记录', '安全工程内容同步']
     types: [completed]
@@ -32,7 +37,7 @@ on:
       - '.github/workflows/deploy.yml'
 
 concurrency:
-  group: deploy
+  group: ${{ inputs.inspect_only && 'deploy-inspection' || 'deploy' }}
   # Let the active deployment finish; GitHub retains only the latest pending run.
   cancel-in-progress: false
 
@@ -48,8 +53,67 @@ env:
   DATA_ROOT: /data/wufeifei-assets/data
 
 jobs:
+  inspect:
+    if: github.event_name == 'workflow_dispatch' && inputs.inspect_only && github.actor == github.repository_owner && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: 开始任务状态
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: preparing
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -T 10 -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+      - name: 更新阶段：检查部署状态
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: verifying
+      - name: 检查部署状态
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "SITE_ROOT='${{ env.SITE_ROOT }}' REPO_DIR='${{ env.REPO_DIR }}' bash -se" <<'EOF'
+          set -euo pipefail
+          date -Is
+          uptime
+          free -h
+          df -h "$SITE_ROOT" "$REPO_DIR"
+          if [ -L "$SITE_ROOT/current" ]; then
+            echo "current_release=$(basename "$(readlink -f "$SITE_ROOT/current")")"
+          fi
+          lslocks --noheadings --output PID,COMMAND,PATH | awk -v lock="$SITE_ROOT/.deploy.lock" '$3 == lock { print }'
+          ps -eo pid,ppid,pgid,stat,etime,pcpu,pmem,comm | awk 'NR == 1 || $8 ~ /^(node|npm|flock|bash|sshd)$/'
+          find "$SITE_ROOT/releases" -mindepth 1 -maxdepth 1 -type d -name '*.tmp' -printf 'staging=%f\n'
+          EOF
+      - name: 完成任务状态
+        if: always()
+        uses: ./.github/actions/workflow-status
+        continue-on-error: true
+        with:
+          phase: finished
+          state: ${{ job.status }}
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+
   deploy:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
+    if: "!inputs.inspect_only && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository))"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout delivery formatter

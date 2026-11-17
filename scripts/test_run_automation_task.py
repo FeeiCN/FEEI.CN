@@ -118,6 +118,16 @@ class WritingLoopTests(unittest.TestCase):
         self.assertEqual(self.goal()['selected_version'], 0)
         self.assertIn('1 次模型审稿、0 轮修订', result['audit']['summary'])
 
+    def test_typed_file_content_is_reviewed_and_file_only_changes_change_digest(self):
+        result = writing.with_files(self.result)
+        result['report_markdown'] = '完整待审稿，尚未写入 FEEI.CN。'
+        actual = self.execute(self.draft(result), self.review(result))
+        self.assertEqual(actual['files'], result['files'])
+        self.assertIn('有来源的完整初稿', (self.out / 'writing/draft-0.md').read_text())
+        changed = copy.deepcopy(result)
+        changed['files'][0]['content'] += '补充证据。\n'
+        self.assertNotEqual(writing.digest(result), writing.digest(changed))
+
     def test_incomplete_initial_file_contract_stops_before_review(self):
         draft = self.draft()
         draft['result']['report_markdown'] = '# 一个问题\n完整正文，尚未展示文件。'
@@ -158,7 +168,7 @@ class WritingLoopTests(unittest.TestCase):
         result = self.execute(self.draft(), self.review(category='readability'), revised, self.review(revised))
         self.assertEqual(result['report_markdown'], revised['report_markdown'])
         self.assertEqual(self.goal()['selected_version'], 1)
-        self.assertEqual((self.out / 'writing/draft-0.md').read_text(), self.result['report_markdown'])
+        self.assertIn(self.result['report_markdown'], (self.out / 'writing/draft-0.md').read_text())
         self.assertTrue((self.out / 'writing/review-1.json').is_file())
         self.assertIn('review-0.json', self.calls[2][1])
 

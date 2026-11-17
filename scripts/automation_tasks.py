@@ -343,15 +343,19 @@ def reading_full_text(result, report, out, files):
             f"授权：{content['license']}。{content['rights_evidence'].strip()}\n")
 
 
-def validate_research_draft(report):
+def validate_research_draft(report, files=None):
     from scheduled_issue_review import draft_contents
-    if not re.search(r'^## 完整待审稿\s*$', report, re.M):
+    if files is None and not re.search(r'^## 完整待审稿\s*$', report, re.M):
         raise ValueError('研究文章必须以 ## 完整待审稿 展示逐文件完整版本，不能只交付正文')
-    contents = draft_contents(report)
+    if files is None:
+        contents = draft_contents(report)
+    else:
+        from conversation import files_mapping
+        contents = files_mapping(files)
     articles = {name: content for name, content in contents.items()
                 if name.startswith(('docs/', 'blog/')) and name.endswith(('.md', '.mdx'))}
     if not articles:
-        raise ValueError('研究文章缺少目标路径及四反引号代码块中的完整文件')
+        raise ValueError('研究文章缺少逐文件完整版本，必须提供目标路径和完整文件')
     if any(name.startswith('.github/workflows/') for name in contents):
         raise ValueError('研究文章不能包含 workflow 修改')
     for name, content in articles.items():
@@ -371,8 +375,15 @@ def validate_research_draft(report):
 
 
 def validate_result(t, result, out):
-    if set(result) != set(SCHEMA['required']):
+    if set(result) not in (set(SCHEMA['required']), set(SCHEMA['required']) | {'files'}):
         raise ValueError('结果字段不符合 schema')
+    if 'files' in result:
+        from conversation import files_mapping, issue_paths
+        proposed = files_mapping(result['files'])
+        if proposed:
+            issue_paths(list(proposed))
+        if any(name.startswith('.github/workflows/') for name in proposed):
+            raise ValueError('定时任务不能直接提议 workflow 写入；须由本人在会话中请求修改')
     status = result['status']
     if status not in SCHEMA['properties']['status']['enum']:
         raise ValueError('无效的任务状态')
@@ -405,7 +416,7 @@ def validate_result(t, result, out):
             raise ValueError('交付附件不存在、为空或是链接')
         files.append(target)
     if t['id'] in WRITING_TASKS and status == 'completed':
-        validate_research_draft(report)
+        validate_research_draft(report, result.get('files'))
     if t['id'] == 'daily-reading-selection' and status == 'completed':
         report = reading_full_text(result, report, out, files)
     if t['id'] == 'knowledge-base-governance' and status == 'completed':
@@ -433,9 +444,14 @@ def validate_result(t, result, out):
     return status, report
 
 
-def issue_title(report, fallback):
+def issue_title(report, fallback, files=None):
     heading = re.search(r'^# ([^\n]+)', report, re.M)
     title = heading[1].strip() if heading else fallback
+    if not heading and files:
+        front = re.match(r'\A---\n(.*?)\n---\n', files[0]['content'], re.S)
+        meta = yaml.safe_load(front[1]) if front else {}
+        if isinstance(meta, dict) and isinstance(meta.get('title'), str) and meta['title'].strip():
+            title = meta['title'].strip()
     title = re.sub(r'^(?:\[(?:自动任务|completed|blocked|no_update)\]\s*)+', '', title, flags=re.I)
     title = re.sub(r'\s*[·｜|]\s*\d{4}-\d{2}-\d{2}(?:[ T].*)?$', '', title)
     return title[:200].strip() or fallback
@@ -475,7 +491,8 @@ def deliver(t, out):
             raise ValueError('个人记录采集受阻，原 Issue 保持可补充状态')
         return
     marker = f"<!-- automation-task:{t['id']} -->"
-    digest = hashlib.sha256(report.encode()).hexdigest()
+    digest = (hashlib.sha256(json.dumps({'report': report, 'files': result['files']}, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+              if 'files' in result else hashlib.sha256(report.encode()).hexdigest())
     fingerprint = f'<!-- report-sha256:{digest} -->'
     reply_to = meta.get('reply_to')
     if reply_to:
@@ -500,7 +517,19 @@ def deliver(t, out):
     else:
         body += ('\n可直接提问或说明修改意见。已展示目标文件与完整稿时，可直接说“这版可以，写入网站吧”；'
                  '尚未展示具体版本时，会先整理待审稿。\n')
-    if status == 'completed' and t['id'] in REVIEW:
+    if status == 'completed' and result.get('files'):
+        import conversation
+        session_id = repo + '/reports/' + t['id'] + '/' + digest
+        request = {'id': 'report:' + digest, 'author': {'login': 'github-actions[bot]'},
+                   'body': report, 'createdAt': ''}
+        context = {'session_id': session_id, 'request': request, 'source_run': str(os.environ['GITHUB_RUN_ID'])}
+        response = {'action': 'revise', 'message': report, 'files': result['files'], 'draft_id': '',
+                    'quote': '', 'has_changes': True, 'risk': 'medium', 'verification': ['写入前核对目标基线并执行文档检查和生产构建']}
+        contents = conversation.files_mapping(result['files'])
+        draft = conversation.draft_version(session_id, result['files'], conversation.git_baselines(meta['commit'], contents, ROOT), meta['commit'])
+        body = conversation.render_turn(context, response, draft, header=marker + '\n' + fingerprint + '\n<!-- status:completed -->',
+                                        footer=f"运行：[Actions]({meta['run_url']}) · commit `{meta['commit'][:8]}`")
+    elif status == 'completed' and t['id'] in REVIEW:
         from scheduled_issue_review import seal_report
         body = seal_report(body, issue_title(report, t['title']), meta['commit'])
     if status != 'no_update' and not duplicated and not expired:
@@ -525,7 +554,7 @@ def deliver(t, out):
             state_label = '待补充' if status == 'blocked' else ('待审阅' if t['id'] in REVIEW else '已交付')
             for name, color in [(task_label, 'd4c5f9'), (state_label, 'fbca04' if status == 'blocked' else 'c2e0c6')]:
                 gh('label', 'create', name, '--repo', repo, '--color', color, '--force')
-            url = gh('issue', 'create', '--repo', repo, '--title', issue_title(report, t['title']),
+            url = gh('issue', 'create', '--repo', repo, '--title', issue_title(report, t['title'], result.get('files')),
                      '--label', task_label, '--label', state_label, '--body-file', str(out / 'report.md')).strip()
         meta['issue_url'] = url
     else:

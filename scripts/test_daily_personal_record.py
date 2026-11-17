@@ -34,6 +34,13 @@ def snapshot():
 
 class DailyTests(unittest.TestCase):
     def setUp(self):
+        class FixedDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime(2026, 11, 10, 12, tzinfo=timezone.utc).astimezone(tz)
+        clock = patch.object(daily, 'datetime', FixedDatetime)
+        clock.start()
+        self.addCleanup(clock.stop)
         guard = patch.object(daily, 'api', side_effect=AssertionError('测试必须隔离 GitHub API'))
         guard.start()
         self.addCleanup(guard.stop)

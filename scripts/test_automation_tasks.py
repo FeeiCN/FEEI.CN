@@ -5,9 +5,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 import re
 import tempfile
+import subprocess
 import unittest
 
 import scheduled_issue_review as review
+import conversation
+import issue_conversation
 from unittest.mock import patch
 from urllib.error import HTTPError
 
@@ -206,26 +209,28 @@ class AutomationResultTests(unittest.TestCase):
             'description: 分析邮件网关失陷的原因与处置。\n---\n完整研究正文\n````\n')
         self.write_delivery_metadata()
         meta = json.loads((self.out / 'metadata.json').read_text())
-        meta['commit'] = 'a' * 40
+        subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
+        subprocess.run(['git', '-c', 'user.name=test', '-c', 'user.email=test@example.com',
+                        'commit', '--allow-empty', '-qm', 'baseline'], cwd=self.root, check=True)
+        meta['commit'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.root, text=True).strip()
         (self.out / 'metadata.json').write_text(json.dumps(meta))
         with patch.object(automation, 'destination', return_value='owner/public'), \
                 patch.object(automation, 'gh', return_value='https://example.com/issue') as api:
             automation.deliver(self.task, self.out)
         body = (self.out / 'report.md').read_text()
-        issue = {'title': '邮件网关事件', 'body': body, 'author': {'login': review.BOT},
+        issue = {'number': 936, 'title': '邮件网关事件', 'body': body, 'author': {'login': review.BOT},
                  'state': 'OPEN', 'labels': [], 'comments': [
                      {'id': 'approval', 'author': {'login': 'owner'}, 'body': '写入',
                       'createdAt': '2026-11-17T00:56:49Z', 'updatedAt': '2026-11-17T00:56:49Z'}]}
         request, plan = review.latest_request_and_plan(issue, 'owner')
         self.assertIsNotNone(plan)
-        intent = review.bind_intent(issue, 'owner', {
-            'intent': 'approve', 'request_id': request['id'], 'plan_id': plan['id'],
-            'quote': '写入', 'has_changes': False, 'reason': '本人要求写入当前首次完整稿',
-        })
         with patch.object(review, 'task_source', return_value='security-event-research'):
-            context = review.decide(issue, 'owner', 'owner', 'owner/public', lambda _: None, intent=intent)
-        self.assertEqual(context['mode'], 'execute')
-        self.assertEqual(context['files'], ['docs/邮件网关事件.md'])
+            context = issue_conversation.make_context(issue, 'owner/public', 'owner', 'owner', root=self.root)
+        value = {'action': 'approve', 'message': '写入当前完整版本。', 'files': [],
+                 'draft_id': context['current_draft']['id'], 'quote': '写入', 'has_changes': False,
+                 'risk': 'low', 'verification': []}
+        self.assertEqual(issue_conversation.decision(context, {'response': value, 'draft': None}, issue), 'approve')
+        self.assertEqual(list(conversation.files_mapping(context['current_draft']['files'])), ['docs/邮件网关事件.md'])
         self.assertEqual(review.draft_contents(body), review.draft_contents(self.result['report_markdown']))
         visible = body.split('<details>', 1)[0]
         self.assertIn('完整研究正文', visible)

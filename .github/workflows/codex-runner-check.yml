@@ -53,6 +53,7 @@ jobs:
           python3 -m unittest discover -s scripts -p test_actions_diagnosis_lifecycle.py
           python3 -m unittest discover -s scripts -p test_history_life_journey.py
           python3 -m unittest discover -s scripts -p test_scheduled_issue_review.py
+          python3 -m unittest discover -s scripts -p test_conversation.py
       - name: Install pinned Codex
         run: python3 scripts/codex_runner.py install
       - name: Verify exact filesystem and network permissions

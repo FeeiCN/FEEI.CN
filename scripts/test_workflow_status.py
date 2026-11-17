@@ -31,10 +31,12 @@ class WorkflowStatusTests(unittest.TestCase):
 
     def test_issue_status_precedes_installation_and_does_not_lock_execution(self):
         workflow = yaml.safe_load((ROOT / '.github/workflows/codex-issue-driver.yml').read_text())
-        steps = workflow['jobs']['drive']['steps']
+        steps = workflow['jobs']['turn']['steps']
         names = [s.get('name') for s in steps]
-        self.assertLess(names.index('核验议题来源与请求'), names.index('来源核验后显示执行状态'))
-        self.assertLess(names.index('来源核验后显示执行状态'), names.index('准备自然语言解释器'))
+        self.assertLess(names.index('开始任务状态'), names.index('恢复当前会话'))
+        self.assertLess(names.index('恢复当前会话'), names.index('安装统一执行器'))
+        self.assertEqual(workflow['jobs']['turn']['permissions']['issues'], 'read')
+        self.assertEqual(workflow['jobs']['publish']['permissions']['issues'], 'write')
         source = (ROOT / '.github/workflows/codex-issue-driver.yml').read_text()
         self.assertNotIn('--remove-label', source)
         self.assertNotIn('--add-label', source)

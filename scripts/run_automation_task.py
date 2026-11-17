@@ -7,9 +7,11 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from copy import deepcopy
 
 from codex_runner import run_codex
 from automation_tasks import COMMON, ROOT, SCHEMA, WRITING_TASKS, reading_review_preflight, validate_result
+from conversation import FILE_SCHEMA, source_preview
 
 
 MAX_REVISIONS = 2
@@ -32,7 +34,10 @@ def object_schema(properties):
 
 TEXT = {'type': 'string'}
 BRIEF_SCHEMA = object_schema({key: TEXT for key in ('reader', 'question', 'takeaway', 'scope')})
-DRAFT_SCHEMA = object_schema({'brief': BRIEF_SCHEMA, 'result': SCHEMA})
+WRITING_SCHEMA = deepcopy(SCHEMA)
+WRITING_SCHEMA['properties']['files'] = {'type': 'array', 'items': FILE_SCHEMA}
+WRITING_SCHEMA['required'].append('files')
+DRAFT_SCHEMA = object_schema({'brief': BRIEF_SCHEMA, 'result': WRITING_SCHEMA})
 FINDING_SCHEMA = object_schema({
     'id': TEXT,
     'category': {'type': 'string', 'enum': list(CHECKS)},
@@ -93,7 +98,16 @@ def save(out, relative, value):
 
 
 def digest(result):
-    return hashlib.sha256(result['report_markdown'].encode()).hexdigest()
+    value = with_files(result)
+    return hashlib.sha256(json.dumps({'report': value['report_markdown'], 'files': value['files']}, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
+
+def with_files(result):
+    if 'files' in result:
+        return result
+    from scheduled_issue_review import draft_contents
+    contents = draft_contents(result['report_markdown']) if result['status'] == 'completed' else {}
+    return {**result, 'files': [{'path': name, 'content': content} for name, content in contents.items()]}
 
 
 def prepare_review_copy(result):
@@ -209,7 +223,9 @@ def execute(task_id, out, executor):
             save(out, 'writing/brief.json', brief)
         for index, version in enumerate(versions):
             save(out, f'writing/draft-{index}.json', version)
-            output_path(out, f'writing/draft-{index}.md').write_text(version['report_markdown'], encoding='utf-8')
+            preview = source_preview(version.get('files', []))[0]
+            output_path(out, f'writing/draft-{index}.md').write_text(
+                version['report_markdown'] + ('\n\n' + preview if preview else ''), encoding='utf-8')
         for index, review in enumerate(reviews):
             save(out, f'writing/review-{index}.json', review)
 
@@ -303,6 +319,7 @@ def execute(task_id, out, executor):
     try:
         draft = call_phase('draft', base + '\n\n' + instructions['draft'],
                          DRAFT_SCHEMA)
+        draft['result'] = with_files(draft['result'])
         validate_shape(draft, DRAFT_SCHEMA)
         brief, result = draft['brief'], prepare_review_copy(draft['result'])
         validate_result({'id': task_id}, result, out)
@@ -344,8 +361,9 @@ def execute(task_id, out, executor):
             checkpoint()
             revised = call_phase(f'revise-{round_number + 1}', base + '\n\n' + instructions['revise'] + '\n' +
                                f'写作目标在 output/writing/brief.json；编辑基线为 output/writing/draft-{candidate}.json；'
-                               f'本轮意见为 output/writing/review-{len(reviews) - 1}.json。', SCHEMA)
-            validate_shape(revised, SCHEMA)
+                               f'本轮意见为 output/writing/review-{len(reviews) - 1}.json。', WRITING_SCHEMA)
+            revised = with_files(revised)
+            validate_shape(revised, WRITING_SCHEMA)
             revised = prepare_review_copy(revised)
             validate_result({'id': task_id}, revised, out)
             versions.append(revised)

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 import {deploymentScope} from './deployment_scope.mjs';
 
@@ -28,4 +30,30 @@ test('workflow uses scope classifier and retries failed or missing indexes', () 
   const workflow = fs.readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8');
   assert.match(workflow, /node scripts\/deployment_scope.mjs/);
   assert.match(workflow, /\[ "\$index_ready" != true \]/);
+});
+
+test('interrupted builds reset only generated Rspack state before one retry', () => {
+  const workflow = fs.readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8');
+  const loop = workflow.slice(workflow.indexOf('          build_ok=false'), workflow.indexOf('          build_resource_snapshot after'));
+  for (const failure of [124, 137, 143, 1]) {
+    const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'feei-build-recovery-'));
+    try {
+      fs.mkdirSync(path.join(folder, 'cache/rspack'), {recursive: true});
+      fs.writeFileSync(path.join(folder, 'cache/other-data'), 'preserve');
+      const result = spawnSync('bash', ['-e'], {cwd: folder, encoding: 'utf8', input: `
+        build_cache="$PWD/cache"
+        staging_dir="$PWD/staging"
+        calls=0
+        run_build() { calls=$((calls + 1)); if [ "$calls" = 1 ]; then return ${failure}; fi; }
+        ${loop}
+        echo "result=$build_ok calls=$calls"
+      `});
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, failure === 1 ? /result=false calls=1/ : /result=true calls=2/);
+      assert.equal(fs.existsSync(path.join(folder, 'cache/rspack')), failure === 1);
+      assert.equal(fs.readFileSync(path.join(folder, 'cache/other-data'), 'utf8'), 'preserve');
+    } finally {
+      fs.rmSync(folder, {recursive: true, force: true});
+    }
+  }
 });

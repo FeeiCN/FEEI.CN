@@ -7,6 +7,10 @@ on:
         description: 只读检查服务器连接、部署锁和发布版本
         type: boolean
         default: false
+      reset_build_cache:
+        description: 在部署锁内清理 Rspack 生成缓存后重建
+        type: boolean
+        default: false
   workflow_run:
     workflows: ['日记议题归档', 'Codex 议题驱动', '议题内容抓取与行车记录', '安全工程内容同步']
     types: [completed]
@@ -113,7 +117,7 @@ jobs:
           retention-days: 30
 
   deploy:
-    if: "!inputs.inspect_only && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository))"
+    if: ${{ !inputs.inspect_only && (!inputs.reset_build_cache || (github.actor == github.repository_owner && github.ref == 'refs/heads/main')) && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout delivery formatter
@@ -143,7 +147,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' bash -se" <<'EOF'
+            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' RESET_BUILD_CACHE='${{ inputs.reset_build_cache && 'true' || 'false' }}' bash -se" <<'EOF'
           set -euo pipefail
 
           timer_start=0
@@ -257,6 +261,7 @@ jobs:
           echo "[deploy-scope] $scope"
           pages_changed="$(node -e 'console.log(JSON.parse(process.argv[1]).pages)' "$scope")"
           search_changed="$(node -e 'console.log(JSON.parse(process.argv[1]).search)' "$scope")"
+          if [ "$RESET_BUILD_CACHE" = true ]; then pages_changed=true; fi
           if [ "$pages_changed" = false ] && [ -n "$previous_release" ]; then
             exec 8>"$site_root/.search-index.lock"
             flock --wait 1200 8 || { echo "ERROR: search index is still running after 20 minutes"; exit 1; }
@@ -279,6 +284,10 @@ jobs:
 
           group_start "Clean build cache and stale releases"
           build_cache="$site_root/build-cache"
+          if [ "$RESET_BUILD_CACHE" = true ]; then
+            echo "[build-cache] reset requested; removing generated Rspack cache"
+            rm -rf "$build_cache/rspack"
+          fi
           if [ -d "$build_cache" ]; then
             cache_size_kb="$(du -sk "$build_cache" | cut -f1)"
             echo "build_cache_size_kb=$cache_size_kb"
@@ -357,14 +366,20 @@ jobs:
             return "$build_status"
           }
           build_ok=false
-          for build_attempt in 1 2 3; do
+          for build_attempt in 1 2; do
             rm -rf "$staging_dir"
-            echo "Build attempt $build_attempt of 3"
-            if run_build; then build_ok=true; break; fi
-            sleep 5
+            echo "Build attempt $build_attempt of 2"
+            if run_build; then build_ok=true; break; else build_status=$?; fi
+            echo "[build-failure] attempt=$build_attempt status=$build_status"
+            if [ "$build_attempt" = 1 ] && { [ "$build_status" = 124 ] || [ "$build_status" = 137 ] || [ "$build_status" = 143 ]; }; then
+              echo "[build-cache] reset after interrupted build before one retry"
+              rm -rf "$build_cache/rspack"
+            else
+              break
+            fi
           done
           build_resource_snapshot after
-          [ "$build_ok" = true ] || { echo "Build failed after 3 attempts"; exit 1; }
+          [ "$build_ok" = true ] || { echo "Build failed after $build_attempt attempts"; exit 1; }
           group_end "Build Docusaurus"
           restore_data_source
 

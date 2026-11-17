@@ -31,7 +31,10 @@ class WritingLoopTests(unittest.TestCase):
             override.start()
             self.addCleanup(override.stop)
         self.result = {
-            'status': 'completed', 'report_markdown': '# 一个问题\n\n有来源的完整初稿。',
+            'status': 'completed', 'report_markdown': (
+                '# 一个问题\n\n## 完整待审稿\n### docs/一个问题.md\n````markdown\n'
+                '---\nslug: /one-question\ntitle: 一个问题\nicon: book-icon\n'
+                'description: 解释一个问题的原因。\n---\n有来源的完整初稿。\n````\n'),
             'sources': ['https://example.com/a', 'https://example.com/b'], 'artifacts': [],
             'audit': {'summary': '核验两份来源', 'data_cutoff': '2026-11-07', 'deduplication_reason': '包含新增分析'},
         }
@@ -115,6 +118,22 @@ class WritingLoopTests(unittest.TestCase):
         self.assertEqual(self.goal()['selected_version'], 0)
         self.assertIn('1 次模型审稿、0 轮修订', result['audit']['summary'])
 
+    def test_incomplete_initial_file_contract_stops_before_review(self):
+        draft = self.draft()
+        draft['result']['report_markdown'] = '# 一个问题\n完整正文，尚未展示文件。'
+        with self.assertRaisesRegex(ValueError, '逐文件完整版本'):
+            self.execute(draft)
+        self.assertEqual([phase for phase, _ in self.calls], ['draft'])
+        self.assertEqual(self.goal()['state'], 'failed')
+
+    def test_revision_cannot_drop_approved_file_contract(self):
+        revised = copy.deepcopy(self.result)
+        revised['report_markdown'] = '# 一个问题\n修订的完整正文，缺少目标文件。'
+        with self.assertRaisesRegex(ValueError, '逐文件完整版本'):
+            self.execute(self.draft(), self.review(category='readability'), revised)
+        self.assertEqual([phase for phase, _ in self.calls], ['draft', 'review-0', 'revise-1'])
+        self.assertEqual(self.goal()['state'], 'failed')
+
     def test_stage_notice_is_fixed_before_review_hash_and_preserves_article_quotes(self):
         raw = copy.deepcopy(self.result)
         raw['report_markdown'] = ('完整修订稿，待后续模型复核，尚未写入 FEEI.CN。\n\n' +
@@ -158,7 +177,7 @@ class WritingLoopTests(unittest.TestCase):
 
     def test_regression_uses_previous_baseline_for_next_revision(self):
         bad, good = copy.deepcopy(self.result), copy.deepcopy(self.result)
-        bad['report_markdown'] = '# 丢失证据的修改'
+        bad['report_markdown'] = bad['report_markdown'].replace('有来源的完整初稿。', '丢失证据的修改。')
         good['report_markdown'] += '\n解释得到改进，保留原始证据。'
         result = self.execute(self.draft(), self.review(category='readability'),
                               bad, self.review(bad, 'preservation', 'blocking'), good, self.review(good))

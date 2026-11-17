@@ -33,6 +33,138 @@ def snapshot():
 
 
 class DailyTests(unittest.TestCase):
+    def setUp(self):
+        guard = patch.object(daily, 'api', side_effect=AssertionError('测试必须隔离 GitHub API'))
+        guard.start()
+        self.addCleanup(guard.stop)
+
+    def test_inbox_contains_owner_review_questions_without_filled_answers(self):
+        body = daily.inbox_body(REPO, DAY, '42')
+        for phrase in ['今日主要做了什么', '照顾好了自己', '照顾好了家人', '真正重要的事情',
+                       '四个目标', '开心和不愉快', '明天可以提升']:
+            self.assertIn(phrase, body)
+        self.assertNotIn('- [x]', body)
+
+    def test_body_updates_preserve_owner_prose_and_other_section_without_comments(self):
+        record = issue(body=daily.inbox_body(REPO, DAY, '42') + '\n\n我今天陪家人散步。\n')
+        original = record['body']
+        server = copy.deepcopy(record)
+
+        def api(endpoint, method='GET', data=None):
+            self.assertNotIn('/comments', endpoint)
+            if method == 'PATCH':
+                server.update(data)
+            return copy.deepcopy(server)
+
+        data = daily.snapshot_marker(DAY)
+        clues = f'<!-- daily-personal-clues:{DAY} -->'
+        with patch.object(daily, 'api', side_effect=api) as call:
+            daily.publish_section(REPO, record, data, '旧数据')
+            daily.publish_section(REPO, record, clues, '本轮线索')
+            daily.publish_section(REPO, record, data, '新数据')
+            count = call.call_count
+            daily.publish_section(REPO, record, data, '新数据')
+            self.assertEqual(call.call_count, count)
+        self.assertTrue(record['body'].startswith(original))
+        self.assertEqual(daily.section_content(record['body'], clues).strip(), '本轮线索')
+        self.assertEqual(daily.section_content(record['body'], data).strip(), '新数据')
+        self.assertNotIn('旧数据', record['body'])
+        self.assertEqual(daily.without_sections(record['body']).strip(), original.strip())
+
+    def test_body_update_stops_on_concurrent_owner_edit_or_wrong_author(self):
+        for changed in [issue(body=issue()['body'] + '\n本人新补充'), {**issue(), 'user': {'login': 'owner'}}]:
+            with self.subTest(changed=changed), patch.object(daily, 'api', return_value=changed) as call:
+                with self.assertRaisesRegex(ValueError, '已变化'):
+                    daily.publish_section(REPO, issue(), daily.snapshot_marker(DAY), '新数据')
+                self.assertEqual(call.call_count, 1)
+                self.assertEqual(len(call.call_args.args), 1)
+
+    def test_damaged_duplicate_or_oversized_sections_never_overwrite_body(self):
+        marker = daily.snapshot_marker(DAY)
+        end = marker.replace(' -->', ':end -->')
+        for suffix in [marker, end, marker + end + marker + end, end + marker]:
+            with self.subTest(suffix=suffix), patch.object(daily, 'api') as call:
+                with self.assertRaises(ValueError):
+                    daily.publish_section(REPO, issue(body=issue()['body'] + suffix), marker, '数据')
+                call.assert_not_called()
+        with patch.object(daily, 'api') as call, self.assertRaisesRegex(ValueError, '大小限制'):
+            daily.publish_section(REPO, issue(), marker, '数据' * 20000)
+        call.assert_not_called()
+
+    def test_managed_data_run_links_do_not_replace_daily_source_provenance(self):
+        body = daily.inbox_body(REPO, DAY, '42')
+        marker = daily.snapshot_marker(DAY)
+        body += '\n' + marker + f'\nhttps://github.com/{REPO}/actions/runs/99\n' + marker.replace(' -->', ':end -->')
+        run = {'path': '.github/workflows/daily-personal-record.yml', 'head_branch': 'main',
+               'event': 'schedule', 'head_repository': {'full_name': REPO}}
+        with patch.object(review, 'registered_tasks', return_value={'daily-personal-record': run['path']}):
+            self.assertEqual(review.task_source({'author': {'login': daily.BOT}, 'body': body}, REPO,
+                                               lambda number: run if number == '42' else {}), 'daily-personal-record')
+
+    def test_completed_body_sections_skip_morning_collection_and_model(self):
+        marker = daily.snapshot_marker(DAY)
+        clues = f'<!-- daily-personal-clues:{DAY} -->'
+        body = issue()['body'] + marker + '\n早间快照\n' + marker.replace(' -->', ':end -->')
+        body += clues + '\n<!-- daily-clues-status:completed -->\n线索\n' + clues.replace(' -->', ':end -->')
+        with tempfile.TemporaryDirectory() as folder, patch.object(daily, 'ROOT', Path(folder)), patch.dict(os.environ, {
+                'GITHUB_REPOSITORY': REPO, 'PERSONAL_MODE': 'create', 'PERSONAL_DATE': str(DAY),
+                'GITHUB_OUTPUT': folder + '/outputs', 'GITHUB_STEP_SUMMARY': folder + '/summary'}), \
+                patch.object(daily, 'find_issue', return_value=issue(body=body)), patch.object(daily, 'pages', return_value=[]), \
+                patch.object(daily, 'timing', return_value={}), patch.object(daily, 'collect') as collect, \
+                patch.object(daily, 'publish_section') as publish, patch('sys.argv', ['daily', 'prepare']):
+            daily.main()
+            collect.assert_not_called()
+            publish.assert_not_called()
+            self.assertIn('ready=false', Path(folder + '/outputs').read_text())
+
+    def test_wrong_date_or_damaged_other_section_stops_update(self):
+        marker = daily.snapshot_marker(DAY)
+        for body in [issue()['body'].replace(str(DAY), '2026-11-09'),
+                     issue()['body'] + f'<!-- daily-personal-clues:{DAY}:end -->']:
+            with self.subTest(body=body), patch.object(daily, 'api') as call, self.assertRaises(ValueError):
+                daily.publish_section(REPO, issue(body=body), marker, '新数据')
+            call.assert_not_called()
+
+    def test_morning_clues_and_evening_refresh_update_body_without_comments(self):
+        import automation_tasks as automation
+        server = issue(body=daily.inbox_body(REPO, DAY, '42'))
+
+        def api(endpoint, method='GET', data=None):
+            self.assertNotIn('/comments', endpoint)
+            self.assertIn(method, ['GET', 'PATCH'])
+            if method == 'PATCH':
+                server.update(data)
+            return copy.deepcopy(server)
+
+        with tempfile.TemporaryDirectory() as folder:
+            out = Path(folder) / 'output'
+            env = {'GITHUB_REPOSITORY': REPO, 'PERSONAL_MODE': 'create', 'PERSONAL_DATE': str(DAY),
+                   'PERSONAL_ISSUE': '864', 'GITHUB_OUTPUT': folder + '/outputs', 'GITHUB_STEP_SUMMARY': folder + '/summary'}
+            with patch.object(daily, 'ROOT', Path(folder)), patch.dict(os.environ, env), \
+                    patch.object(daily, 'find_issue', side_effect=lambda *args: copy.deepcopy(server)), \
+                    patch.object(daily, 'api', side_effect=api), patch.object(daily, 'pages', return_value=[]), \
+                    patch.object(daily, 'timing', return_value={}), patch('sys.argv', ['daily', 'prepare']):
+                with patch.object(daily, 'collect', return_value=snapshot()):
+                    daily.main()
+                self.assertIn('ready=true', Path(folder + '/outputs').read_text())
+                (out / 'result.json').write_text(json.dumps({
+                    'status': 'completed', 'report_markdown': '已经核实的一条线索。', 'sources': [], 'artifacts': [],
+                    'audit': {'summary': '核对当前来源', 'data_cutoff': str(DAY), 'deduplication_reason': '当天首次线索'},
+                }))
+                (out / 'metadata.json').write_text(json.dumps({'delivery_repository': REPO}))
+                automation.deliver({'id': 'daily-personal-record', 'delivery': 'issue'}, out)
+                server['body'] += '\n\n我今天陪家人散步，很开心。'
+                missing = snapshot()
+                missing['sources']['health'] = {'status': 'unavailable'}
+                with patch.dict(os.environ, {'PERSONAL_MODE': 'refresh'}), patch.object(daily, 'collect', return_value=missing):
+                    daily.main()
+            self.assertIn('我今天陪家人散步，很开心。', server['body'])
+            self.assertIn('已经核实的一条线索。', server['body'])
+            self.assertIn('体重：70 kg', server['body'])
+            self.assertIn('非本次更新', server['body'])
+            self.assertEqual(server['body'].count(daily.snapshot_marker(DAY)), 1)
+            self.assertEqual(server['body'].count(f'<!-- daily-personal-clues:{DAY} -->'), 1)
+
     def test_created_inbox_passes_registered_task_source_validation(self):
         body = daily.inbox_body(REPO, DAY, '42')
         source = {'author': {'login': daily.BOT}, 'body': body}
@@ -138,7 +270,7 @@ class DailyTests(unittest.TestCase):
                 'GITHUB_OUTPUT': folder + '/outputs', 'GITHUB_STEP_SUMMARY': folder + '/summary',
                 'GITHUB_EVENT_NAME': 'workflow_dispatch'}), patch.object(daily, 'find_issue', return_value=issue()), patch.object(
                 daily, 'pages', return_value=[]), patch.object(daily, 'timing', return_value={}), patch.object(
-                daily, 'collect', return_value=snapshot()), patch.object(daily, 'publish_comment') as publish, patch('sys.argv', ['daily', 'prepare']):
+                daily, 'collect', return_value=snapshot()), patch.object(daily, 'publish_section') as publish, patch('sys.argv', ['daily', 'prepare']):
             daily.main()
             self.assertIn('ready=false', Path(folder + '/outputs').read_text())
             self.assertIn(str(DAY), publish.call_args.args[3])
@@ -149,7 +281,7 @@ class DailyTests(unittest.TestCase):
                 'GITHUB_RUN_ID': '42',
                 'GITHUB_OUTPUT': folder + '/outputs', 'GITHUB_STEP_SUMMARY': folder + '/summary'}), patch.object(
                 daily, 'find_issue', return_value=None), patch.object(daily, 'api', return_value=issue()) as api, patch.object(
-                daily, 'pages', return_value=[]), patch.object(daily, 'timing', return_value={}), patch.object(daily, 'publish_comment'), patch(
+                daily, 'pages', return_value=[]), patch.object(daily, 'timing', return_value={}), patch.object(daily, 'publish_section'), patch(
                 'sys.argv', ['daily', 'prepare']):
             def collect(*args):
                 self.assertEqual(api.call_args.args[1], 'POST')

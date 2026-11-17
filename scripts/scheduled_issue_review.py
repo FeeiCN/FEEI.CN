@@ -9,6 +9,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
+import time
 from datetime import date
 from codex_runner import CodexError, run_codex
 from workflow_delivery import article_links as delivery_links, delivery_report
@@ -31,8 +32,20 @@ INTENT_SCHEMA = {
 }
 
 
+class ReviewFormatError(ValueError):
+    def __init__(self, code, message):
+        super().__init__(message)
+        self.code = code
+
+
 def digest(value):
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
+
+def request_fingerprint(request):
+    if request['id'].startswith(('title:', 'edit:')):
+        return digest({key: request[key] for key in ('id', 'author', 'body', 'createdAt')})
+    return digest(request)
 
 
 def bot(author):
@@ -113,6 +126,9 @@ def task_source(issue, repo, runs, tasks=None):
     known = registered_tasks() if tasks is None else tasks
     if task not in known:
         raise ValueError('Issue 来源未通过核验：缺少已登记的任务标记，且无法匹配仓库已同步的历史微信读书划线')
+    if task == 'daily-personal-record':
+        from daily_personal_record import without_sections
+        body = without_sections(body)
     links = re.findall(r'https://github\.com/' + re.escape(repo) + r'/actions/runs/(\d+)(?!\d)', body)
     if len(set(links)) != 1:
         raise ValueError('缺少唯一的当前仓库任务运行链接')
@@ -188,12 +204,12 @@ def approval_source(issue, owner, request, plan, expected):
     candidate = {**issue, 'comments': [c for c in issue.get('comments', []) if c['id'] != request['id']]}
     if snapshot(candidate, owner) == expected:
         return expected
-    # Only standalone retries after this draft may be omitted from its content snapshot.
+    # Pure confirmations and standalone retries do not change the proposed files.
     for c in reversed(candidate['comments'][:]):
         if c['author']['login'] != owner or c['createdAt'] <= plan['createdAt']:
             continue
         text = c['body'].strip()
-        if not explicit_action(text, 'approve'):
+        if not confirmation_requested(issue, owner, c, plan) and not explicit_action(text, 'approve'):
             break
         candidate['comments'] = [item for item in candidate['comments'] if item['id'] != c['id']]
         if snapshot(candidate, owner) == expected:
@@ -217,13 +233,26 @@ def content_paths(paths):
 def metadata(text, write=True):
     matches = re.findall(r'^## Plan metadata\s*\n```json\s*\n([\s\S]*?)\n```\s*$', text.strip(), re.M)
     if len(matches) != 1:
-        raise ValueError('缺少唯一的 Plan metadata')
-    value = json.loads(matches[0])
+        raise ReviewFormatError('metadata_missing', '缺少唯一的 Plan metadata')
+    try:
+        value = json.loads(matches[0])
+    except json.JSONDecodeError as error:
+        raise ReviewFormatError('metadata_invalid', 'Plan metadata 不是有效 JSON') from error
+    if (not isinstance(value, dict)
+            or set(value) != {'task_type', 'affected_files', 'risk', 'verification'}
+            or not isinstance(value['task_type'], str) or not isinstance(value['risk'], str)
+            or value['task_type'] not in {'analysis', 'discussion', 'implementation'}
+            or value['risk'] not in {'low', 'medium', 'high'}
+            or not isinstance(value['verification'], list) or not value['verification']
+            or any(not isinstance(item, str) or not item.strip() for item in value['verification'])):
+        raise ReviewFormatError('metadata_invalid', 'Plan metadata 字段、任务类型、风险或验证项无效')
     paths = value.get('affected_files', [])
+    if not isinstance(paths, list):
+        raise ReviewFormatError('metadata_invalid', 'affected_files 必须是仓库相对路径数组')
     if value.get('task_type') in {'analysis', 'discussion'} and not write and not paths:
         return value
     if value.get('task_type') != 'implementation' or not paths:
-        raise ValueError('写入计划必须列出具体内容文件')
+        raise ReviewFormatError('draft_paths_missing', '写入计划必须列出具体内容文件')
     content_paths(paths)
     if any(name.startswith('.github/workflows/') for name in paths) and value.get('risk') not in {'medium', 'high'}:
         raise ValueError('workflow 修改的 risk 至少为 medium')
@@ -289,11 +318,16 @@ def latest_request_and_plan(issue, owner):
     comments = trusted_comments(issue, owner)
     own = [c for c in comments if c['author']['login'] == owner]
     edited = os.environ.get('EVENT_ACTION') == 'edited'
-    if (not own and initial_owner_request(issue, owner)) or (
+    daily_edit = (edited and os.environ.get('COMMAND_ACTOR') == owner and bot(issue.get('author', {}))
+                  and issue.get('body', '').startswith('<!-- automation-task:daily-personal-record -->'))
+    if daily_edit or (not own and initial_owner_request(issue, owner)) or (
             edited and issue.get('author', {}).get('login') == owner
             and issue.get('title', '').strip()
             and issue.get('state') in {'OPEN', 'CLOSED'}):
         body = issue.get('body', '').strip()
+        if daily_edit:
+            from daily_personal_record import without_sections
+            body = without_sections(body).strip()
         request_body = issue['title'].strip() + ('\n\n' + body if body else '')
         identity = digest({'title': issue['title'], 'body': body})
         prefix = 'edit:' if edited else 'title:'
@@ -306,6 +340,50 @@ def latest_request_and_plan(issue, owner):
         }]
     plans = [c for c in comments if bot(c['author']) and c['body'].startswith(PLAN)]
     return (own[-1] if own else None, plans[-1] if plans else report_draft(issue))
+
+
+def unregistered_draft(issue, owner):
+    for item in reversed(trusted_comments(issue, owner)):
+        if not bot(item.get('author', {})) or not item['body'].startswith('<!-- codex-driver:review:reply -->'):
+            continue
+        if not re.search(r'^## 完整(?:修订稿|待审稿)\s*$', item['body'], re.M):
+            continue
+        try:
+            files = draft_contents(item['body'])
+        except ValueError:
+            continue
+        if files:
+            return {**item, 'files': list(files), 'registered': False}
+    return None
+
+
+def pure_confirmation(text):
+    return re.fullmatch(r'(?:确认|是的)[。.!！]*', text.strip()) is not None
+
+
+def confirmation_requested(issue, owner, request, plan):
+    if not plan or not pure_confirmation(request['body']):
+        return False
+    if plan.get('createdAt', '') >= request['createdAt']:
+        return False
+    try:
+        if plan.get('origin') != 'report':
+            draft_files(plan['body'], metadata(plan['body'])['affected_files'])
+    except ValueError:
+        return False
+    replies = [c for c in trusted_comments(issue, owner) if bot(c['author'])
+               and c.get('updatedAt', c['createdAt']) < request['createdAt']
+               and c['createdAt'] >= plan.get('createdAt', '')]
+    prompt = replies[-1]['body'] if replies else plan['body']
+    if prompt.startswith(PLAN) or plan.get('origin') == 'report' and not replies:
+        prompt = prompt.rsplit('\n---\n', 1)[-1]
+    else:
+        try:
+            if not prompt.startswith('<!-- codex-driver:review:reply -->') or draft_contents(prompt):
+                return False
+        except ValueError:
+            return False
+    return bool(re.search(r'确认|批准|可直接说', prompt) and re.search(r'写入|发布|提交', prompt))
 
 
 def explicit_action(text, action):
@@ -338,18 +416,19 @@ def bind_intent(issue, owner, result):
     if result['intent'] in {'approve', 'regenerate'}:
         if result['quote'] != request['body'].strip():
             raise ValueError('执行意图必须引用本人完整最新评论，不能截掉否定或修改要求')
-        if result['has_changes'] or not explicit_action(result['quote'], result['intent']):
+        confirmed = result['intent'] == 'approve' and confirmation_requested(issue, owner, request, plan)
+        if result['has_changes'] or not (explicit_action(result['quote'], result['intent']) or confirmed):
             result.update(intent='clarify', plan_id='', reason='请说明是继续修改，还是确认当前完整版本执行；本轮尚未执行。')
         elif result['intent'] == 'approve' and result['plan_id'] != (plan['id'] if plan else ''):
             result.update(intent='clarify', plan_id='', reason='请说明要写入哪个版本；当前只能批准最近展示的完整稿。')
-    return {'source': snapshot(issue, owner), 'request_digest': digest(request),
+    return {'source': snapshot(issue, owner), 'request_digest': request_fingerprint(request),
             'plan_digest': digest(plan) if plan else None, 'result': result}
 
 
 def checked_intent(issue, owner, intent):
     request, plan = latest_request_and_plan(issue, owner)
     if (not isinstance(intent, dict) or request is None or intent.get('source') != snapshot(issue, owner)
-            or intent.get('request_digest') != digest(request)
+            or intent.get('request_digest') != request_fingerprint(request)
             or intent.get('plan_digest') != (digest(plan) if plan else None)):
         raise ValueError('本人意见或稿件已变化，自然语言判断失效，请重新说明要求')
     result = intent.get('result')
@@ -374,6 +453,8 @@ def intent_prompt(issue, owner, task):
     original = '原报告即 current_draft 中的完整版本。' if plan and plan.get('origin') == 'report' else excerpt(issue['body'], 12000)
     data = {'task': task, 'title': issue['title'], 'original_report': original,
             'current_draft': plan_context, 'latest_request': request, 'discussion': discussion,
+            'approval_confirmation_allowed': confirmation_requested(issue, owner, request, plan),
+            'unregistered_draft': unregistered_draft(issue, owner) if not plan else None,
             'context_scope': '原报告节选、最近12条讨论节选、最新完整稿、本人最新完整评论；旧指代不明确时澄清'}
     instructions = (
         '你只判断 GitHub Issue 本人最新评论的意图，不执行动作，不调用工具，不读写文件，不回答正文。'
@@ -383,9 +464,16 @@ def intent_prompt(issue, owner, task):
         'regenerate=本人明确要求使用当前固定模板重做体重壁纸，仅 update-weight-wallpaper 可用；'
         'approve=本人明确要求立即将已经展示的当前完整版本写入网站；clarify=执行对象或意图有歧义。'
         '“不错”“可以”“同意观点”单独出现只是 discuss，不构成网站发布授权。'
+        'approval_confirmation_allowed=true 表示已有完整版本且机器人刚在征求写入批准，'
+        '本人仅回复“确认”或“是的”可以按上下文判断为 approve，绑定 current_draft；无需再追问。'
+        '该值为 false 时不能仅凭上述短句判为批准；内容、版本或指代仍有歧义时使用 clarify。'
         '否定、询问、假设、未来安排、引用示例、较旧版本、尚未展示的新稿都不能批准当前稿。'
         '“按这个改完就发布”属于 revise 且 has_changes=true，须先展示新稿，不得同时批准。'
         '“这版可以，发布吧”“可以，写入”“就按当前稿提交到网站”可以是 approve；current_draft 也可以来自首次报告正文，已展示的同一版本不需要再贴全文或再次确认；没有现成稿时 plan_id 空，程序会先准备待审稿。'
+        'unregistered_draft 是历史误作为讨论交付的完整文件，正文没有截断；它可帮助确定本人指代，'
+        '但没有可信版本绑定，不能充当 current_draft。本人明确要求写入该稿时使用 approve、plan_id 为空，'
+        '程序先补齐待审版本；不要因为讨论节选被截断就再次询问是否指这份已完整提供的文件。'
+        '确认已有稿件并要求修改另一个文件时，须在 reason 分别说明两个对象；未展示的新修改仍属 revise，不能一并批准。'
         'has_changes 表示最新评论还要求修改稿件、图、文件或壁纸模板；有修改就不能 approve/regenerate。'
         'request_id 必须为 latest_request.id；approve 的 plan_id 必须为 current_draft.id，其余为空。'
         'approve/regenerate 的 quote 必须逐字等于本人最新完整评论去除首尾空白，不得截取有利片段；其余可为空。'
@@ -530,6 +618,8 @@ def readable_draft(text):
 def seal(issue, owner, text, base, initial_approval=False):
     spec = metadata(text, write=False)
     if spec['task_type'] in {'analysis', 'discussion'}:
+        if draft_contents(text):
+            raise ReviewFormatError('draft_type_mismatch', '已展示仓库完整文件，必须使用 implementation 并列出 affected_files，不能作为普通讨论交付')
         if ('<!-- automation-task:daily-personal-record -->' in issue.get('body', '')
                 and re.search(r'^## 完整(?:修订稿|待审稿)\s*$', text, re.M)):
             raise ValueError('日记完整稿必须提供逐文件待审版本，不能作为普通讨论稿交付')
@@ -540,7 +630,7 @@ def seal(issue, owner, text, base, initial_approval=False):
             raise ValueError('回复超出评论长度，请缩小本轮讨论范围')
         return body
     if not re.search(r'^## 完整待审稿\s*$', text, re.M):
-        raise ValueError('定时任务必须展示完整待审稿后才能等待审批')
+        raise ReviewFormatError('draft_heading_missing', '仓库待写入版本必须展示 ## 完整待审稿 后才能等待审批')
     draft_files(text, spec['affected_files'])
     notice = ('本次先整理完整待写入稿，尚未写入仓库。'
               '请审阅下方具体版本，确认后直接说明“这版可以，写入网站吧”。\n\n' if initial_approval else '')
@@ -549,6 +639,53 @@ def seal(issue, owner, text, base, initial_approval=False):
     if len(body.encode()) > 63000:
         raise ValueError('完整待审稿超出评论长度，不能截断后等待审批；请缩小本轮写入范围')
     return body
+
+
+def run_review(issue, owner, context, base, prompt, state_dir, executor=None, budget=2700):
+    executor = executor or run_codex
+    deadline = time.monotonic() + budget
+    diagnostic = state_dir / 'issue-review-validation.json'
+    result = state_dir / 'result.txt'
+    result.unlink(missing_ok=True)
+    original_files = None
+    for attempt in (1, 2):
+        output = state_dir / f'issue-review-attempt-{attempt}.txt'
+        diagnostic.write_text(json.dumps({'attempt': attempt, 'state': 'running'}))
+        try:
+            executor(prompt, output=output, cwd=ROOT, timeout=max(1, deadline - time.monotonic()),
+                     effort='medium', profile='content_review',
+                     permissions='{extends=":read-only", network={enabled=true}}', search='live',
+                     exclude=['REVIEW_*'], stage='issue-driver', attempt=attempt,
+                     stdout_log=state_dir / f'issue-review-attempt-{attempt}.log',
+                     stderr_log=state_dir / f'issue-review-attempt-{attempt}.err')
+        except Exception:
+            diagnostic.write_text(json.dumps({'attempt': attempt, 'state': 'execution_failed'}))
+            raise
+        text = output.read_text()
+        try:
+            if original_files and draft_contents(text) != original_files:
+                raise ReviewFormatError('repair_content_changed', '格式修正改变了已展示的文件内容或范围')
+            seal(issue, owner, text, base, initial_approval=context.get('initial_approval', False))
+        except ValueError as error:
+            code = getattr(error, 'code', 'draft_contract_invalid')
+            diagnostic.write_text(json.dumps({'attempt': attempt, 'state': 'invalid',
+                                               'code': code, 'reason': str(error)}, ensure_ascii=False))
+            if attempt == 2 or deadline - time.monotonic() < 60:
+                raise ReviewFormatError(code, f'审阅交付格式校验失败：{error}；未交付或写入') from error
+            try:
+                original_files = draft_contents(text)
+            except ValueError:
+                original_files = None
+            prompt += (
+                '\n\n【固定程序的交付校验反馈】上次结果已保存到 ' + str(output) +
+                f'，错误码 {code}：{error}。只修正交付格式，保留完整文件内容和本人请求范围，'
+                '不得添加未经请求的新修改；不得把格式重试当作写入批准。'
+                '请返回修正后的完整回复及唯一的 Plan metadata。'
+            )
+            continue
+        result.write_text(text)
+        diagnostic.write_text(json.dumps({'attempt': attempt, 'state': 'valid'}, ensure_ascii=False))
+        return
 
 
 def read_comments(repo, number):
@@ -704,7 +841,7 @@ def apply_draft(issue, owner, context):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['route', 'interpret', 'regenerate', 'context', 'seal', 'apply', 'verify', 'verify-approval', 'verify-consent'])
+    parser.add_argument('command', choices=['route', 'interpret', 'regenerate', 'context', 'review', 'validate', 'seal', 'apply', 'verify', 'verify-approval', 'verify-consent'])
     args = parser.parse_args()
     state_dir = Path(os.environ.get('ISSUE_REVIEW_STATE_DIR', '/tmp'))
     issue = json.loads((state_dir / 'issue.json').read_text())
@@ -806,6 +943,13 @@ def main():
                 '技术修复请求先给具体解决方案，不将普通讨论或历史诊断当作写入批准。'
                 if context['task'] == DIAGNOSIS_TASK else '按当前请求交付。'),
         }, ensure_ascii=False, indent=2))
+    elif args.command == 'review':
+        context = json.loads(base64.b64decode(os.environ['REVIEW_CONTEXT']))
+        if context['mode'] != 'plan' or context['source'] != snapshot(fresh_issue(), owner):
+            raise ValueError('审阅请求已变化，停止生成回复')
+        run_review(issue, owner, context, os.environ['BASE'], (state_dir / 'prompt.md').read_text(), state_dir)
+    elif args.command == 'validate':
+        metadata((state_dir / 'result.txt').read_text(), write=False)
     elif args.command == 'seal':
         text = (state_dir / 'result.txt').read_text()
         issue = fresh_issue()

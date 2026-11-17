@@ -9,13 +9,9 @@ import sys
 import time
 
 from codex_runner import run_codex
-from automation_tasks import COMMON, ROOT, SCHEMA, reading_review_preflight, validate_result
+from automation_tasks import COMMON, ROOT, SCHEMA, WRITING_TASKS, reading_review_preflight, validate_result
 
 
-WRITING_TASKS = {
-    'security-event-research', 'ai-security-frontier-research',
-    'ai-coding-rd-efficiency', 'security-architecture-defense',
-}
 MAX_REVISIONS = 2
 TIME_BUDGET = 1800
 WRITING_TIME_BUDGET = 5400

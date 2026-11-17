@@ -66,13 +66,71 @@ def day_marker(day):
 def inbox_body(repo, day, run_id):
     if not re.fullmatch(r'[1-9][0-9]*', str(run_id or '')):
         raise ValueError('创建个人记录需要有效的 GitHub Actions 运行编号')
-    return (f'{TASK_MARKER}\n{day_marker(day)}\n\n今天发生了哪些真正值得记住的事？\n\n'
-            '可以直接在这里记录；自动采集线索和数据在评论中更新，不代表已确认事实或网站发布。\n\n'
+    return (f'{TASK_MARKER}\n{day_marker(day)}\n\n## 今日主要做了什么\n\n'
+            '## 回顾\n\n'
+            '- 是不是照顾好了自己？\n'
+            '- 是不是照顾好了家人？\n'
+            '- 是否推进了真正重要的事情？\n'
+            '- 今天的选择是否在让自己离四个目标更近一步？\n'
+            '- 有哪些开心和不愉快的，有哪些明天可以提升的？\n\n'
+            '可以直接填写正文或评论补充；自动线索和数据在正文中更新，不代表本人确认或网站发布。\n\n'
             f'来源运行：https://github.com/{repo}/actions/runs/{run_id}')
 
 
 def snapshot_marker(day):
     return f'<!-- daily-personal-data:{day} -->'
+
+
+def section_content(body, marker):
+    end = marker.replace(' -->', ':end -->')
+    if not body.count(marker) and not body.count(end):
+        return None
+    if body.count(marker) != 1 or body.count(end) != 1:
+        raise ValueError('每日记录自动区块标记不完整或重复，停止更新')
+    start_at, end_at = body.index(marker) + len(marker), body.index(end)
+    if start_at > end_at:
+        raise ValueError('每日记录自动区块顺序错误，停止更新')
+    return body[start_at:end_at]
+
+
+def without_sections(body):
+    markers = dict.fromkeys(marker.replace(':end -->', ' -->') for marker in re.findall(
+        r'<!-- daily-personal-(?:data|clues):\d{4}-\d{2}-\d{2}(?::end)? -->', body))
+    for marker in markers:
+        content = section_content(body, marker)
+        if '<!-- daily-personal-' in content:
+            raise ValueError('每日记录自动区块不能嵌套，停止更新')
+        end = marker.replace(' -->', ':end -->')
+        body = body.replace(marker + content + end, '')
+    return body
+
+
+def publish_section(repo, issue, marker, content):
+    target = re.fullmatch(r'<!-- daily-personal-(?:data|clues):(\d{4}-\d{2}-\d{2}) -->', marker)
+    if not target:
+        raise ValueError('只能更新每日记录的自动线索或数据区块')
+    if '<!-- daily-personal-' in content:
+        raise ValueError('自动区块内容不能嵌入其他每日记录区块标记')
+    previous = issue.get('body') or ''
+    day = re.search(r'<!-- daily-personal-record:(\d{4}-\d{2}-\d{2}) -->', previous)
+    if day and day[1] != target[1]:
+        raise ValueError('自动区块与每日记录日期不一致，停止更新')
+    without_sections(previous)
+    old = section_content(previous, marker)
+    end = marker.replace(' -->', ':end -->')
+    block = marker + '\n' + content.strip() + '\n' + end
+    body = (previous.replace(marker + old + end, block) if old is not None
+            else previous + '\n\n' + block)
+    if len(body.encode()) > 60000:
+        raise ValueError('每日记录正文超过交付大小限制，未截断或覆盖')
+    if body == previous:
+        return
+    current = api(f'repos/{repo}/issues/{issue["number"]}')
+    if (current.get('user', {}).get('login') != BOT or TASK_MARKER not in previous
+            or (current.get('body') or '') != previous):
+        raise ValueError('每日记录正文或归属已变化，停止更新以保留并发修改')
+    api(f'repos/{repo}/issues/{issue["number"]}', 'PATCH', {'body': body})
+    issue['body'] = body
 
 
 def find_issue(repo, day):
@@ -335,24 +393,28 @@ def main():
     (out / 'daily-schedule.json').write_text(json.dumps(schedule, ensure_ascii=False))
     marker = snapshot_marker(day)
     comments = pages(f'repos/{repo}/issues/{issue["number"]}/comments')
-    complete = any(c.get('user', {}).get('login') == BOT and marker in (c.get('body') or '') and '<!-- evening-complete -->' in c['body'] for c in comments)
+    data_section = section_content(issue.get('body') or '', marker)
+    previous = data_section if data_section is not None else next(
+        (c['body'] for c in comments if c.get('user', {}).get('login') == BOT and marker in (c.get('body') or '')), '')
+    complete = '<!-- evening-complete -->' in previous
     refresh = mode == 'refresh' and (not complete or os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch')
     # Morning retries do not recall the model or re-fetch snapshots after successful creation.
-    existing_snapshot = any(c.get('user', {}).get('login') == BOT and marker in (c.get('body') or '') for c in comments)
+    existing_snapshot = bool(previous)
     if refresh or (mode == 'create' and not existing_snapshot):
         snapshot = collect(repo, day, now)
         (out / 'personal-snapshot.json').write_text(json.dumps(snapshot, ensure_ascii=False))
         timing_line = f'计划：{day} {"23:15" if mode == "refresh" else "07:45"} Asia/Shanghai；实际采集：{snapshot["collected_at"]}；数据截止：{snapshot["cutoff"]}。'
-        body = marker + f'\n\n## {day} {"晚间刷新" if mode == "refresh" else "早间快照"}\n\n' + timing_line + '\n\n' + render(snapshot)
-        previous = next((c['body'] for c in comments if c.get('user', {}).get('login') == BOT and marker in (c.get('body') or '')), '')
+        body = '<details>\n<summary>自动数据快照</summary>\n\n' + f'## {day} {"晚间刷新" if mode == "refresh" else "早间快照"}\n\n' + timing_line + '\n\n' + render(snapshot) + '\n\n</details>'
         body = preserve_sources(body, previous, snapshot)
         if mode == 'refresh' and fresh(snapshot):
             body += '\n<!-- evening-complete -->'
-        publish_comment(repo, issue, marker, body)
+        publish_section(repo, issue, marker, body)
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
         # A placeholder without clues can be retried, but never replace an existing completed legacy report.
-        has_clues = any(c.get('user', {}).get('login') == BOT and f'<!-- daily-personal-clues:{day} -->' in (c.get('body') or '')
-                        and '<!-- daily-clues-status:completed -->' in c['body'] for c in comments)
+        clues = section_content(issue.get('body') or '', f'<!-- daily-personal-clues:{day} -->')
+        has_clues = ('<!-- daily-clues-status:completed -->' in clues if clues is not None else
+                     any(c.get('user', {}).get('login') == BOT and f'<!-- daily-personal-clues:{day} -->' in (c.get('body') or '')
+                         and '<!-- daily-clues-status:completed -->' in c['body'] for c in comments))
         ready = mode == 'create' and not has_clues and '<!-- status:completed -->' not in (issue.get('body') or '')
         output.write(f'ready={str(ready).lower()}\ndate={day}\nissue={issue["number"]}\n')
     with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:

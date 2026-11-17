@@ -1,5 +1,9 @@
 import unittest
+import json
+import os
 from pathlib import Path
+import subprocess
+import tempfile
 from unittest.mock import patch
 
 import yaml
@@ -58,6 +62,59 @@ class IssueTitleTests(unittest.TestCase):
         self.assertFalse(result['translated'])
         self.assertEqual(result['markdown'], raw['markdown'])
         self.assertEqual(result['translate_error'], 'timeout')
+
+
+class FetchWorkflowResultTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        workflow = yaml.safe_load((Path(fetch.__file__).resolve().parents[1] /
+                                   '.github/workflows/fetch-issue-url.yml').read_text())
+        self.script = next(step['run'] for step in workflow['jobs']['process']['steps']
+                           if step.get('name') == 'Fetch URL content')
+        self.script = self.script.replace('${{ steps.creds.outputs.translate_flag }}', '--no-translate')
+        self.script = self.script.replace('/tmp/', str(self.root) + '/')
+        self.target = self.root / 'result.json'
+        self.target.write_text('{"previous":true}')
+        (self.root / 'scripts').mkdir()
+
+    def run_fetch(self, output, status=0):
+        (self.root / 'scripts/fetch_url_content.py').write_text(
+            'import sys\nprint(' + repr(output) + ')\nsys.exit(' + str(status) + ')\n')
+        env = {**os.environ, 'URL': 'https://example.org/article',
+               'GITHUB_STEP_SUMMARY': str(self.root / 'summary.md')}
+        return subprocess.run(['bash', '-e', '-c', self.script], cwd=self.root, env=env,
+                              capture_output=True, text=True)
+
+    def test_valid_json_is_published_after_validation_and_temp_file_is_removed(self):
+        value = {'status': 'success', 'title': '抓取结果', 'markdown': '正文'}
+        result = self.run_fetch(json.dumps(value))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(self.target.read_text()), value)
+        self.assertEqual(list(self.root.glob('fetch-issue-result.*')), [])
+
+    def test_nonzero_fetch_exit_is_preserved_even_with_valid_json(self):
+        result = self.run_fetch('{"status":"success"}', status=23)
+        self.assertEqual(result.returncode, 23, result.stderr)
+        self.assertEqual(json.loads(self.target.read_text()), {'previous': True})
+        self.assertFalse((self.root / 'summary.md').exists())
+        self.assertEqual(list(self.root.glob('fetch-issue-result.*')), [])
+
+    def test_polluted_json_and_invalid_result_do_not_replace_previous_file(self):
+        for output in ['任务状态：执行中\n{"status":"success"}', '[]', 'null', '{"status":"error"}']:
+            with self.subTest(output=output):
+                result = self.run_fetch(output)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(json.loads(self.target.read_text()), {'previous': True})
+                self.assertEqual(list(self.root.glob('fetch-issue-result.*')), [])
+
+    def test_translation_failure_still_allows_original_content_delivery(self):
+        value = {'status': 'success', 'title': 'Original', 'markdown': 'Original article',
+                 'translated': False, 'translate_error': 'timeout'}
+        result = self.run_fetch(json.dumps(value))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(self.target.read_text()), value)
 
 
 if __name__ == '__main__':

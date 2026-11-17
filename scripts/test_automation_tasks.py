@@ -175,6 +175,64 @@ class AutomationResultTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '来源'):
             automation.validate_result(self.task, self.result, self.out)
 
+    def test_research_without_file_contract_never_reaches_issue_delivery(self):
+        for task_id in automation.WRITING_TASKS:
+            for report in ['# 网关事件\n完整研究正文\n完整待审稿，尚未写入 FEEI.CN。',
+                           '## 完整待审稿\n完整研究正文，没有目标文件。',
+                           '## 完整待审稿\n### docs/事件.md\n```markdown\n正文\n```']:
+                with self.subTest(task=task_id, report=report):
+                    self.task['id'] = task_id
+                    self.result['report_markdown'] = report
+                    self.write_delivery_metadata()
+                    with patch.object(automation, 'gh') as api, self.assertRaisesRegex(ValueError, '研究文章'):
+                        automation.deliver(self.task, self.out)
+                    api.assert_not_called()
+
+    def test_research_file_requires_metadata_and_body(self):
+        for content in ['只有正文', '---\nslug: /incident\n---\n正文',
+                        '---\nslug: [\n---\n正文',
+                        '---\nslug: /incident\ntitle: 事件\nicon: history-circle-icon\ndescription: 事件分析\n---\n']:
+            with self.subTest(content=content):
+                self.result['report_markdown'] = ('## 完整待审稿\n### docs/事件.md\n````markdown\n'
+                                                  + content + '\n````')
+                with self.assertRaisesRegex(ValueError, 'front matter|文章正文'):
+                    automation.validate_result(self.task, self.result, self.out)
+
+    def test_research_initial_delivery_can_execute_single_write_approval(self):
+        self.task.update(title='安全事件研究', delivery='issue')
+        self.result['report_markdown'] = (
+            '# 邮件网关事件\n\n## 完整待审稿\n### docs/邮件网关事件.md\n````markdown\n'
+            '---\nslug: /mail-gateway-incident\ntitle: 邮件网关事件\nicon: history-circle-icon\n'
+            'description: 分析邮件网关失陷的原因与处置。\n---\n完整研究正文\n````\n')
+        self.write_delivery_metadata()
+        meta = json.loads((self.out / 'metadata.json').read_text())
+        meta['commit'] = 'a' * 40
+        (self.out / 'metadata.json').write_text(json.dumps(meta))
+        with patch.object(automation, 'destination', return_value='owner/public'), \
+                patch.object(automation, 'gh', return_value='https://example.com/issue') as api:
+            automation.deliver(self.task, self.out)
+        body = (self.out / 'report.md').read_text()
+        issue = {'title': '邮件网关事件', 'body': body, 'author': {'login': review.BOT},
+                 'state': 'OPEN', 'labels': [], 'comments': [
+                     {'id': 'approval', 'author': {'login': 'owner'}, 'body': '写入',
+                      'createdAt': '2026-11-17T00:56:49Z', 'updatedAt': '2026-11-17T00:56:49Z'}]}
+        request, plan = review.latest_request_and_plan(issue, 'owner')
+        self.assertIsNotNone(plan)
+        intent = review.bind_intent(issue, 'owner', {
+            'intent': 'approve', 'request_id': request['id'], 'plan_id': plan['id'],
+            'quote': '写入', 'has_changes': False, 'reason': '本人要求写入当前首次完整稿',
+        })
+        with patch.object(review, 'task_source', return_value='security-event-research'):
+            context = review.decide(issue, 'owner', 'owner', 'owner/public', lambda _: None, intent=intent)
+        self.assertEqual(context['mode'], 'execute')
+        self.assertEqual(context['files'], ['docs/邮件网关事件.md'])
+        self.assertEqual(review.draft_contents(body), review.draft_contents(self.result['report_markdown']))
+        visible = body.split('<details>', 1)[0]
+        self.assertIn('完整研究正文', visible)
+        self.assertNotIn('slug:', visible)
+        self.assertEqual(sum(c.args[:2] == ('issue', 'create') for c in api.call_args_list), 1)
+        self.assertFalse(any(c.args[:2] == ('issue', 'comment') for c in api.call_args_list))
+
     def reading_content(self, **changes):
         self.task.update(id='daily-reading-selection', title='每日阅读精选')
         content = {
@@ -420,7 +478,7 @@ class AutomationResultTests(unittest.TestCase):
         with patch.dict('os.environ', {'PERSONAL_ISSUE': '864', 'PERSONAL_DATE': '2026-11-10'}), patch.object(
                 automation, 'destination', return_value='owner/public'), patch.object(daily, 'find_issue', return_value={
                     'number': 864, 'html_url': 'https://github.com/owner/public/issues/864'}), patch.object(
-                daily, 'publish_comment') as publish, patch.object(automation, 'gh') as create:
+                daily, 'publish_section') as publish, patch.object(automation, 'gh') as create:
             automation.deliver(self.task, self.out)
         create.assert_not_called()
         self.assertIn('daily-clues-status:completed', publish.call_args.args[3])

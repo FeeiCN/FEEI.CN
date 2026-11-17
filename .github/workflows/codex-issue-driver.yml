@@ -492,7 +492,10 @@ jobs:
                       "最终末尾必须有唯一 `## Plan metadata`，其下是三反引号 json 代码块，且只含四个字段："
                       ' {"task_type":"discussion","affected_files":[],"risk":"low","verification":["已核对讨论上下文"]}。'
                       "普通问答使用 discussion、affected_files=[]；确实缺少完成请求必需的事实、需要本人补充时使用 analysis、affected_files=[]；"
-                      "只有逐文件展示仓库待写入源码时才用 implementation，并列出非空 affected_files；implementation 配空数组会被拒绝。Issue 报告的完整修订仍是 discussion，不等于仓库实施任务。risk 仅 low/medium/high，verification 为非空字符串数组。"
+                      "只要回复展示仓库完整文件，就必须使用 implementation 并列出对应的非空 affected_files；不能将完整文件标为 discussion。"
+                      "即使本人只说‘补到合适的位置’，形成了仓库完整文件也必须登记为可批准版本。implementation 配空数组会被拒绝。"
+                      "Issue 报告的完整修订仍是 discussion，不等于仓库实施任务。risk 仅 low/medium/high，verification 为非空字符串数组。"
+                      "本人同时确认已有稿件并要求修改 workflow 等其他文件时，分别说明已有稿件与新修改的状态和范围；未展示的新修改先送审，不合并为一次批准。"
                   )
                   import base64
                   review_context = json.loads(base64.b64decode(os.environ['REVIEW_CONTEXT']))
@@ -533,6 +536,14 @@ jobs:
               f"{role}\n"
           )
           PY
+
+          if [ "$MODE" = "plan" ] && [ "$SCHEDULED_REVIEW" = "true" ]; then
+            BASE="$BASE_SHA" python3 scripts/scheduled_issue_review.py review
+            echo 'cost=unknown' >> "$GITHUB_OUTPUT"
+            echo 'turns=unknown' >> "$GITHUB_OUTPUT"
+            echo "result_len=$(wc -c < /tmp/result.txt)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           # 权限由本流程选择，模型调用交给公共执行器。
           if [ "$MODE" = "plan" ] && [ "$SCHEDULED_REVIEW" = "true" ]; then
@@ -608,68 +619,10 @@ jobs:
           REVIEW_CONTEXT: ${{ steps.decide.outputs.review-context }}
           REVIEW_SCRIPT_SHA256: ${{ steps.decide.outputs.review-script-sha256 }}
         run: |
-          # Plan metadata 是展示文本后的机器契约，必须是合法且字段完整的 JSON。
-          python3 - <<'PY'
-          import json, re, sys, pathlib
-          text = pathlib.Path("/tmp/result.txt").read_text(encoding="utf-8", errors="replace")
-          matches = re.findall(
-              r"^## Plan metadata\s*\n```json\s*\n([\s\S]*?)\n```\s*$",
-              text.strip(),
-              flags=re.MULTILINE,
-          )
-          if len(matches) != 1:
-              raise SystemExit("必须在末尾包含且只包含一个 ## Plan metadata JSON 块")
-          metadata = json.loads(matches[0])
-          if set(metadata) != {"task_type", "affected_files", "risk", "verification"}:
-              raise SystemExit("Plan metadata 字段不完整或包含额外字段")
-          allowed = {"implementation", "analysis"}
-          if __import__('os').environ.get('SCHEDULED_REVIEW') == 'true':
-              allowed.add('discussion')
-          if metadata["task_type"] not in allowed:
-              raise SystemExit("无效的 task_type")
-          if metadata["risk"] not in {"low", "medium", "high"}:
-              raise SystemExit("risk 必须是 low、medium 或 high")
-          if not isinstance(metadata["affected_files"], list) or not all(
-              isinstance(path, str) and path and not path.startswith("/") and ".." not in pathlib.PurePosixPath(path).parts
-              for path in metadata["affected_files"]
-          ):
-              raise SystemExit("affected_files 必须是安全的仓库相对路径数组")
-          if metadata["task_type"] in {"analysis", "discussion"} and metadata["affected_files"]:
-              raise SystemExit("analysis/discussion 任务的 affected_files 必须为空")
-          if metadata["task_type"] == "implementation" and not metadata["affected_files"]:
-              raise SystemExit("implementation 任务必须列出 affected_files")
-          if not isinstance(metadata["verification"], list) or not metadata["verification"] or not all(
-              isinstance(item, str) and item.strip() for item in metadata["verification"]
-          ):
-              raise SystemExit("verification 必须是非空字符串数组")
-          print(f"SCHEMA_OK type={metadata['task_type']}")
-          PY
-          SCHEMA_STATUS=$?
-          if [ "$SCHEMA_STATUS" -ne 0 ]; then
-            REJECT_REASON="$(python3 -c "import sys; print('rejected by schema validator (exit=)')" 2>/dev/null || true)"
-            echo "::error::plan schema 校验失败,exit=$SCHEMA_STATUS"
-            [ -z "${WORKFLOW_STATUS_NODE:-}" ] || "$WORKFLOW_STATUS_NODE" "${WORKFLOW_STATUS_SCRIPT:-}" --phase delivering --issue-number "$N" --label failed || true
-            {
-              echo "<!-- codex-driver:plan-rejected -->"
-              echo
-              echo "## plan 被 driver 拒绝"
-              echo
-              echo "原因:Codex 输出的 \`## Plan metadata\` JSON 契约缺失或校验失败。"
-              echo
-              echo "请直接说明需要如何重新整理。注意末尾必须含:"
-              echo
-              echo "## Plan metadata"
-              echo '```json'
-              echo '{"task_type":"implementation","affected_files":["path/to/file"],"risk":"low","verification":["npm run build"]}'
-              echo '```'
-            } > /tmp/reject.md
-            gh issue comment "$N" --repo "$REPO" --body-file /tmp/reject.md 2>/dev/null || true
-            exit 1
-          fi
-
           if [ "$SCHEDULED_REVIEW" = "true" ]; then
             python3 scripts/scheduled_issue_review.py seal
           else
+            python3 scripts/scheduled_issue_review.py validate
             {
               echo "<!-- codex-driver:plan:commit=${BASE}:cost=${COST}:turns=${TURNS} -->"
               echo
@@ -877,10 +830,17 @@ jobs:
           import os
           from pathlib import Path
           link = f"https://github.com/{os.environ['REPO']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          import json
+          diagnostic = Path('/tmp/issue-review-validation.json')
+          detail = ''
+          if diagnostic.is_file():
+              value = json.loads(diagnostic.read_text())
+              if value.get('state') == 'invalid':
+                  detail = f"\n\n交付格式校验失败（{value['code']}）：{value['reason']}。已保留输出，未写入；无需重复确认原要求。"
           Path('/tmp/review-failure.md').write_text(
               '<!-- codex-driver:review-failed -->\n\n'
               '本次审阅未完成，尚未产生可批准的完整版本，也未写入仓库。'
-              f'请查看[运行日志]({link})中的原因，补充意见后直接继续评论。\n')
+              + detail + f'\n\n请查看[运行日志]({link})。\n')
           PYREVIEW
           gh issue comment "$N" --repo "$REPO" --body-file /tmp/review-failure.md
 
@@ -932,7 +892,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: codex-execution-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/codex-executions/*.json
+          path: |
+            ${{ runner.temp }}/codex-executions/*.json
+            /tmp/issue-review-attempt-*.txt
+            /tmp/issue-review-validation.json
           if-no-files-found: ignore
           retention-days: 30
 

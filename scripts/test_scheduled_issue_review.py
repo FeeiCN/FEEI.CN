@@ -1200,3 +1200,272 @@ class ActualIssueRegressionTests(unittest.TestCase):
         self.assertEqual(review.task_instructions({'task': 'security-event-research'}, issue), '')
         with self.assertRaises(ValueError):
             review.task_instructions(context, {'body': ''})
+
+
+class Issue940RequestTests(unittest.TestCase):
+    def owner_issue(self):
+        issue = fixture()
+        issue.update(author={'login': OWNER}, title='去掉每日个人记录workflow多次评论信息',
+                     body='body 包含每日回顾问题', comments=[],
+                     createdAt='2026-11-16T15:30:22Z', updatedAt='2026-11-16T15:30:22Z')
+        return issue
+
+    def test_label_timestamp_drift_does_not_invalidate_initial_or_edited_request(self):
+        for action in ['opened', 'edited']:
+            with self.subTest(action=action), patch.dict(os.environ, {'EVENT_ACTION': action}):
+                issue = self.owner_issue()
+                intent = interpretation(issue, 'revise', has_changes=True)
+                issue.update(updatedAt='2026-11-16T15:30:37Z', labels=[{'name': 'codex:executing'}])
+                self.assertEqual(decide(issue, intent=intent)['mode'], 'plan')
+                for field in ['title', 'body']:
+                    changed = deepcopy(issue)
+                    changed[field] += '，新增要求'
+                    with self.assertRaisesRegex(ValueError, '判断失效'):
+                        decide(changed, intent=intent)
+
+    def test_comment_edit_timestamp_is_still_part_of_its_binding(self):
+        issue = self.owner_issue()
+        issue['comments'] = [comment('request', OWNER, '修复', '2026-11-16T15:31:00Z')]
+        intent = interpretation(issue, 'revise', has_changes=True)
+        issue['comments'][0]['updatedAt'] = '2026-11-16T15:32:00Z'
+        with self.assertRaisesRegex(ValueError, '判断失效'):
+            decide(issue, intent=intent)
+
+    def test_interpret_cli_accepts_its_own_status_label_update(self):
+        issue = self.owner_issue()
+        original = decide(issue)
+        intent = interpretation(issue, 'revise', has_changes=True)
+        fresh = deepcopy(issue)
+        fresh.update(updatedAt='2026-11-16T15:30:37Z', labels=[{'name': 'codex:executing'}])
+        with tempfile.TemporaryDirectory() as folder:
+            directory = Path(folder)
+            (directory / 'issue.json').write_text(json.dumps(issue))
+            env = {'ISSUE_REVIEW_STATE_DIR': folder, 'OWNER': OWNER, 'REPO': REPO, 'N': '940',
+                   'COMMAND_ACTOR': OWNER, 'REVIEW_CONTEXT': base64.b64encode(json.dumps(original).encode()).decode()}
+            with patch.dict(os.environ, env), patch.object(review, 'read_comments', return_value=[]), \
+                    patch.object(review.subprocess, 'check_output', return_value=json.dumps(fresh)), \
+                    patch.object(review, 'interpret_message', return_value=intent), \
+                    patch('sys.argv', ['scheduled_issue_review.py', 'interpret']), patch('sys.stdout', io.StringIO()) as output:
+                review.main()
+            self.assertIn('mode=plan', output.getvalue())
+            self.assertNotIn('mode=skip', output.getvalue())
+
+    def test_owner_edit_of_daily_body_excludes_automatic_sections_from_request(self):
+        issue = fixture()
+        issue['comments'] = []
+        issue['body'] = ('<!-- automation-task:daily-personal-record -->\n<!-- daily-personal-record:2026-11-10 -->\n'
+                         '我今天陪家人散步。\nhttps://github.com/' + REPO + '/actions/runs/123\n'
+                         '<!-- daily-personal-clues:2026-11-10 -->\n自动采集线索\n<!-- daily-personal-clues:2026-11-10:end -->')
+        task = {'daily-personal-record': '.github/workflows/daily-personal-record.yml'}
+        source = {**run('123'), 'path': task['daily-personal-record']}
+        with patch.dict(os.environ, {'EVENT_ACTION': 'edited', 'COMMAND_ACTOR': OWNER}):
+            request, _ = review.latest_request_and_plan(issue, OWNER)
+            self.assertIn('我今天陪家人散步。', request['body'])
+            self.assertNotIn('自动采集线索', request['body'])
+            self.assertEqual(review.decide(issue, OWNER, OWNER, REPO, lambda _: source, task)['mode'], 'interpret')
+        with patch.dict(os.environ, {'EVENT_ACTION': 'edited', 'COMMAND_ACTOR': review.BOT}):
+            self.assertIsNone(review.latest_request_and_plan(issue, OWNER)[0])
+
+
+class Issue924ApprovalTests(unittest.TestCase):
+    def test_confirmation_to_current_approval_prompt_can_execute(self):
+        for text in ['确认', '确认。', '是的', '是的！']:
+            issue = ready()
+            issue['comments'][-1]['body'] = text
+            with self.subTest(text=text):
+                prompt = review.intent_prompt(issue, OWNER, 'security-event-research')
+                data = json.loads(prompt.split('<input_data>\n')[1].split('\n</input_data>')[0])
+                self.assertTrue(data['approval_confirmation_allowed'])
+                self.assertEqual(decide(issue, intent=interpretation(issue, 'approve'))['mode'], 'execute')
+
+    def test_confirmation_then_explicit_write_keeps_same_version(self):
+        issue = ready()
+        issue['comments'][-1]['body'] = '确认'
+        issue['comments'].extend([
+            comment('clarify', review.BOT, '<!-- codex-driver:review:reply -->\n请确认是否将当前完整稿写入仓库？', '2026-11-05T01:03:00Z'),
+            comment('write', OWNER, '写入', '2026-11-05T01:04:00Z'),
+        ])
+        context = decide(issue, intent=interpretation(issue, 'approve'))
+        self.assertEqual(context['mode'], 'execute')
+        self.assertEqual(context['plan_id'], 'plan')
+        self.assertEqual(context['approval_id'], 'write')
+        self.assertEqual(context['files'], [FILE])
+
+    def test_confirmation_cannot_approve_without_a_complete_version(self):
+        issue = fixture()
+        issue['comments'][0]['body'] = '确认'
+        self.assertEqual(interpretation(issue, 'approve')['result']['intent'], 'clarify')
+        issue = ready()
+        issue['comments'][1]['body'] = issue['comments'][1]['body'].replace('````markdown', '```markdown')
+        issue['comments'][-1]['body'] = '确认'
+        self.assertEqual(interpretation(issue, 'approve')['result']['intent'], 'clarify')
+
+    def test_generic_acknowledgement_or_unrelated_question_is_not_approval(self):
+        for body in ['<!-- codex-driver:review:reply -->\n请确认你是否读过这段文字？',
+                     '<!-- codex-driver:diagnostic:skip -->\n请确认是否写入',
+                     '请确认是否写入']:
+            issue = ready()
+            issue['comments'].insert(-1, comment('question', review.BOT, body, '2026-11-05T01:01:30Z'))
+            issue['comments'][-1]['body'] = '确认'
+            with self.subTest(body=body):
+                self.assertEqual(interpretation(issue, 'approve')['result']['intent'], 'clarify')
+                issue['comments'].append(comment('write', OWNER, '写入', '2026-11-05T01:03:00Z'))
+                with self.assertRaisesRegex(ValueError, '审批失效'):
+                    decide(issue, intent=interpretation(issue, 'approve'))
+
+    def test_edits_negation_questions_and_quotes_still_invalidate_approval(self):
+        for text in ['确认，但补一段', '确认吗？', '不要确认', '> 确认', '“确认”', '不错', '是的，先别写入']:
+            issue = ready()
+            issue['comments'][-1]['body'] = text
+            with self.subTest(text=text):
+                self.assertEqual(interpretation(issue, 'approve')['result']['intent'], 'clarify')
+                issue['comments'].append(comment('write', OWNER, '写入', '2026-11-05T01:03:00Z'))
+                with self.assertRaisesRegex(ValueError, '审批失效'):
+                    decide(issue, intent=interpretation(issue, 'approve'))
+
+    def test_owner_content_changes_after_confirmation_are_not_ignored(self):
+        issue = ready()
+        issue['comments'][-1]['body'] = '确认'
+        issue['comments'].extend([
+            comment('edit', OWNER, '补充新的处置步骤', '2026-11-05T01:03:00Z'),
+            comment('write', OWNER, '写入', '2026-11-05T01:04:00Z'),
+        ])
+        with self.assertRaisesRegex(ValueError, '审批失效'):
+            decide(issue, intent=interpretation(issue, 'approve'))
+
+
+class Issue927DeliveryTests(unittest.TestCase):
+    def setUp(self):
+        self.issue = fixture()
+        self.issue.update(author={'login': OWNER}, title='累了为什么还不睡', body='')
+        self.issue['comments'][0]['body'] = '补到合适的位置'
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.directory = Path(self.temp.name)
+        self.calls = []
+
+    def executor(self, *responses):
+        sequence = iter(responses)
+
+        def call(prompt, **kwargs):
+            self.calls.append((prompt, kwargs))
+            response = next(sequence)
+            if isinstance(response, Exception):
+                raise response
+            kwargs['output'].write_text(response)
+        return call
+
+    def run_review(self, *responses, **kwargs):
+        review.run_review(self.issue, OWNER, {}, 'abc123', '当前本人请求与完整上下文', self.directory,
+                          executor=self.executor(*responses), **kwargs)
+
+    def discussion_with_file(self):
+        return TEXT.replace('"implementation"', '"discussion"').replace(json.dumps([FILE]), '[]')
+
+    def test_full_file_cannot_be_silently_delivered_as_discussion(self):
+        with self.assertRaisesRegex(review.ReviewFormatError, 'implementation') as error:
+            review.seal(self.issue, OWNER, self.discussion_with_file(), 'abc123')
+        self.assertEqual(error.exception.code, 'draft_type_mismatch')
+
+    def test_owner_draft_write_approval_uses_full_registered_version(self):
+        large = TEXT.replace(BODY, BODY + '\n' + '完整证据' * 2000 + '\n稿件末尾')
+        self.run_review(self.discussion_with_file().replace(BODY, BODY + '\n' + '完整证据' * 2000 + '\n稿件末尾'), large)
+        sealed = review.seal(self.issue, OWNER, (self.directory / 'result.txt').read_text(), 'abc123')
+        self.issue['comments'].extend([
+            comment('plan', review.BOT, sealed, '2026-11-05T01:01:00Z'),
+            comment('approval', OWNER, '写入', '2026-11-05T01:02:00Z'),
+        ])
+        prompt = review.intent_prompt(self.issue, OWNER, 'owner-issue')
+        data = json.loads(prompt.split('<input_data>\n')[1].split('\n</input_data>')[0])
+        self.assertEqual(data['current_draft']['body'], sealed)
+        self.assertIn('稿件末尾', data['current_draft']['body'])
+        self.assertIsNone(data['unregistered_draft'])
+        context = decide(self.issue, intent=interpretation(self.issue, 'approve'))
+        self.assertEqual(context['mode'], 'execute')
+        self.assertEqual(context['files'], [FILE])
+        self.assertEqual(len(self.issue['comments']), 3)
+
+    def test_legacy_reply_is_provided_in_full_but_cannot_bypass_version_binding(self):
+        body = '<!-- codex-driver:review:reply -->\n' + TEXT.split('## 写入计划')[0]
+        body = body.replace(BODY, BODY + '\n' + '完整证据' * 2000 + '\n旧稿末尾')
+        self.issue['comments'].extend([
+            comment('legacy', review.BOT, body, '2026-11-05T01:01:00Z'),
+            comment('approval', OWNER, '写入', '2026-11-05T01:02:00Z'),
+        ])
+        data = json.loads(review.intent_prompt(self.issue, OWNER, 'owner-issue').split('<input_data>\n')[1].split('\n</input_data>')[0])
+        self.assertIsNone(data['current_draft'])
+        self.assertEqual(data['unregistered_draft']['body'], body)
+        self.assertFalse(data['unregistered_draft']['registered'])
+        context = decide(self.issue, intent=interpretation(self.issue, 'approve'))
+        self.assertEqual(context['mode'], 'plan')
+        self.assertTrue(context['initial_approval'])
+        self.assertNotIn('files', context)
+        self.issue['comments'][1]['author']['login'] = 'outsider'
+        self.assertIsNone(review.unregistered_draft(self.issue, OWNER))
+
+    def test_missing_heading_is_repaired_once_without_changing_file(self):
+        invalid = TEXT.replace('## 完整待审稿', '## 修改方案')
+        self.run_review(invalid, TEXT)
+        self.assertEqual((self.directory / 'result.txt').read_text(), TEXT)
+        self.assertEqual((self.directory / 'issue-review-attempt-1.txt').read_text(), invalid)
+        self.assertIn('draft_heading_missing', self.calls[1][0])
+        self.assertEqual(len(self.calls), 2)
+        self.assertEqual(self.calls[1][1]['profile'], 'content_review')
+        self.assertEqual(self.calls[1][1]['permissions'], '{extends=":read-only", network={enabled=true}}')
+        self.assertLessEqual(self.calls[1][1]['timeout'], self.calls[0][1]['timeout'])
+
+    def test_format_retry_cannot_change_article_or_file_scope(self):
+        for valid in [TEXT.replace(BODY, BODY + '\n未经请求的新内容'), TEXT.replace(FILE, 'docs/other.md')]:
+            with self.subTest(valid=valid), self.assertRaisesRegex(review.ReviewFormatError, '改变了'):
+                self.run_review(self.discussion_with_file(), valid)
+            self.assertFalse((self.directory / 'result.txt').exists())
+            self.assertEqual(json.loads((self.directory / 'issue-review-validation.json').read_text())['code'], 'repair_content_changed')
+
+    def test_repeated_format_failure_keeps_evidence_and_no_deliverable(self):
+        self.directory.joinpath('result.txt').write_text('上次遗留输出')
+        with self.assertRaises(review.ReviewFormatError):
+            self.run_review('缺少机器契约', '仍然缺少机器契约')
+        self.assertEqual(len(self.calls), 2)
+        self.assertTrue((self.directory / 'issue-review-attempt-1.txt').is_file())
+        self.assertTrue((self.directory / 'issue-review-attempt-2.txt').is_file())
+        self.assertFalse((self.directory / 'result.txt').exists())
+        self.assertEqual(json.loads((self.directory / 'issue-review-validation.json').read_text())['code'], 'metadata_missing')
+
+    def test_execution_errors_and_insufficient_budget_do_not_retry(self):
+        for response, budget in [(review.CodexError('执行失败'), 2700), ('格式错误', 1)]:
+            self.calls.clear()
+            with self.subTest(response=response), self.assertRaises((review.CodexError, review.ReviewFormatError)):
+                self.run_review(response, budget=budget)
+            self.assertEqual(len(self.calls), 1)
+            self.assertFalse((self.directory / 'result.txt').exists())
+
+    def test_second_model_failure_does_not_report_stale_format_diagnostic(self):
+        with self.assertRaises(review.CodexError):
+            self.run_review('格式错误', review.CodexError('连接失败'))
+        self.assertEqual(json.loads((self.directory / 'issue-review-validation.json').read_text())['state'], 'execution_failed')
+
+    def test_mixed_workflow_request_keeps_current_draft_but_cannot_approve_new_changes(self):
+        self.issue['comments'].append(comment('plan', review.BOT, review.seal(self.issue, OWNER, TEXT, 'abc123'), '2026-11-05T01:01:00Z'))
+        self.issue['comments'].append(comment('approval', OWNER, '是的。优化下workflow，不要这样多次确认', '2026-11-05T01:02:00Z'))
+        context = decide(self.issue, intent=interpretation(self.issue, 'revise', has_changes=True))
+        self.assertEqual(context['mode'], 'plan')
+        self.assertNotIn('files', context)
+        self.assertEqual(review.latest_request_and_plan(self.issue, OWNER)[1]['id'], 'plan')
+
+    def test_cli_uses_same_validation_and_rechecks_source_before_delivery(self):
+        (self.directory / 'issue.json').write_text(json.dumps(self.issue))
+        (self.directory / 'prompt.md').write_text('当前完整请求')
+        context = {'mode': 'plan', 'source': review.snapshot(self.issue, OWNER)}
+        env = {'ISSUE_REVIEW_STATE_DIR': str(self.directory), 'OWNER': OWNER, 'REPO': REPO,
+               'N': '927', 'BASE': 'abc123', 'REVIEW_CONTEXT': base64.b64encode(json.dumps(context).encode()).decode()}
+        with patch.dict(os.environ, env), patch.object(review, 'read_comments', return_value=self.issue['comments']), \
+                patch.object(review.subprocess, 'check_output', return_value=json.dumps(self.issue)):
+            with patch.object(review, 'run_codex', side_effect=self.executor(self.discussion_with_file(), TEXT)), \
+                    patch('sys.argv', ['scheduled_issue_review.py', 'review']):
+                review.main()
+            with patch('sys.argv', ['scheduled_issue_review.py', 'seal']):
+                review.main()
+            self.assertTrue((self.directory / 'comment.md').read_text().startswith(review.PLAN))
+            self.issue['comments'][0]['body'] += '，补充新要求'
+            with patch('sys.argv', ['scheduled_issue_review.py', 'seal']), self.assertRaisesRegex(ValueError, '发生变化'):
+                review.main()

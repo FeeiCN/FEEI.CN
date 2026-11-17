@@ -204,11 +204,17 @@ jobs:
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: |
-          python3 scripts/fetch_url_content.py "$URL" ${{ steps.creds.outputs.translate_flag }} > /tmp/result.json || true
+          FETCH_RESULT="$(mktemp /tmp/fetch-issue-result.XXXXXX)"
+          trap 'rm -f "$FETCH_RESULT"' EXIT
+          python3 scripts/fetch_url_content.py "$URL" ${{ steps.creds.outputs.translate_flag }} > "$FETCH_RESULT"
+          export FETCH_RESULT
           python3 - <<'PY'
           import json, os, sys
-          with open("/tmp/result.json", "r", encoding="utf-8") as fp:
+          with open(os.environ["FETCH_RESULT"], "r", encoding="utf-8") as fp:
               r = json.load(fp)
+          if not isinstance(r, dict) or r.get("status") != "success":
+              raise SystemExit("抓取结果必须是 status=success 的 JSON 对象，未替换结果文件")
+          os.replace(os.environ["FETCH_RESULT"], "/tmp/result.json")
           print(f"status={r.get('status')} / title={(r.get('title') or '')[:80]}", flush=True)
           print(f"translated={r.get('translated')} / provider={r.get('translate_provider')}", flush=True)
           err = r.get("translate_error")

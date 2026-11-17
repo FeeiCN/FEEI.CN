@@ -23,8 +23,9 @@ BACKSTAGE = Path('docs/05-吴飞飞/01-关于/关于FEEI.CN')
 COMMON = BACKSTAGE / 'SKILL/自动化执行约定.md'
 START = '<!-- automation-prompt:start -->'
 END = '<!-- automation-prompt:end -->'
-RESEARCH = {'security-event-research', 'ai-security-frontier-research',
-            'ai-coding-rd-efficiency', 'security-architecture-defense', 'hk-ipo-alerts'}
+WRITING_TASKS = {'security-event-research', 'ai-security-frontier-research',
+                 'ai-coding-rd-efficiency', 'security-architecture-defense'}
+RESEARCH = WRITING_TASKS | {'hk-ipo-alerts'}
 REVIEW = RESEARCH | {'knowledge-base-governance'}
 PERSONAL = {'personal-health-trend-research', 'update-weight-wallpaper', 'daily-personal-record'}
 READING = {'daily-reading-selection', 'weekly-reading-review'}
@@ -342,6 +343,33 @@ def reading_full_text(result, report, out, files):
             f"授权：{content['license']}。{content['rights_evidence'].strip()}\n")
 
 
+def validate_research_draft(report):
+    from scheduled_issue_review import draft_contents
+    if not re.search(r'^## 完整待审稿\s*$', report, re.M):
+        raise ValueError('研究文章必须以 ## 完整待审稿 展示逐文件完整版本，不能只交付正文')
+    contents = draft_contents(report)
+    articles = {name: content for name, content in contents.items()
+                if name.startswith(('docs/', 'blog/')) and name.endswith(('.md', '.mdx'))}
+    if not articles:
+        raise ValueError('研究文章缺少目标路径及四反引号代码块中的完整文件')
+    if any(name.startswith('.github/workflows/') for name in contents):
+        raise ValueError('研究文章不能包含 workflow 修改')
+    for name, content in articles.items():
+        front = re.match(r'\A---\n(.*?)\n---\n', content, re.S)
+        if not front:
+            raise ValueError(f'{name}: 研究待审稿缺少完整 front matter')
+        try:
+            meta = yaml.safe_load(front[1])
+        except yaml.YAMLError as error:
+            raise ValueError(f'{name}: front matter 语法错误') from error
+        required = ('slug', 'title', 'icon', 'description')
+        if not isinstance(meta, dict) or any(
+                not isinstance(meta.get(key), str) or not meta[key].strip() for key in required):
+            raise ValueError(f'{name}: front matter 必须包含非空 slug、title、icon、description')
+        if not content[front.end():].strip():
+            raise ValueError(f'{name}: 研究待审稿缺少文章正文')
+
+
 def validate_result(t, result, out):
     if set(result) != set(SCHEMA['required']):
         raise ValueError('结果字段不符合 schema')
@@ -376,6 +404,8 @@ def validate_result(t, result, out):
         if not target.is_file() or target.stat().st_size == 0 or (ROOT / path).is_symlink():
             raise ValueError('交付附件不存在、为空或是链接')
         files.append(target)
+    if t['id'] in WRITING_TASKS and status == 'completed':
+        validate_research_draft(report)
     if t['id'] == 'daily-reading-selection' and status == 'completed':
         report = reading_full_text(result, report, out, files)
     if t['id'] == 'knowledge-base-governance' and status == 'completed':
@@ -433,7 +463,7 @@ def deliver(t, out):
             raise ValueError('当天个人记录 Issue 已改变，停止交付')
         if status != 'no_update':
             marker = f'<!-- daily-personal-clues:{day} -->'
-            daily.publish_comment(repo, issue, marker, marker + f'\n<!-- daily-clues-status:{status} -->\n\n' + report + '\n\n仅供本人补充与纠正，未自动写入网站。')
+            daily.publish_section(repo, issue, marker, f'<!-- daily-clues-status:{status} -->\n\n## 自动线索\n\n' + report + '\n\n仅供本人补充与纠正，未自动写入网站。')
         meta.update(status=status, issue_url=issue['html_url'])
         (out / 'metadata.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2))
         (out / 'report.md').write_text(report)

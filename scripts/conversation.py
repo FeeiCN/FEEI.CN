@@ -286,11 +286,20 @@ def render_turn(context, response, draft=None, commit='', header='', footer='', 
     if draft:
         validate_draft(session_id, draft)
     visible = visible_turn(response, draft, header, footer)
+    manifest = None
+    if draft:
+        references = []
+        for item in draft['files']:
+            start = visible.find(item['content'])
+            if start < 0:
+                raise ValueError('固定展示中缺少完整文件')
+            references.append({'path': item['path'], 'content_range': [start, start + len(item['content'])]})
+        manifest = {**draft, 'files': references}
     payload = {'version': 1, 'session_id': session_id,
                'request': {'id': context['request']['id'], 'hash': request_hash(context['request'])},
                'handled_requests': {item['id']: request_hash(item) for item in context.get('requests', [context['request']])},
                'response': {key: value for key, value in response.items() if key != 'files'},
-               'draft': draft, 'commit': commit, 'header': header, 'footer': footer, 'source_run': context.get('source_run', ''),
+               'draft': manifest, 'commit': commit, 'header': header, 'footer': footer, 'source_run': context.get('source_run', ''),
                'execution': execution,
                'body_hash': hashlib.sha256(visible.encode()).hexdigest()}
     encoded = base64.b64encode(gzip.compress(json.dumps(payload, ensure_ascii=False).encode(), mtime=0)).decode()
@@ -319,6 +328,16 @@ def read_turn(body, session_id):
                 or value['body_hash'] != hashlib.sha256(body[:match.start()].encode()).hexdigest()):
             raise ValueError('会话回执的正文或归属已变化')
         if value['draft']:
+            files = []
+            for item in value['draft']['files']:
+                if set(item) == {'path', 'content_range'}:
+                    span = item['content_range']
+                    if (not isinstance(span, list) or len(span) != 2 or any(type(part) is not int for part in span)
+                            or not 0 <= span[0] < span[1] <= match.start()):
+                        raise ValueError('稿件内容范围无效')
+                    item = {'path': item['path'], 'content': body[span[0]:span[1]]}
+                files.append(item)
+            value['draft'] = {**value['draft'], 'files': files}
             validate_draft(session_id, value['draft'])
         if body[:match.start()] != visible_turn(value['response'], value['draft'], value['header'], value['footer']):
             raise ValueError('展示内容不等于结构化稿件')

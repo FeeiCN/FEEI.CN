@@ -244,6 +244,23 @@ class ConversationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             core.read_turn(body.replace('新版正文', '未授权改写'), context['session_id'])
 
+    def test_wire_manifest_reuses_displayed_source_and_still_reads_old_full_payloads(self):
+        context = self.context()
+        draft = core.draft_version(context['session_id'], self.propose()['files'], core.baselines(self.root, [FILE]), self.base)
+        body = core.render_turn(context, self.propose(), draft)
+        encoded = body.split(core.TURN)[1].split(' -->')[0]
+        payload = json.loads(gzip.decompress(base64.b64decode(encoded)))
+        self.assertEqual(set(payload['draft']['files'][0]), {'path', 'content_range'})
+        self.assertEqual(core.read_turn(body, context['session_id'])['draft'], draft)
+        payload['draft'] = draft
+        legacy_encoded = base64.b64encode(gzip.compress(json.dumps(payload, ensure_ascii=False).encode())).decode()
+        old = body[:body.index(core.TURN)] + core.TURN + legacy_encoded + ' -->\n'
+        self.assertEqual(core.read_turn(old, context['session_id'])['draft'], draft)
+        payload['draft'] = {**draft, 'files': [{'path': FILE, 'content_range': [-1, 2]}]}
+        invalid = base64.b64encode(gzip.compress(json.dumps(payload, ensure_ascii=False).encode())).decode()
+        with self.assertRaises(ValueError):
+            core.read_turn(body[:body.index(core.TURN)] + core.TURN + invalid + ' -->\n', context['session_id'])
+
     def test_edited_bot_turn_is_not_a_new_trusted_version(self):
         self.turn(self.propose())
         self.issue['comments'][0]['updatedAt'] = '2026-11-17T01:00:00Z'

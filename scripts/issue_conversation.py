@@ -1,10 +1,12 @@
 """GitHub adapter for the shared conversation engine and fixed delivery actions."""
 import argparse
+import base64
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
+from urllib.parse import quote
 
 import conversation as core
 import scheduled_issue_review as legacy
@@ -46,16 +48,42 @@ def issue_requests(issue, owner, edited=False):
     return ([root_request] if root_request else []) + own
 
 
+def load_draft_files(source, paths, repo, root):
+    if source.get('repository') != repo or not re.fullmatch(r'[a-f0-9]{40}', source.get('commit', '')):
+        raise ValueError('稿件读取来源与当前仓库不一致')
+    core.issue_paths(paths)
+    commit = source['commit']
+    local = subprocess.run(['git', 'cat-file', '-e', commit + '^{commit}'], cwd=root, capture_output=True).returncode == 0
+    files = []
+    for name in paths:
+        if local:
+            raw = subprocess.check_output(['git', 'show', commit + ':' + name], cwd=root)
+        else:
+            data = json.loads(gh('api', f'repos/{repo}/contents/{quote(name, safe="/")}?ref={commit}'))
+            if data.get('type') != 'file':
+                raise ValueError('固定提交的稿件不是普通文件')
+            if data.get('encoding') == 'none' and re.fullmatch(r'[a-f0-9]{40}', data.get('sha', '')):
+                data = json.loads(gh('api', f'repos/{repo}/git/blobs/{data["sha"]}'))
+            if data.get('encoding') != 'base64' or not isinstance(data.get('content'), str):
+                raise ValueError('无法读取固定提交的完整稿件')
+            raw = base64.b64decode(''.join(data['content'].split()), validate=True)
+        files.append({'path': name, 'content': raw.decode('utf-8')})
+    return files
+
+
 def restore(issue, repo, owner, task, root=ROOT):
     session_id = f'{repo}/issues/{issue["number"]}'
     state, old_plan = core.initial_state(session_id), None
     legacy_plan = legacy.latest_request_and_plan(issue, owner)[1]
     candidates = []
+    def read_turn(body, session):
+        return core.read_turn(body, session, lambda source, paths: load_draft_files(source, paths, repo, root))
+
     if core.TURN in issue['body']:
         fingerprint = re.search(r'<!-- report-sha256:([a-f0-9]{64}) -->', issue['body'])
         if not fingerprint:
             raise ValueError('首次会话报告缺少来源指纹')
-        initial = core.read_turn(issue['body'], repo + '/reports/' + task + '/' + fingerprint[1])
+        initial = read_turn(issue['body'], repo + '/reports/' + task + '/' + fingerprint[1])
         candidates.append((issue.get('createdAt', ''), 'turn', ({'id': 'report'}, initial)))
     if legacy_plan:
         candidates.append((legacy_plan.get('createdAt', issue.get('createdAt', '')), 'legacy', legacy_plan))
@@ -63,10 +91,11 @@ def restore(issue, repo, owner, task, root=ROOT):
         state['messages'].append({'id': item['id'], 'role': 'user' if item['author']['login'] == owner else 'assistant',
                          'body': item['body'], 'created_at': item['createdAt']})
         if legacy.bot(item['author']) and core.TURN in item['body']:
-            turn = core.read_turn(item['body'], session_id)
             if (not item['body'].startswith('<!-- codex-conversation:reply -->\n')
-                    or item.get('updatedAt', item['createdAt']) != item['createdAt']
-                    or turn['header'] or turn['footer'] not in {'', run_footer({'repository': repo, 'source_run': turn['source_run']})}):
+                    or item.get('updatedAt', item['createdAt']) != item['createdAt']):
+                raise ValueError('会话回执被编辑或来自其他交付入口')
+            turn = read_turn(item['body'], session_id)
+            if turn['header'] or turn['footer'] not in {'', run_footer({'repository': repo, 'source_run': turn['source_run']})}:
                 raise ValueError('会话回执被编辑或来自其他交付入口')
             candidates.append((item['createdAt'], 'turn', (item, turn)))
     for _, kind, value in sorted(candidates, key=lambda entry: entry[0]):
@@ -295,7 +324,7 @@ def execute_approved(context, result, root, directory):
         if head != pr['headRefOid'] or not set(changed).issubset(files) or core.git_baselines(head, files, root) != draft['file_hashes']:
             raise ValueError('现有 PR 与封存稿件不一致，停止复用')
         check_fresh(context, root)
-        return {'state': 'pr_open', 'commit': '', 'review_url': pr['url'],
+        return {'state': 'pr_open', 'commit': '', 'review_url': pr['url'], 'review_commit': head,
                 'message': '该版本已有待审 PR，请查看具体改动并在 PR 中确认合并。'}
     remote = subprocess.run(['git', 'ls-remote', '--exit-code', '--heads', 'origin', 'refs/heads/' + branch],
                             cwd=root, capture_output=True, text=True)
@@ -334,7 +363,8 @@ def execute_approved(context, result, root, directory):
              '--title', f'修订 Issue #{context["issue_number"]} 的文件', '--body-file', body).strip()
     if not re.fullmatch(r'https://github\.com/' + re.escape(context['repository']) + r'/pull/[1-9][0-9]*', url):
         raise ValueError('创建 PR 后未获得有效链接，请核对运行记录')
-    return {'state': 'pr_open', 'commit': '', 'review_url': url,
+    head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
+    return {'state': 'pr_open', 'commit': '', 'review_url': url, 'review_commit': head,
             'message': '已创建待审 PR；文档检查和无警告生产构建通过。文件尚未合入 main，请审阅差异后确认合并。'}
 
 
@@ -359,10 +389,14 @@ def publish_result(context, directory, outcome, root=ROOT):
                     or not re.fullmatch(r'https://github\.com/' + re.escape(context['repository']) + r'/pull/[1-9][0-9]*', url)):
                 raise ValueError('PR 回执与本轮动作不一致')
             draft = result['draft'] or context['current_draft']
+            source = {'repository': context['repository'], 'commit': receipt.get('review_commit', '')}
             value = {**result['response'], 'action': 'revise', 'has_changes': True,
                      'draft_id': '', 'quote': '', 'review_url': url,
                      'message': result['response']['message'] + '\n\n' + receipt['message']}
-            body = core.render_turn(context, value, draft, footer=run_footer(context))
+            core.validate_draft_source(source, context['session_id'], value)
+            loaded = load_draft_files(source, list(draft['file_hashes']), context['repository'], root)
+            core.validate_draft(context['session_id'], {**draft, 'files': loaded})
+            body = core.render_turn(context, value, draft, footer=run_footer(context), draft_source=source)
             label = 'plan-ready'
         elif receipt_path.exists() and action == 'revise':
             receipt = json.loads(receipt_path.read_text())
@@ -370,8 +404,12 @@ def publish_result(context, directory, outcome, root=ROOT):
                 raise ValueError('修订交付回执无效')
             failed = receipt['state'] == 'failed'
             value = {**result['response'], 'message': receipt['message']}
-            body = core.render_turn(context if not failed else {**context, 'requests': []},
-                                    value, result['draft'], footer=run_footer(context))
+            delivery = context if not failed else {**context, 'requests': []}
+            try:
+                body = core.render_turn(delivery, value, result['draft'], footer=run_footer(context))
+            except core.DeliverySizeError:
+                value['message'] += '完整稿件保存在本次运行的 conversation 附件，尚未形成可审阅的 PR；原请求保留。'
+                body = core.render_turn({**context, 'requests': []}, value, footer=run_footer(context))
             label = 'failed' if failed else 'discussing'
         elif receipt_path.exists():
             receipt = json.loads(receipt_path.read_text())
@@ -395,8 +433,13 @@ def publish_result(context, directory, outcome, root=ROOT):
             body = core.render_turn(context if fulfilled else {**context, 'requests': []}, value,
                                     commit=receipt['commit'], execution=execution, footer=run_footer(context))
         elif action not in {'approve', 'regenerate'}:
-            body = core.render_turn(context, result['response'], result['draft'], footer=run_footer(context))
-            label = 'plan-ready' if result['draft'] else 'paused' if action in {'pause', 'clarify'} else 'discussing'
+            try:
+                body = core.render_turn(context, result['response'], result['draft'], footer=run_footer(context))
+                label = 'plan-ready' if result['draft'] else 'paused' if action in {'pause', 'clarify'} else 'discussing'
+            except core.DeliverySizeError:
+                value = {**result['response'], 'message': '本轮尚未完成 PR 交付。完整稿件保存在本次运行的 conversation 附件，原请求保留；没有删减文件或写入 main。'}
+                body = core.render_turn({**context, 'requests': []}, value, footer=run_footer(context))
+                label = 'failed'
         else:
             body = None
     else:

@@ -340,7 +340,8 @@ def create_or_find(repo, person, run_id, carry, lookup):
         body += '承接已确认迁移的对话：\n\n> ' + BOOTSTRAP['choice'] + '\n\n选择理由尚未说明；已知历史为朱元璋后来投军。\n\n'
     body += INDEX_START + '\n正在准备第一幕。\n' + INDEX_END
     body += '\n\n[创建运行](' + run_url(repo, run_id) + ')\n'
-    issue = api(repo, 'issues', 'POST', {'title': f'跟随{person}：一生中的重要选择', 'body': body, 'labels': [LABEL]})
+    issue = api(repo, 'issues', 'POST', {'title': f'跟随{person}：一生中的重要选择', 'body': body,
+                                       'labels': [LABEL], 'assignees': [repo.split('/')[0]]})
     return issue['number']
 
 

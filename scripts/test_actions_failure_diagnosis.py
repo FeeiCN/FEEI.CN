@@ -121,6 +121,10 @@ class DiagnosisTests(unittest.TestCase):
                     if endpoint:
                         self.assertEqual(api.call_args.args[:2], (f'repos/owner/repo/{endpoint}', 'POST'))
                         self.assertIn(diagnosis.run_marker(run()), api.call_args.args[2]['body'])
+                        if issue is None:
+                            self.assertEqual(api.call_args.args[2]['assignees'], ['owner'])
+                        else:
+                            self.assertNotIn('assignees', api.call_args.args[2])
                         self.assertTrue((out / 'summary').exists())
                     else:
                         self.assertEqual(api.call_count, 1)

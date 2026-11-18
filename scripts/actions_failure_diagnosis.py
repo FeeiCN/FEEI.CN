@@ -561,7 +561,8 @@ def publish():
     elif issue:
         delivered = gh(f'repos/{repo}/issues/{issue}/comments', 'POST', {'body': body})
     else:
-        delivered = gh(f'repos/{repo}/issues', 'POST', {'title': f'Actions 失败诊断：{safe_text(run["name"])[:180]}', 'body': body})
+        delivered = gh(f'repos/{repo}/issues', 'POST', {'title': f'Actions 失败诊断：{safe_text(run["name"])[:180]}',
+                                                     'body': body, 'assignees': [repo.split('/')[0]]})
         # Concurrent failures may both create the first issue. Keep the oldest.
         siblings = [item for item in pages(f'repos/{repo}/issues?state=open&creator=github-actions%5Bbot%5D')
                     if 'pull_request' not in item and workflow_marker(run) in (item.get('body') or '')]

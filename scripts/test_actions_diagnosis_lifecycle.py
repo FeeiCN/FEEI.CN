@@ -127,6 +127,18 @@ class LifecycleTests(unittest.TestCase):
                 else:
                     self.assertEqual(lifecycle.verify_recovery(REPO, failure(), proof)['id'], 43)
 
+    def test_new_incident_is_assigned_to_owner(self):
+        data = context()
+        def github(endpoint, method='GET', payload=None):
+            return {'number': 7} if method == 'POST' else failure()
+        with patch.object(lifecycle, 'gh', side_effect=github) as api, \
+                patch.object(lifecycle, 'inventory', return_value={}), \
+                patch.object(lifecycle, 'latest_run', return_value=failure()):
+            lifecycle.publish(data, {'coverage': '核对', 'findings': [finding()]})
+        creations = [c.args for c in api.call_args_list if c.args[:2] == ('repos/owner/repo/issues', 'POST')]
+        self.assertEqual(len(creations), 1)
+        self.assertEqual(creations[0][2]['assignees'], ['owner'])
+
     def test_same_cause_updates_only_its_summary_without_new_comments(self):
         original = context()['failures'][0]
         body = lifecycle.body_for(original, finding(), {(42, 1)}, [])
@@ -151,6 +163,7 @@ class LifecycleTests(unittest.TestCase):
         calls = [c.args for c in api.call_args_list if len(c.args) > 1]
         self.assertEqual(calls[0][:2], ('repos/owner/repo/issues/7/comments', 'POST'))
         self.assertIn('历史诊断 #9', calls[0][2]['body'])
+        self.assertFalse(any('assignees' in c[2] for c in calls))
         self.assertEqual(calls[-1], ('repos/owner/repo/issues/9', 'PATCH', {'state': 'closed', 'state_reason': 'not_planned'}))
         self.assertFalse(any(c[1] == 'DELETE' for c in calls))
 

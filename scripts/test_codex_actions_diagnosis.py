@@ -64,6 +64,17 @@ class CodexDiagnosisTests(unittest.TestCase):
                     task.publish()
                 api.assert_called_once()
 
+    def test_publish_assigns_only_new_issues(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(task, 'OUT', Path(folder)), patch.dict(
+                os.environ, {'GITHUB_REPOSITORY': 'owner/repo', 'GITHUB_STEP_SUMMARY': folder + '/summary'}):
+            Path(folder, 'context.json').write_text(json.dumps(self.context()))
+            Path(folder, 'result.json').write_text(json.dumps(self.result()))
+            with patch.object(task, 'delivered', return_value=(None, False)), patch.object(
+                    task, 'gh', side_effect=[run(), {'html_url': 'https://example.com/report'}]) as api:
+                task.publish()
+            self.assertEqual(api.call_args.args[:2], ('repos/owner/repo/issues', 'POST'))
+            self.assertEqual(api.call_args.args[2]['assignees'], ['owner'])
+
     def test_publish_reuses_existing_issue_and_skips_delivered_attempt(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(task, 'OUT', Path(folder)), patch.dict(
                 os.environ, {'GITHUB_REPOSITORY': 'owner/repo', 'GITHUB_STEP_SUMMARY': folder + '/summary'}):
@@ -74,6 +85,7 @@ class CodexDiagnosisTests(unittest.TestCase):
                 task.publish()
             self.assertEqual(api.call_args.args[:2], ('repos/owner/repo/issues/876/comments', 'POST'))
             self.assertIn(task.marker(run()), api.call_args.args[2]['body'])
+            self.assertNotIn('assignees', api.call_args.args[2])
             with patch.object(task, 'delivered', return_value=(876, True)), patch.object(task, 'gh', return_value=run()) as api:
                 task.publish()
             api.assert_called_once()

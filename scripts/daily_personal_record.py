@@ -388,7 +388,8 @@ def main():
     created = issue is None
     if created:
         body = inbox_body(repo, day, os.environ.get('GITHUB_RUN_ID'))
-        issue = api(f'repos/{repo}/issues', 'POST', {'title': f'{day} 每日个人记录', 'body': body})
+        issue = api(f'repos/{repo}/issues', 'POST', {'title': f'{day} 每日个人记录', 'body': body,
+                                                  'assignees': [repo.split('/')[0]]})
     schedule = timing(repo, day, mode, now)
     (out / 'daily-schedule.json').write_text(json.dumps(schedule, ensure_ascii=False))
     marker = snapshot_marker(day)

@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: site-check-${{ github.ref }}
+  group: site-check-${{ github.ref }}-${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository) }}
   cancel-in-progress: true
 
 jobs:

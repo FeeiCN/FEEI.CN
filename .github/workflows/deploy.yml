@@ -115,6 +115,7 @@ jobs:
   deploy:
     if: "!inputs.inspect_only && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository))"
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout delivery formatter
         uses: actions/checkout@v6
@@ -141,7 +142,8 @@ jobs:
           phase: running
       - name: Deploy on server
         run: |
-          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
+          ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
             "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' bash -se" <<'EOF'
           set -euo pipefail
@@ -356,15 +358,13 @@ jobs:
             active_build_pid=""
             return "$build_status"
           }
-          build_ok=false
-          for build_attempt in 1 2 3; do
-            rm -rf "$staging_dir"
-            echo "Build attempt $build_attempt of 3"
-            if run_build; then build_ok=true; break; fi
-            sleep 5
-          done
+          rm -rf "$staging_dir"
+          if ! run_build; then
+            build_resource_snapshot after
+            echo "Build failed"
+            exit 1
+          fi
           build_resource_snapshot after
-          [ "$build_ok" = true ] || { echo "Build failed after 3 attempts"; exit 1; }
           group_end "Build Docusaurus"
           restore_data_source
 

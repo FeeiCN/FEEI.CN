@@ -49,6 +49,9 @@ class ConversationTests(unittest.TestCase):
                       'state': 'OPEN', 'createdAt': '2026-11-17T00:00:00Z', 'updatedAt': '2026-11-17T00:00:00Z', 'comments': []}
         self.counter = 0
         self.calls = []
+        self.validation_patch = patch.object(adapter, 'check_validation')
+        self.validation_patch.start()
+        self.addCleanup(self.validation_patch.stop)
         for target, value in [('STATE', self.directory)]:
             mocked = patch.object(adapter, target, value)
             mocked.start()
@@ -132,7 +135,7 @@ class ConversationTests(unittest.TestCase):
             receipt = adapter.execute_approved(context, result, self.root, self.directory)
         self.assertEqual(receipt['state'], 'pr_open')
         self.assertEqual((self.root / FILE).read_text(), revised)
-        self.assertEqual(build.call_count, 1)
+        self.assertEqual(build.call_count, 0)
         adapter.write_json(self.directory / 'receipt.json', receipt)
         adapter.publish_result(context, self.directory, 'success', self.root)
         self.assertIsNone(self.context())
@@ -211,7 +214,7 @@ class ConversationTests(unittest.TestCase):
             receipt = adapter.execute_approved(context, result, self.root, self.directory)
         self.assertEqual(receipt['state'], 'pr_open')
         self.assertEqual(subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.root, text=True).strip(), head)
-        self.assertEqual(build.call_count, 1)
+        self.assertEqual(build.call_count, 0)
 
     def test_failed_pr_delivery_preserves_new_draft_and_pending_request(self):
         context = self.context()
@@ -507,7 +510,7 @@ class ConversationTests(unittest.TestCase):
 
     def test_paths_and_environment_write_scopes_are_enforced(self):
         context = self.context()
-        for name in ['../outside.md', '/tmp/outside', '.git/config', '.env', 'docs/../../file', 'scripts/code.py']:
+        for name in ['../outside.md', '/tmp/outside', '.git/config', '.env', 'docs/../../file', 'static/data/raw.json']:
             value = self.propose()
             value['files'][0]['path'] = name
             with self.subTest(name=name), self.assertRaises(ValueError):
@@ -519,6 +522,127 @@ class ConversationTests(unittest.TestCase):
         (self.root / 'docs/link').symlink_to(outside, target_is_directory=True)
         with self.assertRaises(ValueError):
             core.target_path(self.root, 'docs/link/file.md')
+
+    def test_issue_supports_task_code_config_and_tests_and_excludes_sensitive_outputs(self):
+        context = self.context()
+        for name in ['scripts/issue_conversation.py', 'scripts/test_conversation.py', 'src/theme/TOC/index.tsx',
+                     'plugins/search.ts', 'config/site.json', 'tests/unit/test.py', 'test/ui.test.ts',
+                     'package.json', 'package-lock.json', 'tsconfig.json', 'docusaurus.config.ts',
+                     'sidebars.ts', '.gitignore', 'AGENTS.md', '.github/actions/workflow-status/action.yml']:
+            value = self.propose() | {'files': [{'path': name, 'content': 'valid text'}]}
+            with self.subTest(name=name):
+                self.assertEqual(core.validate_response(value, context)['files'], value['files'])
+        for name in ['scripts/.env.local', 'src/.env', 'config/credentials.json', 'config/secrets.yaml',
+                     'config/server.pem', 'config/server.key', 'src/node_modules/lib.js', 'build/index.html',
+                     '.docusaurus/config.json', 'output/result.json', 'static/data/health/record.json',
+                     '.git/hooks/post-commit', 'scripts/__pycache__/code.pyc', 'src/dist/bundle.js']:
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                core.issue_paths([name])
+        prompt = core.prompt_for(context, self.directory / 'context.json')
+        self.assertIn('scripts/ 脚本', prompt)
+        self.assertNotIn('不能修改脚本', prompt)
+
+    def test_readonly_validation_binds_proof_and_writer_rejects_missing_or_stale_proof(self):
+        self.validation_patch.stop()
+        context = self.context()
+        result = core.respond(context, self.directory, self.root, self.executor(self.propose()))
+        draft = result['draft']
+        with self.assertRaisesRegex(ValueError, '独立验证'):
+            adapter.execute_approved(context, result, self.root, self.directory)
+        run = subprocess.run
+        commands = []
+        def validate_commands(args, **kwargs):
+            commands.append(args)
+            if args == ['npm', 'ci']:
+                return subprocess.CompletedProcess(args, 0)
+            return run(args, **kwargs)
+        with patch.object(adapter, 'build') as build, patch.object(adapter.subprocess, 'run', side_effect=validate_commands):
+            adapter.validate_candidate(context, result, self.root, self.directory)
+        self.assertEqual(build.call_count, 1)
+        self.assertIn(['npm', 'ci'], commands)
+        proof = json.loads((self.directory / 'checked.json').read_text())
+        self.assertEqual(proof['draft_id'], draft['id'])
+        subprocess.run(['git', 'restore', '--', FILE], cwd=self.root, check=True)
+        adapter.check_validation(context, draft, self.root, self.directory)
+        for key, value in [('draft_id', 'changed'), ('input_hash', 'changed'), ('base', 'f' * 40)]:
+            adapter.write_json(self.directory / 'checked.json', proof | {key: value})
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, '独立验证'):
+                adapter.check_validation(context, draft, self.root, self.directory)
+        adapter.write_json(self.directory / 'checked.json', proof)
+        def writer_commands(args, **kwargs):
+            self.assertNotEqual(args[0], 'npm')
+            self.assertNotEqual(args[0], 'node')
+            if args[:2] == ['git', 'ls-remote']:
+                return subprocess.CompletedProcess(args, 2, '', '')
+            if args[:2] == ['git', 'push']:
+                return subprocess.CompletedProcess(args, 0, '', '')
+            return run(args, **kwargs)
+        with patch.object(adapter, 'build', side_effect=AssertionError('writer must not execute candidate')), \
+                patch.object(adapter.subprocess, 'run', side_effect=writer_commands):
+            receipt = adapter.execute_approved(context, result, self.root, self.directory)
+        self.assertEqual(receipt['state'], 'pr_open')
+
+    def test_candidate_script_tests_execute_in_validation_and_failure_blocks_proof(self):
+        context = self.context()
+        files = [{'path': 'scripts/example.py', 'content': 'def value():\n    return 42\n'},
+                 {'path': 'scripts/test_example.py', 'content': 'import unittest\nfrom example import value\n\nclass T(unittest.TestCase):\n    def test_value(self):\n        self.assertEqual(value(), 42)\n'}]
+        proposal = self.propose() | {'files': files}
+        result = core.respond(context, self.directory, self.root, self.executor(proposal))
+        original = subprocess.run
+        calls = []
+        def commands(args, **kwargs):
+            calls.append(args)
+            if args == ['npm', 'ci']:
+                return subprocess.CompletedProcess(args, 0)
+            return original(args, **kwargs)
+        with patch.object(adapter, 'build'), patch.object(adapter.subprocess, 'run', side_effect=commands):
+            adapter.validate_candidate(context, result, self.root, self.directory)
+        self.assertTrue((self.directory / 'checked.json').exists())
+        self.assertIn(['python3', '-m', 'unittest', 'scripts/test_example.py'], calls)
+        for file in files:
+            (self.root / file['path']).unlink()
+        changed = self.propose() | {'files': [files[0] | {'content': 'def value():\n    return 0\n'}, files[1]]}
+        result = core.respond(context, self.directory, self.root, self.executor(changed))
+        with patch.object(adapter, 'build'), patch.object(adapter.subprocess, 'run', side_effect=commands):
+            with self.assertRaises(subprocess.CalledProcessError):
+                adapter.validate_candidate(context, result, self.root, self.directory)
+        self.assertFalse((self.directory / 'checked.json').exists())
+
+    def test_validation_failure_removes_stale_proof_and_does_not_write_success(self):
+        context = self.context()
+        result = core.respond(context, self.directory, self.root, self.executor(self.propose()))
+        adapter.write_json(self.directory / 'checked.json', {'stale': True})
+        original = subprocess.run
+        with patch.object(adapter.subprocess, 'run', wraps=original) as run, \
+                patch.object(adapter, 'build', side_effect=ValueError('build failed')):
+            def commands(args, **kwargs):
+                if args == ['npm', 'ci']:
+                    return subprocess.CompletedProcess(args, 0)
+                return original(args, **kwargs)
+            run.side_effect = commands
+            with self.assertRaisesRegex(ValueError, 'build failed'):
+                adapter.validate_candidate(context, result, self.root, self.directory)
+        self.assertFalse((self.directory / 'checked.json').exists())
+
+    def test_script_draft_can_be_submitted_and_restored_without_executing_it_in_writer(self):
+        context = self.context()
+        content = 'raise RuntimeError("this is a draft, do not run it in writer")\n'
+        proposal = self.propose() | {'files': [{'path': 'scripts/issue_conversation.py', 'content': content}]}
+        result = core.respond(context, self.directory, self.root, self.executor(proposal))
+        run = subprocess.run
+        def commands(args, **kwargs):
+            if args[:2] == ['git', 'ls-remote']:
+                return subprocess.CompletedProcess(args, 2, '', '')
+            if args[:2] == ['git', 'push']:
+                return subprocess.CompletedProcess(args, 0, '', '')
+            return run(args, **kwargs)
+        with patch.object(adapter, 'build', side_effect=AssertionError('not in writer')), \
+                patch.object(adapter.subprocess, 'run', side_effect=commands):
+            receipt = adapter.execute_approved(context, result, self.root, self.directory)
+        adapter.write_json(self.directory / 'receipt.json', receipt)
+        adapter.publish_result(context, self.directory, 'success', self.root)
+        self.add_message(OWNER, '解释改动')
+        self.assertEqual(self.context()['current_draft']['files'], proposal['files'])
 
     def test_cross_issue_payload_and_oversized_output_are_rejected(self):
         context = self.context()
@@ -729,7 +853,15 @@ class WorkflowBoundaryTests(unittest.TestCase):
         self.assertEqual(jobs['apply']['permissions']['issues'], 'read')
         self.assertEqual(jobs['apply']['permissions']['contents'], 'write')
         self.assertEqual(jobs['apply']['permissions']['pull-requests'], 'write')
-        self.assertIn('has_files', jobs['apply']['if'])
+        self.assertIn('has_files', jobs['validate']['if'])
+        self.assertIn("needs.validate.result == 'success'", jobs['apply']['if'])
+        self.assertEqual(jobs['validate']['permissions']['contents'], 'read')
+        self.assertNotIn('pull-requests', jobs['validate']['permissions'])
+        for step in jobs['validate']['steps']:
+            self.assertNotIn('secrets.', json.dumps(step))
+            if step.get('uses') == 'actions/checkout@v6':
+                self.assertFalse(step['with']['persist-credentials'])
+        self.assertFalse(any('npm ' in step.get('run', '') for step in jobs['apply']['steps']))
         self.assertEqual(jobs['regenerate']['permissions']['actions'], 'write')
         for job in jobs.values():
             for step in job['steps']:

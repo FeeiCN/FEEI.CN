@@ -112,9 +112,79 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-  apply:
+  validate:
     needs: turn
     if: needs.turn.result == 'success' && (needs.turn.outputs.action == 'approve' || needs.turn.outputs.has_files == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: read
+      actions: read
+    outputs:
+      artifact_id: ${{ steps.artifact.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.turn.outputs.execution_sha }}
+          path: tooling
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          path: site
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.turn.outputs.artifact_id }}
+          path: site/output/conversation
+          merge-multiple: true
+      - name: 开始验证状态
+        continue-on-error: true
+        uses: ./tooling/.github/actions/workflow-status
+        with:
+          phase: verifying
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 验证候选文件
+        working-directory: site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ needs.turn.outputs.issue }}
+        run: python3 ../tooling/scripts/issue_conversation.py validate --root "$PWD"
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        if: always()
+        with:
+          name: conversation-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            site/output/conversation/checked.json
+            site/output/conversation/build.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: 完成验证状态
+        if: always()
+        continue-on-error: true
+        uses: ./tooling/.github/actions/workflow-status
+        with:
+          phase: finished
+          state: ${{ job.status }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  apply:
+    needs: [turn, validate]
+    if: needs.turn.result == 'success' && needs.validate.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -147,14 +217,11 @@ jobs:
           artifact-ids: ${{ needs.turn.outputs.artifact_id }}
           path: site/output/conversation
           merge-multiple: true
-      - uses: actions/setup-node@v4
+      - uses: actions/download-artifact@v4
         with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: site/package-lock.json
-      - name: 安装构建依赖
-        working-directory: site
-        run: npm ci
+          artifact-ids: ${{ needs.validate.outputs.artifact_id }}
+          path: site/output/conversation
+          merge-multiple: true
       - name: 更新阶段：核验稿件并创建待审 PR
         continue-on-error: true
         uses: ./tooling/.github/actions/workflow-status
@@ -256,7 +323,7 @@ jobs:
           retention-days: 30
 
   publish:
-    needs: [turn, apply, regenerate]
+    needs: [turn, validate, apply, regenerate]
     if: always() && needs.turn.outputs.ready == 'true' && needs.turn.outputs.artifact_id != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -296,7 +363,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ needs.turn.outputs.issue }}
-          TURN_OUTCOME: ${{ needs.turn.result }}
+          TURN_OUTCOME: ${{ needs.turn.result == 'success' && needs.validate.result != 'failure' && needs.validate.result != 'cancelled' && 'success' || 'failure' }}
         run: python3 scripts/issue_conversation.py publish
       - name: 更新会话展示状态
         continue-on-error: true

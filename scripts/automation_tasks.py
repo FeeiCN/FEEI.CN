@@ -471,9 +471,12 @@ def deliver(t, out):
             links = [f'- [来源 {index} · {urlparse(url).hostname}](<{url}>)'
                      for index, url in enumerate(missing, 1)]
             report += '\n\n<details>\n<summary>核验来源</summary>\n\n' + '\n'.join(links) + '\n\n</details>'
-    if t['id'] == 'daily-personal-record' and os.environ.get('PERSONAL_ISSUE'):
+    if t['id'] == 'daily-personal-record':
         import daily_personal_record as daily
-        day = datetime.fromisoformat(os.environ['PERSONAL_DATE']).date()
+        number, target = os.environ.get('PERSONAL_ISSUE', ''), os.environ.get('PERSONAL_DATE', '')
+        if not re.fullmatch(r'[1-9][0-9]*', number) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', target):
+            raise ValueError('每日记录缺少固定日期或原 Issue，停止交付，不另建 Issue 或评论')
+        day = datetime.fromisoformat(target).date()
         issue = daily.find_issue(repo, day)
         if not issue or str(issue['number']) != os.environ['PERSONAL_ISSUE']:
             raise ValueError('当天个人记录 Issue 已改变，停止交付')

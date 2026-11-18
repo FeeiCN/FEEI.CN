@@ -106,21 +106,26 @@ def without_sections(body):
 
 
 def publish_section(repo, issue, marker, content):
-    target = re.fullmatch(r'<!-- daily-personal-(?:data|clues):(\d{4}-\d{2}-\d{2}) -->', marker)
-    if not target:
-        raise ValueError('只能更新每日记录的自动线索或数据区块')
-    if '<!-- daily-personal-' in content:
-        raise ValueError('自动区块内容不能嵌入其他每日记录区块标记')
+    publish_sections(repo, issue, {marker: content})
+
+
+def publish_sections(repo, issue, sections):
     previous = issue.get('body') or ''
     day = re.search(r'<!-- daily-personal-record:(\d{4}-\d{2}-\d{2}) -->', previous)
-    if day and day[1] != target[1]:
-        raise ValueError('自动区块与每日记录日期不一致，停止更新')
     without_sections(previous)
-    old = section_content(previous, marker)
-    end = marker.replace(' -->', ':end -->')
-    block = marker + '\n' + content.strip() + '\n' + end
-    body = (previous.replace(marker + old + end, block) if old is not None
-            else previous + '\n\n' + block)
+    body = previous
+    for marker, content in sections.items():
+        target = re.fullmatch(r'<!-- daily-personal-(?:data|clues):(\d{4}-\d{2}-\d{2}) -->', marker)
+        if not target:
+            raise ValueError('只能更新每日记录的自动线索或数据区块')
+        if '<!-- daily-personal-' in content:
+            raise ValueError('自动区块内容不能嵌入其他每日记录区块标记')
+        if day and day[1] != target[1]:
+            raise ValueError('自动区块与每日记录日期不一致，停止更新')
+        old = section_content(body, marker)
+        end = marker.replace(' -->', ':end -->')
+        block = marker + '\n' + content.strip() + '\n' + end
+        body = body.replace(marker + old + end, block) if old is not None else body + '\n\n' + block
     if len(body.encode()) > 60000:
         raise ValueError('每日记录正文超过交付大小限制，未截断或覆盖')
     if body == previous:
@@ -155,16 +160,25 @@ def text(value):
     return str(value).replace('@', '@\u200b').replace('<', '&lt;').replace('>', '&gt;').replace('|', '／').replace('\n', ' ').replace('[', '［').replace(']', '］')[:250]
 
 
-def publish_comment(repo, issue, marker, body):
-    comments = pages(f'repos/{repo}/issues/{issue["number"]}/comments')
-    existing = next((c for c in comments if c.get('user', {}).get('login') == BOT and marker in (c.get('body') or '')), None)
-    if len(body.encode()) > 60000:
-        raise ValueError('自动数据快照超过交付大小限制')
-    if existing:
-        if existing['body'] != body:
-            api(f'repos/{repo}/issues/comments/{existing["id"]}', 'PATCH', {'body': body})
-    else:
-        api(f'repos/{repo}/issues/{issue["number"]}/comments', 'POST', {'body': body})
+def legacy_sections(issue, day, comments):
+    sections = {}
+    for kind in ('data', 'clues'):
+        marker = f'<!-- daily-personal-{kind}:{day} -->'
+        if section_content(issue.get('body') or '', marker) is not None:
+            continue
+        for comment in reversed(comments):
+            body = comment.get('body') or ''
+            if comment.get('user', {}).get('login') != BOT or not body.startswith(marker):
+                continue
+            end = marker.replace(' -->', ':end -->')
+            content = section_content(body, marker) if end in body else body[len(marker):]
+            if '<!-- daily-personal-' in content:
+                raise ValueError('旧版每日记录评论区块损坏，停止更新')
+            if kind == 'data' and '<details>' not in content:
+                content = '<details>\n<summary>自动数据快照</summary>\n\n' + content.strip() + '\n\n</details>'
+            sections[marker] = content.strip()
+            break
+    return sections
 
 
 def get_json(url):
@@ -394,9 +408,9 @@ def main():
     (out / 'daily-schedule.json').write_text(json.dumps(schedule, ensure_ascii=False))
     marker = snapshot_marker(day)
     comments = pages(f'repos/{repo}/issues/{issue["number"]}/comments')
+    sections = legacy_sections(issue, day, comments)
     data_section = section_content(issue.get('body') or '', marker)
-    previous = data_section if data_section is not None else next(
-        (c['body'] for c in comments if c.get('user', {}).get('login') == BOT and marker in (c.get('body') or '')), '')
+    previous = data_section if data_section is not None else sections.get(marker, '')
     complete = '<!-- evening-complete -->' in previous
     refresh = mode == 'refresh' and (not complete or os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch')
     # Morning retries do not recall the model or re-fetch snapshots after successful creation.
@@ -409,13 +423,14 @@ def main():
         body = preserve_sources(body, previous, snapshot)
         if mode == 'refresh' and fresh(snapshot):
             body += '\n<!-- evening-complete -->'
-        publish_section(repo, issue, marker, body)
+        sections[marker] = body
+    if sections:
+        publish_sections(repo, issue, sections)
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
         # A placeholder without clues can be retried, but never replace an existing completed legacy report.
-        clues = section_content(issue.get('body') or '', f'<!-- daily-personal-clues:{day} -->')
-        has_clues = ('<!-- daily-clues-status:completed -->' in clues if clues is not None else
-                     any(c.get('user', {}).get('login') == BOT and f'<!-- daily-personal-clues:{day} -->' in (c.get('body') or '')
-                         and '<!-- daily-clues-status:completed -->' in c['body'] for c in comments))
+        clues_marker = f'<!-- daily-personal-clues:{day} -->'
+        clues = section_content(issue.get('body') or '', clues_marker)
+        has_clues = '<!-- daily-clues-status:completed -->' in (clues if clues is not None else sections.get(clues_marker, ''))
         ready = mode == 'create' and not has_clues and '<!-- status:completed -->' not in (issue.get('body') or '')
         output.write(f'ready={str(ready).lower()}\ndate={day}\nissue={issue["number"]}\n')
     with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:

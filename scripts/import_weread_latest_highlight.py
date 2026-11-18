@@ -424,7 +424,8 @@ def issue_exists(repo: str, issue_number: int | None) -> bool:
 
 
 def create_issue(repo: str, title: str, body: str) -> dict[str, Any]:
-    completed = run_gh_with_retry(["issue", "create", "--repo", repo, "--title", title, "--body-file", "-"], input_text=body)
+    completed = run_gh_with_retry(["issue", "create", "--repo", repo, "--title", title,
+                                   "--assignee", repo.split('/')[0], "--body-file", "-"], input_text=body)
     if completed.returncode != 0:
         details = (completed.stderr or completed.stdout).strip()
         raise RuntimeError(f"gh issue create 失败: {details}")

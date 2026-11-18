@@ -555,7 +555,8 @@ def deliver(t, out):
             for name, color in [(task_label, 'd4c5f9'), (state_label, 'fbca04' if status == 'blocked' else 'c2e0c6')]:
                 gh('label', 'create', name, '--repo', repo, '--color', color, '--force')
             url = gh('issue', 'create', '--repo', repo, '--title', issue_title(report, t['title'], result.get('files')),
-                     '--label', task_label, '--label', state_label, '--body-file', str(out / 'report.md')).strip()
+                     '--assignee', repo.split('/')[0], '--label', task_label, '--label', state_label,
+                     '--body-file', str(out / 'report.md')).strip()
         meta['issue_url'] = url
     else:
         (out / 'report.md').write_text(body)

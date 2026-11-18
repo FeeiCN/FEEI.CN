@@ -203,7 +203,8 @@ def publish():
             summary.append(response['html_url'] + '（已更新原报告）')
             continue
         endpoint = f'repos/{repo}/issues/{issue}/comments' if issue else f'repos/{repo}/issues'
-        data = {'body': body} if issue else {'title': 'Actions 失败诊断：' + run['name'][:150], 'body': body}
+        data = {'body': body} if issue else {'title': 'Actions 失败诊断：' + run['name'][:150], 'body': body,
+                                            'assignees': [repo.split('/')[0]]}
         response = gh(endpoint, 'POST', data)
         summary.append(response['html_url'])
     with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:

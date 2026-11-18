@@ -236,6 +236,8 @@ class AutomationResultTests(unittest.TestCase):
         self.assertIn('完整研究正文', visible)
         self.assertNotIn('slug:', visible)
         self.assertEqual(sum(c.args[:2] == ('issue', 'create') for c in api.call_args_list), 1)
+        created = next(c.args for c in api.call_args_list if c.args[:2] == ('issue', 'create'))
+        self.assertEqual(created[created.index('--assignee') + 1], 'owner')
         self.assertFalse(any(c.args[:2] == ('issue', 'comment') for c in api.call_args_list))
 
     def reading_content(self, **changes):

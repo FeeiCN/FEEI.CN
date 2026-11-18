@@ -292,6 +292,7 @@ class DailyTests(unittest.TestCase):
                 'sys.argv', ['daily', 'prepare']):
             def collect(*args):
                 self.assertEqual(api.call_args.args[1], 'POST')
+                self.assertEqual(api.call_args.args[2]['assignees'], ['owner'])
                 posted = api.call_args.args[2]['body']
                 self.assertEqual(review.task_source({'author': {'login': daily.BOT}, 'body': posted}, REPO,
                     lambda _: {'path': '.github/workflows/daily-personal-record.yml', 'head_branch': 'main',
@@ -308,9 +309,10 @@ class DailyTests(unittest.TestCase):
                 'GITHUB_REPOSITORY': REPO, 'PERSONAL_MODE': 'create', 'PERSONAL_DATE': str(DAY),
                 'GITHUB_OUTPUT': folder + '/outputs', 'GITHUB_STEP_SUMMARY': folder + '/summary'}), patch.object(
                 daily, 'find_issue', return_value=issue()), patch.object(daily, 'pages', return_value=comments), patch.object(
-                daily, 'timing', return_value={}), patch.object(daily, 'collect') as collect, patch('sys.argv', ['daily', 'prepare']):
+                daily, 'timing', return_value={}), patch.object(daily, 'collect') as collect, patch.object(daily, 'api') as api, patch('sys.argv', ['daily', 'prepare']):
             daily.main()
             collect.assert_not_called()
+            api.assert_not_called()
             self.assertIn('ready=false', Path(folder + '/outputs').read_text())
 
     def test_collect_filters_activity_to_beijing_day_and_preserves_unknown(self):

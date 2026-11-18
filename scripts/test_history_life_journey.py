@@ -337,6 +337,12 @@ class HistoryJourneyTests(unittest.TestCase):
                 journey.execute(out)
             self.assertEqual(json.loads((out / 'result.json').read_text())['open_question'], '')
 
+    def test_new_person_issue_is_assigned_to_owner(self):
+        with patch.object(journey, 'labels'), patch.object(journey, 'api', side_effect=[[], {'number': 901}]) as api:
+            self.assertEqual(journey.create_or_find(REPO, '朱元璋', 30, True, run), 901)
+        self.assertEqual(api.call_args.args[:3], (REPO, 'issues', 'POST'))
+        self.assertEqual(api.call_args.args[3]['assignees'], [OWNER])
+
     def test_existing_person_reuses_original_issue(self):
         issue = fixture()
         with patch.object(journey, 'labels'), patch.object(journey, 'api', return_value=[issue]) as calls:

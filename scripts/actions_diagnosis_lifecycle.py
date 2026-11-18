@@ -305,7 +305,8 @@ def publish(context, result):
                 gh(f'repos/{repo}/issues/{canonical["number"]}/comments', 'POST', {'body': body})
             number = canonical['number']
         else:
-            response = gh(f'repos/{repo}/issues', 'POST', {'title': 'Actions 失败诊断：' + original['name'][:150], 'body': body})
+            response = gh(f'repos/{repo}/issues', 'POST', {'title': 'Actions 失败诊断：' + original['name'][:150],
+                                                         'body': body, 'assignees': [repo.split('/')[0]]})
             number = response['number']
         for duplicate in active[1:]:
             if duplicate['live'].get('state') == 'closed':

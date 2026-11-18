@@ -5,6 +5,10 @@ on:
     branches:
       - main
   pull_request:
+  workflow_run:
+    workflows: ['日记议题归档', 'Codex 议题驱动', '议题内容抓取与行车记录', '安全工程内容同步']
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
   schedule:
     # 北京时间 10:40，避开凌晨自动数据提交和 GitHub 整点拥堵。
@@ -13,8 +17,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: site-check-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
 
     steps:
@@ -22,6 +31,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.sha }}
+          persist-credentials: false
 
       - name: 开始任务状态
         uses: ./.github/actions/workflow-status
@@ -64,6 +75,10 @@ jobs:
 
       - name: Verify shared workflow status
         run: node --test scripts/test_workflow_status.mjs
+      - name: Verify artifact packaging and publication
+        run: |
+          python3 -m unittest discover -s scripts -p test_site_artifact.py
+          node --test scripts/test_deploy_change_detection.mjs
       - name: 更新阶段：验证结果
         uses: ./.github/actions/workflow-status
         continue-on-error: true
@@ -74,6 +89,25 @@ jobs:
 
       - name: Strict build check
         run: DOCUSAURUS_FASTER=true CI_STRICT=true npm run build
+      - name: Package verified site
+        id: site
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          SITE_COMMIT: ${{ github.sha }}
+          SITE_RUN_ID: ${{ github.run_id }}
+          SITE_ATTEMPT: ${{ github.run_attempt }}
+        run: python3 scripts/site_artifact.py package
+      - name: Upload verified site
+        if: steps.site.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.site.outputs.name }}
+          path: |
+            output/site/site.tar.gz
+            output/site/manifest.json
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
       - name: 完成任务状态
         if: always() && hashFiles('.github/actions/workflow-status/action.yml') != ''
         uses: ./.github/actions/workflow-status

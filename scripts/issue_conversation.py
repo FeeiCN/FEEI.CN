@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 import re
 import subprocess
-import sys
 
 import conversation as core
 import scheduled_issue_review as legacy
@@ -268,42 +267,75 @@ def build(root, directory):
 
 def execute_approved(context, result, root, directory):
     issue, _ = check_fresh(context, root)
-    if decision(context, result, issue) != 'approve':
-        raise ValueError('本轮没有批准写入')
-    draft = context['current_draft']
+    action = decision(context, result, issue)
+    draft = result['draft'] if action == 'revise' else context['current_draft']
+    if action not in {'revise', 'approve'} or not draft:
+        raise ValueError('本轮没有可交付的完整稿件')
     core.validate_draft(context['session_id'], draft)
+    files = core.files_mapping(draft['files'])
+    core.issue_paths(list(files))
     if subprocess.check_output(['git', 'status', '--porcelain'], cwd=root).strip():
         raise ValueError('写入工作区存在其他改动')
-    if core.baselines(root, core.files_mapping(draft['files'])) == draft['file_hashes']:
-        commit = context['applied'].get(draft['id']) or subprocess.check_output(
-            ['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
-        return {'state': 'unchanged', 'commit': commit,
-                'message': '目标文件已与当前稿件一致，本轮没有重复提交。'}
-    apply_files(context, draft, root)
+    actual = core.baselines(root, files)
+    if actual == draft['file_hashes']:
+        return {'state': 'unchanged', 'commit': '',
+                'message': 'main 中的目标文件已与当前稿件一致，本轮没有重复提交。'}
+    if actual != draft['baseline']:
+        raise ValueError('目标文件已被更新，需要审阅新的完整版本')
+    branch = f'codex/issue-{context["issue_number"]}-{draft["id"][:12]}'
+    pulls = json.loads(gh('pr', 'list', '--repo', context['repository'], '--head', branch,
+                         '--state', 'all', '--json', 'url,state,headRefOid,baseRefName'))
+    if pulls:
+        pr = pulls[0]
+        if pr['state'] != 'OPEN' or pr['baseRefName'] != 'main':
+            raise ValueError('该版本的 PR 已关闭或目标分支变化，请重新审阅后修订')
+        subprocess.run(['git', 'fetch', 'origin', branch], cwd=root, check=True)
+        head = subprocess.check_output(['git', 'rev-parse', 'FETCH_HEAD'], cwd=root, text=True).strip()
+        changed = subprocess.check_output(['git', 'diff', '--name-only', 'HEAD...' + head], cwd=root, text=True).splitlines()
+        if head != pr['headRefOid'] or not set(changed).issubset(files) or core.git_baselines(head, files, root) != draft['file_hashes']:
+            raise ValueError('现有 PR 与封存稿件不一致，停止复用')
+        check_fresh(context, root)
+        return {'state': 'pr_open', 'commit': '', 'review_url': pr['url'],
+                'message': '该版本已有待审 PR，请查看具体改动并在 PR 中确认合并。'}
+    remote = subprocess.run(['git', 'ls-remote', '--exit-code', '--heads', 'origin', 'refs/heads/' + branch],
+                            cwd=root, capture_output=True, text=True)
+    if remote.returncode == 0:
+        subprocess.run(['git', 'fetch', 'origin', branch], cwd=root, check=True)
+        head = subprocess.check_output(['git', 'rev-parse', 'FETCH_HEAD'], cwd=root, text=True).strip()
+        changed = subprocess.check_output(['git', 'diff', '--name-only', 'HEAD...' + head], cwd=root, text=True).splitlines()
+        if not set(changed).issubset(files) or core.git_baselines(head, files, root) != draft['file_hashes']:
+            raise ValueError('已推送分支与封存稿件不一致，停止恢复 PR')
+        subprocess.run(['git', 'switch', '-c', branch, head], cwd=root, check=True)
+    elif remote.returncode == 2:
+        subprocess.run(['git', 'switch', '-c', branch], cwd=root, check=True)
+        apply_files(context, draft, root)
+    else:
+        raise ValueError('无法核验远端任务分支，停止 PR 交付')
     validate_workflows(draft['file_hashes'], root)
     build(root, directory)
     verify_written(draft, root)
     check_fresh(context, root)
-    subprocess.run(['git', 'add', '--', *draft['file_hashes']], cwd=root, check=True)
-    subprocess.run(['git', '-c', 'user.name=FeeiCN[bot]', '-c', 'user.email=feei@feei.cn',
-                    'commit', '-m', f'写入已批准稿件 (#{context["issue_number"]})'], cwd=root, check=True)
-    for attempt in (1, 2):
-        check_fresh(context, root)
-        if core.baselines(root, core.files_mapping(draft['files'])) != draft['file_hashes']:
-            raise ValueError('提交后的文件不再等于批准版本')
-        pushed = subprocess.run(['git', 'push', 'origin', 'HEAD:main'], cwd=root, capture_output=True, text=True)
-        if not pushed.returncode:
-            commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
-            from workflow_delivery import delivery_report
-            report = delivery_report(list(draft['file_hashes']), context['repository'], 'done', commit, '',
-                                     f'https://github.com/{context["repository"]}/actions/runs/{os.environ.get("GITHUB_RUN_ID", "")}',
-                                     root=root, checks='批准版本、文档检查及无警告生产构建均已核验。')
-            return {'state': 'done', 'commit': commit, 'message': report}
-        if attempt == 2 or not re.search(r'non-fast-forward|fetch first', pushed.stderr):
-            raise ValueError('推送失败，未确认写入 main')
-        subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], cwd=root, check=True)
-        build(root, directory)
-    raise ValueError('写入没有完成')
+    if remote.returncode == 2:
+        subprocess.run(['git', 'add', '--', *draft['file_hashes']], cwd=root, check=True)
+        subprocess.run(['git', '-c', 'user.name=FeeiCN[bot]', '-c', 'user.email=feei@feei.cn',
+                        'commit', '-m', f'提交待审修改 (#{context["issue_number"]})'], cwd=root, check=True)
+    check_fresh(context, root)
+    if core.baselines(root, files) != draft['file_hashes']:
+        raise ValueError('提交后的文件不再等于封存版本')
+    subprocess.run(['git', 'push', 'origin', 'HEAD:refs/heads/' + branch], cwd=root, check=True)
+    body = directory / 'pull-request.md'
+    body.write_text(result['response']['message'].strip() + '\n\n'
+                    + f'Closes #{context["issue_number"]}\n\n'
+                    + '修改文件：\n' + ''.join('- `' + name + '`\n' for name in files)
+                    + '\n验证：完整稿件与目标基线、文档检查及无警告生产构建均已核验。'
+                    + '\n\n请在 Files changed 中审阅具体变动；完整文件位于本分支。未经本人确认不合并。\n')
+    check_fresh(context, root)
+    url = gh('pr', 'create', '--repo', context['repository'], '--base', 'main', '--head', branch,
+             '--title', f'修订 Issue #{context["issue_number"]} 的文件', '--body-file', body).strip()
+    if not re.fullmatch(r'https://github\.com/' + re.escape(context['repository']) + r'/pull/[1-9][0-9]*', url):
+        raise ValueError('创建 PR 后未获得有效链接，请核对运行记录')
+    return {'state': 'pr_open', 'commit': '', 'review_url': url,
+            'message': '已创建待审 PR；文档检查和无警告生产构建通过。文件尚未合入 main，请审阅差异后确认合并。'}
 
 
 
@@ -320,7 +352,28 @@ def publish_result(context, directory, outcome, root=ROOT):
                          'request': {'id': context['request']['id'], 'hash': core.request_hash(context['request'])}}
         if result['draft'] and core.git_baselines(context['base'], result['draft']['file_hashes'], root) != result['draft']['baseline']:
             raise ValueError('交付稿件基线与本轮执行提交不一致')
-        if receipt_path.exists():
+        if receipt_path.exists() and json.loads(receipt_path.read_text()).get('state') == 'pr_open':
+            receipt = json.loads(receipt_path.read_text())
+            url = receipt.get('review_url', '')
+            if (action not in {'revise', 'approve'} or receipt.get('commit')
+                    or not re.fullmatch(r'https://github\.com/' + re.escape(context['repository']) + r'/pull/[1-9][0-9]*', url)):
+                raise ValueError('PR 回执与本轮动作不一致')
+            draft = result['draft'] or context['current_draft']
+            value = {**result['response'], 'action': 'revise', 'has_changes': True,
+                     'draft_id': '', 'quote': '', 'review_url': url,
+                     'message': result['response']['message'] + '\n\n' + receipt['message']}
+            body = core.render_turn(context, value, draft, footer=run_footer(context))
+            label = 'plan-ready'
+        elif receipt_path.exists() and action == 'revise':
+            receipt = json.loads(receipt_path.read_text())
+            if receipt.get('commit') or receipt['state'] not in {'failed', 'unchanged'}:
+                raise ValueError('修订交付回执无效')
+            failed = receipt['state'] == 'failed'
+            value = {**result['response'], 'message': receipt['message']}
+            body = core.render_turn(context if not failed else {**context, 'requests': []},
+                                    value, result['draft'], footer=run_footer(context))
+            label = 'failed' if failed else 'discussing'
+        elif receipt_path.exists():
             receipt = json.loads(receipt_path.read_text())
             states = {'approve': {'done', 'unchanged', 'failed'}, 'regenerate': {'requested', 'failed'}}
             if action not in states or receipt['state'] not in states[action]:
@@ -329,7 +382,8 @@ def publish_result(context, directory, outcome, root=ROOT):
                 raise ValueError('执行回执缺少有效提交编号')
             if receipt['state'] == 'done' and not receipt['commit'] or receipt['state'] in {'failed', 'requested'} and receipt['commit']:
                 raise ValueError('执行结果与提交状态不一致')
-            execution['state'] = receipt['state']
+            if execution:
+                execution['state'] = receipt['state']
             value = {'action': 'applied' if receipt['commit'] else 'answer',
                      'message': receipt['message'], 'files': [],
                      'draft_id': (context['current_draft'] or {}).get('id', ''),
@@ -359,11 +413,6 @@ def publish_result(context, directory, outcome, root=ROOT):
         label = 'failed'
     post(context, body, root)
     outputs(label=label)
-    if receipt and receipt['state'] in {'done', 'unchanged'}:
-        try:
-            gh('issue', 'close', context['issue_number'], '--repo', context['repository'], '--reason', 'completed')
-        except subprocess.CalledProcessError:
-            print('内容已写入，但自动关闭 Issue 失败。', file=sys.stderr)
 
 
 def main():
@@ -400,7 +449,7 @@ def main():
         result = core.respond(context, STATE, args.root, footer=run_footer(context))
         issue, _ = check_fresh(context, args.root)
         action = decision(context, result, issue)
-        outputs(action=action)
+        outputs(action=action, has_files=str(bool(result['draft'])).lower())
         return
     result_path = STATE / 'result.json'
     if args.command == 'publish':
@@ -411,7 +460,7 @@ def main():
         try:
             receipt = execute_approved(context, result, args.root, STATE)
         except Exception:
-            write_json(STATE / 'receipt.json', {'state': 'failed', 'commit': '', 'message': '本轮写入未完成；请核对运行记录，尚未确认推送或部署成功。'})
+            write_json(STATE / 'receipt.json', {'state': 'failed', 'commit': '', 'message': '本轮 PR 交付未完成；请核对运行记录，未合入 main 或部署。'})
             raise
         write_json(STATE / 'receipt.json', receipt)
     elif args.command == 'regenerate':

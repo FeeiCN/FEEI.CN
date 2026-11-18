@@ -38,6 +38,7 @@ jobs:
       issue: ${{ steps.prepare.outputs.issue }}
       execution_sha: ${{ steps.prepare.outputs.execution_sha }}
       action: ${{ steps.respond.outputs.action }}
+      has_files: ${{ steps.respond.outputs.has_files }}
       artifact_id: ${{ steps.artifact.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@v6
@@ -113,11 +114,12 @@ jobs:
 
   apply:
     needs: turn
-    if: needs.turn.outputs.action == 'approve' && needs.turn.result == 'success'
+    if: needs.turn.result == 'success' && (needs.turn.outputs.action == 'approve' || needs.turn.outputs.has_files == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: write
+      pull-requests: write
       issues: read
       actions: read
     outputs:
@@ -153,15 +155,15 @@ jobs:
       - name: 安装构建依赖
         working-directory: site
         run: npm ci
-      - name: 更新阶段：核验批准并写入
+      - name: 更新阶段：核验稿件并创建待审 PR
         continue-on-error: true
         uses: ./tooling/.github/actions/workflow-status
         with:
           phase: running
-      - name: 核验批准并写入
+      - name: 核验稿件并创建待审 PR
         working-directory: site
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
           ISSUE_NUMBER: ${{ needs.turn.outputs.issue }}
         run: python3 ../tooling/scripts/issue_conversation.py apply --root "$PWD"
       - uses: actions/upload-artifact@v4

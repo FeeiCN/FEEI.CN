@@ -40,8 +40,6 @@ jobs:
           phase: running
       - name: Run sync script
         env:
-          MINIMAX_COOKIE: ${{ secrets.MINIMAX_COOKIE }}
-          MINIMAX_GROUP_ID: ${{ secrets.MINIMAX_GROUP_ID }}
           ANTHROPIC_ADMIN_KEY: ${{ secrets.ANTHROPIC_ADMIN_KEY }}
           OPENAI_ADMIN_KEY: ${{ secrets.OPENAI_ADMIN_KEY }}
         run: |

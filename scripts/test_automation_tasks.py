@@ -491,6 +491,18 @@ class AutomationResultTests(unittest.TestCase):
         self.assertIn('daily-clues-status:completed', publish.call_args.args[3])
         self.assertEqual(json.loads((self.out / 'metadata.json').read_text())['issue_url'], 'https://github.com/owner/public/issues/864')
 
+    def test_daily_delivery_requires_original_issue_and_never_falls_back_to_generic_publication(self):
+        self.task.update(id='daily-personal-record')
+        self.write_delivery_metadata()
+        for env in [{}, {'PERSONAL_DATE': '2026-11-18'}, {'PERSONAL_ISSUE': '864'},
+                    {'PERSONAL_DATE': '2026-11-18', 'PERSONAL_ISSUE': 'not-an-issue'}]:
+            with self.subTest(env=env), patch.dict('os.environ', env, clear=True), \
+                    patch.object(automation, 'destination', return_value='owner/public'), \
+                    patch.object(automation, 'gh') as api:
+                with self.assertRaisesRegex(ValueError, '不另建 Issue 或评论'):
+                    automation.deliver(self.task, self.out)
+            api.assert_not_called()
+
     def test_expired_candidate_is_saved_without_posting_stale_alert(self):
         self.task.update(id='hk-ipo-alerts', title='港股提醒')
         self.write_delivery_metadata({'expires_at': '2020-01-01T00:45:00+00:00'})

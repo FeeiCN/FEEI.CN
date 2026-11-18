@@ -294,13 +294,64 @@ def build(root, directory):
     subprocess.run(['npm', 'run', 'check:docs'], cwd=root, check=True)
 
 
-def execute_approved(context, result, root, directory):
-    issue, _ = check_fresh(context, root)
+def selected_draft(context, result, issue):
     action = decision(context, result, issue)
     draft = result['draft'] if action == 'revise' else context['current_draft']
     if action not in {'revise', 'approve'} or not draft:
         raise ValueError('本轮没有可交付的完整稿件')
     core.validate_draft(context['session_id'], draft)
+    core.issue_paths(list(core.files_mapping(draft['files'])))
+    return draft
+
+
+def validation_identity(context, draft, root):
+    return {'repository': context['repository'], 'session_id': context['session_id'],
+            'input_hash': context['input_hash'], 'draft_id': draft['id'], 'file_hashes': draft['file_hashes'],
+            'base': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()}
+
+
+def validate_candidate(context, result, root, directory):
+    proof = directory / 'checked.json'
+    proof.unlink(missing_ok=True)
+    issue, _ = check_fresh(context, root)
+    draft = selected_draft(context, result, issue)
+    if subprocess.check_output(['git', 'status', '--porcelain'], cwd=root).strip():
+        raise ValueError('验证工作区存在其他改动')
+    identity = validation_identity(context, draft, root)
+    if core.baselines(root, draft['file_hashes']) != draft['file_hashes']:
+        apply_files(context, draft, root)
+    subprocess.run(['npm', 'ci'], cwd=root, check=True)
+    validate_workflows(draft['file_hashes'], root)
+    tests = set()
+    for name in draft['file_hashes']:
+        path = Path(name)
+        candidate = path if path.name.startswith(('test_', 'test.')) else path.with_name('test_' + path.name)
+        if candidate.suffix in {'.py', '.mjs', '.cjs', '.js'} and core.target_path(root, str(candidate)).is_file():
+            tests.add(str(candidate))
+    for suffix, command in [('.py', ['python3', '-m', 'unittest']), ('.mjs', ['node', '--test']),
+                            ('.cjs', ['node', '--test']), ('.js', ['node', '--test'])]:
+        selected = sorted(name for name in tests if name.endswith(suffix))
+        if selected:
+            env = {**os.environ, 'PYTHONPATH': str(root / 'scripts')}
+            subprocess.run([*command, *selected], cwd=root, env=env, check=True)
+    if any(name.startswith(('src/', 'plugins/')) or name in {'package.json', 'package-lock.json', 'tsconfig.json'}
+           for name in draft['file_hashes']):
+        subprocess.run(['npm', 'run', 'typecheck'], cwd=root, check=True)
+    build(root, directory)
+    verify_written(draft, root)
+    check_fresh(context, root)
+    write_json(proof, identity)
+
+
+def check_validation(context, draft, root, directory):
+    proof = directory / 'checked.json'
+    if not proof.exists() or json.loads(proof.read_text()) != validation_identity(context, draft, root):
+        raise ValueError('缺少当前稿件与 main 版本的独立验证结果，请重新验证后交付')
+
+
+def execute_approved(context, result, root, directory):
+    issue, _ = check_fresh(context, root)
+    draft = selected_draft(context, result, issue)
     files = core.files_mapping(draft['files'])
     core.issue_paths(list(files))
     if subprocess.check_output(['git', 'status', '--porcelain'], cwd=root).strip():
@@ -311,6 +362,7 @@ def execute_approved(context, result, root, directory):
                 'message': 'main 中的目标文件已与当前稿件一致，本轮没有重复提交。'}
     if actual != draft['baseline']:
         raise ValueError('目标文件已被更新，需要审阅新的完整版本')
+    check_validation(context, draft, root, directory)
     branch = f'codex/issue-{context["issue_number"]}-{draft["id"][:12]}'
     pulls = json.loads(gh('pr', 'list', '--repo', context['repository'], '--head', branch,
                          '--state', 'all', '--json', 'url,state,headRefOid,baseRefName'))
@@ -340,8 +392,6 @@ def execute_approved(context, result, root, directory):
         apply_files(context, draft, root)
     else:
         raise ValueError('无法核验远端任务分支，停止 PR 交付')
-    validate_workflows(draft['file_hashes'], root)
-    build(root, directory)
     verify_written(draft, root)
     check_fresh(context, root)
     if remote.returncode == 2:
@@ -460,7 +510,7 @@ def publish_result(context, directory, outcome, root=ROOT):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['prepare', 'respond', 'publish', 'apply', 'regenerate'])
+    parser.add_argument('command', choices=['prepare', 'respond', 'publish', 'validate', 'apply', 'regenerate'])
     parser.add_argument('--issue', type=int, default=int(os.environ.get('ISSUE_NUMBER') or '0'))
     parser.add_argument('--root', type=Path, default=ROOT)
     args = parser.parse_args()
@@ -499,7 +549,9 @@ def main():
         publish_result(context, STATE, os.environ.get('TURN_OUTCOME', ''), args.root)
         return
     result = json.loads(result_path.read_text())
-    if args.command == 'apply':
+    if args.command == 'validate':
+        validate_candidate(context, result, args.root, STATE)
+    elif args.command == 'apply':
         try:
             receipt = execute_approved(context, result, args.root, STATE)
         except Exception:

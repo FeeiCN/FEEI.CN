@@ -144,9 +144,26 @@ def allowed_paths(paths):
 
 def issue_paths(paths):
     allowed_paths(paths)
-    if any(not (name.startswith(('docs/', 'blog/', 'static/media/'))
-                or re.fullmatch(r'\.github/workflows/[a-zA-Z0-9_-]+\.ya?ml', name)) for name in paths):
-        raise ValueError('写入仅支持 docs/、blog/、static/media/ 和 .github/workflows/ 内的已审阅文件')
+    for name in paths:
+        path = PurePosixPath(name)
+        parts = [part.lower() for part in path.parts]
+        if (any(part in {'.git', '.ssh', '.aws', '.codex', '.cache', '.docusaurus', 'node_modules',
+                         'build', 'dist', 'coverage', 'output', '__pycache__'} for part in parts)
+                or any(re.match(r'^(?:\.env(?:\.|$)|credentials?(?:\.|$)|secrets?(?:\.|$)|id_(?:rsa|ed25519)(?:\.|$))', part)
+                       for part in parts)
+                or path.suffix.lower() in {'.pem', '.key', '.p12', '.pfx', '.pyc'}):
+            raise ValueError('Issue PR 不支持凭证、内部文件或生成产物：' + name)
+        directory = name.startswith(('docs/', 'blog/', 'static/media/', 'scripts/', 'src/', 'plugins/',
+                                     'config/', 'tests/', 'test/', '.github/actions/'))
+        workflow = re.fullmatch(r'\.github/workflows/[a-zA-Z0-9_-]+\.ya?ml', name)
+        root_file = name in {'AGENTS.md', '.gitignore', '.prettierignore', '.prettierrc', '.eslintrc',
+                             'package.json', 'package-lock.json'} or re.fullmatch(
+            r'(?:tsconfig(?:\.[\w-]+)?\.json|(?:docusaurus|babel|postcss|eslint|jest|vitest|playwright)\.config\.[\w]+|sidebars\.[jt]s|\.(?:prettierrc|eslintrc)\.[\w]+)', name)
+        text = path.suffix.lower() in {'.md', '.mdx', '.py', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx',
+                                      '.json', '.yml', '.yaml', '.css', '.scss', '.sass', '.less', '.sh',
+                                      '.txt', '.svg', '.toml', '.ini', '.cfg', '.html', '.xml', '.sql'}
+        if not ((directory and text) or workflow or root_file):
+            raise ValueError('Issue PR 仅支持任务相关的文档、代码、测试与配置文本；不支持原始数据或无关路径：' + name)
     return paths
 
 
@@ -419,7 +436,10 @@ def prompt_for(context, archive):
     if context.get('write_scope') == 'local':
         instructions += '当前是本地入口，可以提出与本人请求直接相关的仓库文件；实际写入仍由本地会话按其权限执行。'
     else:
-        instructions += '当前是 Issue 入口，只能提出 docs/、blog/、static/media/ 内文本文件或 .github/workflows/ 直接 YAML 文件；不能修改脚本、组件、AGENTS 或原始数据。'
+        instructions += ('当前是 Issue 入口，可以提出与当前需求直接相关的文档、scripts/ 脚本、src/ 组件、plugins/、config/、tests/、test/、'
+                         '.github/actions/、.github/workflows/ 以及 AGENTS.md、package.json、package-lock.json、tsconfig 和站点工具配置文本，'
+                         '由固定程序验证后创建待审 PR；不允许凭证、Git 内部文件、生成产物、static/data/ 原始数据或无关文件。'
+                         '涉及 workflow、权限、认证或部署时仍先给计划并等待本人确认；新增修改不能继承旧版本批准，不能直接合并或发布。')
     if context.get('task') == 'daily-personal-record':
         instructions += '本人补充经历时，先读取档案 source_issue 中自动线索和数据，再默认整理成 goal.diary_target 的完整日记文件；纯问题先回答，缺少事实时只说明必要缺口。'
     selected = {key: context.get(key) for key in (

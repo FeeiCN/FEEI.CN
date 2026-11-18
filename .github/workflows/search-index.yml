@@ -1,0 +1,49 @@
+name: 网站搜索索引
+
+on:
+  schedule:
+    # 北京时间每天 03:00，仅更新已发布页面的搜索索引。
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: search-index
+  cancel-in-progress: false
+
+env:
+  REPO_DIR: /data/wufeifei.com
+  SITE_ROOT: /data/wufeifei.com-site
+
+jobs:
+  index:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.actor == github.repository_owner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -T 10 -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+      - name: Rebuild search index for the published release
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "SITE_ROOT='${{ env.SITE_ROOT }}' REPO_DIR='${{ env.REPO_DIR }}' bash -se" <<'EOF'
+          set -euo pipefail
+          exec 9>"$SITE_ROOT/.deploy.lock"
+          flock --wait 600 9 || { echo "ERROR: deployment lock timeout"; exit 1; }
+          exec 8>"$SITE_ROOT/.search-index.lock"
+          flock --wait 60 8 || { echo "ERROR: search index lock timeout"; exit 1; }
+          [ -L "$SITE_ROOT/current" ] || { echo "ERROR: no published release"; exit 1; }
+          release_dir="$(readlink -f "$SITE_ROOT/current")"
+          [ -s "$release_dir/index.html" ] || { echo "ERROR: published homepage missing"; exit 1; }
+          cd "$REPO_DIR"
+          echo "[search-index] release=$(basename "$release_dir")"
+          timeout --signal=TERM --kill-after=30s 480 node scripts/build_search_index.mjs "$release_dir"
+          EOF

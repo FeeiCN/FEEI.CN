@@ -224,22 +224,6 @@ jobs:
           fi
           quality_base="$old_head"
           if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then quality_base="$deployed_head"; fi
-          # Observe the previous release's asynchronous index build on every deploy.
-          # A successful page publish does not prove that search indexing finished.
-          if [ -n "$previous_release" ]; then
-            index_status_file="$previous_release/search-index-status.json"
-            echo "[deploy-index-check] previous_release=$deployed_head"
-            if [ -s "$index_status_file" ]; then
-              grep -E '"(status|updatedAt|pages|durationMs)"' "$index_status_file" || true
-            else
-              echo "[deploy-index-check] index_status=missing"
-            fi
-            if [ -s "$previous_release/search-index.json" ]; then
-              echo "[deploy-index-check] index_bytes=$(stat -c%s "$previous_release/search-index.json")"
-            else
-              echo "[deploy-index-check] index_file=missing"
-            fi
-          fi
           echo "old_head=$old_head"
           echo "new_head=$new_head"
           echo "deployed_head=${deployed_head:-none}"
@@ -262,20 +246,8 @@ jobs:
           scope="$(node scripts/deployment_scope.mjs "$deployed_head" "$new_head")"
           echo "[deploy-scope] $scope"
           pages_changed="$(node -e 'console.log(JSON.parse(process.argv[1]).pages)' "$scope")"
-          search_changed="$(node -e 'console.log(JSON.parse(process.argv[1]).search)' "$scope")"
           if [ "$pages_changed" = false ] && [ "$RESET_RSPACK_CACHE" != true ] && [ -n "$previous_release" ]; then
-            exec 8>"$site_root/.search-index.lock"
-            flock --wait 1200 8 || { echo "ERROR: search index is still running after 20 minutes"; exit 1; }
-            index_ready=false
-            if [ -s "$previous_release/search-index-status.json" ]; then
-              index_ready="$(node -e 'try { console.log(JSON.parse(require("fs").readFileSync(process.argv[1])).status === "success") } catch { console.log(false) }' "$previous_release/search-index-status.json")"
-            fi
-            if [ "$search_changed" = true ] || [ "$index_ready" != true ] || [ ! -s "$previous_release/search-index-manifest.json" ]; then
-              group_start "Refresh search index without rebuilding pages"
-              node scripts/build_search_index.mjs "$previous_release"
-              group_end "Refresh search index without rebuilding pages"
-            fi
-            echo "No page build inputs changed; shared data refreshed, Docusaurus build skipped."
+            echo "No page build inputs changed; shared data refreshed, search waits for its nightly job."
             exit 0
           fi
 
@@ -383,10 +355,12 @@ jobs:
           ln -s "$music_root" "$staging_dir/music"
           ln -s "$data_root" "$staging_dir/data"
 
-          # Publish immediately. Reuse the previous release's search index so
-          # search remains available while the new index is rebuilt in background.
+          # Keep the last nightly index until the independent search job updates it.
           if [ -n "$previous_release" ] && [ -s "$previous_release/search-index.json" ]; then
             cp "$previous_release/search-index.json" "$staging_dir/search-index.json"
+            if [ -s "$previous_release/search-index-status.json" ]; then
+              cp "$previous_release/search-index-status.json" "$staging_dir/search-index-status.json"
+            fi
             if [ -s "$previous_release/search-index-manifest.json" ]; then
               cp "$previous_release/search-index-manifest.json" "$staging_dir/search-index-manifest.json"
               cp -a "$previous_release/search-index-assets" "$staging_dir/search-index-assets"
@@ -399,29 +373,8 @@ jobs:
           mv -Tf "$next_current_link" "$current_link"
           group_end "Publish release"
 
-          # Search indexing is deliberately outside the publish critical path.
-          # Build into the already-published immutable release and replace the
-          # inherited index atomically when ready. Failure must not roll back deploy.
-          search_log="$site_root/search-index-${release_name}.log"
-          nohup bash -c '
-            release_dir="$1"
-            repo_dir="$2"
-            search_log="$3"
-            release_name="$4"
-            site_root="$5"
-            exec 8>"$site_root/.search-index.lock"
-            flock --wait 1200 8 || { echo "[search-index] lock timeout" >>"$search_log"; exit 1; }
-            if node "$repo_dir/scripts/build_search_index.mjs" "$release_dir" >"$search_log" 2>&1; then
-              echo "[search-index] background rebuild completed for $release_name" >>"$search_log"
-            else
-              echo "[search-index] background rebuild failed for $release_name" >>"$search_log"
-            fi
-          ' _ "$release_dir" "$repo_dir" "$search_log" "$release_name" "$site_root" </dev/null >/dev/null 2>&1 9>&- &
-          echo "[search-index] background rebuild started pid=$! release=$release_name"
-
           group_start "Clean old releases"
           ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf
-          find "$site_root" -maxdepth 1 -type f -name 'search-index-*.log' -mtime +7 -delete || true
           group_end "Clean old releases"
           EOF
 

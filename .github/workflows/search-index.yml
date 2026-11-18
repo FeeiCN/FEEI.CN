@@ -44,7 +44,6 @@ jobs:
           release_dir="$(readlink -f "$SITE_ROOT/current")"
           [ -s "$release_dir/index.html" ] || { echo "ERROR: published homepage missing"; exit 1; }
           cd "$REPO_DIR"
-          node scripts/prepare_build_dependencies.mjs "$SITE_ROOT/build-cache"
           echo "[search-index] release=$(basename "$release_dir")"
           timeout --signal=TERM --kill-after=30s 480 node scripts/build_search_index.mjs "$release_dir"
           EOF

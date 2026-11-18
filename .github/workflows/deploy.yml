@@ -7,13 +7,19 @@ on:
         description: 只读检查服务器连接、部署锁和发布版本
         type: boolean
         default: false
-      check_run_id:
-        description: 严格检查成功运行编号，留空使用当前 main 的最新成功产物
-        type: string
+      reset_rspack_cache:
+        description: 清理 Rspack 构建缓存后重新构建
+        type: boolean
+        default: false
   workflow_run:
     workflows: ['网站严格检查']
     types: [completed]
     branches: [main]
+
+concurrency:
+  group: ${{ inputs.inspect_only && 'deploy-inspection' || 'deploy' }}
+  # Let the active deployment finish; GitHub retains only the latest pending run.
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -29,7 +35,6 @@ env:
 jobs:
   inspect:
     if: github.event_name == 'workflow_dispatch' && inputs.inspect_only && github.actor == github.repository_owner && github.ref == 'refs/heads/main'
-    concurrency: deploy-inspection
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
@@ -87,95 +92,272 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-
-  prepare:
+  deploy:
     if: >-
       !inputs.inspect_only &&
       ((github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && github.ref == 'refs/heads/main') ||
        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
-    outputs:
-      ready: ${{ steps.source.outputs.ready }}
-      commit: ${{ steps.source.outputs.commit }}
-      run_id: ${{ steps.source.outputs.run_id }}
-      attempt: ${{ steps.source.outputs.attempt }}
-      artifact_id: ${{ steps.source.outputs.artifact_id }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - name: Resolve successful main build
-        id: source
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_RUN_ID: ${{ github.event.workflow_run.id || inputs.check_run_id }}
-        run: python3 scripts/site_artifact.py resolve
-
-  deploy:
-    needs: prepare
-    if: needs.prepare.outputs.ready == 'true'
-    runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      SITE_COMMIT: ${{ needs.prepare.outputs.commit }}
-      SITE_RUN_ID: ${{ needs.prepare.outputs.run_id }}
-      SITE_ATTEMPT: ${{ needs.prepare.outputs.attempt }}
     steps:
       - name: Checkout delivery formatter
         uses: actions/checkout@v6
         with:
           persist-credentials: false
+
       - name: 开始任务状态
         uses: ./.github/actions/workflow-status
         continue-on-error: true
         with:
           phase: preparing
           task: ${{ github.job }}
-      - name: Download verified build on Actions runner
-        uses: actions/download-artifact@v4
-        with:
-          artifact-ids: ${{ needs.prepare.outputs.artifact_id }}
-          run-id: ${{ needs.prepare.outputs.run_id }}
-          github-token: ${{ github.token }}
-          path: output/site
-          merge-multiple: true
-      - name: Verify commit, source attempt, digest and archive paths
-        run: python3 scripts/site_artifact.py verify
       - name: Setup SSH
-        env:
-          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_PORT: ${{ secrets.SERVER_PORT }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/deploy_key
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -T 10 -p "$SERVER_PORT" "$SERVER_HOST" >> ~/.ssh/known_hosts
-      - name: 更新阶段：上传并发布
+          ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: 更新阶段：执行任务
         uses: ./.github/actions/workflow-status
         continue-on-error: true
         with:
           phase: running
-      - name: Upload with SCP and publish on server
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_PORT: ${{ secrets.SERVER_PORT }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
+      - name: Deploy on server
         run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' RESET_RSPACK_CACHE='${{ inputs.reset_rspack_cache || false }}' bash -se" <<'EOF'
           set -euo pipefail
-          ssh_args=(-o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -i ~/.ssh/deploy_key -p "$SERVER_PORT")
-          remote_dir="$(ssh "${ssh_args[@]}" "$SERVER_USER@$SERVER_HOST" "mkdir -p '$SITE_ROOT/incoming'; mktemp -d '$SITE_ROOT/incoming/site-$GITHUB_RUN_ID-XXXXXX'")"
-          [[ "$remote_dir" == "$SITE_ROOT"/incoming/site-* && "${remote_dir##*/}" =~ ^site-[0-9]+-[a-zA-Z0-9]+$ ]] || { echo 'Invalid upload directory'; exit 1; }
-          cleanup_upload() {
-            ssh "${ssh_args[@]}" "$SERVER_USER@$SERVER_HOST" "rm -rf -- '$remote_dir'" >/dev/null 2>&1 || true
+
+          timer_start=0
+          start_timer() { timer_start="$(date +%s)"; }
+          format_duration() { local t="$1"; if [ "$t" -ge 60 ]; then echo "$((t/60))分$((t%60))秒"; else echo "${t}秒"; fi; }
+          end_timer() { local name="$1"; local duration=$(($(date +%s)-timer_start)); echo "[deploy-timing] ${name}: $(format_duration "$duration")"; }
+          group_start() { echo "::group::$1"; start_timer; }
+          group_end() { end_timer "$1"; echo "::endgroup::"; }
+
+          repo_dir="$REPO_DIR"
+          site_root="$SITE_ROOT"
+          media_root="$MEDIA_ROOT"
+          music_root="$MUSIC_ROOT"
+          data_root="$DATA_ROOT"
+          releases_dir="$site_root/releases"
+          current_link="$site_root/current"
+          next_current_link="$site_root/current.next"
+          deploy_lock_file="$site_root/.deploy.lock"
+          releases_to_keep=2
+          staging_dir=""
+          active_build_pid=""
+          hidden_data_dir="$repo_dir/static/.data.deploy-hidden"
+
+          mkdir -p "$site_root"
+          exec 9>"$deploy_lock_file"
+          flock --wait 1200 9 || { echo "ERROR: another deployment is still running after waiting 20 minutes"; exit 1; }
+          echo "Deployment lock acquired: $deploy_lock_file"
+
+          restore_data_source() {
+            if [ -d "$hidden_data_dir" ]; then
+              if [ ! -e "$repo_dir/static/data" ]; then mv "$hidden_data_dir" "$repo_dir/static/data"; else rm -rf "$hidden_data_dir"; fi
+            fi
           }
-          trap cleanup_upload EXIT
-          scp -o BatchMode=yes -o ConnectTimeout=15 -i ~/.ssh/deploy_key -P "$SERVER_PORT" \
-            output/site/site.tar.gz output/site/manifest.json scripts/site_artifact.py scripts/publish_site_artifact.sh \
-            "$SERVER_USER@$SERVER_HOST:$remote_dir/"
-          ssh "${ssh_args[@]}" "$SERVER_USER@$SERVER_HOST" \
-            "REPO_DIR='$REPO_DIR' SITE_ROOT='$SITE_ROOT' MEDIA_ROOT='$MEDIA_ROOT' MUSIC_ROOT='$MUSIC_ROOT' DATA_ROOT='$DATA_ROOT' GITHUB_REPOSITORY='$GITHUB_REPOSITORY' SITE_COMMIT='$SITE_COMMIT' SITE_RUN_ID='$SITE_RUN_ID' SITE_ATTEMPT='$SITE_ATTEMPT' bash '$remote_dir/publish_site_artifact.sh' '$remote_dir' '$SITE_COMMIT'"
+          cleanup_deploy() {
+            exit_status=$?
+            trap - EXIT HUP INT TERM
+            if [ -n "$active_build_pid" ] && kill -0 "$active_build_pid" 2>/dev/null; then
+              kill -TERM -- "-$active_build_pid" 2>/dev/null || kill -TERM "$active_build_pid" 2>/dev/null || true
+              sleep 2
+              kill -KILL -- "-$active_build_pid" 2>/dev/null || kill -KILL "$active_build_pid" 2>/dev/null || true
+              wait "$active_build_pid" 2>/dev/null || true
+            fi
+            restore_data_source
+            if [ -n "$staging_dir" ] && [ -e "$staging_dir" ]; then rm -rf "$staging_dir"; fi
+            exit "$exit_status"
+          }
+          trap cleanup_deploy EXIT
+          trap 'exit 143' HUP INT TERM
+
+          group_start "Prepare repository"
+          cd "$repo_dir"
+          restore_data_source
+          old_head="$(git rev-parse HEAD)"
+          pull_ok=false
+          for pull_attempt in 1 2 3 4 5; do
+            echo "git pull attempt $pull_attempt of 5"
+            if git pull origin main; then
+              pull_ok=true
+              break
+            fi
+            if [ "$pull_attempt" -lt 5 ]; then
+              sleep $((pull_attempt * 10))
+            fi
+          done
+          [ "$pull_ok" = true ] || { echo "ERROR: git pull failed after 5 attempts"; exit 1; }
+          new_head="$(git rev-parse HEAD)"
+          deployed_head=""
+          previous_release=""
+          if [ -L "$current_link" ]; then
+            previous_release="$(readlink -f "$current_link")"
+            deployed_head="$(basename "$previous_release")"
+          fi
+          quality_base="$old_head"
+          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then quality_base="$deployed_head"; fi
+          echo "old_head=$old_head"
+          echo "new_head=$new_head"
+          echo "deployed_head=${deployed_head:-none}"
+          group_end "Prepare repository"
+
+          group_start "Check docs quality"
+          npm run check:docs -- --base="$quality_base"
+          group_end "Check docs quality"
+
+          group_start "Prepare shared assets"
+          rm -rf static/media static/music
+          mkdir -p "$data_root"
+          # Weather is generated data: keep its authoritative cache in the
+          # persistent shared data root instead of the Git working tree.
+          node scripts/build_weather_cache.mjs "$data_root/weather"
+          python3 scripts/sleep_score_storage.py seed --root "$data_root/sleep-score" --legacy-root static/data/sleep-score
+          rsync -a --delete --exclude 'weather/' --exclude 'health/' --exclude 'sleep-score/' static/data/ "$data_root/"
+          group_end "Prepare shared assets"
+
+          scope="$(node scripts/deployment_scope.mjs "$deployed_head" "$new_head")"
+          echo "[deploy-scope] $scope"
+          pages_changed="$(node -e 'console.log(JSON.parse(process.argv[1]).pages)' "$scope")"
+          if [ "$pages_changed" = false ] && [ "$RESET_RSPACK_CACHE" != true ] && [ -n "$previous_release" ]; then
+            echo "No page build inputs changed; shared data refreshed, search waits for its nightly job."
+            exit 0
+          fi
+
+          group_start "Install dependencies if needed"
+          node scripts/prepare_build_dependencies.mjs "$site_root/build-cache"
+          group_end "Install dependencies if needed"
+
+          group_start "Clean build cache and stale releases"
+          build_cache="$site_root/build-cache"
+          if [ "$RESET_RSPACK_CACHE" = true ]; then
+            rm -rf -- "$build_cache/rspack"
+            echo "[build-cache] Cleared Rspack cache for a cold build: $build_cache/rspack"
+          fi
+          if [ -d "$build_cache" ]; then
+            cache_size_kb="$(du -sk "$build_cache" | cut -f1)"
+            echo "build_cache_size_kb=$cache_size_kb"
+            # Preserve Rspack/MDX persistent caches across docs builds. The cache
+            # was 1.94 GiB on run 40728880639, dangerously close to the old 2 GiB
+            # eviction threshold; /data had 70 GiB free. Cap at 4 GiB instead.
+            if [ "$cache_size_kb" -gt 4194304 ]; then rm -rf "$build_cache"; mkdir -p "$build_cache"; fi
+          fi
+          mkdir -p "$releases_dir"
+          find "$releases_dir" -mindepth 1 -maxdepth 1 -type d -name '*.tmp' -exec rm -rf {} +
+          ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf
+          group_end "Clean build cache and stale releases"
+
+          group_start "Type check"
+          # A docs/data-only release cannot change TypeScript source or its configuration.
+          # Docusaurus still compiles and validates all changed MDX during the build.
+          typecheck_required=true
+          if [ -n "$deployed_head" ] && git cat-file -e "${deployed_head}^{commit}" 2>/dev/null; then
+            typecheck_required=false
+            while IFS= read -r changed_file; do
+              case "$changed_file" in
+                docs/*|static/data/*) ;;
+                *) typecheck_required=true; break ;;
+              esac
+            done < <(git -c core.quotePath=false diff --name-only "$deployed_head" "$new_head")
+          fi
+          if [ "$typecheck_required" = true ]; then
+            npm run typecheck
+          else
+            echo "Docs/data-only release; skip redundant TypeScript typecheck."
+          fi
+          group_end "Type check"
+
+          release_name="$(git rev-parse HEAD)"
+          release_dir="$releases_dir/$release_name"
+          # Use release-scoped staging to avoid cross-build output cache interactions.
+          # The unpublished temporary directory is renamed into its immutable release.
+          staging_dir="${release_dir}.tmp"
+          rm -rf "$staging_dir"
+          mv static/data "$hidden_data_dir"
+
+          # Read-only pressure/IO snapshots help distinguish slow Rspack cache
+          # rebuilds from system-level disk and memory contention.
+          build_resource_snapshot() {
+            local phase="$1" kind
+            echo "[build-snapshot] phase=$phase at=$(date -Is)"
+            for kind in cpu io memory; do
+              if [ -r "/proc/pressure/$kind" ]; then
+                while IFS= read -r line; do echo "[build-pressure] phase=$phase kind=$kind $line"; done < "/proc/pressure/$kind"
+              fi
+            done
+            if [ -r /proc/vmstat ]; then
+              awk -v phase="$phase" '$1 ~ /^(pswpin|pswpout|pgmajfault|pgpgin|pgpgout)$/ {print "[build-vmstat] phase=" phase " " $1 "=" $2}' /proc/vmstat
+            fi
+          }
+
+          group_start "Build Docusaurus"
+          echo "[build-resources] CPUs=$(nproc)"
+          echo "[build-resources] RAYON_NUM_THREADS=4"
+          echo "[build-resources] DOCUSAURUS_SSG_WORKER_THREAD_COUNT=4"
+          free -h || true
+          df -h "$site_root" || true
+          build_resource_snapshot before
+          if [ -d node_modules/.cache ]; then
+            echo "[build-cache] largest top-level entries (KiB):"
+            du -sk node_modules/.cache/* 2>/dev/null | sort -rn | head -n 12 || true
+          fi
+          build_timeout_seconds=900
+          run_build() {
+            local build_status
+            setsid timeout --signal=TERM --kill-after=30s "$build_timeout_seconds" \
+              env CI_STRICT=true COMPLIANCE_ONTOLOGY_DATA_DIR="$hidden_data_dir/compliance" RAYON_NUM_THREADS=4 DOCUSAURUS_SSG_WORKER_THREAD_COUNT=4 DOCUSAURUS_PERF_LOGGER=true /usr/bin/time -v npm run build -- --out-dir "$staging_dir" &
+            active_build_pid=$!
+            if wait "$active_build_pid"; then build_status=0; else build_status=$?; fi
+            active_build_pid=""
+            return "$build_status"
+          }
+          rm -rf "$staging_dir"
+          if ! run_build; then
+            build_resource_snapshot after
+            echo "Build failed"
+            exit 1
+          fi
+          build_resource_snapshot after
+          group_end "Build Docusaurus"
+          restore_data_source
+
+          group_start "Publish release"
+          mkdir -p "$media_root" "$music_root" "$data_root"
+          rm -rf "$staging_dir/media" "$staging_dir/music" "$staging_dir/data"
+          ln -s "$media_root" "$staging_dir/media"
+          ln -s "$music_root" "$staging_dir/music"
+          ln -s "$data_root" "$staging_dir/data"
+
+          # Keep the last nightly index until the independent search job updates it.
+          if [ -n "$previous_release" ] && [ -s "$previous_release/search-index.json" ]; then
+            cp "$previous_release/search-index.json" "$staging_dir/search-index.json"
+            if [ -s "$previous_release/search-index-status.json" ]; then
+              cp "$previous_release/search-index-status.json" "$staging_dir/search-index-status.json"
+            fi
+            if [ -s "$previous_release/search-index-manifest.json" ]; then
+              cp "$previous_release/search-index-manifest.json" "$staging_dir/search-index-manifest.json"
+              cp -a "$previous_release/search-index-assets" "$staging_dir/search-index-assets"
+            fi
+          fi
+          rm -rf "$release_dir"
+          mv "$staging_dir" "$release_dir"
+          staging_dir=""
+          ln -sfn "$release_dir" "$next_current_link"
+          mv -Tf "$next_current_link" "$current_link"
+          group_end "Publish release"
+
+          group_start "Clean old releases"
+          ls -1dt "$releases_dir"/* 2>/dev/null | tail -n +$((releases_to_keep + 1)) | xargs -r rm -rf
+          group_end "Clean old releases"
+          EOF
+
       - name: 记录部署结果
         if: always() && hashFiles('scripts/workflow_delivery.py') != ''
         env:

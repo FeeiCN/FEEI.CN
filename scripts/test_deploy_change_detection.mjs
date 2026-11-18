@@ -3,6 +3,7 @@ import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {createRequire} from 'node:module';
 import test from 'node:test';
 import {deploymentScope} from './deployment_scope.mjs';
 
@@ -26,10 +27,43 @@ test('missing deployed baseline conservatively rebuilds', () => {
   assert.equal(JSON.parse(result.stdout).pages, true);
 });
 
-test('workflow uses scope classifier and retries failed or missing indexes', () => {
+test('page deployments never rebuild search; nightly workflow targets the locked published release', () => {
+  const require = createRequire(import.meta.url);
+  const yaml = require('js-yaml');
   const workflow = fs.readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8');
   assert.match(workflow, /node scripts\/deployment_scope.mjs/);
-  assert.match(workflow, /\[ "\$index_ready" != true \]/);
+  const deploy = yaml.load(workflow).jobs.deploy.steps.map((step) => step.run || '').join('\n');
+  assert.doesNotMatch(deploy, /build_search_index\.mjs|nohup|index_ready|search_changed/);
+  const nightly = yaml.load(fs.readFileSync(new URL('../.github/workflows/search-index.yml', import.meta.url), 'utf8'));
+  assert.deepEqual(nightly.on.schedule, [{cron: '0 19 * * *'}]);
+  assert.equal(nightly.on.push, undefined);
+  assert.equal(nightly.on.workflow_run, undefined);
+  const run = nightly.jobs.index.steps.find((step) => step.name === 'Rebuild search index for the published release').run;
+  assert.ok(run.indexOf('flock --wait 600 9') >= 0);
+  assert.ok(run.indexOf('flock --wait 600 9') < run.indexOf('readlink -f'));
+  assert.match(run, /readlink -f "\$SITE_ROOT\/current"/);
+  assert.match(run, /timeout .* node scripts\/build_search_index\.mjs "\$release_dir"/);
+  assert.doesNotMatch(run, /git pull|npm ci|npm run build|nohup/);
+});
+
+test('new page releases inherit the last nightly index and its status without regeneration', () => {
+  const workflow = fs.readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8');
+  const inheritance = workflow.match(/          if \[ -n "\$previous_release" \] && \[ -s "\$previous_release\/search-index.json" \]; then[\s\S]*?\n          fi/)[0];
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'deploy-nightly-search-'));
+  try {
+    const previous = path.join(root, 'previous');
+    const staging = path.join(root, 'staging');
+    fs.mkdirSync(path.join(previous, 'search-index-assets'), {recursive: true});
+    fs.mkdirSync(staging);
+    const files = ['search-index.json', 'search-index-manifest.json', 'search-index-status.json', 'search-index-assets/shard.json.gz'];
+    for (const file of files) fs.writeFileSync(path.join(previous, file), `last-night:${file}`);
+    const result = spawnSync('bash', ['-euo', 'pipefail', '-c', 'previous_release="$1"; staging_dir="$2";\n' + inheritance,
+      'inheritance-test', previous, staging], {encoding: 'utf8'});
+    assert.equal(result.status, 0, result.stderr);
+    for (const file of files) assert.equal(fs.readFileSync(path.join(staging, file), 'utf8'), `last-night:${file}`);
+  } finally {
+    fs.rmSync(root, {recursive: true, force: true});
+  }
 });
 
 test('manual recovery clears only Rspack cache under the deployment lock and forces a build', () => {

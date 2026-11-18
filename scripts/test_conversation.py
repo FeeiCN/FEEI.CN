@@ -60,6 +60,10 @@ class ConversationTests(unittest.TestCase):
         self.addCleanup(github.stop)
 
     def github(self, *args):
+        if args[:2] == ('pr', 'list'):
+            return '[]'
+        if args[:2] == ('pr', 'create'):
+            return 'https://github.com/owner/repo/pull/955\n'
         if args[:2] == ('issue', 'comment'):
             self.add_message(legacy.BOT, Path(args[-1]).read_text())
             return 'https://github.com/owner/repo/issues/940#comment'
@@ -118,19 +122,114 @@ class ConversationTests(unittest.TestCase):
         result = core.respond(context, self.directory, self.root, self.executor(self.approve(context)))
         run = subprocess.run
         def commands(args, **kwargs):
+            if args[:2] == ['git', 'ls-remote']:
+                return subprocess.CompletedProcess(args, 2, '', '')
             if args[:2] == ['git', 'push']:
                 return subprocess.CompletedProcess(args, 0, '', '')
             return run(args, **kwargs)
         with patch.object(adapter, 'build') as build, patch.object(adapter.subprocess, 'run', side_effect=commands):
             receipt = adapter.execute_approved(context, result, self.root, self.directory)
-        self.assertEqual(receipt['state'], 'done')
+        self.assertEqual(receipt['state'], 'pr_open')
         self.assertEqual((self.root / FILE).read_text(), revised)
         self.assertEqual(build.call_count, 1)
         adapter.write_json(self.directory / 'receipt.json', receipt)
         adapter.publish_result(context, self.directory, 'success', self.root)
         self.assertIsNone(self.context())
-        self.assertEqual(self.issue['state'], 'CLOSED')
+        self.assertEqual(self.issue['state'], 'OPEN')
         self.assertEqual(len(self.calls), 4)
+
+    def test_revision_creates_pr_before_approval_and_preserves_full_draft(self):
+        context = self.context()
+        result = core.respond(context, self.directory, self.root, self.executor(self.propose()))
+        run = subprocess.run
+        pushes = []
+        def commands(args, **kwargs):
+            if args[:2] == ['git', 'ls-remote']:
+                return subprocess.CompletedProcess(args, 2, '', '')
+            if args[:2] == ['git', 'push']:
+                pushes.append(args)
+                return subprocess.CompletedProcess(args, 0, '', '')
+            return run(args, **kwargs)
+        with patch.object(adapter, 'build'), patch.object(adapter.subprocess, 'run', side_effect=commands):
+            receipt = adapter.execute_approved(context, result, self.root, self.directory)
+        self.assertEqual(receipt['state'], 'pr_open')
+        self.assertTrue(pushes[0][-1].startswith('HEAD:refs/heads/codex/issue-940-'))
+        self.assertNotIn('HEAD:main', pushes[0])
+        adapter.write_json(self.directory / 'receipt.json', receipt)
+        adapter.publish_result(context, self.directory, 'success', self.root)
+        body = self.issue['comments'][-1]['body']
+        visible = body.split(core.TURN)[0]
+        self.assertIn('/pull/955/files', visible)
+        self.assertNotIn('有证据的新版正文', visible)
+        self.assertNotIn('完整文件与验证方式', visible)
+        restored = core.read_turn(body, context['session_id'])
+        self.assertEqual(restored['draft'], result['draft'])
+        self.assertEqual(self.issue['state'], 'OPEN')
+        self.assertEqual(restored['commit'], '')
+
+    def test_retry_reuses_exact_open_pr_and_rejects_modified_branch(self):
+        remote = self.root / 'output/remote.git'
+        subprocess.run(['git', 'init', '--bare', '-q', str(remote)], check=True)
+        subprocess.run(['git', 'remote', 'add', 'origin', str(remote)], cwd=self.root, check=True)
+        context = self.context()
+        result = core.respond(context, self.directory, self.root, self.executor(self.propose()))
+        with patch.object(adapter, 'build'):
+            first = adapter.execute_approved(context, result, self.root, self.directory)
+        branch = subprocess.check_output(['git', 'branch', '--show-current'], cwd=self.root, text=True).strip()
+        head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.root, text=True).strip()
+        subprocess.run(['git', 'switch', '--detach', self.base], cwd=self.root, check=True)
+        pr = {'url': first['review_url'], 'state': 'OPEN', 'headRefOid': head, 'baseRefName': 'main'}
+        with patch.object(adapter, 'gh', return_value=json.dumps([pr])) as github:
+            retry = adapter.execute_approved(context, result, self.root, self.directory)
+        self.assertEqual(retry['review_url'], first['review_url'])
+        self.assertEqual(github.call_count, 1)
+        subprocess.run(['git', 'switch', branch], cwd=self.root, check=True)
+        (self.root / FILE).write_text('PR 被改为其他内容')
+        subprocess.run(['git', 'commit', '-qam', 'tampered'], cwd=self.root, check=True)
+        subprocess.run(['git', 'push', '-q', 'origin', branch], cwd=self.root, check=True)
+        pr['headRefOid'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.root, text=True).strip()
+        subprocess.run(['git', 'switch', '--detach', self.base], cwd=self.root, check=True)
+        with patch.object(adapter, 'gh', return_value=json.dumps([pr])):
+            with self.assertRaisesRegex(ValueError, '现有 PR 与封存稿件不一致'):
+                adapter.execute_approved(context, result, self.root, self.directory)
+
+    def test_pushed_branch_without_pr_can_be_recovered_without_replacing_commit(self):
+        remote = self.root / 'output/recovery.git'
+        subprocess.run(['git', 'init', '--bare', '-q', str(remote)], check=True)
+        subprocess.run(['git', 'remote', 'add', 'origin', str(remote)], cwd=self.root, check=True)
+        context = self.context()
+        result = core.respond(context, self.directory, self.root, self.executor(self.propose()))
+        with patch.object(adapter, 'build'):
+            adapter.execute_approved(context, result, self.root, self.directory)
+        branch = subprocess.check_output(['git', 'branch', '--show-current'], cwd=self.root, text=True).strip()
+        head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.root, text=True).strip()
+        subprocess.run(['git', 'switch', '--detach', self.base], cwd=self.root, check=True)
+        subprocess.run(['git', 'branch', '-D', branch], cwd=self.root, check=True, stdout=subprocess.DEVNULL)
+        with patch.object(adapter, 'build') as build:
+            receipt = adapter.execute_approved(context, result, self.root, self.directory)
+        self.assertEqual(receipt['state'], 'pr_open')
+        self.assertEqual(subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.root, text=True).strip(), head)
+        self.assertEqual(build.call_count, 1)
+
+    def test_failed_pr_delivery_preserves_new_draft_and_pending_request(self):
+        context = self.context()
+        result = core.respond(context, self.directory, self.root, self.executor(self.propose()))
+        adapter.write_json(self.directory / 'receipt.json',
+                           {'state': 'failed', 'commit': '', 'message': 'PR 创建未完成。'})
+        adapter.publish_result(context, self.directory, 'success', self.root)
+        restored = self.context()
+        self.assertIsNotNone(restored)
+        self.assertEqual(restored['current_draft'], result['draft'])
+        self.assertEqual(self.issue['state'], 'OPEN')
+
+    def test_pr_delivery_rejects_updated_target_before_pushing(self):
+        context = self.context()
+        result = core.respond(context, self.directory, self.root, self.executor(self.propose()))
+        (self.root / FILE).write_text('其他人修改了文件')
+        subprocess.run(['git', 'add', FILE], cwd=self.root, check=True)
+        subprocess.run(['git', 'commit', '-qm', 'concurrent change'], cwd=self.root, check=True)
+        with self.assertRaisesRegex(ValueError, '目标文件已被更新'):
+            adapter.execute_approved(context, result, self.root, self.directory)
 
     def test_followup_question_retains_draft_and_current_version_is_not_truncated(self):
         large = UPDATED + '更多证据。' * 1000
@@ -494,7 +593,7 @@ class ConversationTests(unittest.TestCase):
 
 
 class WorkflowBoundaryTests(unittest.TestCase):
-    def test_model_publication_and_main_writes_have_separate_authority(self):
+    def test_model_publication_and_pr_writes_have_separate_authority(self):
         import yaml
         workflow = yaml.safe_load((core.ROOT / '.github/workflows/codex-issue-driver.yml').read_text())
         jobs = workflow['jobs']
@@ -504,6 +603,8 @@ class WorkflowBoundaryTests(unittest.TestCase):
         self.assertEqual(jobs['publish']['permissions']['issues'], 'write')
         self.assertEqual(jobs['apply']['permissions']['issues'], 'read')
         self.assertEqual(jobs['apply']['permissions']['contents'], 'write')
+        self.assertEqual(jobs['apply']['permissions']['pull-requests'], 'write')
+        self.assertIn('has_files', jobs['apply']['if'])
         self.assertEqual(jobs['regenerate']['permissions']['actions'], 'write')
         for job in jobs.values():
             for step in job['steps']:

@@ -48,6 +48,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install daily verification dependencies
+        run: python3 -m pip install PyYAML
       - name: Verify daily creation and refresh rules
         run: python3 -m unittest discover -s scripts -p test_daily_personal_record.py
       - name: 更新阶段：执行任务

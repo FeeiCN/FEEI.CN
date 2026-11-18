@@ -1,6 +1,7 @@
 import base64
 from copy import deepcopy
 import gzip
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -162,7 +163,8 @@ class ConversationTests(unittest.TestCase):
         self.assertIn('/pull/955/files', visible)
         self.assertNotIn('有证据的新版正文', visible)
         self.assertNotIn('完整文件与验证方式', visible)
-        restored = core.read_turn(body, context['session_id'])
+        restored = core.read_turn(body, context['session_id'],
+                                  lambda source, paths: adapter.load_draft_files(source, paths, REPO, self.root))
         self.assertEqual(restored['draft'], result['draft'])
         self.assertEqual(self.issue['state'], 'OPEN')
         self.assertEqual(restored['commit'], '')
@@ -230,6 +232,129 @@ class ConversationTests(unittest.TestCase):
         subprocess.run(['git', 'commit', '-qm', 'concurrent change'], cwd=self.root, check=True)
         with self.assertRaisesRegex(ValueError, '目标文件已被更新'):
             adapter.execute_approved(context, result, self.root, self.directory)
+
+    def large_proposal(self):
+        files = []
+        for index, name in enumerate([FILE, 'docs/second.md', 'docs/third.md']):
+            content = ORIGINAL + ''.join(hashlib.sha256(f'{index}-{line}'.encode()).hexdigest() + '\n'
+                                         for line in range(600))
+            files.append({'path': name, 'content': content})
+        return self.propose() | {'files': files}
+
+    def test_large_three_file_draft_needs_only_one_model_call(self):
+        context = self.context()
+        proposal = self.large_proposal()
+        result = core.respond(context, self.directory, self.root, self.executor(proposal))
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(core.files_mapping(result['draft']['files']), core.files_mapping(proposal['files']))
+        with self.assertRaises(core.DeliverySizeError):
+            core.render_turn(context, proposal, result['draft'])
+        with self.assertRaises(core.DeliverySizeError):
+            core.render_turn(context, proposal | {'review_url': 'https://github.com/owner/repo/pull/955'}, result['draft'])
+
+    def test_large_pr_manifest_restores_all_files_and_pins_original_commit(self):
+        context = self.context()
+        proposal = self.large_proposal()
+        result = core.respond(context, self.directory, self.root, self.executor(proposal))
+        run = subprocess.run
+        def commands(args, **kwargs):
+            if args[:2] == ['git', 'ls-remote']:
+                return subprocess.CompletedProcess(args, 2, '', '')
+            if args[:2] == ['git', 'push']:
+                return subprocess.CompletedProcess(args, 0, '', '')
+            return run(args, **kwargs)
+        with patch.object(adapter, 'build'), patch.object(adapter.subprocess, 'run', side_effect=commands):
+            receipt = adapter.execute_approved(context, result, self.root, self.directory)
+        adapter.write_json(self.directory / 'receipt.json', receipt)
+        adapter.publish_result(context, self.directory, 'success', self.root)
+        body = self.issue['comments'][-1]['body']
+        payload = json.loads(gzip.decompress(base64.b64decode(body.split(core.TURN)[1].split(' -->')[0])))
+        self.assertLess(len(body.encode()), 10000)
+        self.assertEqual(payload['version'], 2)
+        self.assertEqual(payload['draft_source']['commit'], receipt['review_commit'])
+        self.assertTrue(all(set(item) == {'path'} for item in payload['draft']['files']))
+        self.assertEqual(self.context(), None)
+        self.add_message(OWNER, '说明改动原因，不修改文件')
+        self.assertEqual(self.context()['current_draft'], result['draft'])
+        (self.root / FILE).write_text('分支后来被修改')
+        subprocess.run(['git', 'commit', '-qam', 'later change'], cwd=self.root, check=True)
+        self.assertEqual(self.context()['current_draft'], result['draft'])
+        (self.directory / 'receipt.json').unlink()
+        self.turn(response(message='只补充已核对的事实。'))
+        self.add_message(OWNER, '接着讨论')
+        self.assertEqual(self.context()['current_draft'], result['draft'])
+
+    def compact_body(self):
+        context = self.context()
+        value = self.propose() | {'review_url': 'https://github.com/owner/repo/pull/955'}
+        draft = core.draft_version(context['session_id'], value['files'], core.baselines(self.root, [FILE]), self.base)
+        source = {'repository': REPO, 'commit': 'f' * 40}
+        return context, draft, source, core.render_turn(context, value, draft, draft_source=source)
+
+    def test_compact_manifest_uses_api_at_fixed_commit_when_object_is_missing(self):
+        context, draft, source, body = self.compact_body()
+        data = {'type': 'file', 'encoding': 'base64', 'content': base64.b64encode(UPDATED.encode()).decode()}
+        with patch.object(adapter, 'gh', return_value=json.dumps(data)) as github:
+            restored = core.read_turn(body, context['session_id'],
+                                     lambda ref, paths: adapter.load_draft_files(ref, paths, REPO, self.root))
+        self.assertEqual(restored['draft'], draft)
+        self.assertEqual(github.call_args.args, ('api', f'repos/{REPO}/contents/{FILE}?ref=' + source['commit']))
+
+    def test_compact_manifest_requires_reader_and_rejects_missing_or_changed_files(self):
+        context, draft, source, body = self.compact_body()
+        with self.assertRaises(ValueError):
+            core.read_turn(body, context['session_id'])
+        for files in [[], [{'path': FILE, 'content': UPDATED + '被改动'}]]:
+            with self.subTest(files=len(files)), self.assertRaises(ValueError):
+                core.read_turn(body, context['session_id'], lambda *_: files)
+        with self.assertRaises(ValueError):
+            adapter.load_draft_files(source | {'repository': 'other/repo'}, [FILE], REPO, self.root)
+        with self.assertRaises(ValueError):
+            adapter.load_draft_files(source | {'commit': 'main'}, [FILE], REPO, self.root)
+        value = self.propose() | {'review_url': 'https://github.com/other/repo/pull/955'}
+        with self.assertRaises(ValueError):
+            core.render_turn(context, value, draft, draft_source=source)
+
+    def test_pr_publication_rejects_missing_or_mismatched_commit_before_commenting(self):
+        context = self.context()
+        result = core.respond(context, self.directory, self.root, self.executor(self.propose()))
+        for commit in ['', self.base]:
+            receipt = {'state': 'pr_open', 'commit': '', 'review_url': 'https://github.com/owner/repo/pull/955',
+                       'review_commit': commit, 'message': '已创建 PR。'}
+            adapter.write_json(self.directory / 'receipt.json', receipt)
+            with self.subTest(commit=commit), self.assertRaises(ValueError):
+                adapter.publish_result(context, self.directory, 'success', self.root)
+            self.assertEqual(self.issue['comments'], [])
+        self.assertEqual(json.loads((self.directory / 'result.json').read_text())['draft'], result['draft'])
+
+    def test_compact_manifest_rejects_unsafe_paths_before_loading(self):
+        context, draft, source, body = self.compact_body()
+        payload = json.loads(gzip.decompress(base64.b64decode(body.split(core.TURN)[1].split(' -->')[0])))
+        payload['draft']['files'][0]['path'] = '.env'
+        encoded = base64.b64encode(gzip.compress(json.dumps(payload).encode())).decode()
+        modified = body[:body.index(core.TURN)] + core.TURN + encoded + ' -->\n'
+        with self.assertRaises(ValueError):
+            core.read_turn(modified, context['session_id'], lambda *_: self.fail('不应读取不允许的路径'))
+
+    def test_failed_large_pr_delivery_keeps_complete_artifact_and_pending_request(self):
+        for receipt in [None, {'state': 'failed', 'commit': '', 'message': 'PR 创建失败。'}]:
+            with self.subTest(receipt=receipt):
+                self.issue['comments'] = []
+                (self.directory / 'receipt.json').unlink(missing_ok=True)
+                context = self.context()
+                proposal = self.large_proposal()
+                result = core.respond(context, self.directory, self.root, self.executor(proposal))
+                if receipt:
+                    adapter.write_json(self.directory / 'receipt.json', receipt)
+                adapter.publish_result(context, self.directory, 'success', self.root)
+                body = self.issue['comments'][-1]['body']
+                self.assertLess(len(body.encode()), 10000)
+                self.assertIn('conversation 附件', body)
+                saved = json.loads((self.directory / 'result.json').read_text())
+                self.assertEqual(saved['draft'], result['draft'])
+                self.assertIsNotNone(self.context())
+                self.assertIsNone(self.context()['current_draft'])
+                self.assertEqual((self.root / FILE).read_text(), ORIGINAL)
 
     def test_followup_question_retains_draft_and_current_version_is_not_truncated(self):
         large = UPDATED + '更多证据。' * 1000

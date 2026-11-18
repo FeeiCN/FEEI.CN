@@ -14,6 +14,12 @@ from codex_runner import run_codex
 
 ROOT = Path(__file__).resolve().parents[1]
 TURN = '<!-- codex-conversation:v1:'
+
+
+class DeliverySizeError(ValueError):
+    pass
+
+
 FILE_SCHEMA = {'type': 'object', 'additionalProperties': False,
                'properties': {'path': {'type': 'string'}, 'content': {'type': 'string'}},
                'required': ['path', 'content']}
@@ -286,13 +292,31 @@ def visible_turn(response, draft=None, header='', footer=''):
     return visible + '\n'
 
 
-def render_turn(context, response, draft=None, commit='', header='', footer='', execution=None):
+def validate_draft_source(source, session_id, response):
+    if (not isinstance(source, dict) or set(source) != {'repository', 'commit'}
+            or not isinstance(source['repository'], str)
+            or not re.fullmatch(r'[\w.-]+/[\w.-]+', source['repository'])
+            or not isinstance(source['commit'], str) or not re.fullmatch(r'[a-f0-9]{40}', source['commit'])
+            or not re.fullmatch(re.escape(source['repository']) + r'/issues/[1-9][0-9]*', session_id)
+            or not re.fullmatch(r'https://github\.com/' + re.escape(source['repository']) + r'/pull/[1-9][0-9]*',
+                                response.get('review_url', ''))):
+        raise ValueError('稿件来源必须绑定当前仓库的 PR 和固定提交')
+    return source
+
+
+def render_turn(context, response, draft=None, commit='', header='', footer='', execution=None, draft_source=None):
     session_id = context['session_id']
     if draft:
         validate_draft(session_id, draft)
     visible = visible_turn(response, draft, header, footer)
     manifest = None
-    if draft and response.get('review_url'):
+    if draft_source is not None:
+        validate_draft_source(draft_source, session_id, response)
+        if not draft:
+            raise ValueError('稿件来源缺少完整文件版本')
+        issue_paths([item['path'] for item in draft['files']])
+        manifest = {**draft, 'files': [{'path': item['path']} for item in draft['files']]}
+    elif draft and response.get('review_url'):
         manifest = draft
     elif draft:
         references = []
@@ -302,21 +326,23 @@ def render_turn(context, response, draft=None, commit='', header='', footer='', 
                 raise ValueError('固定展示中缺少完整文件')
             references.append({'path': item['path'], 'content_range': [start, start + len(item['content'])]})
         manifest = {**draft, 'files': references}
-    payload = {'version': 1, 'session_id': session_id,
+    payload = {'version': 2 if draft_source is not None else 1, 'session_id': session_id,
                'request': {'id': context['request']['id'], 'hash': request_hash(context['request'])},
                'handled_requests': {item['id']: request_hash(item) for item in context.get('requests', [context['request']])},
                'response': {key: value for key, value in response.items() if key != 'files'},
                'draft': manifest, 'commit': commit, 'header': header, 'footer': footer, 'source_run': context.get('source_run', ''),
                'execution': execution,
                'body_hash': hashlib.sha256(visible.encode()).hexdigest()}
+    if draft_source is not None:
+        payload['draft_source'] = draft_source
     encoded = base64.b64encode(gzip.compress(json.dumps(payload, ensure_ascii=False).encode(), mtime=0)).decode()
     body = visible + TURN + encoded + ' -->\n'
     if len(body.encode()) > 63000:
-        raise ValueError('完整回复超过 Issue 限制，未截断或发布；请缩小本轮文件范围')
+        raise DeliverySizeError('Issue 展示内容超过交付限制，完整文件未截断；请精简回复摘要，不得删减或修改稿件文件')
     return body
 
 
-def read_turn(body, session_id):
+def read_turn(body, session_id, file_loader=None):
     matches = list(re.finditer(r'^' + re.escape(TURN) + r'([A-Za-z0-9+/=]+) -->\n?\Z', body, re.M))
     if not matches:
         if TURN in body:
@@ -331,10 +357,24 @@ def read_turn(body, session_id):
         if len(raw) > 2_000_000:
             raise ValueError('会话记录过大')
         value = json.loads(raw)
-        if (value['version'] != 1 or value['session_id'] != session_id
+        if (value['version'] not in {1, 2} or value['session_id'] != session_id
                 or value['body_hash'] != hashlib.sha256(body[:match.start()].encode()).hexdigest()):
             raise ValueError('会话回执的正文或归属已变化')
-        if value['draft']:
+        if value['version'] == 2:
+            source = validate_draft_source(value['draft_source'], session_id, value['response'])
+            manifest = value['draft']
+            if (not isinstance(manifest, dict) or not isinstance(manifest.get('files'), list)
+                    or any(not isinstance(item, dict) or set(item) != {'path'} for item in manifest['files'])):
+                raise ValueError('稿件文件清单无效')
+            paths = issue_paths([item['path'] for item in manifest['files']])
+            if file_loader is None:
+                raise ValueError('缺少固定提交的稿件读取器')
+            files = file_loader(source, paths)
+            if set(files_mapping(files)) != set(paths):
+                raise ValueError('固定提交没有返回全部稿件文件')
+            value['draft'] = {**manifest, 'files': files}
+            validate_draft(session_id, value['draft'])
+        elif value['draft']:
             files = []
             for item in value['draft']['files']:
                 if set(item) == {'path', 'content_range'}:
@@ -420,7 +460,8 @@ def respond(context, directory, root=ROOT, executor=None, budget=2700, footer=''
             if original_files is not None and files != original_files:
                 raise ValueError('格式修正改变了文件内容或范围')
             draft = draft_version(context['session_id'], value['files'], baselines(root, files), context['base']) if files else None
-            render_turn(context, value, draft, footer=footer)
+            # Issue drafts are delivered through a PR after the fixed writer runs.
+            render_turn(context, value, None if draft and context.get('write_scope') == 'issue' else draft, footer=footer)
         except ValueError as error:
             (directory / 'validation.json').write_text(json.dumps({'attempt': attempt, 'error': str(error)}, ensure_ascii=False))
             if attempt == 2 or deadline - time.monotonic() < 60:

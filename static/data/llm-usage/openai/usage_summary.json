@@ -1,12 +1,12 @@
 {
   "vendor": "openai",
-  "fetchedAt": "2026-11-18 12:12:26",
+  "fetchedAt": "2026-11-19 06:21:17",
   "source": "ai.feei.cn",
   "source_endpoint": "https://ai.feei.cn/api/v1/admin/usage/stats",
   "timezone": "Asia/Shanghai",
   "sync_window": {
-    "start_date": "2026-10-20",
-    "end_date": "2026-11-18",
+    "start_date": "2026-10-21",
+    "end_date": "2026-11-19",
     "days": 30
   },
   "daily_token_usage": {
@@ -157,7 +157,8 @@
     "2026-11-15": 63319500,
     "2026-11-16": 28550934,
     "2026-11-17": 82210166,
-    "2026-11-18": 51002111
+    "2026-11-18": 139762694,
+    "2026-11-19": 26051088
   },
   "date_usage_stats": {
     "2026-05-22": {
@@ -2285,28 +2286,28 @@
       "average_duration_ms": 0
     },
     "2026-11-15": {
-      "total_requests": 373,
-      "total_input_tokens": 2491827,
-      "total_output_tokens": 256884,
-      "total_cache_tokens": 41826944,
+      "total_requests": 0,
+      "total_input_tokens": 0,
+      "total_output_tokens": 0,
+      "total_cache_tokens": 0,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 41826944,
-      "total_tokens": 44575655,
-      "total_cost": 26.660372,
-      "total_actual_cost": 39.355256,
-      "average_duration_ms": 15091.083109919571
+      "total_cache_read_tokens": 0,
+      "total_tokens": 0,
+      "total_cost": 0.0,
+      "total_actual_cost": 0.0,
+      "average_duration_ms": 0
     },
     "2026-11-16": {
-      "total_requests": 428,
-      "total_input_tokens": 5598855,
-      "total_output_tokens": 320655,
-      "total_cache_tokens": 22631424,
+      "total_requests": 406,
+      "total_input_tokens": 5404661,
+      "total_output_tokens": 300956,
+      "total_cache_tokens": 21157248,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 22631424,
-      "total_tokens": 28550934,
-      "total_cost": 43.852803,
-      "total_actual_cost": 63.323691,
-      "average_duration_ms": 16638.53971962617
+      "total_cache_read_tokens": 21157248,
+      "total_tokens": 26862865,
+      "total_cost": 41.553775,
+      "total_actual_cost": 59.875149,
+      "average_duration_ms": 16586.386699507388
     },
     "2026-11-17": {
       "total_requests": 559,
@@ -2321,28 +2322,40 @@
       "average_duration_ms": 19566.976744186046
     },
     "2026-11-18": {
-      "total_requests": 289,
-      "total_input_tokens": 1485084,
-      "total_output_tokens": 250083,
-      "total_cache_tokens": 49266944,
+      "total_requests": 894,
+      "total_input_tokens": 9299246,
+      "total_output_tokens": 601048,
+      "total_cache_tokens": 129862400,
       "total_cache_creation_tokens": 0,
-      "total_cache_read_tokens": 49266944,
-      "total_tokens": 51002111,
-      "total_cost": 16.365345,
-      "total_actual_cost": 23.871599,
-      "average_duration_ms": 26039.010380622836
+      "total_cache_read_tokens": 129862400,
+      "total_tokens": 139762694,
+      "total_cost": 66.391289,
+      "total_actual_cost": 98.128531,
+      "average_duration_ms": 18664.28970917226
+    },
+    "2026-11-19": {
+      "total_requests": 112,
+      "total_input_tokens": 518872,
+      "total_output_tokens": 59192,
+      "total_cache_tokens": 25473024,
+      "total_cache_creation_tokens": 0,
+      "total_cache_read_tokens": 25473024,
+      "total_tokens": 26051088,
+      "total_cost": 5.418478,
+      "total_actual_cost": 8.127717,
+      "average_duration_ms": 16076.785714285714
     }
   },
-  "window_total_requests": 1649,
-  "window_total_cost": 149.908454,
-  "window_total_actual_cost": 221.095446,
-  "total_token_consumed": "11.32B",
-  "total_days": 148,
-  "active_days": 148,
-  "current_consecutive_days": 41,
+  "window_total_requests": 1971,
+  "window_total_cost": 176.393475,
+  "window_total_actual_cost": 260.676298,
+  "total_token_consumed": "11.43B",
+  "total_days": 149,
+  "active_days": 149,
+  "current_consecutive_days": 42,
   "most_active_day": {
     "date": "2026-10-25",
     "token_count": "1.23B"
   },
-  "daily_avg_token_consumed": "76.47M"
+  "daily_avg_token_consumed": "76.73M"
 }

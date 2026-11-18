@@ -7,6 +7,10 @@ on:
         description: 只读检查服务器连接、部署锁和发布版本
         type: boolean
         default: false
+      reset_rspack_cache:
+        description: 清理 Rspack 构建缓存后重新构建
+        type: boolean
+        default: false
   workflow_run:
     workflows: ['日记议题归档', 'Codex 议题驱动', '议题内容抓取与行车记录', '安全工程内容同步']
     types: [completed]
@@ -145,7 +149,7 @@ jobs:
           ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
             -i ~/.ssh/deploy_key -p ${{ secrets.SERVER_PORT }} \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' bash -se" <<'EOF'
+            "REPO_DIR='${{ env.REPO_DIR }}' SITE_ROOT='${{ env.SITE_ROOT }}' MEDIA_ROOT='${{ env.MEDIA_ROOT }}' MUSIC_ROOT='${{ env.MUSIC_ROOT }}' DATA_ROOT='${{ env.DATA_ROOT }}' RESET_RSPACK_CACHE='${{ inputs.reset_rspack_cache || false }}' bash -se" <<'EOF'
           set -euo pipefail
 
           timer_start=0
@@ -259,7 +263,7 @@ jobs:
           echo "[deploy-scope] $scope"
           pages_changed="$(node -e 'console.log(JSON.parse(process.argv[1]).pages)' "$scope")"
           search_changed="$(node -e 'console.log(JSON.parse(process.argv[1]).search)' "$scope")"
-          if [ "$pages_changed" = false ] && [ -n "$previous_release" ]; then
+          if [ "$pages_changed" = false ] && [ "$RESET_RSPACK_CACHE" != true ] && [ -n "$previous_release" ]; then
             exec 8>"$site_root/.search-index.lock"
             flock --wait 1200 8 || { echo "ERROR: search index is still running after 20 minutes"; exit 1; }
             index_ready=false
@@ -281,6 +285,10 @@ jobs:
 
           group_start "Clean build cache and stale releases"
           build_cache="$site_root/build-cache"
+          if [ "$RESET_RSPACK_CACHE" = true ]; then
+            rm -rf -- "$build_cache/rspack"
+            echo "[build-cache] Cleared Rspack cache for a cold build: $build_cache/rspack"
+          fi
           if [ -d "$build_cache" ]; then
             cache_size_kb="$(du -sk "$build_cache" | cut -f1)"
             echo "build_cache_size_kb=$cache_size_kb"

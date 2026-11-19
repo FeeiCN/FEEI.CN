@@ -4,7 +4,7 @@ import Head from '@docusaurus/Head';
 import Layout from '@theme/Layout';
 import Heading from '@theme/Heading';
 import {usePluginData} from '@docusaurus/useGlobalData';
-import type {HomeRecord} from '../../plugins/homeRecordsPlugin';
+import type {HomeAnnualReview, HomeRecord} from '../../plugins/homeRecordsPlugin';
 import {authorPortrait, featuredReading, shareImageForPath} from '../data/featuredReading';
 import styles from './index.module.css';
 
@@ -12,26 +12,30 @@ function formatHomeDate(date: string, referenceYear?: string): string {
   return referenceYear && date.startsWith(`${referenceYear}-`) ? date.slice(5).replace('-', '.') : date.replaceAll('-', '.');
 }
 
+function Arrow({diagonal = false}: {diagonal?: boolean}): ReactNode {
+  return <span aria-hidden="true">{diagonal ? '↗' : '→'}</span>;
+}
+
 function HeroSection(): ReactNode {
   return (
     <section className={styles.hero} aria-labelledby="home-title">
-      <div className={styles.heroInner}>
+      <div className={`${styles.container} ${styles.heroGrid}`}>
         <div className={styles.heroCopy}>
           <p className={styles.eyebrow}>网络安全 · 人工智能安全 · 生活记录</p>
           <h1 id="home-title">吴飞飞<span>Feei</span></h1>
-          <p className={styles.heroIntro}>探索高等级的安全如何建设，<br />也认真记录工作之外的生活。</p>
-          <p className={styles.heroGuide}>一名生活在杭州的网络安全从业者。<br className={styles.desktopBreak} />从漏洞研究走向企业安全建设，把实践、取舍和后来修正的判断写下来。</p>
-          <nav className={styles.proofLinks} aria-label="公开成果入口">
-            <a href="#public-work">工具实践</a><Link to="/speech">公开演讲</Link><Link to="/publications">出版与白皮书</Link>
-          </nav>
-          <div className={styles.compactActions}>
-            <a href="#start-reading" className={styles.primaryAction}>读几篇精选 <span aria-hidden="true">↓</span></a>
-            <Link to="/about">认识我 <span aria-hidden="true">↗</span></Link>
+          <p className={styles.heroLead}>探索高等级的安全如何建设，<br />也认真记录工作之外的生活。</p>
+          <p className={styles.heroDescription}>从漏洞研究走向企业安全建设。<br className={styles.desktopBreak} />把做过的事、走过的弯路和后来修正的判断写下来。</p>
+          <div className={styles.heroActions}>
+            <a href="#start-reading" className={styles.primaryAction}>从三篇文章开始 <span aria-hidden="true">↓</span></a>
+            <Link to="/about" className={styles.secondaryAction}>认识我 <Arrow diagonal /></Link>
           </div>
+          <nav className={styles.proofLinks} aria-label="公开成果入口">
+            <a href="#public-work">工具与实践</a><Link to="/speech">公开演讲</Link><Link to="/publications">出版物</Link>
+          </nav>
         </div>
         <figure className={styles.portrait}>
-          <div className={styles.portraitFrame}><img src={authorPortrait} alt="吴飞飞" width="240" height="288" fetchPriority="high" /></div>
-          <figcaption>杭州 · 从 2012 年开始记录</figcaption>
+          <div className={styles.portraitFrame}><img src={authorPortrait} alt="吴飞飞" width="280" height="330" fetchPriority="high" /></div>
+          <figcaption><span>生活在杭州</span><span>从 2012 年开始记录</span></figcaption>
         </figure>
       </div>
     </section>
@@ -40,100 +44,87 @@ function HeroSection(): ReactNode {
 
 function ReadingSection(): ReactNode {
   return (
-    <section className={styles.section} aria-labelledby="start-reading">
-      <div className={styles.inner}>
-        <div className={styles.sectionHeading}>
-          <Heading as="h2" id="start-reading">第一次来，读这几篇</Heading>
-          <p>从一个问题、一段经历，认识这里。</p>
-        </div>
-        {[
-          {id: 'professional', title: '安全与经历', description: '先认识我，再看建设方法与 AI 安全。'},
-          {id: 'life', title: '人生与生活', description: '工作之外，那些在意的人和普通的日子。'},
-        ].map((group) => (
-          <div className={styles.readingGroup} key={group.id}>
-            <div className={styles.groupHeading}><h3>{group.title}</h3><p>{group.description}</p></div>
-            <div className={`${styles.featuredList} ${group.id === 'life' ? styles.lifeList : ''}`}>
-              {featuredReading.filter((item) => item.group === group.id).map((item) => (
-                <Link key={item.to} to={'entry' in item ? item.entry : item.to} className={styles.featuredItem}>
-                  <div className={styles.readingMeta}><span>{String(featuredReading.indexOf(item) + 1).padStart(2, '0')}</span><span>{item.category}</span><span aria-hidden="true">↗</span></div>
-                  <h4>{item.title}</h4>
-                  <p>{item.description}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
+    <section className={`${styles.container} ${styles.readingSection}`} aria-labelledby="start-reading">
+      <div className={styles.sectionIntro}>
+        <p className={styles.eyebrow}>精选阅读</p>
+        <Heading as="h2" id="start-reading">从这三篇开始</Heading>
+        <p>一段经历，一次组织实践，<br className={styles.desktopBreak} />以及对生活的选择。</p>
+      </div>
+      <div className={styles.readingPanel}>
+        {featuredReading.map((item, index) => (
+          <Link key={item.to} to={item.to} className={styles.featuredItem}>
+            <div className={styles.articleMeta}><span>{String(index + 1).padStart(2, '0')}</span><span>{item.category}</span></div>
+            <div className={styles.articleCopy}><h3>{item.title}</h3><p>{item.description}</p></div>
+            <span className={styles.articleArrow}><Arrow diagonal /></span>
+          </Link>
         ))}
       </div>
     </section>
   );
 }
 
-function PublicWorkSection(): ReactNode {
+function AnnualReviewsSection({reviews}: {reviews: HomeAnnualReview[]}): ReactNode {
+  if (!reviews.length) return null;
   return (
-    <section className={styles.section} aria-labelledby="public-work">
-      <div className={`${styles.inner} ${styles.publicWork}`}>
-        <div className={styles.sectionHeading}>
-          <Heading as="h2" id="public-work">从实践到分享</Heading>
-          <p>做过的工具，公开讲过的问题，以及团队沉淀的材料。</p>
-        </div>
-        <div className={styles.workList}>
-          <Link to="/gsil"><span className={styles.workType}>监测工具</span><strong>GSIL · GitHub 敏感信息泄漏监控</strong><span>让企业持续发现代码托管平台上的信息泄漏。</span><span aria-hidden="true">↗</span></Link>
-          <Link to="/cobra"><span className={styles.workType}>代码审计</span><strong>Cobra · 企业级代码安全实践</strong><span>把漏洞研究落到代码审计和持续检查。</span><span aria-hidden="true">↗</span></Link>
-          <Link to="/ai-personal-to-org-efficiency"><span className={styles.workType}>演讲材料</span><strong>从个人 AI 提效到组织 AI 提效</strong><span>工具如何进入团队的协作与交付。</span><span aria-hidden="true">↗</span></Link>
-          <Link to="/digital-bank-cybersecurity-system-construction"><span className={styles.workType}>团队材料</span><strong>数字银行安全体系构建</strong><span>阅读数字银行安全建设的实践材料。</span><span aria-hidden="true">↗</span></Link>
-        </div>
-        <div className={styles.workDetails}>
-          <Link to="/speech">全部演讲 →</Link><Link to="/publications">出版物与白皮书 →</Link>
-        </div>
+    <section className={`${styles.container} ${styles.annualSection}`} aria-labelledby="annual-reviews">
+      <div className={styles.sectionHeader}>
+        <div><p className={styles.eyebrow}>年度总结</p><Heading as="h2" id="annual-reviews">这些年的变化</Heading></div>
+        <p>回看工作、家庭与生活里发生的变化。</p>
+      </div>
+      <div className={styles.annualList}>
+        {reviews.map((item) => (
+          <Link key={item.to} to={item.to} className={styles.reviewCard} aria-label={`${item.year} 年度总结：${item.title}`}>
+            <span className={styles.reviewYear}>{item.year}</span>
+            <div className={styles.reviewTitle}><h3>{item.title}</h3><Arrow diagonal /></div>
+            <span className={styles.reviewLabel}>阅读这一年</span>
+          </Link>
+        ))}
       </div>
     </section>
   );
 }
 
-function RecentSection(): ReactNode {
-  const {records, recordsHref, updates} = usePluginData('home-records-plugin') as {records: HomeRecord[]; recordsHref?: string; updates: HomeRecord[]};
-  if (!records.length && !updates.length) return null;
-  const recordsYear = records[0]?.date.slice(0, 4);
-  const updatesYear = updates[0]?.date.slice(0, 4);
+function ActivitySection({updates}: {updates: HomeRecord[]}): ReactNode {
+  const referenceYear = updates[0]?.date.slice(0, 4);
   return (
-    <section className={styles.section} aria-labelledby="recent-heading">
-      <div className={styles.inner}>
-        <div className={styles.sectionHeading}><h2 id="recent-heading">最近，在写什么</h2><p>专题随着认识修订，日记留下当时的生活。</p></div>
-        <div className={styles.updateGrid}>
-          {updates.length > 0 && <div>
-            <h3><Link to="/security-engineering">安全研究 · 近期修订 <span aria-hidden="true">→</span></Link></h3>
-            <div>{updates.map((item) => (
-              <Link key={item.to} to={item.to} className={styles.recentItem}>
-                <time dateTime={item.date}>{formatHomeDate(item.date, updatesYear)}</time><span>{item.title}</span>
-              </Link>
-            ))}</div>
-          </div>}
-          {records.length > 0 && recordsHref && <div>
-            <h3><Link to={recordsHref}>日记 · 最近的日子 <span aria-hidden="true">→</span></Link></h3>
-            <div>{records.map((item) => (
-              <Link key={item.to} to={item.to} className={styles.recentItem}>
-                <time dateTime={item.date}>{formatHomeDate(item.date, recordsYear)}</time><span>{item.title}</span>
-              </Link>
-            ))}</div>
-          </div>}
+    <section className={`${styles.container} ${styles.activitySection}`} aria-label="公开实践与近期修订">
+      <div aria-labelledby="public-work">
+        <div className={styles.smallHeading}><p className={styles.eyebrow}>实践与分享</p><Heading as="h2" id="public-work">做过的事</Heading></div>
+        <div className={styles.workList}>
+          <Link to="/gsil"><div><h3>GSIL</h3><p>GitHub 敏感信息泄漏监控</p></div><Arrow diagonal /></Link>
+          <Link to="/cobra"><div><h3>Cobra</h3><p>企业级代码安全实践</p></div><Arrow diagonal /></Link>
+          <Link to="/digital-bank-cybersecurity-system-construction"><div><h3>《数字银行安全体系构建》</h3><p>参与编写的安全建设专著</p></div><Arrow diagonal /></Link>
         </div>
+        <div className={styles.workDetails}><Link to="/speech">公开演讲 <Arrow /></Link><Link to="/publications">出版物与白皮书 <Arrow /></Link></div>
       </div>
+      {updates.length > 0 && <div aria-labelledby="recent-heading">
+        <div className={styles.smallHeading}><p className={styles.eyebrow}>持续修订</p><Heading as="h2" id="recent-heading">最近，在写什么</Heading></div>
+        <div className={styles.updateList}>
+          {updates.map((item) => (
+            <Link key={item.to} to={item.to} className={styles.recentItem}>
+              <time dateTime={item.date}>{formatHomeDate(item.date, referenceYear)}</time><span>{item.title}</span><Arrow diagonal />
+            </Link>
+          ))}
+        </div>
+        <Link to="/security-engineering" className={styles.allResearch}>进入网络安全专题 <Arrow /></Link>
+      </div>}
     </section>
   );
 }
 
 function StayInTouch(): ReactNode {
   return (
-    <section className={styles.section} aria-labelledby="stay-in-touch">
-      <div className={`${styles.inner} ${styles.stayInTouch}`}>
-        <div><h2 id="stay-in-touch">有空，再来坐坐。</h2><p>安全研究、人生实践与日常记录，不固定更新。RSS 只推送新文章，正文修订不重复推送。</p></div>
-        <div className={styles.compactActions}><a href="/rss.xml">订阅新文章 · RSS ↗</a><Link to="/contact">联系我 ↗</Link></div>
+    <section className={`${styles.container} ${styles.contactSection}`} aria-labelledby="stay-in-touch">
+      <div className={styles.contactInner}>
+        <div><p className={styles.eyebrow}>保持联系</p><h2 id="stay-in-touch">有空，再来坐坐。</h2><p className={styles.subscription}>安全研究、人生实践与日常记录，不固定更新。<br />RSS 只推送新文章，正文修订不重复推送。</p></div>
+        <div className={styles.contactActions}><a href="/rss.xml">订阅新文章 · RSS <Arrow diagonal /></a><Link to="/contact">联系我 <Arrow diagonal /></Link></div>
       </div>
     </section>
   );
 }
 
 export default function Home(): ReactNode {
+  const {annualReviews = [], updates = []} = usePluginData('home-records-plugin') as {annualReviews: HomeAnnualReview[]; updates: HomeRecord[]};
   return (
     <Layout wrapperClassName={styles.homeLayout} description="吴飞飞（Feei）的个人网站。从漏洞研究走向企业安全建设，记录网络安全、人工智能安全的实践与判断，也留下杭州的日常生活。">
       <Head>
@@ -148,8 +139,8 @@ export default function Home(): ReactNode {
       <main className={styles.page}>
         <HeroSection />
         <ReadingSection />
-        <PublicWorkSection />
-        <RecentSection />
+        <AnnualReviewsSection reviews={annualReviews} />
+        <ActivitySection updates={updates} />
         <StayInTouch />
       </main>
     </Layout>

@@ -6,7 +6,7 @@ import {Menu, Portal} from '@chakra-ui/react';
 import {useThemeConfig} from '@docusaurus/theme-common';
 import {usePluginData} from '@docusaurus/useGlobalData';
 import type {HomeAnnualReview} from '../../plugins/homeRecordsPlugin';
-import {authorPortrait, featuredReading, shareImageForPath} from '../data/featuredReading';
+import {featuredReading, shareImageForPath} from '../data/featuredReading';
 import {HomeMotionRoot} from '../components/HomeEffects';
 import {ParticleScene} from '../components/HomeEffects/ParticleScene';
 import styles from './index.module.css';
@@ -122,10 +122,6 @@ export default function Home(): ReactNode {
             <ParticleScene />
           </div>
           <div className={`${styles.container} ${styles.heroContent}`}>
-            <div className={styles.authorLine} data-home-reveal>
-              <img src={authorPortrait} alt="" width="48" height="48" fetchPriority="high" />
-              <span>你好，我是</span>
-            </div>
             <h1 id="home-title" data-home-reveal>
               Feei<span>吴飞飞</span>
             </h1>

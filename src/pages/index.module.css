@@ -1,6 +1,7 @@
 .homeLayout {
   flex: 0 0 auto;
   height: 100svh;
+  padding-top: 0;
   min-width: 0;
   min-height: 0;
 }
@@ -42,7 +43,13 @@
   position: absolute;
   z-index: 1;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 49%, rgb(3 9 22 / 72%) 0%, rgb(3 9 22 / 48%) 32%, transparent 75%);
+  background: radial-gradient(
+    ellipse at 50% 47%,
+    rgb(3 9 22 / 86%) 0%,
+    rgb(3 9 22 / 70%) 27%,
+    rgb(3 9 22 / 28%) 46%,
+    transparent 74%
+  );
   pointer-events: none;
 }
 .particleStage {
@@ -68,26 +75,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding-block: 1.5rem;
+  padding: calc(var(--ifm-navbar-height) + 1.5rem) 0 1.5rem;
   text-align: center;
   text-shadow: 0 2px 18px #030916;
-}
-.authorLine {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: var(--home-secondary);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-}
-.authorLine img {
-  display: block;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  object-position: 50% 25%;
-  border: 1px solid #65738a;
 }
 .hero h1 {
   display: flex;
@@ -306,7 +296,7 @@
     margin-inline: 0.35rem;
   }
   .heroContent {
-    padding-block: 1rem;
+    padding: calc(var(--ifm-navbar-height) + 1rem) 0 1rem;
   }
   .hero h1 {
     font-size: 3.1rem;
@@ -315,10 +305,6 @@
   }
   .hero h1 > span {
     font-size: 1rem;
-  }
-  .authorLine img {
-    width: 28px;
-    height: 28px;
   }
   .heroLead {
     font-size: 1.5rem;
@@ -373,11 +359,7 @@
 }
 @media (max-height: 650px) {
   .heroContent {
-    padding-block: 0.5rem;
-  }
-  .authorLine img {
-    width: 24px;
-    height: 24px;
+    padding: calc(var(--ifm-navbar-height) + 0.5rem) 0 0.5rem;
   }
   .hero h1 {
     margin-top: 0.4rem;
@@ -404,9 +386,6 @@
   }
 }
 @media (max-height: 480px) {
-  .authorLine {
-    display: none;
-  }
   .heroDescription {
     display: none;
   }

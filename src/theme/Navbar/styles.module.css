@@ -1,0 +1,63 @@
+.frame :global(.navbar) {
+  background: rgb(8 13 24 / 94%);
+  border-bottom-color: rgb(173 199 255 / 8%);
+}
+
+.frame :global(.navbar__inner) {
+  --ifm-navbar-link-color: #c4cee0;
+  --ifm-navbar-link-hover-color: #ffffff;
+  --ifm-navbar-search-input-background-color: rgb(154 184 226 / 10%);
+  --ifm-navbar-search-input-color: #e4ecf9;
+  --ifm-hover-overlay: rgb(173 199 255 / 12%);
+  --feei-focus-ring: 0 0 0 3px rgb(173 199 255 / 40%);
+  color: #e4ecf9;
+}
+
+.frame :global(.navbar__inner) :global(.navbar__link),
+.frame :global(.navbar__inner) :global(.clean-btn),
+.frame :global(.navbar__inner) :global(.sidebarIcon) {
+  color: #c4cee0;
+}
+
+.frame :global(.navbar__inner) :global(.navbar__link:hover),
+.frame :global(.navbar__inner) :global(.navbar__link[data-state='open']) {
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.frame :global(.navbar__inner) :global(.clean-btn:hover) {
+  background: rgb(173 199 255 / 12%);
+}
+
+.frame :global(.navbar__inner) :global(a[aria-label='FEEI 首页']) > span {
+  color: #f1f5ff;
+}
+
+.frame :global(.navbar__search) {
+  color: #c4cee0;
+}
+
+.frame :global(.navbar__search-input) {
+  background-color: rgb(154 184 226 / 10%);
+  color: #e4ecf9;
+}
+
+.frame :global(.navbar__search-input)::placeholder {
+  color: #a7b8d3;
+  opacity: 1;
+}
+
+.frame :global(.navbar__search-input):focus {
+  outline-color: #adc7ff;
+}
+
+.frame :global(.navbar__search) > svg {
+  color: #c4cee0;
+}
+
+.frame :global(.navbar__search) kbd {
+  background: transparent;
+  border-color: #687a96;
+  color: #a7b8d3;
+  box-shadow: none;
+}

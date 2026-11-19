@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import daily_personal_record as daily
 import scheduled_issue_review as review
@@ -347,6 +347,84 @@ class DailyTests(unittest.TestCase):
         self.assertEqual(len(snap['sources']['git']['items']), 1)
         self.assertEqual(snap['sources']['health']['status'], 'unavailable')
         self.assertIn('2026-11-09T16%3A00%3A00', pages.call_args_list[0].args[0])
+
+    def test_early_inbox_and_delayed_schedule_keep_the_scheduled_day(self):
+        for now, cron in [
+                ('2026-11-10T00:05:00', '5 16 * * *'),
+                ('2026-11-10T00:45:00', '45 16-22 * * *'),
+                ('2026-11-10T06:45:00', '45 16-22 * * *'),
+                ('2026-11-10T12:30:00', '5 16 * * *'),
+                ('2026-11-11T00:02:00', '45 23,0-14 * * *')]:
+            with self.subTest(now=now, cron=cron):
+                mode = 'create' if cron == '45 23,0-14 * * *' else 'inbox'
+                self.assertEqual(daily.resolve(instant(now), cron), (DAY, mode))
+        self.assertEqual(daily.resolve(instant('2026-11-10T00:01:00')), (DAY, 'inbox'))
+        self.assertEqual(daily.resolve(instant('2026-11-10T07:44:59')), (DAY, 'inbox'))
+
+    def test_inbox_only_creates_once_and_morning_reuses_it(self):
+        server = None
+
+        def api(endpoint, method='GET', data=None):
+            nonlocal server
+            self.assertEqual((endpoint, method), (f'repos/{REPO}/issues', 'POST'))
+            self.assertEqual(data['assignees'], ['owner'])
+            server = issue(body=data['body'])
+            return copy.deepcopy(server)
+
+        output = mock_open()
+        with patch.object(daily, 'ROOT', MagicMock()), patch.dict(os.environ, {
+                'GITHUB_REPOSITORY': REPO, 'PERSONAL_MODE': 'inbox', 'PERSONAL_DATE': str(DAY),
+                'GITHUB_RUN_ID': '42', 'GITHUB_OUTPUT': 'outputs', 'GITHUB_STEP_SUMMARY': 'summary',
+                'TRIGGER_SCHEDULE': ''}), patch.object(daily, 'open', output, create=True), \
+                patch.object(daily, 'find_issue', side_effect=lambda *args: copy.deepcopy(server)), \
+                patch.object(daily, 'api', side_effect=api) as calls, \
+                patch.object(daily, 'pages', return_value=[]) as pages, \
+                patch.object(daily, 'timing', return_value={}), \
+                patch.object(daily, 'collect', return_value=snapshot()) as collect, \
+                patch.object(daily, 'publish_sections') as publish, patch('sys.argv', ['daily', 'prepare']):
+            daily.main()
+            original = copy.deepcopy(server)
+            daily.main()
+            self.assertEqual(calls.call_count, 1)
+            self.assertEqual(server, original)
+            collect.assert_not_called()
+            pages.assert_not_called()
+            publish.assert_not_called()
+            writes = [call.args[0] for call in output().write.call_args_list]
+            self.assertEqual(sum('ready=false' in value for value in writes), 2)
+            self.assertFalse(any('ready=true' in value for value in writes))
+            self.assertNotIn('daily-personal-data:', server['body'])
+            self.assertNotIn('daily-personal-clues:', server['body'])
+            with patch.dict(os.environ, {'PERSONAL_MODE': 'create'}):
+                daily.main()
+            self.assertEqual(calls.call_count, 1)
+            collect.assert_called_once_with(REPO, DAY, daily.datetime.now(timezone.utc))
+            self.assertIn('ready=true', output().write.call_args_list[-3].args[0])
+
+    def test_timing_uses_each_retry_slot_including_previous_day_refresh(self):
+        for now, cron, day, mode, expected in [
+                ('2026-11-10T00:10:00', '5 16 * * *', DAY, 'inbox', '2026-11-10T00:05:00+08:00'),
+                ('2026-11-10T06:50:00', '45 16-22 * * *', DAY, 'inbox', '2026-11-10T06:45:00+08:00'),
+                ('2026-11-10T12:50:00', '45 23,0-14 * * *', DAY, 'create', '2026-11-10T12:45:00+08:00'),
+                ('2026-11-11T00:20:00', '15 16 * * *', DAY, 'refresh', '2026-11-11T00:15:00+08:00')]:
+            with self.subTest(cron=cron), patch.dict(os.environ, {
+                    'TRIGGER_SCHEDULE': cron, 'GITHUB_RUN_ID': ''}):
+                result = daily.timing(REPO, day, mode, instant(now))
+                self.assertEqual(result['planned_at'], expected)
+                self.assertEqual(result['slot_basis'], 'most_recent_trigger_schedule')
+
+    def test_workflow_has_early_slots_and_gates_model_on_ready(self):
+        import yaml
+        workflow = yaml.safe_load((daily.ROOT / '.github/workflows/daily-personal-record.yml').read_text())
+        trigger = workflow.get('on', workflow.get(True))
+        schedules = [item['cron'] for item in trigger['schedule']]
+        self.assertIn('5 16 * * *', schedules)
+        self.assertIn('45 16-22 * * *', schedules)
+        self.assertIn('45 23,0-14 * * *', schedules)
+        for cron in ['15 15 * * *', '45 15 * * *', '15 16 * * *']:
+            self.assertIn(cron, schedules)
+        self.assertIn('inbox', trigger['workflow_dispatch']['inputs']['mode']['options'])
+        self.assertIn("needs.prepare.outputs.ready == 'true'", workflow['jobs']['run']['if'])
 
 
 if __name__ == '__main__':

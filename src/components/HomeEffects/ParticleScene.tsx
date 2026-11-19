@@ -48,7 +48,7 @@ const vertex = /* glsl */ `
     gl_Position = vec4(screen, 0.0, 1.0);
     gl_PointSize = (1.25 + seed.w * 2.2) * uDpr * perspective;
     float highlight = smoothstep(-0.6, 0.8, p.z) * 0.65 + seed.y * 0.35;
-    vColor = mix(vec3(0.18, 0.4, 1.0), vec3(0.94, 0.98, 1.0), highlight);
+    vColor = mix(vec3(0.22, 0.55, 0.91), vec3(0.87, 0.97, 1.0), highlight);
     vOpacity = mix(0.2, 0.8, seed.w) + influence * 0.2;
   }
 `;

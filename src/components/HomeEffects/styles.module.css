@@ -1,42 +1,3 @@
-.progress {
-  position: fixed;
-  z-index: calc(var(--ifm-z-index-fixed) - 1);
-  top: var(--ifm-navbar-height);
-  right: 0;
-  left: 0;
-  height: 2px;
-  background: var(--home-accent);
-  transform-origin: 0 50%;
-  pointer-events: none;
-}
-.toggle {
-  align-self: center;
-  min-height: 36px;
-  padding: 0;
-  border: 0;
-  border-radius: 2px;
-  background: none;
-  color: var(--home-secondary);
-  font-size: 11px;
-  font-weight: 400;
-}
-.toggle:hover:not(:disabled) {
-  color: var(--home-accent);
-}
-.toggle:focus-visible {
-  outline: 2px solid var(--home-accent);
-  outline-offset: 4px;
-}
-.toggleDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--home-accent);
-}
-.toggle:disabled {
-  opacity: 0.7;
-}
-
 .particleScene {
   position: relative;
   width: 100%;
@@ -66,8 +27,8 @@
   padding: 2% 5%;
 }
 .particleGlow {
-  background: radial-gradient(ellipse at 49% 42%, #144bcb 0%, #0d2360 27%, transparent 65%);
-  opacity: 0.68;
+  background: radial-gradient(ellipse at 49% 42%, #103567 0%, #0a1d3c 27%, transparent 65%);
+  opacity: 0.55;
 }
 .particleGrid {
   background-image:
@@ -75,85 +36,8 @@
   background-size: 40px 40px;
   mask-image: radial-gradient(ellipse, #000 15%, transparent 72%);
 }
-.artwork {
-  width: 100%;
-}
-.artwork svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.securityOrbit {
-  transform-origin: 300px 270px;
-  animation: orbit 48s linear infinite;
-}
-.signalTrace {
-  animation: trace 6s linear infinite;
-}
-.teamTile {
-  animation: assemble 6s ease-in-out infinite;
-}
-.soloTile {
-  animation: breathe 6s ease-in-out infinite;
-  transform-origin: 116px 270px;
-}
-.lifeSun {
-  animation: sunrise 9s ease-in-out infinite alternate;
-  transform-origin: 300px 236px;
-}
-@keyframes orbit {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@keyframes trace {
-  to {
-    stroke-dashoffset: -478;
-  }
-}
-@keyframes assemble {
-  0%,
-  15%,
-  85%,
-  100% {
-    transform: translate(0, 0);
-  }
-  40%,
-  60% {
-    transform: translate(var(--tile-x), var(--tile-y));
-  }
-}
-@keyframes breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(0.9);
-  }
-}
-@keyframes sunrise {
-  from {
-    transform: translateY(8px) rotate(-4deg);
-  }
-  to {
-    transform: translateY(-8px) rotate(4deg);
-  }
-}
-
-:global([data-motion-still]) .artwork *,
-:global([data-motion-paused]) .artwork * {
-  animation-play-state: paused;
-}
-
 @media (max-width: 760px) {
   .particleGrid {
     background-size: 28px 28px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .artwork * {
-    animation: none !important;
   }
 }

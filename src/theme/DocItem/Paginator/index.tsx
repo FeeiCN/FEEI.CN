@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react';
 import Link from '@docusaurus/Link';
 import {useDoc} from '@docusaurus/plugin-content-docs/client';
+import {featuredForPath} from '@site/src/data/featuredReading';
 import styles from './styles.module.css';
 
 type PaginatorItem = {
@@ -19,6 +20,7 @@ function Item({item, direction}: {item: PaginatorItem; direction: 'previous' | '
 
 export default function DocItemPaginator(): ReactNode {
   const {metadata} = useDoc();
+  if (featuredForPath(metadata.permalink)) return null;
   const previous = metadata.previous as PaginatorItem | undefined;
   const next = metadata.next as PaginatorItem | undefined;
 

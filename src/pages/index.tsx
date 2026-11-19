@@ -21,6 +21,9 @@ function HeroSection(): ReactNode {
           <h1 id="home-title">吴飞飞<span>Feei</span></h1>
           <p className={styles.heroIntro}>探索高等级的安全如何建设，<br />也认真记录工作之外的生活。</p>
           <p className={styles.heroGuide}>一名生活在杭州的网络安全从业者。<br className={styles.desktopBreak} />从漏洞研究走向企业安全建设，把实践、取舍和后来修正的判断写下来。</p>
+          <nav className={styles.proofLinks} aria-label="公开成果入口">
+            <a href="#public-work">工具实践</a><Link to="/speech">公开演讲</Link><Link to="/publications">出版与白皮书</Link>
+          </nav>
           <div className={styles.compactActions}>
             <a href="#start-reading" className={styles.primaryAction}>读几篇精选 <span aria-hidden="true">↓</span></a>
             <Link to="/about">认识我 <span aria-hidden="true">↗</span></Link>
@@ -43,15 +46,23 @@ function ReadingSection(): ReactNode {
           <Heading as="h2" id="start-reading">第一次来，读这几篇</Heading>
           <p>从一个问题、一段经历，认识这里。</p>
         </div>
-        <div className={styles.featuredList}>
-          {featuredReading.map((item, index) => (
-            <Link key={item.to} to={item.to} className={styles.featuredItem}>
-              <div className={styles.readingMeta}><span>{String(index + 1).padStart(2, '0')}</span><span>{item.category}</span><span aria-hidden="true">↗</span></div>
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
-            </Link>
-          ))}
-        </div>
+        {[
+          {id: 'professional', title: '安全与经历', description: '先认识我，再看建设方法与 AI 安全。'},
+          {id: 'life', title: '人生与生活', description: '工作之外，那些在意的人和普通的日子。'},
+        ].map((group) => (
+          <div className={styles.readingGroup} key={group.id}>
+            <div className={styles.groupHeading}><h3>{group.title}</h3><p>{group.description}</p></div>
+            <div className={`${styles.featuredList} ${group.id === 'life' ? styles.lifeList : ''}`}>
+              {featuredReading.filter((item) => item.group === group.id).map((item) => (
+                <Link key={item.to} to={'entry' in item ? item.entry : item.to} className={styles.featuredItem}>
+                  <div className={styles.readingMeta}><span>{String(featuredReading.indexOf(item) + 1).padStart(2, '0')}</span><span>{item.category}</span><span aria-hidden="true">↗</span></div>
+                  <h4>{item.title}</h4>
+                  <p>{item.description}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -66,14 +77,13 @@ function PublicWorkSection(): ReactNode {
           <p>做过的工具，公开讲过的问题，以及团队沉淀的材料。</p>
         </div>
         <div className={styles.workList}>
-          <Link to="/gsil"><span className={styles.workType}>工具实践</span><strong>GSIL 与 Cobra</strong><span>从敏感信息泄漏监测，到企业级代码审计。</span><span aria-hidden="true">↗</span></Link>
-          <Link to="/speech"><span className={styles.workType}>公开分享</span><strong>演讲与交流</strong><span>安全架构、支付安全，以及 AI 进入真实业务。</span><span aria-hidden="true">↗</span></Link>
-          <Link to="/publications"><span className={styles.workType}>出版与白皮书</span><strong>团队经验的沉淀</strong><span>数字银行安全体系、可信纵深防御与原生安全。</span><span aria-hidden="true">↗</span></Link>
+          <Link to="/gsil"><span className={styles.workType}>监测工具</span><strong>GSIL · GitHub 敏感信息泄漏监控</strong><span>让企业持续发现代码托管平台上的信息泄漏。</span><span aria-hidden="true">↗</span></Link>
+          <Link to="/cobra"><span className={styles.workType}>代码审计</span><strong>Cobra · 企业级代码安全实践</strong><span>把漏洞研究落到代码审计和持续检查。</span><span aria-hidden="true">↗</span></Link>
+          <Link to="/ai-personal-to-org-efficiency"><span className={styles.workType}>演讲材料</span><strong>从个人 AI 提效到组织 AI 提效</strong><span>工具如何进入团队的协作与交付。</span><span aria-hidden="true">↗</span></Link>
+          <Link to="/digital-bank-cybersecurity-system-construction"><span className={styles.workType}>团队材料</span><strong>数字银行安全体系构建</strong><span>阅读数字银行安全建设的实践材料。</span><span aria-hidden="true">↗</span></Link>
         </div>
         <div className={styles.workDetails}>
-          <Link to="/cobra">阅读 Cobra 实践 →</Link>
-          <Link to="/ai-personal-to-org-efficiency">从个人 AI 提效到组织 AI 提效 →</Link>
-          <Link to="/digital-bank-cybersecurity-system-construction">数字银行安全体系构建 →</Link>
+          <Link to="/speech">全部演讲 →</Link><Link to="/publications">出版物与白皮书 →</Link>
         </div>
       </div>
     </section>

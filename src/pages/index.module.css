@@ -62,7 +62,7 @@
   max-width: 35rem;
   margin: 0.8rem 0 0;
   color: var(--home-secondary);
-  font-size: 0.88rem;
+  font-size: max(14px, 0.96rem);
   line-height: 1.85;
 }
 
@@ -81,6 +81,7 @@
 }
 
 .compactActions a,
+.proofLinks a,
 .workDetails a {
   display: inline-flex;
   align-items: center;
@@ -92,6 +93,25 @@
   border-bottom: 1px solid var(--home-accent);
   color: var(--home-accent);
   font-weight: 600;
+}
+
+.proofLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 1.4rem;
+  margin-top: 0.65rem;
+  font-size: max(14px, 0.9rem);
+}
+
+.proofLinks a {
+  min-height: 36px;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  text-decoration-color: var(--home-rule);
+}
+
+.proofLinks a:hover {
+  text-decoration-color: currentColor;
 }
 
 .portrait {
@@ -149,22 +169,49 @@
   font-size: 0.78rem;
 }
 
+.readingGroup + .readingGroup {
+  margin-top: 0.8rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--home-rule);
+}
+
+.groupHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.groupHeading h3 {
+  margin: 0;
+  color: var(--home-accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.groupHeading p {
+  margin: 0;
+  color: var(--home-secondary);
+  font-size: max(14px, 0.9rem);
+  line-height: 1.7;
+}
+
 .featuredList {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem 2rem;
 }
 
+.lifeList {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .featuredItem {
-  grid-column: span 2;
   display: block;
   padding: 0.7rem 0 1.1rem;
 }
 
-.featuredItem:nth-child(-n + 2) {
-  grid-column: span 3;
-  border-bottom: 1px solid var(--home-rule);
-}
 
 .readingMeta {
   display: flex;
@@ -184,26 +231,23 @@
   margin-left: auto;
 }
 
-.featuredItem h3 {
+.featuredItem h4 {
   margin: 0 0 0.55rem;
   font-size: 1.05rem;
   font-weight: 650;
   line-height: 1.5;
 }
 
-.featuredItem:nth-child(-n + 2) h3 {
-  font-size: 1.25rem;
-}
 
 .featuredItem p {
   margin: 0;
   max-width: 32rem;
   color: var(--home-secondary);
-  font-size: 0.84rem;
+  font-size: max(15px, 1rem);
   line-height: 1.8;
 }
 
-.page a:hover h3,
+.page a:hover h4,
 .workList a:hover strong,
 .recentItem:hover > span,
 .compactActions a:hover,
@@ -215,12 +259,12 @@
 
 .workList a {
   display: grid;
-  grid-template-columns: 7.5rem 11rem minmax(0, 1fr) auto;
+  grid-template-columns: 6.5rem minmax(0, 1.2fr) minmax(0, 1fr) auto;
   align-items: baseline;
   gap: 1rem;
   padding: 0.8rem 0;
   border-top: 1px solid var(--home-rule);
-  font-size: 0.84rem;
+  font-size: max(14px, 0.96rem);
 }
 
 .workList a > span:not(:last-child) {
@@ -273,7 +317,7 @@
 }
 
 .recentItem > span {
-  font-size: 0.86rem;
+  font-size: max(15px, 1rem);
   line-height: 1.65;
   overflow-wrap: anywhere;
 }
@@ -350,7 +394,7 @@
   }
 
   .heroGuide {
-    font-size: 0.84rem;
+    font-size: max(14px, 0.96rem);
   }
 
   .desktopBreak {
@@ -389,8 +433,7 @@
     display: block;
   }
 
-  .featuredItem,
-  .featuredItem:nth-child(-n + 2) {
+  .featuredItem {
     padding: 1rem 0;
     border-bottom: 1px solid var(--home-rule);
   }
@@ -404,14 +447,13 @@
     margin-bottom: 0.4rem;
   }
 
-  .featuredItem h3,
-  .featuredItem:nth-child(-n + 2) h3 {
+  .featuredItem h4 {
     font-size: 1.05rem;
     margin-bottom: 0.3rem;
   }
 
   .featuredItem p {
-    font-size: 0.84rem;
+    font-size: max(15px, 1rem);
   }
 
   .workList a {

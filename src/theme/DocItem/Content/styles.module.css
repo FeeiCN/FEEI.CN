@@ -3,6 +3,10 @@
   margin-inline: auto;
 }
 
+.themeDocMarkdown :global(:is(h2, h3, h4, h5, h6)[id]) {
+  scroll-margin-top: calc(var(--ifm-navbar-height) + 2rem);
+}
+
 .readingMode {
   display: flex;
   gap: 0.7rem;

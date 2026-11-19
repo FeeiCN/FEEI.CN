@@ -49,14 +49,16 @@ def resolve(now, cron='', mode='auto', target=''):
         return day, 'refresh' if mode == 'auto' else mode
     if mode != 'auto':
         return local.date(), mode
-    if cron in ('15 15 * * *', '45 15 * * *', '15 16 * * *'):
+    slot = local
+    if cron:
         from automation_schedule import latest_slot
         slot = latest_slot([cron], now.astimezone(timezone.utc)).astimezone(TZ)
+    if cron in ('15 15 * * *', '45 15 * * *', '15 16 * * *'):
         day = slot.date() - timedelta(days=1) if slot.hour < 7 else slot.date()
         return day, 'refresh'
-    if local.time() < time(7, 45):
-        return local.date() - timedelta(days=1), 'refresh'
-    return local.date(), 'refresh' if local.time() >= time(23, 15) else 'create'
+    if slot.time() < time(7, 45):
+        return slot.date(), 'inbox'
+    return slot.date(), 'refresh' if slot.time() >= time(23, 15) else 'create'
 
 
 def day_marker(day):
@@ -376,8 +378,16 @@ def fresh(snapshot):
 
 
 def timing(repo, day, mode, now):
-    planned = datetime.combine(day, time(23, 15) if mode == 'refresh' else time(7, 45), TZ)
+    cron = os.environ.get('TRIGGER_SCHEDULE', '')
+    if cron:
+        from automation_schedule import latest_slot
+        planned = latest_slot([cron], now.astimezone(timezone.utc)).astimezone(TZ)
+    else:
+        planned = datetime.combine(day, {'inbox': time(0, 5), 'create': time(7, 45),
+                                        'refresh': time(23, 15)}[mode], TZ)
     result = {'planned_at': planned.isoformat(), 'observed_at': now.astimezone(TZ).isoformat(),
+              'trigger_schedule': cron or None,
+              'slot_basis': 'most_recent_trigger_schedule' if cron else 'manual_stage_reference',
               'note': '计划至运行创建的差值不是 Runner 排队时间，也不能证明 GitHub 内部延迟原因。'}
     if os.environ.get('GITHUB_RUN_ID'):
         run = api(f'repos/{repo}/actions/runs/{int(os.environ["GITHUB_RUN_ID"])}')
@@ -387,6 +397,14 @@ def timing(repo, day, mode, now):
         result['plan_to_creation_minutes'] = round((created - planned).total_seconds() / 60, 1)
         result['creation_to_run_start_seconds'] = (started - created).total_seconds()
     return result
+
+
+def write_result(repo, issue, day, mode, now, schedule, ready):
+    with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+        output.write(f'ready={str(ready).lower()}\ndate={day}\nissue={issue["number"]}\n')
+    with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+        summary.write(f'个人记录 [{day}](https://github.com/{repo}/issues/{issue["number"]}) · {mode} · 实际执行 {now.astimezone(TZ).isoformat()}。\n')
+        summary.write('\n```json\n' + json.dumps(schedule, ensure_ascii=False, indent=2) + '\n```\n')
 
 
 def main():
@@ -406,6 +424,9 @@ def main():
                                                   'assignees': [repo.split('/')[0]]})
     schedule = timing(repo, day, mode, now)
     (out / 'daily-schedule.json').write_text(json.dumps(schedule, ensure_ascii=False))
+    if mode == 'inbox':
+        write_result(repo, issue, day, mode, now, schedule, False)
+        return
     marker = snapshot_marker(day)
     comments = pages(f'repos/{repo}/issues/{issue["number"]}/comments')
     sections = legacy_sections(issue, day, comments)
@@ -418,7 +439,7 @@ def main():
     if refresh or (mode == 'create' and not existing_snapshot):
         snapshot = collect(repo, day, now)
         (out / 'personal-snapshot.json').write_text(json.dumps(snapshot, ensure_ascii=False))
-        timing_line = f'计划：{day} {"23:15" if mode == "refresh" else "07:45"} Asia/Shanghai；实际采集：{snapshot["collected_at"]}；数据截止：{snapshot["cutoff"]}。'
+        timing_line = f'计划或手动阶段参考：{schedule.get("planned_at", "未记录")}；实际采集：{snapshot["collected_at"]}；数据截止：{snapshot["cutoff"]}。'
         body = '<details>\n<summary>自动数据快照</summary>\n\n' + f'## {day} {"晚间刷新" if mode == "refresh" else "早间快照"}\n\n' + timing_line + '\n\n' + render(snapshot) + '\n\n</details>'
         body = preserve_sources(body, previous, snapshot)
         if mode == 'refresh' and fresh(snapshot):
@@ -426,16 +447,12 @@ def main():
         sections[marker] = body
     if sections:
         publish_sections(repo, issue, sections)
-    with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
-        # A placeholder without clues can be retried, but never replace an existing completed legacy report.
-        clues_marker = f'<!-- daily-personal-clues:{day} -->'
-        clues = section_content(issue.get('body') or '', clues_marker)
-        has_clues = '<!-- daily-clues-status:completed -->' in (clues if clues is not None else sections.get(clues_marker, ''))
-        ready = mode == 'create' and not has_clues and '<!-- status:completed -->' not in (issue.get('body') or '')
-        output.write(f'ready={str(ready).lower()}\ndate={day}\nissue={issue["number"]}\n')
-    with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-        summary.write(f'个人记录 [{day}](https://github.com/{repo}/issues/{issue["number"]}) · {mode} · 实际执行 {now.astimezone(TZ).isoformat()}。\n')
-        summary.write('\n```json\n' + json.dumps(schedule, ensure_ascii=False, indent=2) + '\n```\n')
+    # A placeholder without clues can be retried, but never replace an existing completed legacy report.
+    clues_marker = f'<!-- daily-personal-clues:{day} -->'
+    clues = section_content(issue.get('body') or '', clues_marker)
+    has_clues = '<!-- daily-clues-status:completed -->' in (clues if clues is not None else sections.get(clues_marker, ''))
+    ready = mode == 'create' and not has_clues and '<!-- status:completed -->' not in (issue.get('body') or '')
+    write_result(repo, issue, day, mode, now, schedule, ready)
 
 
 if __name__ == '__main__':

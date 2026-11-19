@@ -4,14 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 自动选择、早间创建或晚间刷新
+        description: 自动选择、仅创建入口、早间采集或晚间刷新
         type: choice
         default: auto
-        options: [auto, create, refresh]
+        options: [auto, inbox, create, refresh]
       date:
         description: 北京时间日期 YYYY-MM-DD，留空自动选择
         type: string
   schedule:
+    - cron: '5 16 * * *'
+    - cron: '45 16-22 * * *'
     - cron: '45 23,0-14 * * *'
     - cron: '15 15 * * *'
     - cron: '45 15 * * *'

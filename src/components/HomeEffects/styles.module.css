@@ -75,20 +75,6 @@
   background-size: 40px 40px;
   mask-image: radial-gradient(ellipse, #000 15%, transparent 72%);
 }
-.particleLegend {
-  position: absolute;
-  right: max(3rem, calc((100% - 1220px) / 2));
-  bottom: 1rem;
-  left: max(3rem, calc((100% - 1220px) / 2));
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  color: #aabbd7;
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  pointer-events: none;
-}
-
 .artwork {
   width: 100%;
 }
@@ -161,12 +147,6 @@
 }
 
 @media (max-width: 760px) {
-  .particleLegend {
-    left: 1.25rem;
-    right: 1.25rem;
-    font-size: 8px;
-    bottom: 0.5rem;
-  }
   .particleGrid {
     background-size: 28px 28px;
   }

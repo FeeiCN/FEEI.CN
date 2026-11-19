@@ -42,14 +42,6 @@ function HeroSection(): ReactNode {
           <h1 id="home-title" data-home-reveal>
             吴飞飞<span>Feei</span>
           </h1>
-          <div className={styles.heroActions} data-home-reveal data-reveal-delay="120">
-            <a href="#start-reading" className={styles.primaryAction}>
-              翻开三篇精选 <span aria-hidden="true">↓</span>
-            </a>
-            <Link to="/about" className={styles.secondaryAction}>
-              认识我 <Arrow diagonal />
-            </Link>
-          </div>
         </div>
         <div className={styles.heroNarrative} data-home-reveal data-reveal-delay="180">
           <p className={styles.heroLead}>
@@ -62,6 +54,14 @@ function HeroSection(): ReactNode {
             <br />
             把做过的事、走过的弯路，和后来修正的判断写下来。
           </p>
+        </div>
+        <div className={styles.heroActions} data-home-reveal data-reveal-delay="240">
+          <a href="#start-reading" className={styles.primaryAction}>
+            翻开三篇精选 <span aria-hidden="true">↓</span>
+          </a>
+          <Link to="/about" className={styles.secondaryAction}>
+            认识我 <Arrow diagonal />
+          </Link>
         </div>
       </div>
       <div className={`${styles.container} ${styles.heroFoot}`}>

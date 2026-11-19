@@ -58,39 +58,40 @@
 .hero {
   --home-background: #080d18;
   --home-ink: #f1f5ff;
-  --home-secondary: #b6c3da;
-  --home-rule: #2d3a50;
+  --home-secondary: #c4cee0;
+  --home-rule: #3b485e;
   --home-accent: #adc7ff;
   --home-accent-text: #101b30;
   position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - var(--ifm-navbar-height));
   overflow: clip;
   background: var(--home-background);
   color: var(--home-ink);
 }
+.hero::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, rgb(3 9 22 / 72%) 0%, rgb(3 9 22 / 48%) 32%, transparent 75%);
+  pointer-events: none;
+}
 .particleStage {
-  height: clamp(360px, 38vw, 540px);
+  position: absolute;
+  z-index: 0;
+  inset: 0;
   width: 100%;
-  max-width: 1800px;
-  margin-inline: auto;
+  height: 100%;
 }
-.authorLine {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
+.editionLine,
+.heroGrid,
+.heroFoot {
+  position: relative;
+  z-index: 2;
 }
-.authorLine img {
-  display: block;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  object-position: 50% 25%;
-  border: 1px solid #65738a;
-}
-.heroNarrative {
-  padding-block: 1.8rem;
-}
-
 .editionLine {
   display: flex;
   justify-content: space-between;
@@ -107,23 +108,43 @@
   color: var(--home-secondary);
 }
 .heroGrid {
-  display: grid;
-  grid-template-columns: 0.85fr 1.15fr;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 5rem;
-  padding-block: 1.5rem 2.5rem;
+  min-height: 620px;
+  gap: 0;
+  padding-block: 3.5rem;
+  text-align: center;
+  text-shadow: 0 2px 18px #030916;
 }
 .heroCopy {
   position: relative;
-  z-index: 1;
-  padding-block: 0;
+  padding: 0;
+}
+.authorLine {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+}
+.authorLine img {
+  display: block;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: 50% 25%;
+  border: 1px solid #65738a;
 }
 .hero h1 {
   display: flex;
+  justify-content: center;
   align-items: baseline;
   gap: 1.3rem;
   margin: 0.8rem 0 0;
-  font-size: clamp(3.6rem, 6.2vw, 5.4rem);
+  font-size: clamp(4rem, 7vw, 6rem);
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: -0.07em;
@@ -134,11 +155,15 @@
   font-weight: 400;
   letter-spacing: -0.02em;
 }
+.heroNarrative {
+  max-width: 520px;
+  margin-top: 1.3rem;
+}
 .heroLead {
   margin: 0;
   font-family: Georgia, 'Songti SC', STSong, serif;
-  font-size: clamp(1.7rem, 2.8vw, 2.3rem);
-  line-height: 1.55;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  line-height: 1.5;
   letter-spacing: -0.035em;
 }
 .heroDescription {
@@ -150,9 +175,10 @@
 .heroActions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 1rem 1.7rem;
-  margin-top: 1.6rem;
+  margin-top: 1.8rem;
   font-size: 13px;
 }
 .heroActions a {
@@ -161,6 +187,7 @@
   justify-content: space-between;
   gap: 2rem;
   min-height: 46px;
+  text-shadow: none;
 }
 .page .primaryAction {
   padding: 0.7rem 1.15rem;
@@ -755,17 +782,16 @@
   .heroGrid {
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    padding-block: 0;
+    align-items: center;
+    min-height: 540px;
+    padding-block: 3rem;
   }
   .heroCopy {
-    padding-block: 1.2rem 0;
-  }
-  .particleStage {
-    height: 320px;
+    padding: 0;
   }
   .heroNarrative {
-    padding-block: 1rem 1.5rem;
+    padding: 0;
+    margin-top: 1.15rem;
   }
   .authorLine img {
     width: 28px;

@@ -83,6 +83,7 @@ export function ParticleScene(): ReactNode {
     const host = hostRef.current;
     const canvas = canvasRef.current;
     if (!host || !canvas) return;
+    const interactionHost = host.closest('section') ?? host;
     setReady(false);
     if (!canvas.getContext('webgl', {alpha: true, depth: false, antialias: false, premultipliedAlpha: false})) return;
     const renderer = new Renderer({
@@ -199,8 +200,8 @@ export function ParticleScene(): ReactNode {
     resizeObserver.observe(host);
     observer.observe(host);
     document.addEventListener('visibilitychange', sync);
-    host.addEventListener('pointermove', move);
-    host.addEventListener('pointerleave', leave);
+    interactionHost.addEventListener('pointermove', move);
+    interactionHost.addEventListener('pointerleave', leave);
     canvas.addEventListener('webglcontextlost', contextLost);
     canvas.addEventListener('webglcontextrestored', contextRestored);
     control.current = {sync};
@@ -213,8 +214,8 @@ export function ParticleScene(): ReactNode {
       resizeObserver.disconnect();
       observer.disconnect();
       document.removeEventListener('visibilitychange', sync);
-      host.removeEventListener('pointermove', move);
-      host.removeEventListener('pointerleave', leave);
+      interactionHost.removeEventListener('pointermove', move);
+      interactionHost.removeEventListener('pointerleave', leave);
       canvas.removeEventListener('webglcontextlost', contextLost);
       canvas.removeEventListener('webglcontextrestored', contextRestored);
       if (!lost) {
@@ -243,10 +244,6 @@ export function ParticleScene(): ReactNode {
         ))}
       </svg>
       <canvas ref={canvasRef} className={styles.particleCanvas} />
-      <div className={styles.particleLegend}>
-        <span>FEEI / FIELD NOTES</span>
-        <span>探索，持续发生。</span>
-      </div>
     </div>
   );
 }

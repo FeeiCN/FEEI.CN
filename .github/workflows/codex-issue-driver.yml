@@ -23,7 +23,61 @@ permissions:
   contents: read
 
 jobs:
+  mark-executing:
+    if: >-
+      github.actor == github.repository_owner && github.triggering_actor == github.repository_owner &&
+      (github.event_name != 'issue_comment' || !github.event.issue.pull_request)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+          fetch-depth: 0
+      - name: 开始任务状态
+        continue-on-error: true
+        uses: ./.github/actions/workflow-status
+        with:
+          phase: preparing
+      - name: 恢复并核验当前会话
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number || github.event.issue.number }}
+        run: python3 scripts/issue_conversation.py prepare
+      - name: 完成任务状态
+        continue-on-error: true
+        if: always()
+        uses: ./.github/actions/workflow-status
+        with:
+          phase: finished
+          state: ${{ job.status }}
+      - name: 更新会话执行状态
+        if: steps.prepare.outputs.ready == 'true' && inputs.dry_run != 'true'
+        continue-on-error: true
+        uses: ./.github/actions/workflow-status
+        with:
+          phase: running
+          issue-number: ${{ steps.prepare.outputs.issue }}
+          label: executing
+          task: issue-label
+      - name: 保存任务状态
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-status-${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/workflow-status/${{ github.run_id }}-${{ github.run_attempt }}/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+
   turn:
+    needs: mark-executing
     if: >-
       github.actor == github.repository_owner && github.triggering_actor == github.repository_owner &&
       (github.event_name != 'issue_comment' || !github.event.issue.pull_request)

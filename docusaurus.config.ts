@@ -30,7 +30,7 @@ const config: Config = {
   themes: ['@docusaurus/theme-mermaid'],
   plugins: [docMtimePlugin, copyMarkdownPlugin, homeRecordsPlugin, complianceOntologyPlugin, [fastSearchPlugin, searchOptions], developmentMemoryPlugin], clientModules: ['./src/clientModules/slidingIndicator.ts'],
   themeConfig: {
-    docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: staticAssetUrl('/music/feei-site-theme-cover.webp'), colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
+    docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: staticAssetUrl('/img/share/feei.png'), colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
     navbar: {hideOnScroll: false, logo: {alt: 'FEEI', src: staticAssetUrl('/img/feei-icon.svg')}, items: [
       {type: 'dropdown', position: 'left', label: '网络安全', icon: 'shield', items: [
         {type: 'doc', docId: '网络安全/网络空间安全/README', label: '网络空间安全', icon: 'shield'},

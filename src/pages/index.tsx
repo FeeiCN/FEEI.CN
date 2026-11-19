@@ -121,19 +121,13 @@ export default function Home(): ReactNode {
           <div className={styles.particleStage}>
             <ParticleScene />
           </div>
-          <div className={`${styles.container} ${styles.editionLine}`}>
-            <span>
-              FEEI.CN <span className={styles.editionSlash}>/</span> 个人记录
-            </span>
-            <span>网络安全 · 人工智能 · 生活</span>
-          </div>
           <div className={`${styles.container} ${styles.heroContent}`}>
             <div className={styles.authorLine} data-home-reveal>
               <img src={authorPortrait} alt="" width="48" height="48" fetchPriority="high" />
               <span>你好，我是</span>
             </div>
             <h1 id="home-title" data-home-reveal>
-              吴飞飞<span>Feei</span>
+              Feei<span>吴飞飞</span>
             </h1>
             <p className={styles.heroLead} data-home-reveal data-reveal-delay="100">
               探索安全与 AI，

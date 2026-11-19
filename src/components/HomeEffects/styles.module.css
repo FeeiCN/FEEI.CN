@@ -1,0 +1,179 @@
+.progress {
+  position: fixed;
+  z-index: calc(var(--ifm-z-index-fixed) - 1);
+  top: var(--ifm-navbar-height);
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: var(--home-accent);
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+.toggle {
+  align-self: center;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: var(--home-secondary);
+  font-size: 11px;
+  font-weight: 400;
+}
+.toggle:hover:not(:disabled) {
+  color: var(--home-accent);
+}
+.toggle:focus-visible {
+  outline: 2px solid var(--home-accent);
+  outline-offset: 4px;
+}
+.toggleDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--home-accent);
+}
+.toggle:disabled {
+  opacity: 0.7;
+}
+
+.particleScene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  isolation: isolate;
+}
+.particleCanvas,
+.particleFallback,
+.particleGlow,
+.particleGrid {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.particleCanvas {
+  opacity: 0;
+}
+.particleScene[data-ready] .particleCanvas {
+  opacity: 1;
+}
+.particleScene[data-ready] .particleFallback {
+  opacity: 0;
+}
+.particleFallback {
+  padding: 2% 5%;
+}
+.particleGlow {
+  background: radial-gradient(ellipse at 49% 42%, #144bcb 0%, #0d2360 27%, transparent 65%);
+  opacity: 0.68;
+}
+.particleGrid {
+  background-image:
+    linear-gradient(#8db3ff12 1px, transparent 1px), linear-gradient(90deg, #8db3ff12 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse, #000 15%, transparent 72%);
+}
+.particleLegend {
+  position: absolute;
+  right: max(3rem, calc((100% - 1220px) / 2));
+  bottom: 1rem;
+  left: max(3rem, calc((100% - 1220px) / 2));
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #aabbd7;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  pointer-events: none;
+}
+
+.artwork {
+  width: 100%;
+}
+.artwork svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.securityOrbit {
+  transform-origin: 300px 270px;
+  animation: orbit 48s linear infinite;
+}
+.signalTrace {
+  animation: trace 6s linear infinite;
+}
+.teamTile {
+  animation: assemble 6s ease-in-out infinite;
+}
+.soloTile {
+  animation: breathe 6s ease-in-out infinite;
+  transform-origin: 116px 270px;
+}
+.lifeSun {
+  animation: sunrise 9s ease-in-out infinite alternate;
+  transform-origin: 300px 236px;
+}
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes trace {
+  to {
+    stroke-dashoffset: -478;
+  }
+}
+@keyframes assemble {
+  0%,
+  15%,
+  85%,
+  100% {
+    transform: translate(0, 0);
+  }
+  40%,
+  60% {
+    transform: translate(var(--tile-x), var(--tile-y));
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.9);
+  }
+}
+@keyframes sunrise {
+  from {
+    transform: translateY(8px) rotate(-4deg);
+  }
+  to {
+    transform: translateY(-8px) rotate(4deg);
+  }
+}
+
+:global([data-motion-still]) .artwork *,
+:global([data-motion-paused]) .artwork * {
+  animation-play-state: paused;
+}
+
+@media (max-width: 760px) {
+  .particleLegend {
+    left: 1.25rem;
+    right: 1.25rem;
+    font-size: 8px;
+    bottom: 0.5rem;
+  }
+  .particleGrid {
+    background-size: 28px 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artwork * {
+    animation: none !important;
+  }
+}

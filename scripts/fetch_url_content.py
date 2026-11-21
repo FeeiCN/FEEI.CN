@@ -27,7 +27,7 @@ from html import unescape
 from html.parser import HTMLParser
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from translate_text import TranslationError, is_english_text, translate_text
@@ -46,7 +46,7 @@ YOUTUBE_URL_RE = re.compile(
     re.IGNORECASE,
 )
 YOUTUBE_OEMBED_BASE = "https://www.youtube.com/oembed"
-WAYBACK_BASE = "https://web.archive.org/web/0"
+WAYBACK_BASE = "https://web.archive.org/web"
 
 
 def collapse_whitespace(value: str) -> str:
@@ -378,7 +378,6 @@ def youtube_to_markdown(oembed: dict[str, Any], source_url: str) -> str:
     title = collapse_whitespace(str(oembed.get("title") or ""))
     author = collapse_whitespace(str(oembed.get("author_name") or ""))
     author_url = str(oembed.get("author_url") or "")
-    provider = collapse_whitespace(str(oembed.get("provider_name") or "YouTube"))
     thumbnail = str(oembed.get("thumbnail_url") or "")
     html = str(oembed.get("html") or "")
 
@@ -404,19 +403,49 @@ def youtube_to_markdown(oembed: dict[str, Any], source_url: str) -> str:
     return "\n\n".join(chunks).strip()
 
 
+def wayback_snapshot_url(url: str, timeout: float) -> str | None:
+    query = urlencode({"url": url})
+    payload, _ = fetch_json(f"https://archive.org/wayback/available?{query}", timeout=timeout)
+    snapshots = payload.get("archived_snapshots") if isinstance(payload, dict) else None
+    closest = snapshots.get("closest") if isinstance(snapshots, dict) else None
+    if not isinstance(closest, dict) or closest.get("available") is not True:
+        return None
+
+    timestamp = closest.get("timestamp")
+    if isinstance(timestamp, str) and re.fullmatch(r"[0-9]{14}", timestamp):
+        return f"{WAYBACK_BASE}/{timestamp}id_/{url}"
+    return None
+
+
 def try_wayback_fallback(url: str, timeout: float) -> tuple[str, str, str] | None:
     """直接抓取失败时试 Wayback Machine；带 query 的 URL 在 wayback 没有时再去掉 query 重试。"""
     candidates = [url]
     if "?" in url:
         candidates.append(url.split("?", 1)[0])
     for candidate in candidates:
-        wayback_url = f"{WAYBACK_BASE}/{candidate}"
+        wayback_url = f"{WAYBACK_BASE}/0/{candidate}"
         try:
             html, content_type = fetch(wayback_url, timeout=timeout)
-        except RuntimeError:
+        except (RuntimeError, TimeoutError):
             continue
         if len(html) >= 1024 and ("Wayback Machine" in html or "wayback" in html.lower()):
             return html, content_type, wayback_url
+
+    for candidate in candidates:
+        try:
+            snapshot_url = wayback_snapshot_url(candidate, timeout=timeout)
+            if snapshot_url is None:
+                continue
+            html, content_type = fetch(snapshot_url, timeout=timeout)
+        except (RuntimeError, TimeoutError):
+            continue
+
+        # 索引的状态码可能与实际回放不同，以回放的 HTML 正文为准。
+        if content_type.split(";", 1)[0].strip().lower() not in {"text/html", "application/xhtml+xml"}:
+            continue
+        title, markdown = html_to_markdown(html)
+        if markdown and (not title or usable_title(title_text(title))):
+            return html, content_type, snapshot_url
     return None
 
 

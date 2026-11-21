@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import type APlayerInstance from 'aplayer';
 import type {Audio, Options} from 'aplayer';
-import {staticAssetUrl} from '@site/src/utils/staticAssets';
+import {siteShareImagePath, staticAssetUrl} from '@site/src/utils/staticAssets';
 import {babyMusicManifestUrl, buildAllDerivedGroups, playlistGroupFromManifest, siteMusicGroups} from './playlist';
 import type {PlaylistGroup, PlaylistManifestGroup} from './playlist';
 import Controls from './Controls';
@@ -89,6 +89,15 @@ function reportState() {
   });
 }
 
+function updateMediaMetadata(track: Audio | undefined) {
+  if (!track || !navigator.mediaSession || typeof MediaMetadata !== 'function') return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: track.name,
+    artist: track.artist,
+    artwork: [{src: staticAssetUrl(siteShareImagePath), sizes: '1200x630', type: 'image/png'}],
+  });
+}
+
 function play(player: Engine) {
   loading = player.audio.readyState < 3;
   reportError('');
@@ -127,12 +136,14 @@ async function prepare(group: PlaylistGroup, requestedIndex?: number, autoplay =
       autoplay: false, loop: preferences.loop, order: preferences.order, volume: preferences.volume,
       preload: 'metadata', mutex: false, lrcType: 3, listFolded: true});
     engine = player;
+    updateMediaMetadata(player.list.audios[player.list.index]);
     // APlayer's setAudio auto-plays without handling rejection; pause first.
     const setAudio = player.setAudio.bind(player);
     player.setAudio = (track) => {
       const resume = !player.audio.paused;
       player.pause();
       setAudio(track);
+      updateMediaMetadata(track);
       if (resume) play(player);
     };
     player.play = () => play(player);

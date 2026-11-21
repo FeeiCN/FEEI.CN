@@ -93,6 +93,7 @@ jobs:
       execution_sha: ${{ steps.prepare.outputs.execution_sha }}
       action: ${{ steps.respond.outputs.action }}
       has_files: ${{ steps.respond.outputs.has_files }}
+      task: ${{ steps.delivery.outputs.task }}
       artifact_id: ${{ steps.artifact.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@v6
@@ -134,6 +135,12 @@ jobs:
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: python3 scripts/issue_conversation.py respond
+      - name: 读取已核验的会话类型
+        id: delivery
+        if: steps.respond.outcome == 'success'
+        run: |
+          task=$(jq -er '.task | strings | select(length > 0)' output/conversation/context.json)
+          printf 'task=%s\n' "$task" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         id: artifact
         if: always() && steps.prepare.outputs.ready == 'true' && inputs.dry_run != 'true'
@@ -168,7 +175,10 @@ jobs:
 
   validate:
     needs: turn
-    if: needs.turn.result == 'success' && (needs.turn.outputs.action == 'approve' || needs.turn.outputs.has_files == 'true')
+    if: >-
+      needs.turn.result == 'success' &&
+      (needs.turn.outputs.action == 'approve' ||
+      (needs.turn.outputs.has_files == 'true' && needs.turn.outputs.task != 'daily-personal-record'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -300,7 +310,7 @@ jobs:
       - name: 完成任务状态
         continue-on-error: true
         if: always()
-        uses: ./tooling/.github/actions/workflow-status
+        uses: ./.github/actions/workflow-status
         with:
           phase: finished
           state: ${{ job.status }}
@@ -417,7 +427,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ needs.turn.outputs.issue }}
-          TURN_OUTCOME: ${{ needs.turn.result == 'success' && needs.validate.result != 'failure' && needs.validate.result != 'cancelled' && 'success' || 'failure' }}
+          TURN_OUTCOME: >-
+            ${{ needs.turn.result == 'success' &&
+            ((needs.turn.outputs.task == 'daily-personal-record' && needs.turn.outputs.action == 'approve') ||
+            (needs.validate.result != 'failure' && needs.validate.result != 'cancelled')) && 'success' || 'failure' }}
         run: python3 scripts/issue_conversation.py publish
       - name: 更新会话展示状态
         continue-on-error: true

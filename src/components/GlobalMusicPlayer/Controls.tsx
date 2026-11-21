@@ -86,6 +86,7 @@ export default function Controls() {
   const duration = playback?.duration ?? 0;
   const currentTime = scrub ?? playback?.currentTime ?? 0;
   const lyrics = playback?.lyrics ?? [];
+  const trackKey = `${playback?.groupId}:${playback?.trackIndex}`;
   let currentLine = -1;
   for (let index = 0; index < lyrics.length; index++) {
     if (lyrics[index][0] <= (playback?.currentTime ?? 0)) currentLine = index;
@@ -252,14 +253,18 @@ export default function Controls() {
     };
   }, [lyricsOpen]);
   useEffect(() => {
-    if (!lyricsOpen || !following || currentLine < 0) return;
-    const line = lineRefs.current[currentLine];
     const container = lyricScrollRef.current;
-    if (!line || !container) return;
+    if (!lyricsOpen || !following || !container) return;
+    if (currentLine <= 0) {
+      container.scrollTo({top: 0, behavior: 'instant'});
+      return;
+    }
+    const line = lineRefs.current[currentLine];
+    if (!line) return;
     container.scrollTo({top: line.offsetTop - container.clientHeight / 2 + line.clientHeight / 2,
       behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'});
-  }, [lyricsOpen, following, currentLine, lyrics.length]);
-  useEffect(() => { setFollowing(true); setScrub(null); }, [playback?.groupId, playback?.trackIndex]);
+  }, [lyricsOpen, following, currentLine, lyrics.length, trackKey]);
+  useEffect(() => { setFollowing(true); setScrub(null); }, [trackKey]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(''), 2500);
@@ -360,7 +365,7 @@ export default function Controls() {
         {playback && <IconButton label="下一首" onClick={() => dispatchMusicPlayerCommand({action: 'next'})}><SkipIcon /></IconButton>}
         <IconButton label="停止播放并收起" onClick={dismiss}><XIcon size={16} disableHover /></IconButton>
         {playback && <div className={styles.miniProgress} style={progressStyle} />}
-        {!expanded && error && <span className={styles.errorDot} title={error} aria-label={error} />}
+        {!expanded && error && <div className={styles.errorDot} title={error} aria-label={error} />}
       </div> : <Dialog.Content asChild><section ref={panelRef} aria-label="音乐播放器" data-details-expanded={detailsExpanded && hasPlayed} className={styles.panel}>
         <header className={styles.header}>
           <Dialog.Title className={styles.headerTitle}>音乐</Dialog.Title>
@@ -407,7 +412,7 @@ export default function Controls() {
         <div><strong>{playback?.title}</strong><span>{playback?.artist}</span></div>
         <IconButton label="关闭全屏歌词" onClick={() => setLyricsOpen(false)}><XIcon size={20} disableHover /></IconButton>
       </div>
-      {lyrics.length ? <div ref={lyricScrollRef} className={styles.lyricLines}
+      {lyrics.length ? <div key={trackKey} ref={lyricScrollRef} className={styles.lyricLines}
         onWheel={() => setFollowing(false)} onTouchMove={() => setFollowing(false)}>
         {lyrics.map(([time, line], index) => <button key={`${time}-${index}`} ref={(element) => { lineRefs.current[index] = element; }}
           type="button" className={`${styles.lyricLine} ${index === currentLine ? styles.currentLine : ''}`}

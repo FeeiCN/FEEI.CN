@@ -18,12 +18,28 @@ function Arrow(): ReactNode {
 function HomeReading({reviews}: {reviews: HomeAnnualReview[]}): ReactNode {
   return (
     <Tabs.Root defaultValue="intro" className={styles.homeTabs} lazyMount={false} unmountOnExit={false}>
+      <div className={styles.heroActions}>
+        <Tabs.List className={styles.tabList} aria-label="首页内容">
+          <Tabs.Trigger value="intro" className={styles.tabTrigger}>
+            概览
+          </Tabs.Trigger>
+          <Tabs.Trigger value="reading" className={styles.tabTrigger}>
+            精选阅读
+          </Tabs.Trigger>
+          <Tabs.Trigger value="annual" className={styles.tabTrigger}>
+            年度总结
+          </Tabs.Trigger>
+        </Tabs.List>
+        <Link to="/about" className={styles.aboutLink}>
+          认识我 <Arrow />
+        </Link>
+      </div>
       <Tabs.Content value="intro" className={styles.introPanel}>
         <p className={styles.heroLead}>
           <span>探索安全与 AI，</span>
           <span>在实践中持续进化。</span>
         </p>
-        <p className={styles.heroDescription}>探索 → 实践 → 记录 → 再探索</p>
+        <p className={styles.heroDescription}>记住生活，改善选择，积累认识。</p>
       </Tabs.Content>
       <Tabs.Content value="reading" className={styles.readingPanel} aria-label="三篇精选阅读">
         {featuredReading.map((item, index) => (
@@ -47,22 +63,6 @@ function HomeReading({reviews}: {reviews: HomeAnnualReview[]}): ReactNode {
           </Link>
         ))}
       </Tabs.Content>
-      <div className={styles.heroActions}>
-        <Tabs.List className={styles.tabList} aria-label="首页内容">
-          <Tabs.Trigger value="intro" className={styles.tabTrigger}>
-            概览
-          </Tabs.Trigger>
-          <Tabs.Trigger value="reading" className={styles.tabTrigger}>
-            精选阅读
-          </Tabs.Trigger>
-          <Tabs.Trigger value="annual" className={styles.tabTrigger}>
-            年度总结
-          </Tabs.Trigger>
-        </Tabs.List>
-        <Link to="/about" className={styles.aboutLink}>
-          认识我 <Arrow />
-        </Link>
-      </div>
     </Tabs.Root>
   );
 }
@@ -73,7 +73,11 @@ function HomeFooter(): ReactNode {
     <footer className={`${styles.container} ${styles.homeFooter}`}>
       <div className={styles.footerLinks}>
         <span className={styles.location}>
-          杭州 <span className={styles.editionSlash}>/</span> 从 2012 年开始记录
+          <span>杭州</span>
+          <span className={styles.editionSlash} aria-hidden="true">
+            /
+          </span>
+          <span>从 2012 年开始记录</span>
         </span>
         <nav aria-label="联系与订阅">
           <Link to="/contact">

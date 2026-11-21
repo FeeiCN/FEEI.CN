@@ -67,7 +67,6 @@
   z-index: 2;
 }
 .editionSlash {
-  margin-inline: 0.65rem;
   color: var(--home-accent);
 }
 .heroContent {
@@ -100,16 +99,17 @@
 .homeTabs {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(280px, auto) auto;
+  grid-template-rows: auto minmax(250px, auto);
+  row-gap: 1.5rem;
   width: min(100%, 650px);
-  margin-top: 1.5rem;
+  margin-top: 1.2rem;
 }
 .introPanel,
 .readingPanel,
 .annualPanel {
   grid-column: 1;
-  grid-row: 1;
-  align-self: center;
+  grid-row: 2;
+  align-self: start;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -127,10 +127,27 @@
   animation: none;
 }
 .introPanel {
-  padding-block: 2rem;
+  padding-top: 0.25rem;
+}
+.heroLead,
+.heroDescription {
+  position: relative;
+  isolation: isolate;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+}
+.heroLead::before,
+.heroDescription::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -0.7rem -1.5rem;
+  background: radial-gradient(ellipse, rgb(8 13 24 / 96%) 45%, transparent 75%);
+  pointer-events: none;
 }
 .heroLead {
-  margin: 0;
+  margin-block: 0;
   font-size: clamp(1.5rem, 2.5vw, 2rem);
   font-weight: 400;
   line-height: 1.55;
@@ -141,7 +158,7 @@
   white-space: nowrap;
 }
 .heroDescription {
-  margin: 1rem 0 0;
+  margin-block: 1rem 0;
   color: var(--home-secondary);
   font-size: 13px;
   line-height: 1.9;
@@ -215,13 +232,12 @@
   text-underline-offset: 0.3em;
 }
 .heroActions {
-  grid-row: 2;
+  grid-row: 1;
   display: flex;
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-top: 1.6rem;
   text-shadow: none;
 }
 .tabList {
@@ -279,7 +295,14 @@
   min-height: 46px;
   border-top: 1px solid var(--home-rule);
   color: var(--home-secondary);
-  font-size: 11px;
+  font-size: 12px;
+}
+.location {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  white-space: nowrap;
+  line-height: 1.6;
 }
 .footerLinks nav {
   display: flex;
@@ -357,11 +380,9 @@
     font-size: 1rem;
   }
   .homeTabs {
-    margin-top: 1.1rem;
-    grid-template-rows: minmax(300px, auto) auto;
-  }
-  .introPanel {
-    padding-block: 2rem;
+    margin-top: 1rem;
+    grid-template-rows: auto minmax(300px, auto);
+    row-gap: 1.25rem;
   }
   .heroLead {
     font-size: clamp(18px, 5.3vw, 23px);
@@ -373,7 +394,6 @@
   }
   .heroActions {
     gap: 0.6rem;
-    margin-top: 1.2rem;
   }
   .tabTrigger {
     padding: 0.6rem 0.65rem;
@@ -412,7 +432,6 @@
     justify-content: center;
     gap: 1rem;
     min-height: 40px;
-    font-size: 11px;
   }
   .location {
     display: none;
@@ -432,13 +451,8 @@
   }
   .homeTabs {
     margin-top: 0.6rem;
-    grid-template-rows: minmax(260px, auto) auto;
-  }
-  .introPanel {
-    padding-block: 1rem;
-  }
-  .heroActions {
-    margin-top: 0.7rem;
+    grid-template-rows: auto minmax(260px, auto);
+    row-gap: 0.8rem;
   }
   .homeFooter {
     padding-bottom: 0.3rem;
@@ -468,7 +482,8 @@
   }
   .homeTabs {
     margin: 0;
-    grid-template-rows: minmax(0, auto) auto;
+    grid-template-rows: auto minmax(0, auto);
+    row-gap: 0.5rem;
   }
   .introPanel {
     padding-block: 0.5rem;
@@ -492,7 +507,6 @@
     line-height: 1.5;
   }
   .heroActions {
-    margin-top: 0.5rem;
     gap: 0.5rem;
   }
   .tabTrigger {

@@ -1,4 +1,5 @@
 export const STATIC_ASSET_ORIGIN = 'https://feei.cn';
+export const siteShareImagePath = '/img/feei-share.png';
 
 export function staticAssetUrl(value: string): string;
 export function staticAssetUrl(value: string | undefined): string | undefined;

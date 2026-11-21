@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import type APlayerInstance from 'aplayer';
 import type {Audio, Options} from 'aplayer';
-import {staticAssetUrl} from '@site/src/utils/staticAssets';
+import {siteShareImagePath, staticAssetUrl} from '@site/src/utils/staticAssets';
 import {babyMusicManifestUrl, buildAllDerivedGroups, playlistGroupFromManifest, siteMusicGroups} from './playlist';
 import type {PlaylistGroup, PlaylistManifestGroup} from './playlist';
 import Controls from './Controls';
@@ -94,7 +94,7 @@ function updateMediaMetadata(track: Audio | undefined) {
   navigator.mediaSession.metadata = new MediaMetadata({
     title: track.name,
     artist: track.artist,
-    artwork: track.cover ? [{src: track.cover}] : [],
+    artwork: [{src: staticAssetUrl(siteShareImagePath), sizes: '1200x630', type: 'image/png'}],
   });
 }
 

@@ -2,7 +2,7 @@ import type {ReactNode} from 'react';
 import Link from '@docusaurus/Link';
 import Head from '@docusaurus/Head';
 import Layout from '@theme/Layout';
-import {Menu, Portal} from '@chakra-ui/react';
+import {Tabs} from '@chakra-ui/react';
 import {useThemeConfig} from '@docusaurus/theme-common';
 import {usePluginData} from '@docusaurus/useGlobalData';
 import type {HomeAnnualReview} from '../../plugins/homeRecordsPlugin';
@@ -15,64 +15,55 @@ function Arrow(): ReactNode {
   return <span aria-hidden="true">↗</span>;
 }
 
-function ReadingMenu(): ReactNode {
+function HomeReading({reviews}: {reviews: HomeAnnualReview[]}): ReactNode {
   return (
-    <Menu.Root
-      positioning={{placement: 'top-start', strategy: 'fixed', gutter: 10, slide: true, overflowPadding: 12}}
-      lazyMount={false}
-      unmountOnExit={false}
-    >
-      <Menu.Trigger className={styles.primaryAction}>
-        精选阅读 <span aria-hidden="true">↓</span>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content className={styles.menuContent} aria-label="三篇精选阅读">
-            {featuredReading.map((item) => (
-              <Menu.Item key={item.to} value={item.id} asChild>
-                <Link to={item.to} className={styles.readingItem}>
-                  <span className={styles.menuTitle}>
-                    {item.title}
-                    <Arrow />
-                  </span>
-                  <span className={styles.menuDescription}>{item.description}</span>
-                </Link>
-              </Menu.Item>
-            ))}
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
-  );
-}
-
-function AnnualMenu({reviews}: {reviews: HomeAnnualReview[]}): ReactNode {
-  if (!reviews.length) return null;
-  return (
-    <Menu.Root
-      positioning={{placement: 'top', strategy: 'fixed', gutter: 10, slide: true, overflowPadding: 12}}
-      lazyMount={false}
-      unmountOnExit={false}
-    >
-      <Menu.Trigger className={styles.secondaryAction}>
-        年度总结 <span aria-hidden="true">↓</span>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content className={`${styles.menuContent} ${styles.annualMenu}`} aria-label="近三年年度总结">
-            {reviews.map((item) => (
-              <Menu.Item key={item.to} value={item.year} asChild>
-                <Link to={item.to} className={styles.annualItem} data-year={item.year}>
-                  <span>{item.year}</span>
-                  <span>{item.title}</span>
-                  <Arrow />
-                </Link>
-              </Menu.Item>
-            ))}
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
+    <Tabs.Root defaultValue="intro" className={styles.homeTabs} lazyMount={false} unmountOnExit={false}>
+      <Tabs.Content value="intro" className={styles.introPanel}>
+        <p className={styles.heroLead}>
+          <span>探索安全与 AI，</span>
+          <span>在实践中持续进化。</span>
+        </p>
+        <p className={styles.heroDescription}>探索 → 实践 → 记录 → 再探索</p>
+      </Tabs.Content>
+      <Tabs.Content value="reading" className={styles.readingPanel} aria-label="三篇精选阅读">
+        {featuredReading.map((item, index) => (
+          <Link key={item.to} to={item.to} className={styles.readingItem}>
+            <span className={styles.itemIndex}>{String(index + 1).padStart(2, '0')}</span>
+            <div>
+              <span className={styles.itemTitle}>{item.title}</span>
+              <p>{item.description}</p>
+            </div>
+            <Arrow />
+          </Link>
+        ))}
+      </Tabs.Content>
+      <Tabs.Content value="annual" className={styles.annualPanel} aria-label="近三年年度总结">
+        <p className={styles.annualIntro}>回看工作、家庭与生活里的变化。</p>
+        {reviews.map((item) => (
+          <Link key={item.to} to={item.to} className={styles.annualItem} data-year={item.year}>
+            <span>{item.year}</span>
+            <span>{item.title}</span>
+            <Arrow />
+          </Link>
+        ))}
+      </Tabs.Content>
+      <div className={styles.heroActions}>
+        <Tabs.List className={styles.tabList} aria-label="首页内容">
+          <Tabs.Trigger value="intro" className={styles.tabTrigger}>
+            概览
+          </Tabs.Trigger>
+          <Tabs.Trigger value="reading" className={styles.tabTrigger}>
+            精选阅读
+          </Tabs.Trigger>
+          <Tabs.Trigger value="annual" className={styles.tabTrigger}>
+            年度总结
+          </Tabs.Trigger>
+        </Tabs.List>
+        <Link to="/about" className={styles.aboutLink}>
+          认识我 <Arrow />
+        </Link>
+      </div>
+    </Tabs.Root>
   );
 }
 
@@ -125,21 +116,7 @@ export default function Home(): ReactNode {
             <h1 id="home-title" data-home-reveal>
               Feei<span>吴飞飞</span>
             </h1>
-            <p className={styles.heroLead} data-home-reveal data-reveal-delay="100">
-              探索安全与 AI，
-              <br />
-              在实践中持续进化。
-            </p>
-            <p className={styles.heroDescription} data-home-reveal data-reveal-delay="160">
-              探索 → 实践 → 记录 → 再探索
-            </p>
-            <nav className={styles.heroActions} aria-label="首页阅读入口" data-home-reveal data-reveal-delay="220">
-              <ReadingMenu />
-              <AnnualMenu reviews={annualReviews} />
-              <Link to="/about" className={styles.aboutLink}>
-                认识我 <Arrow />
-              </Link>
-            </nav>
+            <HomeReading reviews={annualReviews} />
           </div>
           <HomeFooter />
         </section>

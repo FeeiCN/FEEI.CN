@@ -1,63 +1,103 @@
+.frame {
+  --nav-background: rgb(255 255 255 / 96%);
+  --nav-border: rgb(30 45 65 / 10%);
+  --nav-text: #4b5563;
+  --nav-strong: #111827;
+  --nav-search-background: #ebedf0;
+  --nav-search-text: #374151;
+  --nav-muted: #66758a;
+  --nav-hover: rgb(30 45 65 / 6%);
+  --nav-focus: #496c9c;
+}
+.frame.home,
+:global([data-theme='dark']) .frame {
+  --nav-background: rgb(8 13 24 / 94%);
+  --nav-border: rgb(173 199 255 / 8%);
+  --nav-text: #c4cee0;
+  --nav-strong: #f1f5ff;
+  --nav-search-background: rgb(154 184 226 / 10%);
+  --nav-search-text: #e4ecf9;
+  --nav-muted: #a7b8d3;
+  --nav-hover: rgb(173 199 255 / 12%);
+  --nav-focus: #adc7ff;
+}
 .frame :global(.navbar) {
-  background: rgb(8 13 24 / 94%);
-  border-bottom-color: rgb(173 199 255 / 8%);
+  background-color: var(--nav-background);
+  border-bottom-color: var(--nav-border);
+  transition:
+    background-color 280ms ease,
+    border-color 280ms ease;
 }
-
 .frame :global(.navbar__inner) {
-  --ifm-navbar-link-color: #c4cee0;
-  --ifm-navbar-link-hover-color: #ffffff;
-  --ifm-navbar-search-input-background-color: rgb(154 184 226 / 10%);
-  --ifm-navbar-search-input-color: #e4ecf9;
-  --ifm-hover-overlay: rgb(173 199 255 / 12%);
-  --feei-focus-ring: 0 0 0 3px rgb(173 199 255 / 40%);
-  color: #e4ecf9;
+  --ifm-navbar-link-color: var(--nav-text);
+  --ifm-navbar-link-hover-color: var(--nav-strong);
+  --ifm-navbar-search-input-background-color: var(--nav-search-background);
+  --ifm-navbar-search-input-color: var(--nav-search-text);
+  --ifm-hover-overlay: var(--nav-hover);
+  --feei-focus-ring: 0 0 0 3px color-mix(in srgb, var(--nav-focus) 40%, transparent);
+  color: var(--nav-text);
 }
-
 .frame :global(.navbar__inner) :global(.navbar__link),
 .frame :global(.navbar__inner) :global(.clean-btn),
 .frame :global(.navbar__inner) :global(.sidebarIcon) {
-  color: #c4cee0;
+  color: var(--nav-text);
+  transition:
+    color 280ms ease,
+    background-color 180ms ease;
 }
-
 .frame :global(.navbar__inner) :global(.navbar__link:hover),
 .frame :global(.navbar__inner) :global(.navbar__link[data-state='open']) {
-  color: #ffffff;
+  color: var(--nav-strong);
   box-shadow: none;
 }
-
+.frame :global(.navbar__inner) :global(.navbar__link--active) {
+  color: var(--nav-strong);
+}
 .frame :global(.navbar__inner) :global(.clean-btn:hover) {
-  background: rgb(173 199 255 / 12%);
+  background: var(--nav-hover);
 }
-
 .frame :global(.navbar__inner) :global(a[aria-label='FEEI 首页']) > span {
-  color: #f1f5ff;
+  color: var(--nav-strong);
+  transition: color 280ms ease;
 }
-
-.frame :global(.navbar__search) {
-  color: #c4cee0;
+.frame :global(.navbar__search),
+.frame :global(.navbar__search) > svg {
+  color: var(--nav-text);
+  transition: color 280ms ease;
 }
-
 .frame :global(.navbar__search-input) {
-  background-color: rgb(154 184 226 / 10%);
-  color: #e4ecf9;
+  background-color: var(--nav-search-background);
+  color: var(--nav-search-text);
+  transition:
+    color 280ms ease,
+    background-color 280ms ease;
 }
-
 .frame :global(.navbar__search-input)::placeholder {
-  color: #a7b8d3;
+  color: var(--nav-muted);
   opacity: 1;
 }
-
 .frame :global(.navbar__search-input):focus {
-  outline-color: #adc7ff;
+  outline-color: var(--nav-focus);
 }
-
-.frame :global(.navbar__search) > svg {
-  color: #c4cee0;
-}
-
 .frame :global(.navbar__search) kbd {
   background: transparent;
-  border-color: #687a96;
-  color: #a7b8d3;
+  border-color: var(--nav-muted);
+  color: var(--nav-muted);
   box-shadow: none;
+  transition:
+    color 280ms ease,
+    border-color 280ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .frame :global(.navbar),
+  .frame :global(.navbar__inner) :global(.navbar__link),
+  .frame :global(.navbar__inner) :global(.clean-btn),
+  .frame :global(.navbar__inner) :global(.sidebarIcon),
+  .frame :global(.navbar__inner) :global(a[aria-label='FEEI 首页']) > span,
+  .frame :global(.navbar__search),
+  .frame :global(.navbar__search) > svg,
+  .frame :global(.navbar__search-input),
+  .frame :global(.navbar__search) kbd {
+    transition: none;
+  }
 }

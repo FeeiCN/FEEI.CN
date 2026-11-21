@@ -41,6 +41,8 @@ const vertex = /* glsl */ `
     float perspective = 5.0 / (4.7 + p.z);
     vec2 screen = p.xy * 0.7 * perspective * uScale;
     screen.x /= uAspect;
+    float mobile = 1.0 - smoothstep(0.85, 1.2, uAspect);
+    screen *= 1.0 + mobile * 0.4;
     vec2 delta = screen - uPointer;
     float distanceToPointer = length(delta);
     float influence = (1.0 - smoothstep(0.0, 0.32, distanceToPointer)) * uPointerStrength;
@@ -49,7 +51,8 @@ const vertex = /* glsl */ `
     gl_PointSize = (1.25 + seed.w * 2.2) * uDpr * perspective;
     float highlight = smoothstep(-0.6, 0.8, p.z) * 0.65 + seed.y * 0.35;
     vColor = mix(vec3(0.22, 0.55, 0.91), vec3(0.87, 0.97, 1.0), highlight);
-    vOpacity = mix(0.2, 0.8, seed.w) + influence * 0.2;
+    float clearCenter = smoothstep(0.18, 0.7, length(screen * vec2(1.35, 0.85)));
+    vOpacity = (mix(0.2, 0.8, seed.w) + influence * 0.2) * mix(1.0, mix(0.16, 1.0, clearCenter), mobile);
   }
 `;
 

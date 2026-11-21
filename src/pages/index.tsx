@@ -2,103 +2,129 @@ import type {ReactNode} from 'react';
 import Link from '@docusaurus/Link';
 import Head from '@docusaurus/Head';
 import Layout from '@theme/Layout';
-import Heading from '@theme/Heading';
+import {Tabs} from '@chakra-ui/react';
+import {useThemeConfig} from '@docusaurus/theme-common';
 import {usePluginData} from '@docusaurus/useGlobalData';
-import type {HomeRecord} from '../../plugins/homeRecordsPlugin';
+import type {HomeAnnualReview} from '../../plugins/homeRecordsPlugin';
+import {featuredReading, shareImageForPath} from '../data/featuredReading';
+import {HomeMotionRoot} from '../components/HomeEffects';
+import {ParticleScene} from '../components/HomeEffects/ParticleScene';
 import styles from './index.module.css';
 
-const featured = [
-  {category: '经历', title: '我的网络安全之路', description: '从漏洞研究到企业安全建设，我为什么不再只盯着单个漏洞？', to: '/my-journey-in-cybersecurity'},
-  {category: '方法', title: '安全体系', description: '安全工具都有了，如何建设经得起持续对抗的安全体系？', to: '/security-system'},
-  {category: '人生', title: '创造确定性人生', description: '每天都很忙，如何让时间和精力真正流向重要的事？', to: '/life-certainty'},
-];
-
-function formatHomeDate(date: string, referenceYear?: string): string {
-  return referenceYear && date.startsWith(`${referenceYear}-`) ? date.slice(5).replace('-', '.') : date.replaceAll('-', '.');
+function Arrow(): ReactNode {
+  return <span aria-hidden="true">↗</span>;
 }
 
-function HeroSection(): ReactNode {
+function HomeReading({reviews}: {reviews: HomeAnnualReview[]}): ReactNode {
   return (
-    <section className={styles.hero}>
-      <div className={styles.heroInner}>
-        <h1>吴飞飞</h1>
-        <p className={styles.heroIntro}>探索高等级的安全如何建设，也记录生活。</p>
-        <p className={styles.heroGuide}>从网络安全到人工智能安全，积累攻防、架构与组织建设的方法。第一次来，可以从下面的问题开始。</p>
-        <div className={styles.compactActions}>
-          <a href="#start-reading">从这里开始 ↓</a>
-          <Link to="/about">关于我 →</Link>
-          <a href="/rss.xml">订阅新文章 · RSS ↗</a>
-        </div>
-        <p className={styles.currentFocus}>订阅安全研究、人生实践与日常记录的新文章；不固定更新频率，正文修订不会重复推送。</p>
+    <Tabs.Root defaultValue="intro" className={styles.homeTabs} lazyMount={false} unmountOnExit={false}>
+      <div className={styles.heroActions}>
+        <Tabs.List className={styles.tabList} aria-label="首页内容">
+          <Tabs.Trigger value="intro" className={styles.tabTrigger}>
+            概览
+          </Tabs.Trigger>
+          <Tabs.Trigger value="reading" className={styles.tabTrigger}>
+            精选阅读
+          </Tabs.Trigger>
+          <Tabs.Trigger value="annual" className={styles.tabTrigger}>
+            年度总结
+          </Tabs.Trigger>
+        </Tabs.List>
+        <Link to="/about" className={styles.aboutLink}>
+          认识我 <Arrow />
+        </Link>
       </div>
-    </section>
+      <Tabs.Content value="intro" className={styles.introPanel}>
+        <p className={styles.heroLead}>
+          <span>探索安全与 AI，</span>
+          <span>在实践中持续进化。</span>
+        </p>
+        <p className={styles.heroDescription}>记住生活，改善选择，积累认识。</p>
+      </Tabs.Content>
+      <Tabs.Content value="reading" className={styles.readingPanel} aria-label="三篇精选阅读">
+        {featuredReading.map((item, index) => (
+          <Link key={item.to} to={item.to} className={styles.readingItem}>
+            <span className={styles.itemIndex}>{String(index + 1).padStart(2, '0')}</span>
+            <div>
+              <span className={styles.itemTitle}>{item.title}</span>
+              <p>{item.description}</p>
+            </div>
+            <Arrow />
+          </Link>
+        ))}
+      </Tabs.Content>
+      <Tabs.Content value="annual" className={styles.annualPanel} aria-label="近三年年度总结">
+        <p className={styles.annualIntro}>回看工作、家庭与生活里的变化。</p>
+        {reviews.map((item) => (
+          <Link key={item.to} to={item.to} className={styles.annualItem} data-year={item.year}>
+            <span>{item.year}</span>
+            <span>{item.title}</span>
+            <Arrow />
+          </Link>
+        ))}
+      </Tabs.Content>
+    </Tabs.Root>
   );
 }
 
-function ReadingSection(): ReactNode {
+function HomeFooter(): ReactNode {
+  const {footer} = useThemeConfig();
   return (
-    <section className={styles.section} aria-labelledby="start-reading">
-      <div className={styles.inner}>
-        <Heading as="h2" id="start-reading" className={styles.compactHeading}>从这里开始</Heading>
-        <div className={styles.featuredList}>
-          {featured.map((item, index) => (
-            <Link key={item.to} to={item.to} className={styles.featuredItem}>
-              <span className={styles.readingNumber} aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-              <div className={styles.featuredCopy}><h3>{item.title}</h3><p>{item.description}</p></div>
-              <span className={styles.featuredCategory}>{item.category}</span>
-              <span className={styles.itemArrow} aria-hidden="true">↗</span>
-            </Link>
-          ))}
-        </div>
+    <footer className={`${styles.container} ${styles.homeFooter}`}>
+      <div className={styles.footerLinks}>
+        <span className={styles.location}>
+          <span>杭州</span>
+          <span className={styles.editionSlash} aria-hidden="true">
+            /
+          </span>
+          <span>从 2012 年开始记录</span>
+        </span>
+        <nav aria-label="联系与订阅">
+          <Link to="/contact">
+            联系 <Arrow />
+          </Link>
+          <a href="/rss.xml" title="不固定更新；RSS 只推送新文章，正文修订不重复推送">
+            RSS <Arrow />
+          </a>
+        </nav>
       </div>
-    </section>
-  );
-}
-
-function RecentSection(): ReactNode {
-  const {records, recordsHref, updates} = usePluginData('home-records-plugin') as {records: HomeRecord[]; recordsHref?: string; updates: HomeRecord[]};
-  if (!records.length && !updates.length) return null;
-  const recordsYear = records[0]?.date.slice(0, 4);
-  const updatesYear = updates[0]?.date.slice(0, 4);
-  return (
-    <section className={styles.section} aria-labelledby="recent-heading">
-      <div className={styles.inner}>
-        <h2 id="recent-heading" className={styles.compactHeading}>最近记录</h2>
-        <div className={styles.updateGrid}>
-          {updates.length > 0 && <div>
-            <h3><Link to="/security-engineering">网络安全 · 近期修订 →</Link></h3>
-            <div className={styles.recentList}>{updates.map((item) => (
-              <Link key={item.to} to={item.to} className={styles.recentItem}>
-                <time dateTime={item.date}>{formatHomeDate(item.date, updatesYear)}</time><span>{item.title}</span>
-              </Link>
-            ))}</div>
-          </div>}
-          {records.length > 0 && recordsHref && <div>
-            <h3><Link to={recordsHref}>日记 →</Link></h3>
-            <div className={styles.recentList}>{records.map((item) => (
-              <Link key={item.to} to={item.to} className={styles.recentItem}>
-                <time dateTime={item.date}>{formatHomeDate(item.date, recordsYear)}</time><span>{item.title}</span>
-              </Link>
-            ))}</div>
-          </div>}
-        </div>
-      </div>
-    </section>
+      {footer?.copyright && <div className={styles.legal} dangerouslySetInnerHTML={{__html: footer.copyright}} />}
+    </footer>
   );
 }
 
 export default function Home(): ReactNode {
+  const {annualReviews = []} = usePluginData('home-records-plugin') as {annualReviews: HomeAnnualReview[]};
   return (
-    <Layout wrapperClassName={styles.homeLayout} description="吴飞飞的个人网站。探索高等级的安全如何建设，积累网络安全与人工智能安全的攻防、架构和组织建设方法，也记录人生实践与日常生活。">
+    <Layout
+      noFooter
+      wrapperClassName={styles.homeLayout}
+      description="吴飞飞（Feei）的个人网站。从漏洞研究走向企业安全建设，记录网络安全、人工智能安全的实践与判断，也留下杭州的日常生活。"
+    >
       <Head>
         <title>吴飞飞 · 安全界</title>
         <meta property="og:title" content="吴飞飞 · 安全界" />
+        <meta property="og:image" content={shareImageForPath('/')} />
+        <meta property="og:image:alt" content="吴飞飞 · Feei：网络安全、人工智能安全与生活记录" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:image" content={shareImageForPath('/')} />
+        <meta name="twitter:card" content="summary_large_image" />
       </Head>
-      <main className={styles.page}>
-        <HeroSection />
-        <ReadingSection />
-        <RecentSection />
-      </main>
+      <HomeMotionRoot className={styles.page}>
+        <section className={styles.hero} aria-labelledby="home-title">
+          <div className={styles.particleStage}>
+            <ParticleScene />
+          </div>
+          <div className={`${styles.container} ${styles.heroContent}`}>
+            <h1 id="home-title" data-home-reveal>
+              Feei<span>吴飞飞</span>
+            </h1>
+            <HomeReading reviews={annualReviews} />
+          </div>
+          <HomeFooter />
+        </section>
+      </HomeMotionRoot>
     </Layout>
   );
 }

@@ -1,0 +1,43 @@
+.particleScene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  isolation: isolate;
+}
+.particleCanvas,
+.particleFallback,
+.particleGlow,
+.particleGrid {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.particleCanvas {
+  opacity: 0;
+}
+.particleScene[data-ready] .particleCanvas {
+  opacity: 1;
+}
+.particleScene[data-ready] .particleFallback {
+  opacity: 0;
+}
+.particleFallback {
+  padding: 2% 5%;
+}
+.particleGlow {
+  background: radial-gradient(ellipse at 49% 42%, #103567 0%, #0a1d3c 27%, transparent 65%);
+  opacity: 0.55;
+}
+.particleGrid {
+  background-image:
+    linear-gradient(#8db3ff12 1px, transparent 1px), linear-gradient(90deg, #8db3ff12 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse, #000 15%, transparent 72%);
+}
+@media (max-width: 760px) {
+  .particleGrid {
+    background-size: 28px 28px;
+  }
+}

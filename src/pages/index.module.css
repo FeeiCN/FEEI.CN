@@ -1,9 +1,8 @@
 .homeLayout {
   flex: 0 0 auto;
-  height: 100svh;
+  min-height: 100svh;
   padding-top: 0;
   min-width: 0;
-  min-height: 0;
 }
 .page {
   --home-background: #fafafa;
@@ -18,8 +17,7 @@
   --home-legal: #596b83;
   --home-selected-border: #7c98b8;
   --home-text-shadow: none;
-  height: 100%;
-  min-height: 0;
+  min-height: 100svh;
   color: var(--home-ink);
   background: var(--home-background);
 }
@@ -55,8 +53,7 @@
   isolation: isolate;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  min-height: 100svh;
   overflow: clip;
 }
 .hero::after {
@@ -91,8 +88,7 @@
   color: var(--home-accent);
 }
 .heroContent {
-  flex: 1;
-  min-height: 0;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -101,10 +97,19 @@
   text-align: center;
   text-shadow: var(--home-text-shadow);
 }
+.identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+}
 .hero h1 {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 1.3rem;
+  justify-content: center;
+  gap: 0.2rem 1.3rem;
+  max-width: 100%;
   margin: 0;
   font-size: clamp(3.8rem, 7vw, 6rem);
   font-weight: 600;
@@ -112,6 +117,8 @@
   letter-spacing: -0.035em;
 }
 .hero h1 > span {
+  flex-shrink: 0;
+  white-space: nowrap;
   color: var(--home-accent);
   font-size: 1.2rem;
   font-weight: 400;
@@ -176,7 +183,7 @@
 }
 .heroLead > span {
   display: block;
-  white-space: nowrap;
+  text-wrap: balance;
 }
 .heroDescription {
   margin-block: 1rem 0;
@@ -269,13 +276,17 @@
 }
 .tabList {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
   gap: 0.25rem;
   border: 0;
   padding: 0;
   background: rgb(var(--home-background-rgb) / 65%);
 }
 .tabTrigger {
+  flex-shrink: 0;
+  white-space: nowrap;
   min-height: 44px;
   padding: 0.6rem 1rem;
   border: 1px solid transparent;
@@ -305,6 +316,7 @@
   gap: 0.65rem;
   min-height: 44px;
   font-size: 13px;
+  white-space: nowrap;
 }
 .aboutLink:hover {
   text-decoration: underline !important;
@@ -501,6 +513,7 @@
   }
   .hero h1 {
     flex-direction: column;
+    align-items: center;
     gap: 0.2rem;
     font-size: 2.7rem;
   }

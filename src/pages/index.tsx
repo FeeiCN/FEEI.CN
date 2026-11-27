@@ -30,14 +30,11 @@ function HomeReading({reviews}: {reviews: HomeAnnualReview[]}): ReactNode {
             年度总结
           </Tabs.Trigger>
         </Tabs.List>
-        <Link to="/about" className={styles.aboutLink}>
-          认识我 <Arrow />
-        </Link>
       </div>
       <Tabs.Content value="intro" className={styles.introPanel}>
         <p className={styles.heroLead}>
-          <span>探索安全与 AI，</span>
-          <span>在实践中持续进化。</span>
+          <span>从漏洞研究到企业安全建设，</span>
+          <span>记录安全与 AI 的实践和判断。</span>
         </p>
         <p className={styles.heroDescription}>记住生活，改善选择，积累认识。</p>
       </Tabs.Content>
@@ -117,9 +114,14 @@ export default function Home(): ReactNode {
             <ParticleScene />
           </div>
           <div className={`${styles.container} ${styles.heroContent}`}>
-            <h1 id="home-title" data-home-reveal>
-              Feei<span>吴飞飞</span>
-            </h1>
+            <div className={styles.identity} data-home-reveal>
+              <h1 id="home-title">
+                Feei<span>吴飞飞</span>
+              </h1>
+              <Link to="/about" className={styles.aboutLink}>
+                认识我 <Arrow />
+              </Link>
+            </div>
             <HomeReading reviews={annualReviews} />
           </div>
           <HomeFooter />

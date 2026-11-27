@@ -6,15 +6,36 @@
   min-height: 0;
 }
 .page {
-  --home-background: #080d18;
-  --home-ink: #f1f5ff;
-  --home-secondary: #b6c6de;
-  --home-rule: #34445c;
-  --home-accent: #adc7ff;
+  --home-background: #fafafa;
+  --home-background-rgb: 250 250 250;
+  --home-shade-rgb: 250 250 250;
+  --home-ink: #172438;
+  --home-secondary: #52657b;
+  --home-rule: #d3dde8;
+  --home-accent: #315f9f;
+  --home-accent-rgb: 49 95 159;
+  --home-index: #61748c;
+  --home-legal: #596b83;
+  --home-selected-border: #7c98b8;
+  --home-text-shadow: none;
   height: 100%;
   min-height: 0;
   color: var(--home-ink);
   background: var(--home-background);
+}
+:global([data-theme='dark']) .page {
+  --home-background: #080d18;
+  --home-background-rgb: 8 13 24;
+  --home-shade-rgb: 3 9 22;
+  --home-ink: #f1f5ff;
+  --home-secondary: #b6c6de;
+  --home-rule: #34445c;
+  --home-accent: #adc7ff;
+  --home-accent-rgb: 173 199 255;
+  --home-index: #8ea5c5;
+  --home-legal: #a4b2c9;
+  --home-selected-border: #6f8baa;
+  --home-text-shadow: 0 2px 18px #030916;
 }
 .container {
   width: min(100% - 6rem, 1220px);
@@ -44,12 +65,12 @@
   z-index: 1;
   inset: 0;
   background:
-    linear-gradient(0deg, #080d18 0%, transparent 20%),
+    linear-gradient(0deg, var(--home-background) 0%, transparent 20%),
     radial-gradient(
       ellipse at 50% 47%,
-      rgb(3 9 22 / 88%) 0%,
-      rgb(3 9 22 / 75%) 27%,
-      rgb(3 9 22 / 28%) 46%,
+      rgb(var(--home-shade-rgb) / 88%) 0%,
+      rgb(var(--home-shade-rgb) / 75%) 27%,
+      rgb(var(--home-shade-rgb) / 28%) 46%,
       transparent 74%
     );
   pointer-events: none;
@@ -78,7 +99,7 @@
   justify-content: center;
   padding: calc(var(--ifm-navbar-height) + 1.5rem) 0 1.5rem;
   text-align: center;
-  text-shadow: 0 2px 18px #030916;
+  text-shadow: var(--home-text-shadow);
 }
 .hero h1 {
   display: flex;
@@ -143,7 +164,7 @@
   position: absolute;
   z-index: -1;
   inset: -0.7rem -1.5rem;
-  background: radial-gradient(ellipse, rgb(8 13 24 / 96%) 45%, transparent 75%);
+  background: radial-gradient(ellipse, rgb(var(--home-background-rgb) / 96%) 45%, transparent 75%);
   pointer-events: none;
 }
 .heroLead {
@@ -165,7 +186,13 @@
 }
 .readingPanel {
   text-align: left;
-  background: linear-gradient(90deg, transparent, rgb(8 13 24 / 78%) 8%, rgb(8 13 24 / 78%) 92%, transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--home-background-rgb) / 78%) 8%,
+    rgb(var(--home-background-rgb) / 78%) 92%,
+    transparent
+  );
 }
 .readingItem {
   display: grid;
@@ -176,7 +203,7 @@
   border-bottom: 1px solid var(--home-rule);
 }
 .itemIndex {
-  color: #8ea5c5;
+  color: var(--home-index);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
@@ -246,7 +273,7 @@
   gap: 0.25rem;
   border: 0;
   padding: 0;
-  background: rgb(8 13 24 / 65%);
+  background: rgb(var(--home-background-rgb) / 65%);
 }
 .tabTrigger {
   min-height: 44px;
@@ -264,13 +291,13 @@
     background-color 160ms ease;
 }
 .tabTrigger[data-selected] {
-  border-color: #6f8baa;
-  background: rgb(173 199 255 / 12%);
+  border-color: var(--home-selected-border);
+  background: rgb(var(--home-accent-rgb) / 12%);
   color: var(--home-ink);
 }
 .tabTrigger:hover {
   color: var(--home-ink);
-  background: rgb(173 199 255 / 8%);
+  background: rgb(var(--home-accent-rgb) / 8%);
 }
 .aboutLink {
   display: inline-flex;
@@ -324,7 +351,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 0.5rem;
-  color: #a4b2c9;
+  color: var(--home-legal);
   font-size: 10px;
   line-height: 1.6;
 }
@@ -360,12 +387,12 @@
   }
   .hero::after {
     background:
-      linear-gradient(0deg, #080d18 0%, transparent 22%),
+      linear-gradient(0deg, var(--home-background) 0%, transparent 22%),
       radial-gradient(
         ellipse 65% 55% at 50% 43%,
-        rgb(3 9 22 / 96%) 0%,
-        rgb(3 9 22 / 88%) 22%,
-        rgb(3 9 22 / 50%) 45%,
+        rgb(var(--home-shade-rgb) / 96%) 0%,
+        rgb(var(--home-shade-rgb) / 88%) 22%,
+        rgb(var(--home-shade-rgb) / 50%) 45%,
         transparent 80%
       );
   }

@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState, type ReactNode} from 'react';
+import {useColorMode} from '@docusaurus/theme-common';
 import {Geometry, Mesh, Program, Renderer} from 'ogl';
 import {useHomeMotion} from './index';
 import styles from './styles.module.css';
@@ -12,6 +13,7 @@ const vertex = /* glsl */ `
   uniform float uDpr;
   uniform vec2 uPointer;
   uniform float uPointerStrength;
+  uniform float uLightMode;
   varying vec3 vColor;
   varying float vOpacity;
 
@@ -51,8 +53,10 @@ const vertex = /* glsl */ `
     gl_PointSize = (1.25 + seed.w * 2.2) * uDpr * perspective;
     float highlight = smoothstep(-0.6, 0.8, p.z) * 0.65 + seed.y * 0.35;
     vColor = mix(vec3(0.22, 0.55, 0.91), vec3(0.87, 0.97, 1.0), highlight);
+    vColor = mix(vColor, mix(vec3(0.18, 0.39, 0.68), vec3(0.12, 0.58, 0.63), highlight), uLightMode);
     float clearCenter = smoothstep(0.18, 0.7, length(screen * vec2(1.35, 0.85)));
     vOpacity = (mix(0.2, 0.8, seed.w) + influence * 0.2) * mix(1.0, mix(0.16, 1.0, clearCenter), mobile);
+    vOpacity *= mix(1.0, 0.62, uLightMode);
   }
 `;
 
@@ -73,7 +77,9 @@ export function ParticleScene(): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const control = useRef<{sync: () => void} | null>(null);
   const {reducedMotion} = useHomeMotion();
+  const {colorMode} = useColorMode();
   const preference = useRef(reducedMotion);
+  const theme = useRef(colorMode);
   const [ready, setReady] = useState(false);
   const [generation, setGeneration] = useState(0);
 
@@ -81,6 +87,11 @@ export function ParticleScene(): ReactNode {
     preference.current = reducedMotion;
     control.current?.sync();
   }, [reducedMotion]);
+
+  useEffect(() => {
+    theme.current = colorMode;
+    control.current?.sync();
+  }, [colorMode]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -113,6 +124,7 @@ export function ParticleScene(): ReactNode {
       uDpr: {value: renderer.dpr},
       uPointer: {value: new Float32Array([0, 0])},
       uPointerStrength: {value: 0},
+      uLightMode: {value: theme.current === 'light' ? 1 : 0},
     };
     const program = new Program(gl, {
       vertex,
@@ -122,7 +134,7 @@ export function ParticleScene(): ReactNode {
       depthTest: false,
       depthWrite: false,
     });
-    program.setBlendFunc(gl.SRC_ALPHA, gl.ONE);
+    program.setBlendFunc(gl.SRC_ALPHA, theme.current === 'light' ? gl.ONE_MINUS_SRC_ALPHA : gl.ONE);
     if (!gl.getProgramParameter(program.program, gl.LINK_STATUS)) {
       geometry.remove();
       program.remove();
@@ -160,8 +172,10 @@ export function ParticleScene(): ReactNode {
       const paused = !visible || document.hidden || preference.current;
       host!.toggleAttribute('data-motion-paused', paused);
       if (lost) return;
+      uniforms.uLightMode.value = theme.current === 'light' ? 1 : 0;
+      program.setBlendFunc(gl.SRC_ALPHA, theme.current === 'light' ? gl.ONE_MINUS_SRC_ALPHA : gl.ONE);
+      render();
       if (!paused) frame = requestAnimationFrame(tick);
-      else render();
     }
     function resize() {
       if (lost) return;
@@ -239,7 +253,7 @@ export function ParticleScene(): ReactNode {
           <path
             key={width}
             d="M500 220C360 30 135 80 155 235C175 390 350 370 500 220C650 70 825 50 845 205C865 360 640 410 500 220Z"
-            stroke={width === 2 ? '#d2e6ff' : '#477cf5'}
+            stroke={width === 2 ? 'var(--particle-highlight)' : 'var(--particle-base)'}
             strokeWidth={width}
             opacity={width === 2 ? 0.8 : 0.2}
             strokeDasharray={width === 2 ? '1 4' : undefined}

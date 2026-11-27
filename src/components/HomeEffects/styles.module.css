@@ -1,8 +1,18 @@
 .particleScene {
+  --particle-glow: radial-gradient(ellipse at 49% 42%, #c6dbef 0%, #d9ece9 27%, transparent 65%);
+  --particle-grid: rgb(49 95 159 / 6%);
+  --particle-base: #497ab1;
+  --particle-highlight: #2e6b85;
   position: relative;
   width: 100%;
   height: 100%;
   isolation: isolate;
+}
+:global([data-theme='dark']) .particleScene {
+  --particle-glow: radial-gradient(ellipse at 49% 42%, #103567 0%, #0a1d3c 27%, transparent 65%);
+  --particle-grid: #8db3ff12;
+  --particle-base: #477cf5;
+  --particle-highlight: #d2e6ff;
 }
 .particleCanvas,
 .particleFallback,
@@ -27,12 +37,13 @@
   padding: 2% 5%;
 }
 .particleGlow {
-  background: radial-gradient(ellipse at 49% 42%, #103567 0%, #0a1d3c 27%, transparent 65%);
+  background: var(--particle-glow);
   opacity: 0.55;
 }
 .particleGrid {
   background-image:
-    linear-gradient(#8db3ff12 1px, transparent 1px), linear-gradient(90deg, #8db3ff12 1px, transparent 1px);
+    linear-gradient(var(--particle-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--particle-grid) 1px, transparent 1px);
   background-size: 40px 40px;
   mask-image: radial-gradient(ellipse, #000 15%, transparent 72%);
 }

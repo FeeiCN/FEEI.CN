@@ -33,10 +33,7 @@ const config: Config = {
   themeConfig: {
     docs: {sidebar: {hideable: true, autoCollapseCategories: true}}, image: staticAssetUrl(siteShareImagePath), colorMode: {defaultMode: 'light', disableSwitch: false, respectPrefersColorScheme: true},
     navbar: {hideOnScroll: false, logo: {alt: 'FEEI', src: staticAssetUrl('/img/feei-icon.svg')}, items: [
-      {type: 'dropdown', position: 'left', label: '网络安全', icon: 'shield', items: [
-        {type: 'doc', docId: '网络安全/网络空间安全/README', label: '网络空间安全', icon: 'shield'},
-        {type: 'docSidebar', sidebarId: 'aiSecuritySidebar', label: '人工智能安全', icon: 'brand-openai-icon'},
-      ]},
+      {type: 'doc', position: 'left', docId: '网络安全/网络空间安全/README', label: '网络空间安全', icon: 'shield'},
       {type: 'dropdown', position: 'left', label: '人生系统', icon: 'biceps-flexed', items: [
         {type: 'docSidebar', sidebarId: 'healthHappinessSidebar', label: '健康幸福', icon: 'heart'},
         {type: 'docSidebar', sidebarId: 'careerSuccessSidebar', label: '事业有成', icon: 'rocket'},

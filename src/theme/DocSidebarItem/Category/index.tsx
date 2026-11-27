@@ -20,6 +20,7 @@ import {
   useVisibleSidebarItems,
 } from '@docusaurus/plugin-content-docs/client';
 import Link from '@docusaurus/Link';
+import {useLocation} from '@docusaurus/router';
 import {translate} from '@docusaurus/Translate';
 import useIsBrowser from '@docusaurus/useIsBrowser';
 import DocSidebarItems from '@theme/DocSidebarItems';
@@ -188,17 +189,24 @@ function DocSidebarItemCategoryCollapsible({
   index,
   ...props
 }: Props): ReactNode {
-  const {items, label, collapsible, className, href, customProps} = item;
+  const {items, label, collapsible, className, customProps} = item;
+  const overviewHref = typeof customProps?.overviewHref === 'string' ? customProps.overviewHref : undefined;
+  const href = item.href ?? overviewHref;
   const articleCount = useMemo(() => countArticles(items), [items]);
   const {
     docs: {
       sidebar: {autoCollapseCategories},
     },
   } = useThemeConfig();
-  const hrefWithSSRFallback = useCategoryHrefWithSSRFallback(item);
+  const categoryHref = useCategoryHrefWithSSRFallback(item);
+  const hrefWithSSRFallback = overviewHref ?? categoryHref;
 
-  const isActive = isActiveSidebarItem(item, activePath);
-  const isCategoryPage = isSamePath(href, activePath);
+  const {hash} = useLocation();
+  const [overviewPath, overviewHash = ''] = overviewHref?.split('#') ?? [];
+  const isOverviewPage = Boolean(overviewHref && isSamePath(overviewPath, activePath)
+    && [overviewHash, encodeURIComponent(overviewHash)].includes(hash.slice(1)));
+  const isActive = isActiveSidebarItem(item, activePath) || isOverviewPage;
+  const isCategoryPage = overviewHref ? isOverviewPage : isSamePath(href, activePath);
   const isCurrentPage = isCategoryPage && !items.some((child) => isActiveSidebarItem(child, activePath));
   const visibleItems = useVisibleSidebarItems(items, activePath);
   const labeledItems = useMemo(() => hideRepeatedSidebarIcons(visibleItems).map((child) => (
@@ -241,21 +249,9 @@ function DocSidebarItemCategoryCollapsible({
     }
   }, [collapsible, expandedItem, index, setCollapsed, autoCollapseCategories]);
 
-  const handleItemClick: ComponentProps<'a'>['onClick'] = (e) => {
-    onItemClick?.(item);
-    if (collapsible) {
-      if (href) {
-        if (isCategoryPage) {
-          e.preventDefault();
-          updateCollapsed();
-        } else {
-          updateCollapsed(false);
-        }
-      } else {
-        e.preventDefault();
-        updateCollapsed();
-      }
-    }
+  const handleItemClick: ComponentProps<'a'>['onClick'] = () => {
+    onItemClick?.(href ? {...item, href} : item);
+    if (collapsible && href) updateCollapsed(false);
   };
 
   const linkClassName = clsx(styles.categoryLink, styles.categoryLinkWithIcon, 'menu__link', {

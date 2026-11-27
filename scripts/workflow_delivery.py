@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 DATA_VIEWS = {
     'reading': 'docs/02-人生系统/04-人生丰富/01-阅读/阅读数据.mdx',
-    'llm-usage': 'docs/01-网络安全/02-人工智能安全/01-通用人工智能/03-AI应用实践/AI使用数据.mdx',
+    'llm-usage': 'docs/01-网络安全/01-网络空间安全/04-软件工程/01-人工智能/03-AI应用实践/AI使用数据.mdx',
     'account-assets': 'docs/02-人生系统/03-财务自由/03-投资/02-个股/01-个股数据.mdx',
     'hk-ipo': 'docs/02-人生系统/03-财务自由/03-投资/03-港股打新/04-港股打新数据.mdx',
     'health': 'docs/02-人生系统/01-健康幸福/健康数据.mdx',

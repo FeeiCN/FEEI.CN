@@ -7,57 +7,61 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const aiRoot = 'docs/01-网络安全/02-人工智能安全';
-const generalIntelligenceRoot = `${aiRoot}/01-通用人工智能`;
-const groups = {
-  '02-AI系统安全': ['AI数据与知识安全.md', '模型资产与AI供应链安全.md', '模型安全对齐与输出安全.md', '大模型应用安全.md', 'Agent与工具调用安全.md', 'AI隐私与机密保护.md', 'AI风险治理.md', 'AI安全评测与红队.md', 'AI运行监控与事件响应.md'],
-  '03-AI赋能安全': ['AI漏洞挖掘.md', 'AI驱动的全链路自动化网络攻击.md', '基于AI驱动的实战网络攻击.md', '安全大模型评测体系.md'],
-  '04-AI滥用防御': ['AI滥用与攻防升级.md', '合成内容与信任安全.md'],
-};
+const securityRoot = 'docs/01-网络安全/01-网络空间安全';
+const legacyRoot = 'docs/01-网络安全/02-人工智能安全';
+const generalIntelligenceRoot = `${securityRoot}/04-软件工程/01-人工智能`;
+const aiPages = new Set([
+  `${securityRoot}/01-安全威胁/02-攻击技术/15-业务安全与自动化滥用/AI滥用与攻防升级.md`,
+  `${securityRoot}/01-安全威胁/02-攻击技术/15-业务安全与自动化滥用/AI滥用防御.md`,
+  `${securityRoot}/01-安全威胁/02-攻击技术/15-业务安全与自动化滥用/合成内容与信任安全.md`,
+  `${securityRoot}/01-安全威胁/02-攻击技术/18-AI与Agent/Agent安全案例初探.md`,
+  `${securityRoot}/01-安全威胁/02-攻击技术/18-AI与Agent/SurrealDB的MCP会话身份绑定缺陷.md`,
+  `${securityRoot}/02-安全组织/AI风险治理.md`,
+  `${securityRoot}/03-安全体系/02-风险发现治理/AI Agent安全研究方法.md`,
+  `${securityRoot}/03-安全体系/02-风险发现治理/AI漏洞挖掘.md`,
+  `${securityRoot}/03-安全体系/02-风险发现治理/AI赋能安全.md`,
+  `${securityRoot}/03-安全体系/03-风险防御对抗/AI系统安全/AI数据与知识安全.md`,
+  `${securityRoot}/03-安全体系/03-风险防御对抗/AI系统安全/AI核心资产与基础设施安全.md`,
+  `${securityRoot}/03-安全体系/03-风险防御对抗/AI系统安全/AI系统安全.md`,
+  `${securityRoot}/03-安全体系/03-风险防御对抗/AI系统安全/AI隐私与机密保护.md`,
+  `${securityRoot}/03-安全体系/03-风险防御对抗/AI系统安全/Agent与工具调用安全.md`,
+  `${securityRoot}/03-安全体系/03-风险防御对抗/AI系统安全/Agent权限撤销与异步执行一致性.md`,
+  `${securityRoot}/03-安全体系/03-风险防御对抗/AI系统安全/大模型应用安全.md`,
+  `${securityRoot}/03-安全体系/03-风险防御对抗/AI系统安全/模型安全对齐与输出安全.md`,
+  `${securityRoot}/03-安全体系/03-风险防御对抗/AI系统安全/模型资产与AI供应链安全.md`,
+  `${securityRoot}/03-安全体系/03-风险防御对抗/AI运行监控与事件响应.md`,
+  `${securityRoot}/03-安全体系/04-安全实战检验/AI安全评测与红队.md`,
+  `${securityRoot}/03-安全体系/04-安全实战检验/AI驱动的全链路自动化网络攻击.md`,
+  `${securityRoot}/03-安全体系/04-安全实战检验/基于AI驱动的实战网络攻击.md`,
+  `${securityRoot}/03-安全体系/04-安全实战检验/安全大模型评测体系.md`,
+  `${securityRoot}/人工智能安全.md`,
+]);
 const read = (file) => readFileSync(path.join(repoRoot, file), 'utf8');
 const exists = (file) => existsSync(path.join(repoRoot, file));
 const git = (args) => execFileSync('git', args, {cwd: repoRoot, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024});
 const isMarkdown = (file) => /\.mdx?$/i.test(file);
-const inScope = (file) => file.startsWith(`${aiRoot}/`) || file.startsWith(`${generalIntelligenceRoot}/`);
+const inScope = (file) => file.startsWith(`${generalIntelligenceRoot}/`) || aiPages.has(file) || file.startsWith(`${legacyRoot}/`);
 const frontMatter = (text) => text.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] ?? '';
 const scalar = (text, key) => {
   const value = frontMatter(text).match(new RegExp(`^${key}:\\s*(.*?)\\s*$`, 'm'))?.[1];
   return value?.replace(/^(['"])(.*)\1$/, '$2');
 };
-const withoutLegacyClassification = (text) => text.replace(/^content_type:.*(?:\r?\n|$)/m, '');
 
-assert.ok(exists(generalIntelligenceRoot), '通用人工智能应作为人工智能安全的基础层');
-assert.ok(!exists('docs/03-智能工程'), '不应保留旧的独立智能工程目录');
-assert.ok(!exists(`${aiRoot}/01-智能工程`), '旧智能工程目录应合并到通用人工智能');
-assert.ok(!exists(`${generalIntelligenceRoot}/02-AI使用实践/05-使用AI`), '重复的使用 AI 层级未压平');
-assert.ok(exists(`${generalIntelligenceRoot}/02-Agent与工具工程/02-Agent与工具工程.md`), 'Agent 与工具工程应作为通用人工智能的独立主目录');
-assert.ok(exists(`${generalIntelligenceRoot}/02-Agent与工具工程/MCP与工具调用.md`), '缺少 MCP 与工具调用基础文章');
-assert.ok(exists(`${generalIntelligenceRoot}/03-AI应用实践/03-AI应用实践.md`), '缺少 AI 应用实践入口');
-assert.ok(exists(`${generalIntelligenceRoot}/04-AI应用与组织/04-AI应用与组织.md`), '缺少 AI 应用与组织入口');
-for (const obsolete of ['02-AI使用实践', '03-AI转型', '04-AI项目']) {
-  assert.ok(!exists(`${generalIntelligenceRoot}/${obsolete}`), `旧通用人工智能分组仍残留：${obsolete}`);
+assert.ok(!exists(legacyRoot), 'AI 内容应融入统一安全目录，不保留独立目录');
+for (const file of aiPages) assert.ok(exists(file), `文章未归位：${file}`);
+for (const name of ['01-人工智能.md', '01-AI基础认知/01-AI基础认知.md', '02-Agent与工具工程/02-Agent与工具工程.md', '03-AI应用实践/03-AI应用实践.md', '04-AI应用与组织/04-AI应用与组织.md']) {
+  assert.ok(exists(`${generalIntelligenceRoot}/${name}`), `缺少通用 AI 分组入口：${name}`);
 }
-for (const obsolete of ['03-AI滥用与信任风险', '04-治理评测与响应']) {
-  assert.ok(!exists(`${aiRoot}/${obsolete}`), `合并后仍残留旧分组：${obsolete}`);
+assert.equal(scalar(read(`${securityRoot}/人工智能安全.md`), 'slug'), '/ai-security');
+assert.equal(scalar(read(`${generalIntelligenceRoot}/01-人工智能.md`), 'slug'), '/ai');
+assert.equal(scalar(read(`${generalIntelligenceRoot}/01-AI基础认知/从零构建大语言模型/index.md`), 'pagination_next'), '网络安全/网络空间安全/软件工程/人工智能/AI基础认知/从零构建大语言模型/从零认识大语言模型');
+for (const file of ['sidebars.ts', 'docusaurus.config.ts']) {
+  assert.ok(!/ai(?:Security|Engineering)Sidebar/.test(read(file)), 'AI 页面应使用统一网络空间安全导航');
 }
-for (const [group, names] of Object.entries(groups)) {
-  const hub = `${aiRoot}/${group}/${group}.md`;
-  assert.ok(exists(hub), `缺少分组入口：${hub}`);
-  assert.equal(scalar(read(hub), 'content_type'), undefined);
-  const category = JSON.parse(read(`${aiRoot}/${group}/_category_.json`));
-  assert.ok(category.label && Number.isInteger(category.position), `分组配置无效：${group}`);
-  for (const name of names) {
-    assert.ok(exists(`${aiRoot}/${group}/${name}`), `文章未归位：${group}/${name}`);
-    assert.ok(!exists(`${aiRoot}/${name}`), `旧位置仍有重复文章：${name}`);
-  }
-}
-for (const name of ['01-通用人工智能.md', '03-AI应用实践/模型接入与部署.md', '03-AI应用实践/使用商业AI.md', '03-AI应用实践/本地部署AI.md']) {
-  assert.ok(exists(`${generalIntelligenceRoot}/${name}`), `通用人工智能入口或接入文章缺失：${name}`);
-}
-assert.equal(scalar(read(`${aiRoot}/人工智能安全.md`), 'slug'), '/ai-security');
-assert.equal(scalar(read(`${generalIntelligenceRoot}/01-通用人工智能.md`), 'slug'), '/ai');
-assert.ok(!read('sidebars.ts').includes('aiEngineeringSidebar'), '不应保留独立通用人工智能侧边栏');
-assert.ok(!read('docusaurus.config.ts').includes("sidebarId: 'aiEngineeringSidebar'"), '不应保留独立通用人工智能顶栏入口');
+assert.ok(read('sidebars.ts').includes("dirName: '01-网络安全/01-网络空间安全'"));
+assert.ok(read('docusaurus.config.ts').includes("docId: '网络安全/网络空间安全/README', label: '网络空间安全'"));
+assert.ok(read('scripts/workflow_delivery.py').includes(`${generalIntelligenceRoot}/03-AI应用实践/AI使用数据.mdx`), '数据交付页路径未更新');
+assert.ok(!read('.github/workflows/sync-security-engineering.yml').includes(legacyRoot), '同步不能继续读取旧目录');
 
 // Validate the current worktree, including files added during a reorganization.
 // Tracked files deleted from the worktree must not be read as if they still existed.
@@ -72,13 +76,19 @@ for (const file of files.filter(inScope)) {
   bySlug.set(slug, file);
 }
 
+for (const file of files.filter((file) => !inScope(file))) {
+  const slug = scalar(read(file), 'slug');
+  assert.ok(!bySlug.has(slug), `AI 文档 URL 与其他文档重复：${slug}，${file}`);
+}
+
 // Compare by published URL, not a single historical directory layout. The base
 // may already contain a concurrent reorganization; those documents must not be skipped.
 const base = process.env.AI_MIGRATION_BASE;
 let preserved = 0;
 if (base) {
   assert.match(base, /^[0-9a-f]{40}$/i, 'AI_MIGRATION_BASE 必须为完整提交 SHA');
-  const originals = git(['ls-tree', '-r', '--name-only', '-z', base, '--', aiRoot, generalIntelligenceRoot]).split('\0').filter(isMarkdown);
+  const originals = git(['ls-tree', '-r', '--name-only', '-z', base, '--', legacyRoot, securityRoot]).split('\0').filter((file) => isMarkdown(file) && inScope(file));
+  assert.ok(originals.length >= 68, '迁移基线至少应覆盖原有 68 篇 AI 文档');
   const originalSlugs = new Set();
   for (const before of originals) {
     const oldText = git(['show', `${base}:${before}`]);
@@ -91,7 +101,7 @@ if (base) {
     const newText = read(after);
     assert.equal(scalar(newText, 'published_at'), scalar(oldText, 'published_at'), `首次发布日期被改变：${before}`);
     if (/text:\s*['"]?演讲/.test(frontMatter(oldText))) {
-      assert.equal(withoutLegacyClassification(newText), withoutLegacyClassification(oldText), `历史快照正文必须原样保存：${before}`);
+      assert.equal(newText, oldText, `历史快照正文必须原样保存：${before}`);
     }
     preserved += 1;
   }
@@ -123,7 +133,7 @@ for (const file of files) {
     let pathname;
     try { pathname = decodeURIComponent(target.split(/[?#]/, 1)[0]); }
     catch { errors.push(`${file}: 非法链接编码 ${target}`); continue; }
-    if (!isMarkdown(pathname)) continue;
+    if (!pathname) continue;
     const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(file), pathname));
     if (!inScope(file) && !inScope(resolved)) continue;
     checked += 1;

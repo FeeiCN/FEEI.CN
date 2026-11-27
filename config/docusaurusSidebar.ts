@@ -5,6 +5,7 @@ type SidebarItemWithProps = {
   id?: string;
   items?: SidebarItemWithProps[];
   customProps?: Record<string, unknown>;
+  collapsible?: boolean;
   collapsed?: boolean;
   label?: string;
   link?: {type?: string; id?: string};
@@ -24,6 +25,19 @@ const CATEGORY_ICONS: Record<string, string> = {
   AI基础认知: 'bulb-svg',
   年度总结: 'history-circle-icon',
 };
+
+const DEFENSE_GROUPS = [
+  {label: '身份与权限', slugs: ['/password-security', '/gugu', '/ai-agent-tool-security', '/agent-authorization-revocation']},
+  {label: '应用与接口', slugs: ['/api-security', '/encrypted-resource-id', '/aop-security', '/llm-application-security', '/ai-model-alignment-output-security']},
+  {label: '数据与凭据', slugs: ['/ai-data-knowledge-security', '/ai-privacy-confidentiality', '/ai-crown-jewels-infrastructure-security', '/ai-model-supply-chain-security']},
+  {label: '终端与办公', slugs: ['/office-security', '/email-security', '/redefining-payment-security-in-the-ai-era']},
+  {label: '监测与响应', slugs: ['/ai-security-monitoring-response']},
+];
+
+const SOFTWARE_TOOLS = new Set([
+  '/autossh', '/ios-device-automation-control', '/install-windows-on-macos',
+  '/remotely-control-the-home-computer', '/work-efficiency', '/how-modern-browsers-work',
+]);
 
 function getDailyRecordSidebarLabel(doc?: LoadedDocWithFrontMatter): string | undefined {
   const slug = doc?.frontMatter?.slug;
@@ -59,7 +73,65 @@ export function attachDocFrontMatterToSidebar<
   Doc extends LoadedDocWithFrontMatter,
 >(items: Item[], docs: Doc[]): Item[] {
   const docsById = new Map(docs.map((doc) => [doc.id, doc]));
-  const hiddenSlugs = new Set(['/links', '/health-data', '/index-data', '/stock-data', '/hk-ipo-data']);
+  const hiddenSlugs = new Set([
+    '/links', '/health-data', '/index-data', '/stock-data', '/hk-ipo-data',
+    '/ai-security', '/ai-system-security', '/ai-for-security',
+    '/security-incidents', '/security-incident-analysis-examples', '/data-breach-list',
+  ]);
+
+  const docSlug = (item: SidebarItemWithProps): string | undefined => {
+    const id = item.type === 'doc' ? item.id : item.link?.type === 'doc' ? item.link.id : undefined;
+    const slug = id ? docsById.get(id)?.frontMatter?.slug : undefined;
+    return typeof slug === 'string' ? slug : undefined;
+  };
+
+  function groupDefenseArticles(children: SidebarItemWithProps[]): SidebarItemWithProps[] {
+    const articles: SidebarItemWithProps[] = [];
+    const seen = new Set<string>();
+    function collect(item: SidebarItemWithProps) {
+      if (item.type === 'category') {
+        if (item.link?.type === 'doc' && item.link.id) {
+          const doc = docsById.get(item.link.id);
+          collect({type: 'doc', id: item.link.id, label: String(doc?.frontMatter?.sidebar_label ?? doc?.title ?? item.label)});
+        }
+        item.items?.forEach(collect);
+      } else if (includeInSidebar(item) && (!item.id || !seen.has(item.id))) {
+        articles.push(item);
+        if (item.id) seen.add(item.id);
+      }
+    }
+    children.forEach(collect);
+    const bySlug = new Map(articles.map((item) => [docSlug(item), item]));
+    const assigned = new Set<SidebarItemWithProps>();
+    const groups = DEFENSE_GROUPS.flatMap(({label, slugs}) => {
+      const items = slugs.flatMap((slug) => {
+        const article = bySlug.get(slug);
+        if (!article) return [];
+        assigned.add(article);
+        return [article];
+      });
+      return items.length ? [{
+        type: 'category', label, collapsible: true, collapsed: true,
+        customProps: {overviewHref: `/security-defense#${label}`}, items,
+      }] : [];
+    });
+    return [
+      ...groups,
+      ...articles.filter((article) => !assigned.has(article)),
+    ];
+  }
+
+  function groupSoftwareTools(children: SidebarItemWithProps[]): SidebarItemWithProps[] {
+    const tools = children.filter((child) => SOFTWARE_TOOLS.has(docSlug(child) ?? ''));
+    if (!tools.length) return children;
+    return [
+      ...children.filter((child) => !tools.includes(child)),
+      {
+        type: 'category', label: '开发与实用工具', collapsible: true, collapsed: true,
+        customProps: {overviewHref: '/software#开发与实用工具'}, items: tools,
+      },
+    ];
+  }
 
   function includeInSidebar(item: SidebarItemWithProps): boolean {
     return item.type !== 'doc' || !item.id || !hiddenSlugs.has(String(docsById.get(item.id)?.frontMatter?.slug));
@@ -157,7 +229,9 @@ export function attachDocFrontMatterToSidebar<
         }, depth);
       }
 
-      let children = originalChildren;
+      let children = docSlug(item) === '/security-defense'
+        ? groupDefenseArticles(originalChildren)
+        : docSlug(item) === '/software' ? groupSoftwareTools(originalChildren) : originalChildren;
 
       if (item.link?.type === 'doc' && item.link.id) {
         nextItem.customProps = applyDocFields(item, item.link.id);
@@ -186,5 +260,11 @@ export function attachDocFrontMatterToSidebar<
     return nextItem;
   }
 
-  return items.filter(includeInSidebar).map((item) => visit(item, 0) as Item);
+  const visibleItems = items.filter(includeInSidebar);
+  const overview = visibleItems.find((item) => docSlug(item) === '/security-engineering');
+  const journey = visibleItems.find((item) => docSlug(item) === '/my-journey-in-cybersecurity');
+  const orderedItems = overview && journey
+    ? [overview, ...visibleItems.filter((item) => item !== overview && item !== journey), journey]
+    : visibleItems;
+  return orderedItems.map((item) => visit(item, 0) as Item);
 }

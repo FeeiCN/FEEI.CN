@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync, readdirSync} from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import createJiti from 'jiti';
@@ -69,6 +70,84 @@ test('linked category indexes appear once and preserve the remaining article ord
     assert.deepEqual(category.items.map(item => item.id), ['december', 'november']);
     assert.equal(children.length, children.includes(index) ? 3 : 2);
   }
+});
+
+test('defense navigation groups actual articles once and retains uncategorized additions', () => {
+  const directory = path.join(siteDir, 'docs/01-网络安全/01-网络空间安全/03-安全体系/03-风险防御对抗');
+  const docs = readdirSync(directory, {recursive: true}).filter(file => file.endsWith('.md')).map(file => {
+    const source = readFileSync(path.join(directory, file), 'utf8');
+    return {id: file, title: file, frontMatter: {slug: source.match(/^slug: (.+)$/m)[1]}};
+  });
+  const index = docs.find(doc => doc.frontMatter.slug === '/security-defense');
+  const aiIndex = docs.find(doc => doc.frontMatter.slug === '/ai-system-security');
+  const asItem = doc => ({type: 'doc', id: doc.id});
+  const extra = {id: 'future-article', frontMatter: {slug: '/future-defense'}};
+  const input = [{type: 'category', label: '风险防御对抗', link: {type: 'doc', id: index.id}, items: [
+    {type: 'category', label: 'AI 系统安全', link: {type: 'doc', id: aiIndex.id},
+      items: docs.filter(doc => doc.id.startsWith('AI系统安全/') && doc !== aiIndex).map(asItem)},
+    ...docs.filter(doc => !doc.id.startsWith('AI系统安全/') && doc !== index).map(asItem),
+    asItem(extra),
+  ]}];
+  const before = structuredClone(input);
+  const [result] = attachDocFrontMatterToSidebar(input, [...docs, extra]);
+  const groups = result.items.filter(item => item.type === 'category');
+  assert.deepEqual(groups.map(item => item.label), ['身份与权限', '应用与接口', '数据与凭据', '终端与办公', '监测与响应']);
+  assert.ok(groups.every(item => item.customProps.overviewHref === `/security-defense#${item.label}`));
+  assert.equal(result.items.at(-1).id, extra.id);
+  const ids = result.items.flatMap(item => item.type === 'category' ? item.items.map(child => child.id) : [item.id]);
+  assert.deepEqual([...ids].sort(), [...docs.filter(doc => doc !== index && doc !== aiIndex).map(doc => doc.id), extra.id].sort());
+  assert.equal(new Set(ids).size, ids.length);
+  assert.deepEqual(input, before);
+});
+
+test('cross-topic guides and incident reference collections stay accessible outside the sidebar', () => {
+  const hidden = ['/ai-system-security', '/ai-for-security', '/security-incidents', '/security-incident-analysis-examples', '/data-breach-list'];
+  const docs = hidden.map((slug, index) => ({id: `reference-${index}`, frontMatter: {slug, displayed_sidebar: 'securityEngineeringSidebar'}}));
+  docs.push({id: 'incident', frontMatter: {slug: '/example-incident'}});
+  const input = [{type: 'category', label: '案例', items: docs.map(doc => ({type: 'doc', id: doc.id}))}];
+  const [category] = attachDocFrontMatterToSidebar(input, docs);
+  assert.deepEqual(category.items.map(item => item.id), ['incident']);
+  assert.equal(docs.length, 6);
+  assert.ok(docs.slice(0, 5).every(doc => doc.frontMatter.displayed_sidebar === 'securityEngineeringSidebar'));
+});
+
+test('software tools form one group while existing topics and new articles remain intact', () => {
+  const slugs = ['/autossh', '/ios-device-automation-control', '/install-windows-on-macos', '/remotely-control-the-home-computer', '/work-efficiency', '/how-modern-browsers-work'];
+  const docs = [
+    {id: 'software', frontMatter: {slug: '/software'}},
+    ...slugs.map((slug, index) => ({id: `tool-${index}`, frontMatter: {slug}})),
+    {id: 'future', frontMatter: {slug: '/future-software'}},
+  ];
+  const topics = ['人工智能', '产品体验'].map(label => ({type: 'category', label, items: []}));
+  const input = [{type: 'category', label: '软件工程', link: {type: 'doc', id: 'software'}, items: [
+    ...topics, ...docs.slice(1).map(doc => ({type: 'doc', id: doc.id})),
+  ]}];
+  const before = structuredClone(input);
+  const [category] = attachDocFrontMatterToSidebar(input, docs);
+  const tools = category.items.at(-1);
+  assert.equal(tools.label, '开发与实用工具');
+  assert.equal(tools.customProps.overviewHref, '/software#开发与实用工具');
+  assert.deepEqual(tools.items.map(item => item.id), docs.slice(1, -1).map(doc => doc.id));
+  assert.deepEqual(category.items.slice(0, -1).map(item => item.id ?? item.label), ['人工智能', '产品体验', 'future']);
+  assert.deepEqual(input, before);
+});
+
+test('security overview is first, professional history is last, and the cross-topic guide stays out of the menu', () => {
+  const items = [
+    {type: 'doc', id: 'journey'}, {type: 'doc', id: 'overview'},
+    ...['威胁', '组织', '体系', '工程'].map(label => ({type: 'category', label, items: []})),
+    {type: 'doc', id: 'ai-guide'},
+  ];
+  const docs = [
+    {id: 'journey', frontMatter: {slug: '/my-journey-in-cybersecurity'}},
+    {id: 'overview', frontMatter: {slug: '/security-engineering'}},
+    {id: 'ai-guide', frontMatter: {slug: '/ai-security'}},
+  ];
+  const result = attachDocFrontMatterToSidebar(items, docs);
+  assert.deepEqual(result.map(item => item.id ?? item.label), ['overview', '威胁', '组织', '体系', '工程', 'journey']);
+  assert.equal(items[0].id, 'journey');
+  assert.deepEqual(attachDocFrontMatterToSidebar(items.slice(1), docs).map(item => item.id ?? item.label),
+    items.slice(1).filter(item => item.id !== 'ai-guide').map(item => item.id ?? item.label));
 });
 
 test('nested categories and documents retain their own icons at every depth', () => {

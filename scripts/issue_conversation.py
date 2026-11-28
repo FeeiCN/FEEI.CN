@@ -343,10 +343,26 @@ def validate_candidate(context, result, root, directory):
     write_json(proof, identity)
 
 
-def check_validation(context, draft, root, directory):
-    proof = directory / 'checked.json'
-    if not proof.exists() or json.loads(proof.read_text()) != validation_identity(context, draft, root):
+def check_validation(context, draft, root, directory, *, checkout_validated_base=False):
+    proof_path = directory / 'checked.json'
+    proof = json.loads(proof_path.read_text()) if proof_path.exists() else None
+    identity = validation_identity(context, draft, root)
+    main_head = identity['base']
+    base = proof.get('base') if isinstance(proof, dict) else None
+    if not isinstance(base, str) or not re.fullmatch(r'[a-f0-9]{40}', base) or proof != {**identity, 'base': base}:
         raise ValueError('缺少当前稿件与 main 版本的独立验证结果，请重新验证后交付')
+    if base == main_head:
+        return
+    ancestor = subprocess.run(['git', 'merge-base', '--is-ancestor', base, main_head],
+                              cwd=root, capture_output=True)
+    if ancestor.returncode:
+        raise ValueError('独立验证使用的提交不在当前 main 历史中，请重新验证后交付')
+    changes = subprocess.run(['git', '--literal-pathspecs', 'diff', '--quiet', '--no-ext-diff',
+                              base, main_head, '--', *draft['file_hashes']], cwd=root, check=False)
+    if changes.returncode:
+        raise ValueError('目标文件已被更新，需要审阅新的完整版本')
+    if checkout_validated_base:
+        subprocess.run(['git', 'switch', '--detach', base], cwd=root, check=True)
 
 
 def execute_approved(context, result, root, directory):
@@ -362,7 +378,8 @@ def execute_approved(context, result, root, directory):
                 'message': 'main 中的目标文件已与当前稿件一致，本轮没有重复提交。'}
     if actual != draft['baseline']:
         raise ValueError('目标文件已被更新，需要审阅新的完整版本')
-    check_validation(context, draft, root, directory)
+    main_head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
+    check_validation(context, draft, root, directory, checkout_validated_base=True)
     branch = f'codex/issue-{context["issue_number"]}-{draft["id"][:12]}'
     pulls = json.loads(gh('pr', 'list', '--repo', context['repository'], '--head', branch,
                          '--state', 'all', '--json', 'url,state,headRefOid,baseRefName'))
@@ -372,7 +389,7 @@ def execute_approved(context, result, root, directory):
             raise ValueError('该版本的 PR 已关闭或目标分支变化，请重新审阅后修订')
         subprocess.run(['git', 'fetch', 'origin', branch], cwd=root, check=True)
         head = subprocess.check_output(['git', 'rev-parse', 'FETCH_HEAD'], cwd=root, text=True).strip()
-        changed = subprocess.check_output(['git', 'diff', '--name-only', 'HEAD...' + head], cwd=root, text=True).splitlines()
+        changed = subprocess.check_output(['git', 'diff', '--name-only', main_head + '...' + head], cwd=root, text=True).splitlines()
         if head != pr['headRefOid'] or not set(changed).issubset(files) or core.git_baselines(head, files, root) != draft['file_hashes']:
             raise ValueError('现有 PR 与封存稿件不一致，停止复用')
         check_fresh(context, root)
@@ -383,7 +400,7 @@ def execute_approved(context, result, root, directory):
     if remote.returncode == 0:
         subprocess.run(['git', 'fetch', 'origin', branch], cwd=root, check=True)
         head = subprocess.check_output(['git', 'rev-parse', 'FETCH_HEAD'], cwd=root, text=True).strip()
-        changed = subprocess.check_output(['git', 'diff', '--name-only', 'HEAD...' + head], cwd=root, text=True).splitlines()
+        changed = subprocess.check_output(['git', 'diff', '--name-only', main_head + '...' + head], cwd=root, text=True).splitlines()
         if not set(changed).issubset(files) or core.git_baselines(head, files, root) != draft['file_hashes']:
             raise ValueError('已推送分支与封存稿件不一致，停止恢复 PR')
         subprocess.run(['git', 'switch', '-c', branch, head], cwd=root, check=True)
@@ -564,7 +581,7 @@ def main():
             raise ValueError('没有核验通过的壁纸重做请求')
         request = context['request']
         gh('workflow', 'run', 'update-weight-wallpaper.yml', '--repo', repo, '--ref', 'main',
-           '-f', 'review_issue=' + str(args.issue), '-f', 'review_comment=' + request['id'],
+           '-f', 'review_issue=' + str(context['issue_number']), '-f', 'review_comment=' + str(request['id']),
            '-f', 'review_request_digest=' + legacy.digest(request))
         write_json(STATE / 'receipt.json', {'state': 'requested', 'commit': '', 'message': '已请求使用固定模板重做壁纸，完成后在本议题交付临时下载附件。'})
 
